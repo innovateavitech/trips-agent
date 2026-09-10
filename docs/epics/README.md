@@ -49,9 +49,10 @@ After the child issues exist, regenerate the map:
 
 | Epic | Module | Milestone | Breakdown |
 |---|---|---|---|
+| [#60](https://github.com/innovateavitech/trips-agent/issues/60) | Storefront | M2 | [Public storefront rendering](0060-public-storefront-rendering.md) |
 | [#62](https://github.com/innovateavitech/trips-agent/issues/62) | CRM | M2 | [Leads, quotes and pipeline](0062-crm-leads-quotes-pipeline.md) |
 | [#68](https://github.com/innovateavitech/trips-agent/issues/68) | Analytics & Reporting | M3 | [Reporting and exports](0068-reporting-and-exports.md) |
 | [#69](https://github.com/innovateavitech/trips-agent/issues/69) | Payments | M3 | [Payouts, disputes and gateway reconciliation](0069-payouts-disputes-reconciliation.md) |
 | [#71](https://github.com/innovateavitech/trips-agent/issues/71) | Security | M3 | [Security hardening and load testing](0071-security-hardening.md) |
 
-The other twelve epics have not been broken down yet.
+The other eleven epics have not been broken down yet.

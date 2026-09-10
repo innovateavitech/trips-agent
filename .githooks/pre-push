@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+#
+# pre-push — refuses to push directly to a protected branch.
+#
+# Installed by scripts/setup.sh, which points core.hooksPath at .githooks/
+# so this file is version-controlled and everyone gets it automatically.
+#
+# See CONTRIBUTING.md for the workflow this protects.
+
+set -uo pipefail
+
+PROTECTED_BRANCHES="main master"
+
+RED=$'\033[0;31m'; YELLOW=$'\033[0;33m'; GREEN=$'\033[0;32m'
+BOLD=$'\033[1m'; DIM=$'\033[2m'; NC=$'\033[0m'
+
+# Emergency override for the repository owner:
+#   ALLOW_MAIN_PUSH=1 git push origin main
+if [ "${ALLOW_MAIN_PUSH:-0}" = "1" ]; then
+  printf '%s\n' "${YELLOW}⚠  ALLOW_MAIN_PUSH=1 — protected-branch check skipped.${NC}" >&2
+  exit 0
+fi
+
+# git feeds us one line per ref being pushed:
+#   <local ref> <local sha> <remote ref> <remote sha>
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  [ -z "${remote_ref:-}" ] && continue
+  branch="${remote_ref#refs/heads/}"
+
+  for protected in $PROTECTED_BRANCHES; do
+    if [ "$branch" = "$protected" ]; then
+      current=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+      cat >&2 <<EOF
+
+${RED}${BOLD}✖  Push to '${branch}' blocked.${NC}
+
+${BOLD}Nobody pushes to ${branch} directly.${NC} Every change goes through a pull
+request so it gets reviewed and CI-checked before it reaches everyone else.
+
+${BOLD}You are on:${NC} ${current}
+
+${GREEN}${BOLD}If your work is already committed on ${branch}${NC} — move it to a branch:
+
+  ${DIM}# 1. save your commits onto a new branch${NC}
+  git branch feat/my-work
+
+  ${DIM}# 2. put ${branch} back to match the remote${NC}
+  git reset --hard origin/${branch}
+
+  ${DIM}# 3. carry on from the branch${NC}
+  git checkout feat/my-work
+  git push -u origin feat/my-work
+  gh pr create --fill
+
+${GREEN}${BOLD}If you have not committed yet${NC} — just branch first:
+
+  git checkout -b feat/my-work
+  git push -u origin feat/my-work
+
+${DIM}Nothing has been lost. Your commits are safe either way.
+Full walkthrough: CONTRIBUTING.md §8 "When things go wrong"${NC}
+
+EOF
+      exit 1
+    fi
+  done
+done
+
+exit 0

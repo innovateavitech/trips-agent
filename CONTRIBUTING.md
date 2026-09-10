@@ -10,6 +10,7 @@ genuinely valuable pull request.
 
 ## Table of contents
 
+0. [Before anything else — run setup.sh](#0-before-anything-else)
 1. [The golden rules](#1-the-golden-rules)
 2. [How branching works here](#2-how-branching-works-here)
 3. [Writing commit messages](#3-writing-commit-messages)
@@ -23,9 +24,37 @@ genuinely valuable pull request.
 
 ---
 
+## 0. Before anything else
+
+```bash
+./scripts/setup.sh
+```
+
+Run this once after cloning. It installs the shared git hooks and checks your tooling. Safe to
+re-run any time.
+
+The hooks are the reason a mistake becomes a two-second message instead of a two-day problem:
+
+| Hook | Stops you from |
+|---|---|
+| `pre-commit` | Committing on `main`, committing a secret, committing a huge binary |
+| `commit-msg` | Writing a commit message that doesn't follow our format |
+| `pre-push` | Pushing to `main` |
+
+They live in [`.githooks/`](.githooks/) and are version-controlled, so everyone gets the same
+ones. They are **not** installed automatically by `git clone` — that is what `setup.sh` is for.
+
+**About `--no-verify`:** it skips the hooks. It exists for genuine false positives, such as a
+secret-scanner hit on a string that only looks like a key. It is not a way around a hook that is
+correctly telling you to branch first. If a hook blocks you and you do not understand why, ask —
+do not reach for `--no-verify`.
+
+---
+
 ## 1. The golden rules
 
-1. **Never push to `main`.** GitHub will reject it. This is a safety net, not a punishment.
+0. **Run `./scripts/setup.sh` once after cloning.** Without it you have no safety nets.
+1. **Never push to `main`.** The pre-push hook rejects it. This is a safety net, not a punishment.
 2. **One branch per task.** Small and focused beats big and complete.
 3. **Always start from an up-to-date `main`.**
 4. **Run the tests before you push.** `pnpm verify` runs exactly what CI runs.
@@ -341,7 +370,9 @@ Lost and want out? `git rebase --abort` returns you exactly to where you started
 
 ### "I accidentally committed to `main`"
 
-You cannot push it, so nothing is broken. Move the commit onto a branch:
+The pre-commit hook normally stops this, so you'll only get here if the hooks weren't installed
+(run `./scripts/setup.sh`) or you used `--no-verify`. Either way nothing is broken — the pre-push
+hook will still refuse to send it. Move the commit onto a branch:
 
 ```bash
 git branch feat/my-work        # save your commit onto a new branch

@@ -63,8 +63,8 @@ Rejected alternatives and why: schema-per-tenant makes the FRD's cross-tenant ad
 
 | Concern | Choice | Rationale |
 |---|---|---|
-| API | .NET 9, ASP.NET Core, Clean Architecture + MediatR | Matches the mandated backend |
-| ORM | EF Core 9 + Npgsql, Dapper for reporting reads | Query filters give tenancy for free; Dapper for hot analytics paths |
+| API | .NET 10, ASP.NET Core, Clean Architecture + MediatR | Matches the mandated backend |
+| ORM | EF Core 10 + Npgsql, Dapper for reporting reads | Query filters give tenancy for free; Dapper for hot analytics paths |
 | DB | PostgreSQL 16 | Portable across undecided clouds; `ltree`, `jsonb`, partitioning, RLS |
 | Cache | Redis | Search cache, host→tenant map, distributed locks, rate limits |
 | Recurring jobs | **Hangfire** (Postgres storage) | Dashboard + reliable cron with zero cloud lock-in |

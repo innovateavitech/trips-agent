@@ -94,3 +94,14 @@ internal sealed class WalletLedgerEntry
     public Guid AgencyId { get; set; }
     public long AmountMinor { get; set; }
 }
+
+/// <summary>
+/// Money whose property names do <em>not</em> end in <c>Minor</c>, so the convention leaves them
+/// alone and an entity configuration has to say so explicitly with <c>IsMoneyMinor()</c>.
+/// </summary>
+internal sealed class LegacyInvoice
+{
+    public Guid Id { get; set; }
+    public long Total { get; set; }
+    public long? Settled { get; set; }
+}

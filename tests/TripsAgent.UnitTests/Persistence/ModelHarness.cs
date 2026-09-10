@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Persistence.Conventions;
 
@@ -29,17 +30,21 @@ internal static class ModelHarness
         "Host=model.building.invalid;Database=never_connected;Username=none;Password=none";
 
     /// <summary>Builds the model for <typeparamref name="TEntity"/> and returns its mapping.</summary>
+    /// <param name="configure">
+    /// Optional extra mapping, standing in for what an <c>IEntityTypeConfiguration&lt;T&gt;</c>
+    /// would do in <c>Persistence/Configurations/</c>.
+    /// </param>
     /// <exception cref="InvalidOperationException">
     /// Thrown by a convention when the entity breaks a rule — a <c>*Minor</c> property that is not
     /// a <see cref="long"/>, or a <see cref="DateTime"/> anywhere. The tests rely on this.
     /// </exception>
-    public static IEntityType BuildEntityType<TEntity>()
+    public static IEntityType BuildEntityType<TEntity>(Action<EntityTypeBuilder<TEntity>>? configure = null)
         where TEntity : class
     {
         var builder = new DbContextOptionsBuilder<HarnessDbContext<TEntity>>();
         AppDbContextOptions.Configure(builder, UnusedConnectionString);
 
-        using var context = new HarnessDbContext<TEntity>(builder.Options);
+        using var context = new HarnessDbContext<TEntity>(builder.Options, configure);
 
         // Touching .Model is what forces EF to build and finalise the model, which is when the
         // conventions run and when a bad mapping throws.
@@ -48,9 +53,11 @@ internal static class ModelHarness
     }
 
     /// <summary>Convenience: the column a property maps to, or null if the property is not mapped.</summary>
-    public static IProperty Property<TEntity>(string propertyName)
+    public static IProperty Property<TEntity>(
+        string propertyName,
+        Action<EntityTypeBuilder<TEntity>>? configure = null)
         where TEntity : class
-        => BuildEntityType<TEntity>().FindProperty(propertyName)
+        => BuildEntityType<TEntity>(configure).FindProperty(propertyName)
            ?? throw new InvalidOperationException($"{typeof(TEntity).Name}.{propertyName} was not mapped.");
 
     /// <summary>
@@ -78,14 +85,21 @@ internal static class ModelHarness
     /// A context holding exactly one entity, registered without a <c>DbSet</c> so that the table
     /// name comes from the entity type itself rather than from a property name.
     /// </summary>
-    private sealed class HarnessDbContext<TEntity>(DbContextOptions<HarnessDbContext<TEntity>> options)
+    private sealed class HarnessDbContext<TEntity>(
+        DbContextOptions<HarnessDbContext<TEntity>> options,
+        Action<EntityTypeBuilder<TEntity>>? configure)
         : DbContext(options)
         where TEntity : class
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            modelBuilder.Entity<TEntity>();
+
+            // Register first, configure second. Folding these into one expression with `?.`
+            // would skip the registration entirely whenever configure is null, because the
+            // null-conditional operator does not evaluate its argument.
+            var entity = modelBuilder.Entity<TEntity>();
+            configure?.Invoke(entity);
         }
 
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

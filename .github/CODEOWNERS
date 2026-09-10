@@ -10,26 +10,25 @@
 # reviewed by anyone, and the lead stays on the money-path and schema rules only.
 
 # Default — currently the lead; widen this as the team grows
-*                                                 @Sayrikey1
+*                                                         @Sayrikey1
 
 # --- Money. Mistakes here cost real cash. -----------------------------------
-/services/TripsAgent.Domain/Payments/             @Sayrikey1
-/services/TripsAgent.Domain/Pricing/              @Sayrikey1
-/services/TripsAgent.Integrations.Paystack/       @Sayrikey1
+/backend/services/TripsAgent.Domain/Payments/             @Sayrikey1
+/backend/services/TripsAgent.Domain/Pricing/              @Sayrikey1
+/backend/services/TripsAgent.Integrations.Paystack/       @Sayrikey1
 
 # --- Supplier integration. Mistakes here issue or lose real tickets. --------
-/services/TripsAgent.Integrations.TripsAfrica/    @Sayrikey1
+/backend/services/TripsAgent.Integrations.TripsAfrica/    @Sayrikey1
 
 # --- Database. Migrations are hard to undo in production. -------------------
-/db/                                              @Sayrikey1
-/services/TripsAgent.Infrastructure/Persistence/  @Sayrikey1
+/backend/services/TripsAgent.Infrastructure/Persistence/  @Sayrikey1
 
 # --- Tenancy. A mistake here leaks one agency's data to another. -----------
-/services/TripsAgent.Infrastructure/Tenancy/      @Sayrikey1
+/backend/services/TripsAgent.Infrastructure/Tenancy/      @Sayrikey1
 
 # --- Process, security and infrastructure ----------------------------------
-/.github/                                         @Sayrikey1
-/infra/                                           @Sayrikey1
-/CONTRIBUTING.md                                  @Sayrikey1
-/README.md                                        @Sayrikey1
-/docs/adr/                                        @Sayrikey1
+/.github/                                                 @Sayrikey1
+/infra/                                                   @Sayrikey1
+/CONTRIBUTING.md                                          @Sayrikey1
+/README.md                                                @Sayrikey1
+/docs/adr/                                                @Sayrikey1

@@ -25,7 +25,7 @@ round trip is worth having, and it removes a tracking dependency.
 
 ## The one rule
 
-> **`packages/ui/src/styles/tokens.css` is the only file in the repository allowed to contain a
+> **`frontend/packages/ui/src/styles/tokens.css` is the only file in the repository allowed to contain a
 > raw colour value.**
 
 Everywhere else uses a semantic token:
@@ -48,7 +48,7 @@ Style guides that rely on memory lose to deadlines. A check that fails the build
 
 ## Tokens
 
-Defined in [`packages/ui/src/styles/tokens.css`](../packages/ui/src/styles/tokens.css) as
+Defined in [`frontend/packages/ui/src/styles/tokens.css`](../frontend/packages/ui/src/styles/tokens.css) as
 `H S% L%` triples (no `hsl()` wrapper) so Tailwind can apply opacity — `bg-primary/10` only works
 in that format.
 
@@ -76,7 +76,7 @@ is the beginning of drift.
 
 ## Components
 
-Live in [`packages/ui/src/components/`](../packages/ui/src/components/), built with
+Live in [`frontend/packages/ui/src/components/`](../frontend/packages/ui/src/components/), built with
 [`cva`](https://cva.style) so every visual decision sits in one place.
 
 ```tsx
@@ -154,7 +154,7 @@ installs it per developer, and its hooks no-op safely if it is absent.
 Our components follow [shadcn/ui](https://github.com/shadcn-ui/ui) conventions — copy the source
 in, own it, adapt it. When pulling one in:
 
-1. Copy it into `packages/ui/src/components/`
+1. Copy it into `frontend/packages/ui/src/components/`
 2. **Replace every colour with a token.** shadcn ships with its own variable names; map them onto
    ours (`bg-primary`, `text-muted-foreground`, `border-border`)
 3. Swap its `cn` import for `../lib/cn`
@@ -167,8 +167,8 @@ in, own it, adapt it. When pulling one in:
 
 | | |
 |---|---|
-| [`packages/ui/src/styles/tokens.css`](../packages/ui/src/styles/tokens.css) | The tokens |
-| [`packages/ui/tailwind.preset.ts`](../packages/ui/tailwind.preset.ts) | The shared Tailwind preset |
+| [`frontend/packages/ui/src/styles/tokens.css`](../frontend/packages/ui/src/styles/tokens.css) | The tokens |
+| [`frontend/packages/ui/tailwind.preset.ts`](../frontend/packages/ui/tailwind.preset.ts) | The shared Tailwind preset |
 | [`scripts/check-design.sh`](../scripts/check-design.sh) | The drift detector |
 | [CLAUDE.md](../CLAUDE.md) | Rules for AI assistants |
 | [WORKING_WITH_CLAUDE.md](WORKING_WITH_CLAUDE.md) | The issue-to-PR loop |

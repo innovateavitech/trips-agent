@@ -73,7 +73,7 @@ Rejected alternatives and why: schema-per-tenant makes the FRD's cross-tenant ad
 | PDF | QuestPDF | Invoices, vouchers, itineraries |
 | Auth | ASP.NET Identity core + JWT access/refresh, Argon2id hashing | |
 | Frontend | React 19 + TypeScript; Vite for consoles, **Next.js 15 App Router** for storefront | SSR/ISR only where SEO matters |
-| Shared UI | Tailwind + shadcn/ui in `packages/ui` | One design system across three apps |
+| Shared UI | Tailwind + shadcn/ui in `frontend/packages/ui` | One design system across three apps |
 | API client | OpenAPI → NSwag-generated TS client | Single source of truth; CI fails if stale |
 | Tests | xUnit, Testcontainers, NetArchTest, Playwright | Real Postgres/Redis/Rabbit in integration tests |
 
@@ -81,36 +81,51 @@ Rejected alternatives and why: schema-per-tenant makes the FRD's cross-tenant ad
 
 ### 1.3 Monorepo layout
 
+The two stacks sit in two self-contained roots, each owning its own build configuration.
+
 ```
 trips-agent/
-├─ apps/
-│  ├─ agent-console/          React + Vite  — authenticated agent workspace
-│  ├─ storefront/             Next.js       — multi-tenant public sites (SSR/ISR)
-│  ├─ admin-console/          React + Vite  — Trips back-office
-│  └─ marketing-site/         Next.js       — tripsagent.com + signup
-├─ packages/
-│  ├─ ui/  api-client/  contracts/  config/  utils/
-├─ services/
-│  ├─ TripsAgent.Api/                 REST API (agent + storefront + admin)
-│  ├─ TripsAgent.Worker/              Hangfire + MassTransit consumers
-│  ├─ TripsAgent.Domain/              entities, value objects, domain events
-│  ├─ TripsAgent.Application/         use cases, validators, policies
-│  ├─ TripsAgent.Infrastructure/      EF Core, outbox, caching, RLS
-│  ├─ TripsAgent.Contracts/           DTOs + integration events (source of TS types)
-│  ├─ TripsAgent.Integrations.TripsAfrica/
-│  ├─ TripsAgent.Integrations.Paystack/
-│  ├─ TripsAgent.Integrations.Storage|Mail|Sms/
-│  └─ TripsAgent.Documents/           QuestPDF renderers
-├─ tests/                     Unit | Integration | Architecture | e2e (Playwright)
+├─ backend/                   run dotnet commands from here
+│  ├─ services/
+│  │  ├─ TripsAgent.Api/                 REST API (agent + storefront + admin)
+│  │  ├─ TripsAgent.Worker/              Hangfire + MassTransit consumers
+│  │  ├─ TripsAgent.Domain/              entities, value objects, domain events
+│  │  ├─ TripsAgent.Application/         use cases, validators, policies
+│  │  ├─ TripsAgent.Infrastructure/      EF Core, outbox, caching, RLS
+│  │  │  └─ Persistence/Migrations/      EF Core migrations + seed
+│  │  ├─ TripsAgent.Contracts/           DTOs + integration events (source of TS types)
+│  │  ├─ TripsAgent.Integrations.TripsAfrica/
+│  │  ├─ TripsAgent.Integrations.Paystack/
+│  │  ├─ TripsAgent.Integrations.Storage|Mail|Sms/
+│  │  └─ TripsAgent.Documents/           QuestPDF renderers
+│  ├─ tests/                  Unit | Integration | Architecture
+│  ├─ TripsAgent.slnx
+│  ├─ Directory.Build.props · Directory.Packages.props
+│  └─ .config/dotnet-tools.json          pinned dotnet-ef
+├─ frontend/                  run pnpm commands from here
+│  ├─ apps/
+│  │  ├─ agent-console/       React + Vite  — authenticated agent workspace
+│  │  ├─ storefront/          Next.js       — multi-tenant public sites (SSR/ISR)
+│  │  ├─ admin-console/       React + Vite  — Trips back-office
+│  │  └─ marketing-site/      Next.js       — tripsagent.com + signup
+│  ├─ packages/
+│  │  └─ ui/  api-client/  contracts/  config/  utils/
+│  ├─ package.json
+│  └─ pnpm-workspace.yaml · turbo.json · pnpm-lock.yaml
+├─ e2e/                       Playwright, drives both stacks
 ├─ infra/                     docker/ terraform/ k8s/
-├─ db/migrations/             EF Core migrations + seed
+├─ scripts/                   setup.sh · check-design.sh · ef.sh
 ├─ docs/                      FRD, ADRs, API notes
-├─ .github/workflows/
-├─ pnpm-workspace.yaml + turbo.json
-└─ TripsAgent.sln
+└─ .github/workflows/
 ```
 
-pnpm workspaces + Turborepo for the JS side; one `.sln` for .NET; a single CI pipeline with per-package affected-graph builds.
+pnpm workspaces + Turborepo rooted at `frontend/`; one `.slnx` rooted at `backend/`; a single
+CI pipeline with per-package affected-graph builds.
+
+**Why split the roots.** Both stacks want to own the repository root — pnpm expects its
+workspace file and lockfile there, MSBuild expects `Directory.Build.props` there — and mixing
+them means every tool globs across the other's tree. Two roots keeps each tool's world small,
+so a `pnpm install` never walks `services/` and `dotnet build` never walks `node_modules/`.
 
 ---
 
@@ -515,7 +530,7 @@ Configured as a **GitHub ruleset** on `innovateavitech/trips-agent` targeting `m
 |---|---|
 | `.github/pull_request_template.md` | What changed · why · how to test it · screenshots for UI · linked issue · the DoD checklist as tick-boxes |
 | `.github/ISSUE_TEMPLATE/bug_report.md` · `feature_request.md` · `task.md` | Consistent, well-formed issues |
-| `CODEOWNERS` | Routes reviews automatically — you own `/services/**/Payments/`, `/db/migrations/`, `.github/`, and anything touching the ledger or supplier adapters, so money-path and schema changes always reach you |
+| `CODEOWNERS` | Routes reviews automatically — you own `/backend/services/**/Payments/`, the persistence layer, `.github/`, and anything touching the ledger or supplier adapters, so money-path and schema changes always reach you |
 | `.env.example` | Every variable, with a comment and a safe dummy value. Real secrets never enter the repo |
 | `docs/adr/` | Architecture Decision Records — one short file per significant decision (why Postgres, why Hangfire + MassTransit, why squash-merge). Teaches the team that decisions have reasons and can be revisited |
 | `docs/onboarding.md` | A guided first week: read these three things, run the app, pick a `good-first-issue`, ship it |

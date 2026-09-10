@@ -125,7 +125,7 @@ you'll touch, and wait for me to confirm.
 
 Relevant context:
 - docs/ARCHITECTURE_AND_DELIVERY_PLAN.md §2.9 has the schema design
-- Follow the patterns already in services/TripsAgent.Application/
+- Follow the patterns already in backend/services/TripsAgent.Application/
 ```
 
 Three things make that prompt work:

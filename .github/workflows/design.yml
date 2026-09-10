@@ -8,8 +8,8 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'apps/**'
-      - 'packages/**'
+      - 'frontend/apps/**'
+      - 'frontend/packages/**'
       - 'scripts/check-design.sh'
       - '.github/workflows/design.yml'
   push:

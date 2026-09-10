@@ -43,6 +43,20 @@ else
   printf '  %s\n\n' "${YELLOW}!${NC} npx not found — install Node first"
 fi
 
+# ----------------------------------------------------------- dotnet tools
+printf '%s\n' "${BOLD}.NET tools${NC}"
+if command -v dotnet >/dev/null 2>&1; then
+  # dotnet-ef is pinned in backend/.config/dotnet-tools.json so everyone runs the same version
+  # as the EF Core packages. Without this, ./scripts/ef.sh cannot create or apply a migration.
+  if (cd backend && dotnet tool restore >/dev/null 2>&1); then
+    printf '  %s\n\n' "${GREEN}✓${NC} dotnet-ef    ${DIM}pinned version restored${NC}"
+  else
+    printf '  %s\n\n' "${YELLOW}!${NC} dotnet-ef    ${DIM}restore failed — run: cd backend && dotnet tool restore${NC}"
+  fi
+else
+  printf '  %s\n\n' "${YELLOW}!${NC} dotnet not found — skipping tool restore"
+fi
+
 # ------------------------------------------------------------- git identity
 printf '%s\n' "${BOLD}Git identity${NC}"
 name=$(git config --get user.name || true)
@@ -100,6 +114,11 @@ ${BOLD}Next${NC}
   1. Read ${BLUE}README.md${NC}         ${DIM}what we're building${NC}
   2. Read ${BLUE}CONTRIBUTING.md${NC}   ${DIM}how we work${NC}
   3. Read ${BLUE}docs/onboarding.md${NC} ${DIM}your first week${NC}
+
+${BOLD}Where to run things${NC}
+  ${DIM}cd backend  && dotnet build     the .NET solution lives here
+  cd frontend && pnpm install     the pnpm workspace lives here
+  ./scripts/check-design.sh       repo-root scripts work from anywhere${NC}
 
 ${BOLD}Starting a task${NC}
   ${DIM}git checkout main && git pull origin main

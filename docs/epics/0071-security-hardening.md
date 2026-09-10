@@ -287,7 +287,7 @@ A repeatable load test of flight search at expected peak, reported separately fo
 warm cache.
 
 #### Acceptance criteria
-- [ ] A k6 (or NBomber) scenario checked into `tests/load/`, runnable locally against Docker
+- [ ] A k6 (or NBomber) scenario checked into `backend/tests/load/`, runnable locally against Docker
       Compose — a load test nobody can re-run is a one-off anecdote
 - [ ] Two runs reported separately: **cold** (every request reaches the supplier stub) and
       **warm** (the cache is doing its job)

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+
+    <!-- The `dotnet ef` tooling requires this on the *startup* project, not just on the one
+         holding the DbContext. Design-time only — PrivateAssets keeps it out of the published
+         output. See ./scripts/ef.sh -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TripsAgent.Infrastructure\TripsAgent.Infrastructure.csproj" />
+    <ProjectReference Include="..\TripsAgent.Documents\TripsAgent.Documents.csproj" />
+    <ProjectReference Include="..\TripsAgent.Integrations.TripsAfrica\TripsAgent.Integrations.TripsAfrica.csproj" />
+    <ProjectReference Include="..\TripsAgent.Integrations.Paystack\TripsAgent.Integrations.Paystack.csproj" />
+  </ItemGroup>
+
+</Project>

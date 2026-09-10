@@ -20,9 +20,9 @@ public interface IMessageBus
     /// Use this for events: past tense, a statement of fact, no expectation of a reply.
     /// </summary>
     /// <typeparam name="TEvent">The event type. Its name is what the broker routes on.</typeparam>
-    /// <param name="event">The event. Must be a class or record — a struct will not serialise.</param>
+    /// <param name="message">The event. Must be a class or record — a struct will not serialise.</param>
     /// <param name="cancellationToken">Cancels the publish, not the work the event triggers.</param>
-    Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default)
+    public Task PublishAsync<TEvent>(TEvent message, CancellationToken cancellationToken = default)
         where TEvent : class;
 
     /// <summary>
@@ -36,7 +36,7 @@ public interface IMessageBus
     /// <param name="command">The command. Must be a class or record.</param>
     /// <param name="queue">Which queue does the work. Pick one from <see cref="MessageQueue"/>.</param>
     /// <param name="cancellationToken">Cancels the send, not the work the command triggers.</param>
-    Task SendAsync<TCommand>(
+    public Task SendAsync<TCommand>(
         TCommand command,
         MessageQueue queue,
         CancellationToken cancellationToken = default)

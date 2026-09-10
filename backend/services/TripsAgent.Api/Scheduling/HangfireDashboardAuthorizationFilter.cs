@@ -10,7 +10,7 @@ namespace TripsAgent.Api.Scheduling;
 /// two facts the policy needs out of the live request.
 /// </summary>
 /// <param name="policy">The rule to apply.</param>
-public sealed class HangfireDashboardAuthorizationFilter(HangfireDashboardPolicy policy)
+internal sealed class HangfireDashboardAuthorizationFilter(HangfireDashboardPolicy policy)
     : IDashboardAuthorizationFilter
 {
     /// <inheritdoc />

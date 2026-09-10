@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace TripsAgent.Application.Messaging;
 
 /// <summary>
@@ -13,6 +15,12 @@ namespace TripsAgent.Application.Messaging;
 /// what a developer sees in the RabbitMQ management UI at http://localhost:15672. Keeping the two
 /// together means the code and the console agree.
 /// </summary>
+[SuppressMessage(
+    "Naming",
+    "CA1711:Identifiers should not have incorrect suffix",
+    Justification = "CA1711 reserves 'Queue' for collection types. This is the name of a RabbitMQ "
+                    + "queue, which is the domain word everyone uses — renaming it to dodge the rule "
+                    + "would make the code disagree with the broker's own UI.")]
 public sealed class MessageQueue
 {
     private MessageQueue(string name)

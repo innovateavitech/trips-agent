@@ -17,12 +17,12 @@ public sealed class MassTransitMessageBus(
     ISendEndpointProvider sendEndpointProvider) : IMessageBus
 {
     /// <inheritdoc />
-    public Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default)
+    public Task PublishAsync<TEvent>(TEvent message, CancellationToken cancellationToken = default)
         where TEvent : class
     {
-        ArgumentNullException.ThrowIfNull(@event);
+        ArgumentNullException.ThrowIfNull(message);
 
-        return publishEndpoint.Publish(@event, cancellationToken);
+        return publishEndpoint.Publish(message, cancellationToken);
     }
 
     /// <inheritdoc />

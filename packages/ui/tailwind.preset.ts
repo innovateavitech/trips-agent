@@ -61,18 +61,26 @@ export const preset = {
       destructive: {
         DEFAULT: 'hsl(var(--destructive))',
         foreground: 'hsl(var(--destructive-foreground))',
+        subtle: 'hsl(var(--destructive-subtle))',
+        'subtle-foreground': 'hsl(var(--destructive-subtle-foreground))',
       },
       success: {
         DEFAULT: 'hsl(var(--success))',
         foreground: 'hsl(var(--success-foreground))',
+        subtle: 'hsl(var(--success-subtle))',
+        'subtle-foreground': 'hsl(var(--success-subtle-foreground))',
       },
       warning: {
         DEFAULT: 'hsl(var(--warning))',
         foreground: 'hsl(var(--warning-foreground))',
+        subtle: 'hsl(var(--warning-subtle))',
+        'subtle-foreground': 'hsl(var(--warning-subtle-foreground))',
       },
       info: {
         DEFAULT: 'hsl(var(--info))',
         foreground: 'hsl(var(--info-foreground))',
+        subtle: 'hsl(var(--info-subtle))',
+        'subtle-foreground': 'hsl(var(--info-subtle-foreground))',
       },
     },
 

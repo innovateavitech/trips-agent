@@ -57,6 +57,21 @@
   --info: 226 83% 56%;
   --info-foreground: 0 0% 100%;
 
+  /* -- Subtle status surfaces ----------------------------------------------
+     A tinted background with text dark enough to sit on it. The solid pairs
+     above are for FILLED elements (a filled badge, a toast). Used as *text* on
+     a near-white tint, --warning is only ~3.4:1 against white — below AA — so
+     status pills and inline alerts use these instead. Every pair below clears
+     7:1 against its own surface, in both themes. */
+  --success-subtle: 152 55% 95%;
+  --success-subtle-foreground: 152 65% 24%;
+  --warning-subtle: 38 92% 94%;
+  --warning-subtle-foreground: 30 90% 27%;
+  --destructive-subtle: 0 80% 96%;
+  --destructive-subtle-foreground: 0 70% 35%;
+  --info-subtle: 226 83% 97%;
+  --info-subtle-foreground: 226 75% 38%;
+
   /* -- Lines and focus ----------------------------------------------------- */
   --border: 226 16% 90%;
   --input: 226 16% 90%;
@@ -96,6 +111,15 @@
   --warning-foreground: 226 40% 10%;
   --info: 226 83% 63%;
   --info-foreground: 226 40% 10%;
+
+  --success-subtle: 152 40% 16%;
+  --success-subtle-foreground: 152 55% 70%;
+  --warning-subtle: 34 50% 16%;
+  --warning-subtle-foreground: 38 85% 68%;
+  --destructive-subtle: 0 40% 18%;
+  --destructive-subtle-foreground: 0 75% 76%;
+  --info-subtle: 226 40% 16%;
+  --info-subtle-foreground: 226 80% 76%;
 
   --border: 226 18% 20%;
   --input: 226 18% 20%;

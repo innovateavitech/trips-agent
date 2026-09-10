@@ -19,6 +19,12 @@ if (DatabaseMigrator.IsMigrationCommand(args))
     return await DatabaseMigrator.RunAsync(app.Services);
 }
 
+// `dotnet run --project services/TripsAgent.Api -- seed` loads the development dataset.
+if (DatabaseSeeder.IsSeedCommand(args))
+{
+    return await DatabaseSeeder.RunAsync(app.Services);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

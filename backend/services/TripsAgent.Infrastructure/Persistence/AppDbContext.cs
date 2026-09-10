@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Domain.Common;
+using TripsAgent.Domain.Tenancy;
 
 namespace TripsAgent.Infrastructure.Persistence;
 
@@ -29,6 +30,15 @@ public class AppDbContext : DbContext
     {
         _clock = clock;
     }
+
+    /// <summary>Travel businesses — the tenant every other business row belongs to.</summary>
+    public DbSet<Agency> Agencies => Set<Agency>();
+
+    /// <summary>Per-agency operational preferences. One row per agency.</summary>
+    public DbSet<AgencySettings> AgencySettings => Set<AgencySettings>();
+
+    /// <summary>Per-agency logo, colours and contact details. One row per agency.</summary>
+    public DbSet<AgencyBranding> AgencyBranding => Set<AgencyBranding>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

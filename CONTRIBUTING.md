@@ -133,8 +133,9 @@ Fixed the bug where...    ← no type, wrong tense, too long
 ### The rules
 
 - **Type** must be one of: `feat` `fix` `docs` `refactor` `test` `chore` `perf` `build` `ci`
-- **Scope** is the area you touched: `auth` `wallet` `supplier` `catalog` `storefront` `admin`
-  `crm` `ui` `db` `deps`
+- **Scope** is the area you touched, roughly matching the `module:` labels on issues:
+  `auth` `tenancy` `wallet` `payments` `pricing` `supplier` `orders` `catalog` `storefront`
+  `crm` `admin` `docs` `ui` `db` `deps` `ci`
 - **Subject** is lowercase, present tense ("add", not "added"), no full stop, under 72 characters
 - Write what the change *does*, not what you did
 

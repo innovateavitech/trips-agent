@@ -45,9 +45,17 @@ gh issue list
 # safe for your first few
 gh issue list --label good-first-issue
 
+# one module — issues are titled "Module: What it is" and carry a module: label
+gh issue list --label "module:wallet-ledger"
+gh issue list --label "module:flight-bus-booking"
+
 # just Milestone 1
 gh issue list --milestone "M1 — Tenanted spine + live ticketing"
 ```
+
+Issues are grouped by **module** in [docs/BACKLOG.md](BACKLOG.md) — 22 of them, from
+`Platform Foundation` through to `Security`. Working inside one module for a few issues in a row
+is usually faster than hopping between them, because the context carries over.
 
 **Check two things before you claim it:**
 

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Hangfire;
 using TripsAgent.Api.Scheduling;
 using TripsAgent.Infrastructure;
+using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Scheduling;
@@ -33,6 +34,13 @@ var app = builder.Build();
 if (DatabaseMigrator.IsMigrationCommand(args))
 {
     return await DatabaseMigrator.RunAsync(app.Services);
+}
+
+// `dotnet run --project services/TripsAgent.Api -- audit-maintenance` prepares the coming months'
+// audit partitions and drops the expired ones, then exits. See AuditLogMaintenanceCommand.
+if (AuditLogMaintenanceCommand.IsMaintenanceCommand(args))
+{
+    return await AuditLogMaintenanceCommand.RunAsync(app.Services);
 }
 
 if (app.Environment.IsDevelopment())

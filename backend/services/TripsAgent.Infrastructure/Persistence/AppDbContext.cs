@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using TripsAgent.Application.Auditing;
+using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
 
 namespace TripsAgent.Infrastructure.Persistence;
@@ -23,12 +25,40 @@ namespace TripsAgent.Infrastructure.Persistence;
 public class AppDbContext : DbContext
 {
     private readonly TimeProvider _clock;
+    private readonly IAuditContext? _auditContext;
 
-    public AppDbContext(DbContextOptions<AppDbContext> options, TimeProvider clock)
+    /// <param name="options">Provider and connection.</param>
+    /// <param name="clock">Source of every timestamp this context stamps.</param>
+    /// <param name="auditContext">
+    /// The current actor, which the audit log's query filter reads. Optional so that tooling and
+    /// tests which construct a context by hand keep working; the application always supplies it
+    /// through dependency injection. Without one, the context behaves as a platform-wide caller.
+    /// </param>
+    public AppDbContext(
+        DbContextOptions<AppDbContext> options,
+        TimeProvider clock,
+        IAuditContext? auditContext = null)
         : base(options)
     {
         _clock = clock;
+        _auditContext = auditContext;
     }
+
+    /// <summary>
+    /// The platform audit trail. Append-only — the database rejects updates and deletes — so this
+    /// set is for reading and for the interceptor that writes it, and nothing else.
+    /// </summary>
+    public DbSet<AuditLogEntry> AuditLogs => Set<AuditLogEntry>();
+
+    /// <summary>
+    /// The agency whose audit rows the caller may see, or null for a platform-wide caller.
+    /// </summary>
+    /// <remarks>
+    /// Read by the query filter below. It has to be an instance member of the context for EF to
+    /// re-read it per instance; a captured local would be baked into the cached model, and every
+    /// later request would be filtered by whoever happened to make the first one.
+    /// </remarks>
+    private Guid? CurrentAgencyId => _auditContext?.AgencyId;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,6 +72,16 @@ public class AppDbContext : DbContext
         modelBuilder.HasPostgresExtension("ltree");
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        // An agency sees its own audit trail and nothing else. Platform-wide rows carry no
+        // agency_id and are visible only to a caller with no agency of their own — a Trips
+        // back-office user or a background job.
+        //
+        // This is the audit log's own filter, not the tenancy mechanism. ITenantContext and the
+        // ITenantOwnedEntity filters are #11; when they land, the agency here should come from
+        // there rather than from IAuditContext.
+        modelBuilder.Entity<AuditLogEntry>()
+            .HasQueryFilter(entry => CurrentAgencyId == null || entry.AgencyId == CurrentAgencyId);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

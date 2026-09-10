@@ -6,29 +6,30 @@
 # permanently change the database gets reviewed by the team lead. Everything else can
 # be reviewed by any teammate.
 #
-# TODO: replace @innovateavitech/leads and @sayrikey with real GitHub handles/teams.
+# As developers join, add them to the default rule below so ordinary changes can be
+# reviewed by anyone, and the lead stays on the money-path and schema rules only.
 
-# Default — any teammate can review
-*                                           @innovateavitech/team
+# Default — currently the lead; widen this as the team grows
+*                                                 @Sayrikey1
 
 # --- Money. Mistakes here cost real cash. -----------------------------------
-/services/TripsAgent.Domain/Payments/        @sayrikey
-/services/TripsAgent.Domain/Pricing/         @sayrikey
-/services/TripsAgent.Integrations.Paystack/  @sayrikey
+/services/TripsAgent.Domain/Payments/             @Sayrikey1
+/services/TripsAgent.Domain/Pricing/              @Sayrikey1
+/services/TripsAgent.Integrations.Paystack/       @Sayrikey1
 
 # --- Supplier integration. Mistakes here issue or lose real tickets. --------
-/services/TripsAgent.Integrations.TripsAfrica/  @sayrikey
+/services/TripsAgent.Integrations.TripsAfrica/    @Sayrikey1
 
 # --- Database. Migrations are hard to undo in production. -------------------
-/db/                                        @sayrikey
-/services/TripsAgent.Infrastructure/Persistence/  @sayrikey
+/db/                                              @Sayrikey1
+/services/TripsAgent.Infrastructure/Persistence/  @Sayrikey1
 
 # --- Tenancy. A mistake here leaks one agency's data to another. -----------
-/services/TripsAgent.Infrastructure/Tenancy/  @sayrikey
+/services/TripsAgent.Infrastructure/Tenancy/      @Sayrikey1
 
 # --- Process, security and infrastructure ----------------------------------
-/.github/                                   @sayrikey
-/infra/                                     @sayrikey
-/CONTRIBUTING.md                            @sayrikey
-/README.md                                  @sayrikey
-/docs/adr/                                  @sayrikey
+/.github/                                         @Sayrikey1
+/infra/                                           @Sayrikey1
+/CONTRIBUTING.md                                  @Sayrikey1
+/README.md                                        @Sayrikey1
+/docs/adr/                                        @Sayrikey1

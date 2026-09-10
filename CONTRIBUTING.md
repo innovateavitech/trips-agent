@@ -153,6 +153,10 @@ tells you what happened and why.
 
 This is the loop you will run dozens of times. Learn it once.
 
+> Using Claude Code to write the change? [`docs/WORKING_WITH_CLAUDE.md`](docs/WORKING_WITH_CLAUDE.md)
+> covers the same loop with the AI steps included — how to brief it, and how to review what it
+> produces before you put your name on it.
+
 ### Step 1 — Start fresh
 
 ```bash

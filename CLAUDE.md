@@ -199,6 +199,7 @@ Full glossary: [README.md §3](README.md#3-glossary--read-this-first)
 |---|---|
 | [README.md](README.md) | The product, personas, glossary, setup, "where do I find X" |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Full git workflow, PR process, recovery from mistakes |
+| [docs/WORKING_WITH_CLAUDE.md](docs/WORKING_WITH_CLAUDE.md) | How developers here work with you: issue → plan → review → PR → reviewer |
 | [docs/ARCHITECTURE_AND_DELIVERY_PLAN.md](docs/ARCHITECTURE_AND_DELIVERY_PLAN.md) | Schema, background jobs, checkout saga, milestones, open questions |
 | [docs/TRIPS_AFRICA_API_NOTES.md](docs/TRIPS_AFRICA_API_NOTES.md) | Supplier endpoints, hash validation, reversal rules |
 | [docs/adr/](docs/adr/) | Why things are the way they are |

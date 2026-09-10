@@ -484,6 +484,10 @@ team lead for keys. **Never commit them.**
 - **We squash-merge.** Your branch history can be as messy as you like; `main` stays clean.
 - **Run `pnpm verify` before you push.** It runs what CI runs.
 
+**Building with Claude Code?** [`docs/WORKING_WITH_CLAUDE.md`](docs/WORKING_WITH_CLAUDE.md) walks
+through the whole loop: pick an issue → brief Claude → review what it wrote → commit → open a PR →
+request a reviewer.
+
 New here? Start with [`docs/onboarding.md`](docs/onboarding.md) and pick up an issue labelled
 `good-first-issue`.
 

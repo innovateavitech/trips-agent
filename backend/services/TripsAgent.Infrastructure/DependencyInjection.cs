@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Auditing;
+using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Persistence;
 
 namespace TripsAgent.Infrastructure;
@@ -43,7 +45,9 @@ public static class DependencyInjection
         // A clock we can replace in tests. Nothing should call DateTimeOffset.UtcNow directly.
         services.TryAddSingletonTimeProvider();
 
-        services.AddDbContext<AppDbContext>(options =>
+        services.AddAuditing(configuration);
+
+        services.AddDbContext<AppDbContext>((serviceProvider, options) =>
         {
             options
                 .UseNpgsql(connectionString, npgsql =>
@@ -57,10 +61,46 @@ public static class DependencyInjection
                         errorCodesToAdd: null);
                 })
                 // users.email is citext, agencies.path is ltree, and every column is snake_case.
-                .UseSnakeCaseNamingConvention();
+                .UseSnakeCaseNamingConvention()
+
+                // Resolved from the scoped provider so the interceptor sees the actor for *this*
+                // request. A singleton would freeze whoever made the first request into every
+                // audit row that followed.
+                .AddInterceptors(serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>());
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// The audit trail: the ambient actor, the redaction policy, the interceptor that turns a save
+    /// into a record of who changed what, and the partition maintenance job.
+    /// </summary>
+    private static void AddAuditing(this IServiceCollection services, IConfiguration configuration)
+    {
+        var section = configuration.GetSection(AuditLogOptions.SectionName);
+
+        // Bound, then validated. A zero in configuration must reach the check below and fail it —
+        // not be skipped over in favour of the default, which would quietly keep data for seven
+        // years that someone had configured to keep for none.
+        services.AddOptions<AuditLogOptions>()
+            .Configure(options => section.Bind(options))
+            .Validate(
+                options => options.RetentionMonths >= 1 && options.PartitionsCreatedAhead >= 1,
+                "AuditLog:RetentionMonths and AuditLog:PartitionsCreatedAhead must both be at least 1. "
+                + "A retention of zero would drop the month still being written to.");
+
+        // Stateless once built, so one instance serves every request.
+        services.AddSingleton<AuditRedactionPolicy>();
+
+        // One actor per request or job run. AuditContext is registered as itself as well, so the
+        // edge — authentication middleware, a job host — can populate what IAuditContext only
+        // exposes for reading.
+        services.AddScoped<AuditContext>();
+        services.AddScoped<IAuditContext>(provider => provider.GetRequiredService<AuditContext>());
+
+        services.AddScoped<AuditSaveChangesInterceptor>();
+        services.AddScoped<IAuditLogMaintenance, AuditLogPartitionMaintenance>();
     }
 
     private static void TryAddSingletonTimeProvider(this IServiceCollection services)

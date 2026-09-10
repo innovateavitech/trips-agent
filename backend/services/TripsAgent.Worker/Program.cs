@@ -1,4 +1,6 @@
+using Hangfire;
 using TripsAgent.Infrastructure;
+using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Scheduling;
 
@@ -37,4 +39,11 @@ builder.Services.Configure<HostOptions>(host =>
 });
 
 var host = builder.Build();
+
+// Recurring jobs are registered here, in the one process that runs them. AddOrUpdate is idempotent,
+// so this is safe on every start: a redeploy updates a schedule in place rather than duplicating it.
+// Resolving the manager connects to PostgreSQL; if that fails the Worker stops, and the orchestrator
+// restarts it — the same fail-fast rule the consumers and the job server follow.
+AuditLogMaintenanceSchedule.Register(host.Services.GetRequiredService<IRecurringJobManager>());
+
 await host.RunAsync();

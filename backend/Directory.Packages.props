@@ -36,6 +36,12 @@
     <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
   </ItemGroup>
 
+  <ItemGroup Label="Authentication">
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.22.0" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Email">
     <!-- Plain SMTP, so it talks to Mailpit locally and to any SMTP relay in production without
          tying us to a cloud provider's SDK (CLAUDE.md: "Cloud is not chosen yet"). -->

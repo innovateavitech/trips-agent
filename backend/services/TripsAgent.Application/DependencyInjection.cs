@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
 
 namespace TripsAgent.Application;
@@ -15,6 +16,11 @@ public static class DependencyInjection
         services.AddScoped<RegisterAgentHandler>();
         services.AddScoped<VerifyEmailHandler>();
         services.AddScoped<ResendVerificationHandler>();
+
+        services.AddScoped<TokenPairFactory>();
+        services.AddScoped<LoginHandler>();
+        services.AddScoped<RefreshTokenHandler>();
+        services.AddScoped<LogoutHandler>();
 
         return services;
     }

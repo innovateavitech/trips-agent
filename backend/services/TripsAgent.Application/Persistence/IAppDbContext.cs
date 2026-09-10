@@ -35,5 +35,10 @@ public interface IAppDbContext
 
     public DbSet<OtpCode> OtpCodes { get; }
 
+    public DbSet<RefreshToken> RefreshTokens { get; }
+
+    /// <summary>The audit trail behind the lockout rule.</summary>
+    public DbSet<LoginAttempt> LoginAttempts { get; }
+
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -19,6 +19,12 @@ namespace TripsAgent.Domain.Identity;
 /// </remarks>
 public sealed class RefreshToken : Entity, IAuditableEntity
 {
+    /// <summary>
+    /// How long a refresh token stays valid. Long, because it is what keeps somebody signed in;
+    /// safe to be long, because it is single-use, revocable, and its reuse is detectable.
+    /// </summary>
+    public static readonly TimeSpan Lifetime = TimeSpan.FromDays(30);
+
     private RefreshToken() => TokenHash = string.Empty;
 
     public static RefreshToken Issue(Guid userId, string tokenHash, DateTimeOffset expiresAt, string? createdByIp = null) =>

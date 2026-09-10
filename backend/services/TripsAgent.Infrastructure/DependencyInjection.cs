@@ -68,6 +68,11 @@ public static class DependencyInjection
 
         services.AddSingleton<IEmailSender>(_ => new SmtpEmailSender(ReadSmtpOptions(configuration)));
 
+        services.AddSingleton(ReadJwtOptions(configuration));
+        services.AddSingleton<IAccessTokenIssuer>(sp => new JwtAccessTokenIssuer(
+            sp.GetRequiredService<JwtOptions>(),
+            sp.GetRequiredService<TimeProvider>()));
+
         services.AddDbContext<AppDbContext>(options =>
         {
             // The tenant write guard is not registered here: AppDbContext installs it in
@@ -126,6 +131,29 @@ public static class DependencyInjection
         {
             throw new InvalidOperationException($"{TokenHashKeySetting} is not valid base64.", ex);
         }
+    }
+
+    /// <summary>
+    /// Reads the JWT settings. Public because the API needs the same values to <i>validate</i>
+    /// tokens that this assembly uses to <i>issue</i> them — two readers of one section, never
+    /// two copies of the defaults.
+    /// </summary>
+    public static JwtOptions ReadJwtOptions(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var jwt = configuration.GetSection("Jwt");
+
+        return new JwtOptions
+        {
+            Issuer = jwt["Issuer"] ?? "https://tripsagent.local",
+            Audience = jwt["Audience"] ?? "trips-agent-api",
+            SigningKey = jwt["SigningKey"] ?? string.Empty,
+            AccessTokenLifetime = int.TryParse(
+                jwt["AccessTokenMinutes"], System.Globalization.CultureInfo.InvariantCulture, out var minutes)
+                ? TimeSpan.FromMinutes(minutes)
+                : TimeSpan.FromMinutes(15),
+        };
     }
 
     private static SmtpOptions ReadSmtpOptions(IConfiguration configuration)

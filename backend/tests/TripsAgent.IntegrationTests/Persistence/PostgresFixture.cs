@@ -69,7 +69,13 @@ public sealed class PostgresFixture : IAsyncLifetime
         // FORCE killed those connections server-side, but the pool on this side still holds
         // them as idle and would hand one straight to the next context, which then fails with
         // "terminating connection due to administrator command". Discard them.
-        var target = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString) { Database = databaseName };
+        var target = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString)
+        {
+            Database = databaseName,
+            Pooling = false,
+            Timeout = 60,
+            CommandTimeout = 60,
+        };
         using (var stale = new Npgsql.NpgsqlConnection(target.ConnectionString))
         {
             Npgsql.NpgsqlConnection.ClearPool(stale);
@@ -96,6 +102,20 @@ public sealed class PostgresFixture : IAsyncLifetime
         var builder = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString)
         {
             Database = databaseName,
+
+            // Pooling off for test connections. Every test gets its own database, and Npgsql
+            // keeps a pool per connection string for the life of the process — so pools from
+            // finished tests sit on idle connections until the server runs out of them, and the
+            // suite starts failing with "sorry, too many clients already" as it grows. Capping
+            // the pool size only moves the ceiling; not pooling at all removes it.
+            Pooling = false,
+
+            // The cost of not pooling is a fresh TCP connection per operation, and against a
+            // container under load from the whole suite the default 15-second timeouts are
+            // occasionally not enough — which showed up as a rare transient failure rather than
+            // a consistent one. Generous here; production keeps the defaults.
+            Timeout = 60,
+            CommandTimeout = 60,
         };
 
         var options = new DbContextOptionsBuilder<AppDbContext>()

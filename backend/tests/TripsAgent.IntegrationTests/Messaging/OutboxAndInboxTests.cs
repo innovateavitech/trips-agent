@@ -18,8 +18,11 @@ internal sealed record SampleWalletCredited(Guid WalletId, long AmountMinor);
 /// <summary>
 /// Issue #30's acceptance criteria, proven against a real PostgreSQL and a fake broker.
 ///
-/// Every test uses its own database (see <see cref="MessagingDatabase.MigratedAsync"/>), so tests
-/// never collide with each other or depend on the order they run in.
+/// Every test uses its own database (see <see cref="MigratedAsync"/>), so tests never collide
+/// with each other or depend on the order they run in. None of them resolve a tenant — the
+/// outbox and inbox are platform-wide, not agency-scoped — so every context here is the
+/// no-tenant one <see cref="PostgresFixture"/> defaults to, the same shape a background job or a
+/// migration runs under.
 /// </summary>
 [Collection(PostgresCollection.Name)]
 public sealed class OutboxAndInboxTests(PostgresFixture postgres)
@@ -33,6 +36,24 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
         OutboxOptions? options = null)
         => new(context, bus, Options.Create(options ?? new OutboxOptions()), clock, NullLogger<OutboxDispatcher>.Instance);
 
+    /// <summary>
+    /// A database identifier PostgreSQL will accept: lower-case, and within its 63-byte limit.
+    /// Test method names here run well past that, so this is not optional truncation.
+    /// </summary>
+    private static string NameFor(string testName)
+    {
+        var name = testName.ToLowerInvariant();
+        return name[..Math.Min(name.Length, 60)];
+    }
+
+    /// <summary>A fresh, empty, migrated database — no tenant, exactly like a background job sees one.</summary>
+    private static async Task<AppDbContext> MigratedAsync(PostgresFixture fixture, string databaseName)
+    {
+        var context = await fixture.CreateEmptyDatabaseAsync(databaseName);
+        await context.Database.MigrateAsync();
+        return context;
+    }
+
     // =====================================================================================
     //  AC: outbox_messages written inside the business transaction
     // =====================================================================================
@@ -40,13 +61,14 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     [Fact]
     public async Task Enqueue_and_SaveChanges_should_commit_the_row()
     {
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(Enqueue_and_SaveChanges_should_commit_the_row));
+        var databaseName = NameFor(nameof(Enqueue_and_SaveChanges_should_commit_the_row));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var writer = new OutboxWriter(context, new MutableTimeProvider(Now));
 
         writer.Enqueue(new SampleAgencyVerified(Guid.CreateVersion7(), "Test Ltd"));
         await context.SaveChangesAsync();
 
-        await using var verify = MessagingDatabase.As(context, TimeProvider.System);
+        await using var verify = postgres.Connect(databaseName);
         (await verify.OutboxMessages.CountAsync()).Should().Be(1);
     }
 
@@ -55,7 +77,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     {
         // The whole point of IOutboxWriter: the row lives or dies with whatever else was in the
         // same unit of work. Proved directly, by rolling one back, rather than by inference.
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(A_rolled_back_transaction_should_take_the_outbox_row_with_it));
+        var databaseName = NameFor(nameof(A_rolled_back_transaction_should_take_the_outbox_row_with_it));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var writer = new OutboxWriter(context, new MutableTimeProvider(Now));
 
         await using (var transaction = await context.Database.BeginTransactionAsync())
@@ -66,7 +89,7 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
             await transaction.RollbackAsync();
         }
 
-        await using var verify = MessagingDatabase.As(context, TimeProvider.System);
+        await using var verify = postgres.Connect(databaseName);
         (await verify.OutboxMessages.CountAsync()).Should().Be(0);
     }
 
@@ -75,7 +98,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     {
         // Simulates a real handler: mutate something else, stage an event, save once. Both rows
         // reach the database together because they were always one SaveChanges call, not two.
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(Enqueue_should_stage_onto_the_same_context_as_an_unrelated_change_in_one_commit));
+        var databaseName = NameFor(nameof(Enqueue_should_stage_onto_the_same_context_as_an_unrelated_change_in_one_commit));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var writer = new OutboxWriter(context, new MutableTimeProvider(Now));
 
         var other = InboxMessageForTest(Guid.CreateVersion7());
@@ -84,7 +108,7 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
 
         await context.SaveChangesAsync();
 
-        await using var verify = MessagingDatabase.As(context, TimeProvider.System);
+        await using var verify = postgres.Connect(databaseName);
         (await verify.OutboxMessages.CountAsync()).Should().Be(1);
         (await verify.InboxMessages.CountAsync()).Should().Be(1);
     }
@@ -97,20 +121,12 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     [Fact]
     public async Task A_message_committed_but_never_dispatched_should_still_go_out_after_a_restart()
     {
-        var databaseName = nameof(A_message_committed_but_never_dispatched_should_still_go_out_after_a_restart);
+        var databaseName = NameFor(nameof(A_message_committed_but_never_dispatched_should_still_go_out_after_a_restart));
 
         // --- "the process", before it dies -------------------------------------------------
         Guid eventAgencyId;
-        string connectionString;
-        await using (var context = await MessagingDatabase.MigratedAsync(postgres, databaseName))
+        await using (var context = await MigratedAsync(postgres, databaseName))
         {
-            // Captured before the context is disposed, because a real restart reconnects to the
-            // database that is already there — it does not drop and recreate it. Calling
-            // MigratedAsync a second time would do exactly that and fail with "database is being
-            // accessed by other users" the moment Npgsql's connection pool still holds this
-            // context's connection open underneath it.
-            connectionString = context.Database.GetConnectionString()!;
-
             var writer = new OutboxWriter(context, new MutableTimeProvider(Now));
             eventAgencyId = Guid.CreateVersion7();
 
@@ -125,9 +141,10 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
 
         // --- "the process", restarted --------------------------------------------------------
         // A brand new context, a brand new dispatcher, a brand new bus — nothing here is the
-        // same instance as before the "crash". The migration already ran once above; connecting
-        // fresh to the same, still-existing database is the whole point of this half.
-        await using var restarted = MessagingDatabase.Connect(connectionString, new MutableTimeProvider(Now.AddMinutes(5)));
+        // same instance as before the "crash". PostgresFixture.Connect reconnects to the
+        // database that is already there; it does not drop and recreate it — doing that would
+        // destroy the very row this test exists to prove survives a restart.
+        await using var restarted = postgres.Connect(databaseName);
         var bus = new RecordingMessageBus();
         var dispatcher = Dispatcher(restarted, bus, new MutableTimeProvider(Now.AddMinutes(5)));
 
@@ -152,7 +169,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     [Fact]
     public async Task Dispatching_should_deserialise_the_payload_back_to_an_equivalent_object()
     {
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(Dispatching_should_deserialise_the_payload_back_to_an_equivalent_object));
+        var databaseName = NameFor(nameof(Dispatching_should_deserialise_the_payload_back_to_an_equivalent_object));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var writer = new OutboxWriter(context, new MutableTimeProvider(Now));
         var expected = new SampleWalletCredited(Guid.CreateVersion7(), 150_000);
 
@@ -171,7 +189,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     public async Task Dispatching_should_set_the_wire_message_id_to_the_rows_own_id()
     {
         // What lets a consumer hand ConsumeContext.MessageId straight to IInboxDeduplicator.
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(Dispatching_should_set_the_wire_message_id_to_the_rows_own_id));
+        var databaseName = NameFor(nameof(Dispatching_should_set_the_wire_message_id_to_the_rows_own_id));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var writer = new OutboxWriter(context, new MutableTimeProvider(Now));
 
         writer.Enqueue(new SampleAgencyVerified(Guid.CreateVersion7(), "Test Ltd"));
@@ -187,7 +206,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     [Fact]
     public async Task An_already_dispatched_message_should_not_be_dispatched_again()
     {
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(An_already_dispatched_message_should_not_be_dispatched_again));
+        var databaseName = NameFor(nameof(An_already_dispatched_message_should_not_be_dispatched_again));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var writer = new OutboxWriter(context, new MutableTimeProvider(Now));
         writer.Enqueue(new SampleAgencyVerified(Guid.CreateVersion7(), "Test Ltd"));
         await context.SaveChangesAsync();
@@ -208,7 +228,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     [Fact]
     public async Task Pending_messages_should_dispatch_oldest_first()
     {
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(Pending_messages_should_dispatch_oldest_first));
+        var databaseName = NameFor(nameof(Pending_messages_should_dispatch_oldest_first));
+        await using var context = await MigratedAsync(postgres, databaseName);
 
         // Written out of order, oldest OccurredAt last, so the assertion cannot pass by
         // accidentally matching insertion order.
@@ -228,7 +249,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     [Fact]
     public async Task A_dispatch_pass_should_publish_at_most_BatchSize_messages()
     {
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(A_dispatch_pass_should_publish_at_most_BatchSize_messages));
+        var databaseName = NameFor(nameof(A_dispatch_pass_should_publish_at_most_BatchSize_messages));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var writer = new OutboxWriter(context, new MutableTimeProvider(Now));
 
         for (var i = 0; i < 5; i++)
@@ -254,7 +276,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     [Fact]
     public async Task A_failed_publish_should_stay_pending_with_the_attempt_recorded()
     {
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(A_failed_publish_should_stay_pending_with_the_attempt_recorded));
+        var databaseName = NameFor(nameof(A_failed_publish_should_stay_pending_with_the_attempt_recorded));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var writer = new OutboxWriter(context, new MutableTimeProvider(Now));
         writer.Enqueue(new SampleAgencyVerified(Guid.CreateVersion7(), "Test Ltd"));
         await context.SaveChangesAsync();
@@ -276,7 +299,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     [Fact]
     public async Task A_message_still_backing_off_should_not_be_retried_before_its_time()
     {
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(A_message_still_backing_off_should_not_be_retried_before_its_time));
+        var databaseName = NameFor(nameof(A_message_still_backing_off_should_not_be_retried_before_its_time));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var writer = new OutboxWriter(context, new MutableTimeProvider(Now));
         writer.Enqueue(new SampleAgencyVerified(Guid.CreateVersion7(), "Test Ltd"));
         await context.SaveChangesAsync();
@@ -306,7 +330,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     [Fact]
     public async Task A_message_that_exhausts_MaxAttempts_should_stop_being_retried()
     {
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(A_message_that_exhausts_MaxAttempts_should_stop_being_retried));
+        var databaseName = NameFor(nameof(A_message_that_exhausts_MaxAttempts_should_stop_being_retried));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var writer = new OutboxWriter(context, new MutableTimeProvider(Now));
         writer.Enqueue(new SampleAgencyVerified(Guid.CreateVersion7(), "Test Ltd"));
         await context.SaveChangesAsync();
@@ -339,7 +364,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     [Fact]
     public async Task An_unresolvable_message_type_should_fail_that_message_without_stopping_the_batch()
     {
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(An_unresolvable_message_type_should_fail_that_message_without_stopping_the_batch));
+        var databaseName = NameFor(nameof(An_unresolvable_message_type_should_fail_that_message_without_stopping_the_batch));
+        await using var context = await MigratedAsync(postgres, databaseName);
 
         // Simulates a message whose contract assembly is not loaded by this process — a real
         // possibility given the Api and the Worker deploy independently. Written directly,
@@ -371,7 +397,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     [Fact]
     public async Task The_result_should_report_the_backlog_still_waiting_after_the_pass()
     {
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(The_result_should_report_the_backlog_still_waiting_after_the_pass));
+        var databaseName = NameFor(nameof(The_result_should_report_the_backlog_still_waiting_after_the_pass));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var writer = new OutboxWriter(context, new MutableTimeProvider(Now));
 
         for (var i = 0; i < 3; i++)
@@ -397,7 +424,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     [Fact]
     public async Task The_first_delivery_should_be_allowed_to_proceed()
     {
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(The_first_delivery_should_be_allowed_to_proceed));
+        var databaseName = NameFor(nameof(The_first_delivery_should_be_allowed_to_proceed));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var deduplicator = new InboxDeduplicator(context, new MutableTimeProvider(Now));
 
         var isNew = await deduplicator.TryBeginProcessingAsync(Guid.CreateVersion7(), "SomeConsumer");
@@ -408,7 +436,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     [Fact]
     public async Task A_redelivery_to_the_same_consumer_should_be_refused()
     {
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(A_redelivery_to_the_same_consumer_should_be_refused));
+        var databaseName = NameFor(nameof(A_redelivery_to_the_same_consumer_should_be_refused));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var deduplicator = new InboxDeduplicator(context, new MutableTimeProvider(Now));
         var messageId = Guid.CreateVersion7();
 
@@ -423,7 +452,8 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     {
         // Publish/subscribe: several consumers legitimately see the same event. Dedupe is per
         // (message, consumer), not per message alone.
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(The_same_message_should_be_allowed_to_reach_a_different_consumer));
+        var databaseName = NameFor(nameof(The_same_message_should_be_allowed_to_reach_a_different_consumer));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var deduplicator = new InboxDeduplicator(context, new MutableTimeProvider(Now));
         var messageId = Guid.CreateVersion7();
 
@@ -438,12 +468,13 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
     {
         // The scenario ON CONFLICT DO NOTHING exists for: two redeliveries of the same message,
         // handled by two consumer instances at once, both racing to be first.
-        await using var context = await MessagingDatabase.MigratedAsync(postgres, nameof(Concurrent_redeliveries_should_let_exactly_one_through));
+        var databaseName = NameFor(nameof(Concurrent_redeliveries_should_let_exactly_one_through));
+        await using var context = await MigratedAsync(postgres, databaseName);
         var messageId = Guid.CreateVersion7();
 
         var attempts = await Task.WhenAll(Enumerable.Range(0, 8).Select(async _ =>
         {
-            await using var raced = MessagingDatabase.As(context, TimeProvider.System);
+            await using var raced = postgres.Connect(databaseName);
             var deduplicator = new InboxDeduplicator(raced, TimeProvider.System);
             return await deduplicator.TryBeginProcessingAsync(messageId, "IssueTicketConsumer");
         }));
@@ -453,4 +484,12 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
 
     private static TripsAgent.Domain.Messaging.InboxMessage InboxMessageForTest(Guid messageId) =>
         TripsAgent.Domain.Messaging.InboxMessage.Create(messageId, "TestConsumer", Now);
+}
+
+/// <summary>A clock a test can move forward by hand, so a backoff window can be asserted exactly.</summary>
+internal sealed class MutableTimeProvider(DateTimeOffset now) : TimeProvider
+{
+    public DateTimeOffset Now { get; set; } = now;
+
+    public override DateTimeOffset GetUtcNow() => Now;
 }

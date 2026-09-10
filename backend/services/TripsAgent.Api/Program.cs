@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Hangfire;
 using TripsAgent.Api.Scheduling;
+using TripsAgent.Api.Tenancy;
 using TripsAgent.Infrastructure;
 using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Messaging;
@@ -43,10 +44,21 @@ if (AuditLogMaintenanceCommand.IsMaintenanceCommand(args))
     return await AuditLogMaintenanceCommand.RunAsync(app.Services);
 }
 
+// `dotnet run --project services/TripsAgent.Api -- seed` loads the development dataset.
+if (DatabaseSeeder.IsSeedCommand(args))
+{
+    return await DatabaseSeeder.RunAsync(app.Services);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+// Resolves the caller's agency for the rest of the request. Everything that touches the
+// database depends on this having run, so it goes before the endpoints. It will sit after
+// UseAuthentication() once JWT issuance lands in #16.
+app.UseTenantContext();
 
 app.MapHealthChecks("/health");
 

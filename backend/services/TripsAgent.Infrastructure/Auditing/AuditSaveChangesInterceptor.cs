@@ -228,7 +228,7 @@ public sealed class AuditSaveChangesInterceptor(
     /// a platform admin acting on an agency's data produces a row that agency can still see.
     /// </summary>
     private Guid? ResolveAgencyId(EntityEntry<IAuditLogged> entry) =>
-        entry.Entity is ITenantOwnedEntity owned ? owned.AgencyId : auditContext.AgencyId;
+        entry.Entity is ITenantScoped owned ? owned.AgencyId : auditContext.AgencyId;
 
     /// <summary>
     /// The key as text. Composite keys are joined, so any key shape fits one column and the

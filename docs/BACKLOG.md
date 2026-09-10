@@ -66,7 +66,7 @@ that does not exist yet and have to redo it.
 | [Admin Console](#admin-console) | 1 | M3 |
 | [Analytics & Reporting](#analytics-reporting) | 2 | M3 |
 | [Loyalty & Reviews](#loyalty-reviews) | 1 | M3 |
-| [Security](#security) | 1 | M3 |
+| [Security](#security) | 10 | M3 |
 
 ---
 
@@ -76,18 +76,18 @@ Scaffold, CI, database, messaging, assets, audit. Everything else sits on this.
 
 | # | Issue | Depends on | Status |
 |---|---|---|---|
-| [#2](https://github.com/innovateavitech/trips-agent/issues/2) | Docker Compose for local infrastructure 🟢 | — | open |
-| [#3](https://github.com/innovateavitech/trips-agent/issues/3) | Environment variable template (.env.example) 🟢 | — | open |
+| [#2](https://github.com/innovateavitech/trips-agent/issues/2) | Docker Compose for local infrastructure 🟢 | — | ✅ done |
+| [#3](https://github.com/innovateavitech/trips-agent/issues/3) | Environment variable template (.env.example) 🟢 | — | ✅ done |
 | [#4](https://github.com/innovateavitech/trips-agent/issues/4) | .NET solution scaffold with Clean Architecture layers | — | ✅ done |
 | [#5](https://github.com/innovateavitech/trips-agent/issues/5) | Architecture tests enforcing the layering rules | — | ✅ done |
 | [#6](https://github.com/innovateavitech/trips-agent/issues/6) | Frontend workspace scaffold (pnpm + Turborepo) | — | ✅ done |
-| [#7](https://github.com/innovateavitech/trips-agent/issues/7) | CI workflow — build, test, lint | — | open |
-| [#8](https://github.com/innovateavitech/trips-agent/issues/8) | EF Core, Npgsql and the migration pipeline | — | open |
-| [#9](https://github.com/innovateavitech/trips-agent/issues/9) | Roslyn analyser banning decimal/float for money | — | open |
+| [#7](https://github.com/innovateavitech/trips-agent/issues/7) | CI workflow — build, test, lint | — | ✅ done |
+| [#8](https://github.com/innovateavitech/trips-agent/issues/8) | EF Core, Npgsql and the migration pipeline | — | ✅ done |
+| [#9](https://github.com/innovateavitech/trips-agent/issues/9) | Roslyn analyser banning decimal/float for money | — | ✅ done |
 | [#18](https://github.com/innovateavitech/trips-agent/issues/18) | Asset upload pipeline | #10 | open |
-| [#21](https://github.com/innovateavitech/trips-agent/issues/21) | Platform audit log | #8 | open |
+| [#21](https://github.com/innovateavitech/trips-agent/issues/21) | Platform audit log | #8 | ✅ done |
 | [#30](https://github.com/innovateavitech/trips-agent/issues/30) | Transactional outbox and inbox | #8 | open |
-| [#31](https://github.com/innovateavitech/trips-agent/issues/31) | MassTransit, RabbitMQ and Hangfire | #30 | open |
+| [#31](https://github.com/innovateavitech/trips-agent/issues/31) | MassTransit, RabbitMQ and Hangfire | #30 | ✅ done |
 
 ## Multi-Tenancy
 
@@ -132,7 +132,7 @@ The double-entry ledger and the agent wallet it backs.
 | [#23](https://github.com/innovateavitech/trips-agent/issues/23) | Agent wallet | #22 | open |
 | [#26](https://github.com/innovateavitech/trips-agent/issues/26) | Wallet top-up end to end | #25, #23 | open |
 | [#27](https://github.com/innovateavitech/trips-agent/issues/27) | Nightly ledger integrity audit job | #23 | open |
-| [#51](https://github.com/innovateavitech/trips-agent/issues/51) | Wallet and statement screens | #48, #26 | open |
+| [#51](https://github.com/innovateavitech/trips-agent/issues/51) | Wallet and statement screens | #48, #26 | ✅ done |
 
 ## Payments
 
@@ -293,6 +293,15 @@ Hardening, rate limiting, PII handling, load testing.
 | # | Issue | Depends on | Status |
 |---|---|---|---|
 | [#71](https://github.com/innovateavitech/trips-agent/issues/71) | Security hardening and load testing 🧩 | — | open |
+| [#102](https://github.com/innovateavitech/trips-agent/issues/102) | Rate limiting per IP, user and agency | #16 | open |
+| [#103](https://github.com/innovateavitech/trips-agent/issues/103) | RLS enforcement test suite | #12, #7 | open |
+| [#104](https://github.com/innovateavitech/trips-agent/issues/104) | PII encryption at rest for traveller documents | #32, #41 | open |
+| [#105](https://github.com/innovateavitech/trips-agent/issues/105) | Data retention policy and the purge job | #21, #31, #32 | open |
+| [#106](https://github.com/innovateavitech/trips-agent/issues/106) | NDPA erasure as anonymisation 🚫 | #21, #22, #62 | open |
+| [#107](https://github.com/innovateavitech/trips-agent/issues/107) | Security headers, CORS and cookie hardening | #16, #59, #60 | open |
+| [#108](https://github.com/innovateavitech/trips-agent/issues/108) | Dependency and secret scanning in CI | #7 | open |
+| [#109](https://github.com/innovateavitech/trips-agent/issues/109) | Load test the search endpoint, cold and warm cache | #33, #40 | open |
+| [#110](https://github.com/innovateavitech/trips-agent/issues/110) | Penetration test — scope, execution and remediation | #102, #103, #104, #105, #106, #107, #108, #109 | open |
 
 ---
 

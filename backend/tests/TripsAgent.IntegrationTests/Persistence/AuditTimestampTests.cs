@@ -133,7 +133,8 @@ public class AuditTimestampTests
             .ReplaceService<IModelCacheKeyFactory, FreshModelFactory>()
             .Options;
 
-        var context = new AppDbContext(options, clock);
+        var tenancy = TestTenancy.None();
+        var context = new AppDbContext(options, clock, tenancy.Tenant, tenancy.Scope);
 
         await context.Database.ExecuteSqlRawAsync(
             """

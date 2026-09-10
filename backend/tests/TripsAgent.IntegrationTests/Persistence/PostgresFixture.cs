@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
+using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Persistence;
 
 namespace TripsAgent.IntegrationTests.Persistence;
@@ -41,10 +42,11 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// Each test gets its own database rather than its own container: creating a database is
     /// milliseconds, starting PostgreSQL is seconds. Tests stay isolated without the wait.
     /// </remarks>
-    public async Task<AppDbContext> CreateEmptyDatabaseAsync(string databaseName)
+    public async Task<AppDbContext> CreateEmptyDatabaseAsync(
+        string databaseName,
+        ITenantContext? tenantContext = null,
+        IPlatformScope? platformScope = null)
     {
-        var builder = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString);
-
         await using (var admin = new Npgsql.NpgsqlConnection(ConnectionString))
         {
             await admin.OpenAsync();
@@ -52,22 +54,65 @@ public sealed class PostgresFixture : IAsyncLifetime
             // The database name comes from a test method's own [CallerMemberName], never from
             // user input, but it is still an identifier being concatenated into DDL — so quote
             // it properly rather than trusting the caller.
-            var quoted = "\"" + databaseName.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
+            var quoted = Quote(databaseName);
 
+            // WITH (FORCE) terminates any connection still open against the old database.
+            // Npgsql pools connections, so a context disposed moments ago can still be holding
+            // one — and the cases of an xUnit [Theory] share a database name, so the second
+            // case would otherwise fail with "database is being accessed by other users".
             await using var command = admin.CreateCommand();
-            command.CommandText = $"DROP DATABASE IF EXISTS {quoted}; CREATE DATABASE {quoted};";
+            command.CommandText = $"DROP DATABASE IF EXISTS {quoted} WITH (FORCE); CREATE DATABASE {quoted};";
             await command.ExecuteNonQueryAsync();
         }
 
-        builder.Database = databaseName;
+        // FORCE killed those connections server-side, but the pool on this side still holds
+        // them as idle and would hand one straight to the next context, which then fails with
+        // "terminating connection due to administrator command". Discard them.
+        var target = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString) { Database = databaseName };
+        using (var stale = new Npgsql.NpgsqlConnection(target.ConnectionString))
+        {
+            Npgsql.NpgsqlConnection.ClearPool(stale);
+        }
+
+        return Connect(databaseName, tenantContext, platformScope);
+    }
+
+    /// <summary>
+    /// Opens another context against a database that already exists, optionally acting as a
+    /// different tenant.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="CreateEmptyDatabaseAsync"/>, which drops and recreates. Reaching
+    /// for the wrong one silently wipes the rows a test has just set up — the whole test then
+    /// passes or fails for reasons unrelated to what it is checking.
+    /// </remarks>
+    public AppDbContext Connect(
+        string databaseName,
+        ITenantContext? tenantContext = null,
+        IPlatformScope? platformScope = null)
+    {
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString)
+        {
+            Database = databaseName,
+        };
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(builder.ConnectionString)
             .UseSnakeCaseNamingConvention()
             .Options;
 
-        return new AppDbContext(options, TimeProvider.System);
+        // Defaults to no tenant, which is what a migration or a seed run looks like.
+        var fallback = TestTenancy.None();
+
+        return new AppDbContext(
+            options,
+            TimeProvider.System,
+            tenantContext ?? fallback.Tenant,
+            platformScope ?? fallback.Scope);
     }
+
+    private static string Quote(string identifier) =>
+        "\"" + identifier.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
 }
 
 /// <summary>

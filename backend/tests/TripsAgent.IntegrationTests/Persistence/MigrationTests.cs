@@ -97,7 +97,9 @@ public class MigrationTests
             .UseSnakeCaseNamingConvention()
             .Options;
 
-        await using var unreachable = new AppDbContext(options, TimeProvider.System);
+        var tenancy = TestTenancy.None();
+        await using var unreachable = new AppDbContext(
+            options, TimeProvider.System, tenancy.Tenant, tenancy.Scope);
 
         var exitCode = await DatabaseMigrator.RunAsync(BuildServiceProviderFor(unreachable));
 

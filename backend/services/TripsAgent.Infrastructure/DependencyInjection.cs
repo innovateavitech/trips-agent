@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Auditing;
 using TripsAgent.Infrastructure.Auditing;
+using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence;
 
 namespace TripsAgent.Infrastructure;
@@ -68,6 +69,10 @@ public static class DependencyInjection
                 // audit row that followed.
                 .AddInterceptors(serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>());
         });
+
+        // The outbox and the inbox: a handler can stage messages in its own transaction, and a
+        // consumer can deduplicate. Nothing here publishes — that is AddOutboxDispatcher, Worker only.
+        services.AddOutbox(configuration);
 
         return services;
     }

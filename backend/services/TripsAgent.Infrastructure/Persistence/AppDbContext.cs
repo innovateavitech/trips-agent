@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Application.Auditing;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
+using TripsAgent.Infrastructure.Messaging;
 
 namespace TripsAgent.Infrastructure.Persistence;
 
@@ -60,6 +61,12 @@ public class AppDbContext : DbContext
     /// </remarks>
     private Guid? CurrentAgencyId => _auditContext?.AgencyId;
 
+    /// <summary>Messages waiting to be published, and the record of those that were. See <see cref="OutboxMessage"/>.</summary>
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
+    /// <summary>Which consumer has processed which message. See <see cref="InboxMessage"/>.</summary>
+    public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -94,14 +101,58 @@ public class AppDbContext : DbContext
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        CaptureDomainEvents();
         StampTimestamps();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
+        CaptureDomainEvents();
         StampTimestamps();
         return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    /// <summary>
+    /// Moves every domain event raised since the last save into <c>platform.outbox_messages</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the transactional outbox, in one method. The events become rows in the same change
+    /// tracker as the business change, so the single save that follows writes both in one database
+    /// transaction. There is no moment at which the order is saved but its <c>OrderPlaced</c> is not,
+    /// or the other way round. The Worker publishes the rows afterwards — see
+    /// <see cref="OutboxDispatcher"/> and docs/adr/0005-own-the-transactional-outbox.md.
+    /// </para>
+    /// <para>
+    /// Events are pulled off the aggregate as they are captured, so if this save fails and the caller
+    /// saves again on the same context, the already-captured rows are retried with it — not doubled.
+    /// </para>
+    /// </remarks>
+    private void CaptureDomainEvents()
+    {
+        // Materialised first: adding outbox rows while walking the change tracker would change the
+        // collection mid-enumeration.
+        var sources = ChangeTracker.Entries<IHasDomainEvents>()
+            .Select(entry => entry.Entity)
+            .ToList();
+
+        if (sources.Count == 0)
+        {
+            return;
+        }
+
+        var now = _clock.GetUtcNow();
+
+        foreach (var source in sources)
+        {
+            var agencyId = (source as ITenantOwnedEntity)?.AgencyId;
+
+            foreach (var domainEvent in source.PullDomainEvents())
+            {
+                OutboxMessages.Add(OutboxMessage.Create(domainEvent, agencyId, now));
+            }
+        }
     }
 
     /// <summary>

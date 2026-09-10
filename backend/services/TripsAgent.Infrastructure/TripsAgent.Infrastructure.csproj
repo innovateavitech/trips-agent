@@ -11,6 +11,10 @@
     <!-- GetSection(...).Get<T>() lives here, not in Abstractions. -->
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
 
+    <!-- The outbox: its dispatcher is a BackgroundService, and its backlog is a health check. -->
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+
     <!-- Design-time only: IDesignTimeDbContextFactory and the `dotnet ef` tooling. PrivateAssets
          keeps it out of anything that references Infrastructure, so it never ships to production. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />

@@ -62,6 +62,14 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Hosting and health checks">
+    <!-- Infrastructure needs these for the outbox: its dispatcher is a BackgroundService and its
+         backlog is a health check. The Api and the Worker already get both through their SDKs;
+         pinning them keeps every project on the same version as EF Core's own dependencies. -->
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" />
+  </ItemGroup>
+
   <ItemGroup Label="Testing">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />

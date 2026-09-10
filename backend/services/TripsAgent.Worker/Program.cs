@@ -21,6 +21,11 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // sit empty until the checkout saga (issue #35) and the supplier poller (issue #38) arrive.
 builder.Services.AddMessageConsuming(builder.Configuration);
 
+// Publishes platform.outbox_messages to RabbitMQ every Outbox:PollInterval (issue #30), through the
+// bus registered just above. Only the Worker does this: the API writes to the outbox but never
+// dispatches, so scaling the API out never multiplies publishers.
+builder.Services.AddOutboxDispatcher();
+
 builder.Services.AddJobProcessing(builder.Configuration);
 
 // Graceful shutdown, the host half. On SIGTERM — which is what Docker, Kubernetes and systemd all

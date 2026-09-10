@@ -129,6 +129,7 @@ if (hangfireOptions.DashboardEnabled)
 }
 app.MapRegistrationEndpoints();
 app.MapAuthenticationEndpoints();
+app.MapKybEndpoints();
 
 app.MapGet("/", () => Results.Ok(new
 {

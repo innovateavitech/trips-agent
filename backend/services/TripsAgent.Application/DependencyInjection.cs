@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
+using TripsAgent.Application.Tenancy.Kyb;
 
 namespace TripsAgent.Application;
 
@@ -21,6 +22,10 @@ public static class DependencyInjection
         services.AddScoped<LoginHandler>();
         services.AddScoped<RefreshTokenHandler>();
         services.AddScoped<LogoutHandler>();
+
+        services.AddScoped<UploadKybDocumentHandler>();
+        services.AddScoped<SubmitKybHandler>();
+        services.AddScoped<GetKybStatusHandler>();
 
         return services;
     }

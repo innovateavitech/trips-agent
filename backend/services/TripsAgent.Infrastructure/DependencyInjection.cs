@@ -6,12 +6,14 @@ using TripsAgent.Application.Auditing;
 using TripsAgent.Application.Identity;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Persistence;
+using TripsAgent.Application.Storage;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Identity;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Notifications;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Storage;
 using TripsAgent.Infrastructure.Tenancy;
 
 namespace TripsAgent.Infrastructure;
@@ -72,6 +74,14 @@ public static class DependencyInjection
         services.AddSingleton<ITokenHasher>(_ => new HmacTokenHasher(ReadTokenHashKey(configuration)));
 
         services.AddSingleton<IEmailSender>(_ => new SmtpEmailSender(ReadSmtpOptions(configuration)));
+
+        // Files on disk, for local development. MinIO and a cloud adapter arrive with the upload
+        // pipeline (#18) behind this same port; nothing above it knows the difference.
+        services.AddSingleton<IBlobStorage>(_ => new LocalFileBlobStorage(new LocalBlobStorageOptions
+        {
+            RootPath = configuration["Storage:LocalRoot"]
+                ?? Path.Combine(Path.GetTempPath(), "tripsagent-storage"),
+        }));
 
         services.AddSingleton(ReadJwtOptions(configuration));
         services.AddSingleton<IAccessTokenIssuer>(sp => new JwtAccessTokenIssuer(

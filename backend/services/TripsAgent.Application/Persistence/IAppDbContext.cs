@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using TripsAgent.Domain.Identity;
+using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Tenancy;
+using TripsAgent.Domain.Tenancy.Kyb;
 
 namespace TripsAgent.Application.Persistence;
 
@@ -39,6 +41,16 @@ public interface IAppDbContext
 
     /// <summary>The audit trail behind the lockout rule.</summary>
     public DbSet<LoginAttempt> LoginAttempts { get; }
+
+    public DbSet<KybSubmission> KybSubmissions { get; }
+
+    public DbSet<KybDocument> KybDocuments { get; }
+
+    /// <summary>
+    /// Not tenant-scoped: an alert records which agency it is <i>about</i>, and Trips staff read
+    /// the queue across all of them.
+    /// </summary>
+    public DbSet<AdminAlert> AdminAlerts { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

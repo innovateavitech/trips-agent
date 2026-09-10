@@ -7,7 +7,7 @@ using TripsAgent.Infrastructure.Auditing;
 namespace TripsAgent.UnitTests.Auditing;
 
 /// <summary>An agency record that is audited, standing in for the real ones still to come.</summary>
-internal sealed class AuditedAgency : IAuditLogged, ITenantOwnedEntity
+internal sealed class AuditedAgency : IAuditLogged, ITenantScoped
 {
     public Guid Id { get; set; } = Guid.CreateVersion7();
 

@@ -5,8 +5,8 @@ using TripsAgent.Application.Auditing;
 using TripsAgent.Application.Identity;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
-using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Identity;
+using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Tenancy;
 
 namespace TripsAgent.Infrastructure;

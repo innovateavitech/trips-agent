@@ -6,8 +6,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Common;
 using TripsAgent.Infrastructure.Persistence;
-using TripsAgent.Infrastructure.Tenancy;
 using TripsAgent.Infrastructure.Persistence.Conventions;
+using TripsAgent.Infrastructure.Tenancy;
 
 namespace TripsAgent.UnitTests.Persistence;
 

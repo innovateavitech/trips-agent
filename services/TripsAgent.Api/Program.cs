@@ -27,11 +27,12 @@ if (args.Contains("migrate", StringComparer.OrdinalIgnoreCase))
         return;
     }
 
-    // Joined up front rather than inside the logging call: an analyser flags work done in a log
-    // argument, since it happens whether or not the level is enabled. Here it always is — this
-    // command exists to report what it did — so a local keeps both the analyser and the log happy.
+    // Both values are worked out up front rather than inside the logging call. CA1873 fails the
+    // build on anything evaluated in a log argument — even a property read — because it happens
+    // whether or not the level is enabled. Plain locals are free, and read no worse.
+    var pendingCount = pending.Count;
     var pendingNames = string.Join(", ", pending);
-    migrationLogger.LogInformation("Applying {Count} migration(s): {Migrations}", pending.Count, pendingNames);
+    migrationLogger.LogInformation("Applying {Count} migration(s): {Migrations}", pendingCount, pendingNames);
     await database.MigrateAsync();
     migrationLogger.LogInformation("Database is up to date.");
     return;

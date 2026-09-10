@@ -1,0 +1,168 @@
+# =============================================================================
+#  Local infrastructure — everything the platform needs but does not build.
+# =============================================================================
+#
+#    docker compose up -d       start all five
+#    docker compose ps          check health
+#    docker compose logs -f     watch output
+#    docker compose down        stop, keeping your data
+#    docker compose down -v     stop and wipe the databases back to empty
+#
+#  Values come from .env (scripts/setup.sh creates it from .env.example), but
+#  every one has a working default below, so this file starts on a clean clone
+#  before .env exists. The defaults and .env.example deliberately agree — if you
+#  change one, change the other.
+#
+#  Nothing here is safe outside your machine. The credentials are throwaway and
+#  every port is published to localhost.
+#
+# =============================================================================
+
+# Compose normally derives the project name from the directory, which here is
+# "Trips Agent Platform" — spaces and capitals that Compose has to mangle. Naming
+# it explicitly keeps container names stable no matter what the folder is called.
+name: trips-agent
+
+services:
+
+  # ---------------------------------------------------------------------------
+  #  PostgreSQL 16 — the system of record
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: trips-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-trips_agent}
+      POSTGRES_USER: ${POSTGRES_USER:-trips}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trips_local_dev}
+      # Pin collation so an index built on a developer's machine sorts the same
+      # way as one built in CI. Locale drift between Postgres hosts silently
+      # corrupts text indexes.
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # -U and -d matter: without them pg_isready reports the server is up while
+      # initdb is still creating the database, and migrations then race it.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trips} -d ${POSTGRES_DB:-trips_agent}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  #  Redis 7 — supplier search cache, storefront domain lookups
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: trips-redis
+    restart: unless-stopped
+    # Append-only persistence so a restart does not silently empty the cache
+    # mid-debugging and leave you chasing a bug that is really a cold cache.
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+  # ---------------------------------------------------------------------------
+  #  RabbitMQ 3 — MassTransit transport for the checkout saga and workers
+  # ---------------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: trips-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-trips}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-trips_local_dev}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"                      # AMQP
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"         # management UI
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      # RabbitMQ is the slowest of the five to boot. A short start_period here
+      # makes it flap as unhealthy on a cold start for no reason.
+      start_period: 45s
+
+  # ---------------------------------------------------------------------------
+  #  MinIO — S3-compatible object storage behind IBlobStorage
+  # ---------------------------------------------------------------------------
+  #  Cloud is not chosen yet (CLAUDE.md), so blob storage goes through a port and
+  #  MinIO stands in locally for whatever object store we end up on.
+  minio:
+    # MinIO tags releases by date rather than by version, so there is no stable
+    # major to pin to the way there is for postgres:16. Pin a RELEASE.* tag here
+    # once the team picks one — :latest means two developers can be on different
+    # builds without noticing.
+    image: minio/minio:latest
+    container_name: trips-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-trips_local}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-trips_local_dev}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"                         # S3 API
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"                 # web console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  #  Mailpit — catches every outbound email
+  # ---------------------------------------------------------------------------
+  #  Nothing the platform sends can reach a real person from here. Read it all at
+  #  http://localhost:8025.
+  mailpit:
+    # Same pinning caveat as MinIO — pin a version tag when the team picks one.
+    image: axllent/mailpit:latest
+    container_name: trips-mailpit
+    restart: unless-stopped
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: 5000
+      # Accept whatever credentials the app sends. Auth is configured per
+      # environment, and local should not be the one that fails differently.
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    ports:
+      - "${SMTP_PORT:-1025}:1025"                          # SMTP
+      - "${MAILPIT_UI_PORT:-8025}:8025"                    # web UI
+    volumes:
+      - mailpit-data:/data
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+
+# -----------------------------------------------------------------------------
+#  Named volumes — `docker compose down -v` removes all of these.
+# -----------------------------------------------------------------------------
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  minio-data:
+  mailpit-data:

@@ -110,10 +110,9 @@ public static partial class DatabaseSeeder
         // hides the rows it just wrote and the seeder would insert duplicates on every run.
         using var _ = platformScope.Enter("database seeding — writes and verifies rows across agencies");
 
-        // Permissions and system roles are platform data, not sample data: they belong in every
-        // environment, and they are seeded even when the demo agencies already exist.
-        var permissions = await SeedPermissionsAsync(dbContext, cancellationToken);
-        var roles = await SeedSystemRolesAsync(dbContext, permissions, cancellationToken);
+        // Reference data first. `migrate` loads it too; repeating it here keeps `seed` usable on
+        // a database that was migrated before reference data moved out of this class.
+        var (_, roles) = await ReferenceDataSeeder.EnsureAsync(dbContext, platformScope, cancellationToken);
 
         if (await dbContext.Agencies.AnyAsync(a => a.Slug == PrincipalSlug, cancellationToken))
         {
@@ -163,70 +162,6 @@ public static partial class DatabaseSeeder
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return 3;
-    }
-
-    /// <summary>
-    /// Writes any permission in the catalogue that is not in the database yet.
-    /// </summary>
-    /// <remarks>
-    /// Additive rather than replace-all: a permission that has been removed from the code but is
-    /// still granted by somebody's custom role should be revoked deliberately, not vanish under a
-    /// deploy and silently widen or narrow what that role can do.
-    /// </remarks>
-    private static async Task<Dictionary<string, Guid>> SeedPermissionsAsync(
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        var existing = await dbContext.Permissions
-            .ToDictionaryAsync(permission => permission.Code, permission => permission.Id, StringComparer.Ordinal, cancellationToken);
-
-        foreach (var (code, category, description) in PermissionCodes.All)
-        {
-            if (existing.ContainsKey(code))
-            {
-                continue;
-            }
-
-            var permission = Permission.Create(code, category, description);
-            dbContext.Permissions.Add(permission);
-            existing[code] = permission.Id;
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        return existing;
-    }
-
-    /// <summary>Writes the system roles and their permission grants.</summary>
-    private static async Task<Dictionary<string, Guid>> SeedSystemRolesAsync(
-        AppDbContext dbContext,
-        Dictionary<string, Guid> permissions,
-        CancellationToken cancellationToken)
-    {
-        var existing = await dbContext.Roles
-            .Where(role => role.AgencyId == null)
-            .ToDictionaryAsync(role => role.Name, role => role.Id, StringComparer.Ordinal, cancellationToken);
-
-        foreach (var (name, scope, description, grantedCodes) in IdentitySeedData.SystemRoles)
-        {
-            if (existing.ContainsKey(name))
-            {
-                continue;
-            }
-
-            var role = Role.CreateSystemRole(name, scope, description);
-            dbContext.Roles.Add(role);
-            existing[name] = role.Id;
-
-            foreach (var code in grantedCodes)
-            {
-                dbContext.RolePermissions.Add(RolePermission.Create(role.Id, permissions[code]));
-            }
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        return existing;
     }
 
     /// <summary>

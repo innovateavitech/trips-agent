@@ -1,7 +1,13 @@
 using System.Diagnostics;
+using System.Text;
 using Hangfire;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using TripsAgent.Api.Identity;
 using TripsAgent.Api.Scheduling;
 using TripsAgent.Api.Tenancy;
+using TripsAgent.Application;
+using TripsAgent.Application.Identity;
 using TripsAgent.Infrastructure;
 using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Messaging;
@@ -11,6 +17,7 @@ using TripsAgent.Infrastructure.Scheduling;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // The API publishes; it never consumes. Consumers run in TripsAgent.Worker so that the two scale
@@ -24,6 +31,39 @@ builder.Services.AddJobScheduling(builder.Configuration);
 var hangfireOptions =
     builder.Configuration.GetSection(HangfireOptions.SectionName).Get<HangfireOptions>()
     ?? new HangfireOptions();
+// Bearer authentication. The same Jwt section that Infrastructure issues tokens from is read
+// here to validate them, so the two can never disagree about the key or the audience.
+var jwtOptions = TripsAgent.Infrastructure.DependencyInjection.ReadJwtOptions(builder.Configuration);
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtOptions.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(jwtOptions.SigningKeyBytes()),
+            ValidateLifetime = true,
+
+            // No grace period. The default is five minutes, which would keep an expired token
+            // working well past the fifteen-minute window that is the whole point of a short one.
+            ClockSkew = TimeSpan.Zero,
+
+            // Our own claim names, not the SOAP-era URIs .NET maps them to by default.
+            NameClaimType = TripsClaimTypes.Subject,
+            RoleClaimType = TripsClaimTypes.Role,
+        };
+
+        // Leave "sub" as "sub". With the default mapping it silently becomes a long
+        // schemas.xmlsoap.org URI, and the tenant middleware would find no user id.
+        options.MapInboundClaims = false;
+    });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("postgres");
@@ -55,9 +95,11 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-// Resolves the caller's agency for the rest of the request. Everything that touches the
-// database depends on this having run, so it goes before the endpoints. It will sit after
-// UseAuthentication() once JWT issuance lands in #16.
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Resolves the caller's agency for the rest of the request, from the claims the token carries.
+// It has to run after UseAuthentication — before that there is no identity to read.
 app.UseTenantContext();
 
 app.MapHealthChecks("/health");
@@ -82,6 +124,8 @@ if (hangfireOptions.DashboardEnabled)
         DisplayStorageConnectionString = false,
     });
 }
+app.MapRegistrationEndpoints();
+app.MapAuthenticationEndpoints();
 
 app.MapGet("/", () => Results.Ok(new
 {

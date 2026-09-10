@@ -45,7 +45,8 @@ public sealed class PostgresFixture : IAsyncLifetime
     public async Task<AppDbContext> CreateEmptyDatabaseAsync(
         string databaseName,
         ITenantContext? tenantContext = null,
-        IPlatformScope? platformScope = null)
+        IPlatformScope? platformScope = null,
+        TimeProvider? clock = null)
     {
         await using (var admin = new Npgsql.NpgsqlConnection(ConnectionString))
         {
@@ -68,13 +69,19 @@ public sealed class PostgresFixture : IAsyncLifetime
         // FORCE killed those connections server-side, but the pool on this side still holds
         // them as idle and would hand one straight to the next context, which then fails with
         // "terminating connection due to administrator command". Discard them.
-        var target = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString) { Database = databaseName };
+        var target = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString)
+        {
+            Database = databaseName,
+            Pooling = false,
+            Timeout = 60,
+            CommandTimeout = 60,
+        };
         using (var stale = new Npgsql.NpgsqlConnection(target.ConnectionString))
         {
             Npgsql.NpgsqlConnection.ClearPool(stale);
         }
 
-        return Connect(databaseName, tenantContext, platformScope);
+        return Connect(databaseName, tenantContext, platformScope, clock);
     }
 
     /// <summary>
@@ -89,11 +96,26 @@ public sealed class PostgresFixture : IAsyncLifetime
     public AppDbContext Connect(
         string databaseName,
         ITenantContext? tenantContext = null,
-        IPlatformScope? platformScope = null)
+        IPlatformScope? platformScope = null,
+        TimeProvider? clock = null)
     {
         var builder = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString)
         {
             Database = databaseName,
+
+            // Pooling off for test connections. Every test gets its own database, and Npgsql
+            // keeps a pool per connection string for the life of the process — so pools from
+            // finished tests sit on idle connections until the server runs out of them, and the
+            // suite starts failing with "sorry, too many clients already" as it grows. Capping
+            // the pool size only moves the ceiling; not pooling at all removes it.
+            Pooling = false,
+
+            // The cost of not pooling is a fresh TCP connection per operation, and against a
+            // container under load from the whole suite the default 15-second timeouts are
+            // occasionally not enough — which showed up as a rare transient failure rather than
+            // a consistent one. Generous here; production keeps the defaults.
+            Timeout = 60,
+            CommandTimeout = 60,
         };
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -106,7 +128,7 @@ public sealed class PostgresFixture : IAsyncLifetime
 
         return new AppDbContext(
             options,
-            TimeProvider.System,
+            clock ?? TimeProvider.System,
             tenantContext ?? fallback.Tenant,
             platformScope ?? fallback.Scope);
     }

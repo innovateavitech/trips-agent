@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Application.Auditing;
+using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
@@ -27,7 +28,7 @@ namespace TripsAgent.Infrastructure.Persistence;
 /// if that slips.
 /// </para>
 /// </remarks>
-public class AppDbContext : DbContext
+public class AppDbContext : DbContext, IAppDbContext
 {
     private readonly TimeProvider _clock;
     private readonly ITenantContext _tenantContext;

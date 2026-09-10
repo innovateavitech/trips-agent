@@ -9,6 +9,7 @@ using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Identity;
+using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Notifications;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Tenancy;
@@ -103,6 +104,9 @@ public static class DependencyInjection
                 .AddInterceptors(serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>());
         });
 
+        // The outbox and the inbox: a handler can stage messages in its own transaction, and a
+        // consumer can deduplicate. Nothing here publishes — that is AddOutboxDispatcher, Worker only.
+        services.AddOutbox(configuration);
         // Use cases see the database through this port; it is the same scoped context, so the
         // same tenant filters, audit interceptor and write guard all still apply.
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());

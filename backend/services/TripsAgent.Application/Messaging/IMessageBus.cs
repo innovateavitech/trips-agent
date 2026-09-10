@@ -19,6 +19,12 @@ public interface IMessageBus
     ///
     /// Use this for events: past tense, a statement of fact, no expectation of a reply.
     /// </summary>
+    /// <remarks>
+    /// <b>Not transactional.</b> This publishes straight away, whether or not the database change it
+    /// describes ever commits. For anything that follows from saving data — which is nearly
+    /// everything — raise a domain event on the aggregate, or use <see cref="IOutbox"/>, so the
+    /// message goes out only if the change commits. See docs/adr/0005-own-the-transactional-outbox.md.
+    /// </remarks>
     /// <typeparam name="TEvent">The event type. Its name is what the broker routes on.</typeparam>
     /// <param name="message">The event. Must be a class or record — a struct will not serialise.</param>
     /// <param name="cancellationToken">Cancels the publish, not the work the event triggers.</param>

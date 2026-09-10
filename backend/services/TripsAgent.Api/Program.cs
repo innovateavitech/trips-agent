@@ -65,8 +65,11 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+// The outbox check reports Degraded, never Unhealthy, when messages are piling up: restarting the
+// API cannot fix a backlog the Worker or the broker is causing. See OutboxBacklogHealthCheck.
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<AppDbContext>("postgres");
+    .AddDbContextCheck<AppDbContext>("postgres")
+    .AddOutboxBacklogCheck();
 
 var app = builder.Build();
 

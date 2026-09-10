@@ -175,6 +175,10 @@ public static class MessagingRegistration
 
         services.AddScoped<IMessageBus, MassTransitMessageBus>();
 
+        // How the outbox dispatcher (issue #30) reaches the broker. Registered wherever there is a
+        // bus, but only the Worker runs the dispatcher that uses it — see AddOutboxDispatcher.
+        services.AddScoped<IOutboxPublisher, MassTransitOutboxPublisher>();
+
         return services;
     }
 

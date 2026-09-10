@@ -1,10 +1,10 @@
 using System.Diagnostics;
-using Hangfire;
-using TripsAgent.Api.Scheduling;
 using System.Text;
+using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using TripsAgent.Api.Identity;
+using TripsAgent.Api.Scheduling;
 using TripsAgent.Api.Tenancy;
 using TripsAgent.Application;
 using TripsAgent.Application.Identity;

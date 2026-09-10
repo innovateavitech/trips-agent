@@ -27,8 +27,11 @@ if (args.Contains("migrate", StringComparer.OrdinalIgnoreCase))
         return;
     }
 
-    migrationLogger.LogInformation(
-        "Applying {Count} migration(s): {Migrations}", pending.Count, string.Join(", ", pending));
+    // Joined up front rather than inside the logging call: an analyser flags work done in a log
+    // argument, since it happens whether or not the level is enabled. Here it always is — this
+    // command exists to report what it did — so a local keeps both the analyser and the log happy.
+    var pendingNames = string.Join(", ", pending);
+    migrationLogger.LogInformation("Applying {Count} migration(s): {Migrations}", pending.Count, pendingNames);
     await database.MigrateAsync();
     migrationLogger.LogInformation("Database is up to date.");
     return;

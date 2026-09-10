@@ -8,6 +8,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+
+    <!-- The `dotnet ef` tooling requires this on the *startup* project, not just on the one
+         holding the DbContext. Design-time only — PrivateAssets keeps it out of the published
+         output. See ./scripts/ef.sh -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

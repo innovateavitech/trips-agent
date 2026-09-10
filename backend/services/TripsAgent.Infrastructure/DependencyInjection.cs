@@ -1,47 +1,73 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Infrastructure.Persistence;
 
 namespace TripsAgent.Infrastructure;
 
 /// <summary>
-/// Where the Api and the Worker wire up everything Infrastructure provides.
-/// Keeping registration here means neither host has to know that PostgreSQL is behind it.
+/// The one place Infrastructure is wired into the container. The API and the Worker both call
+/// <see cref="AddInfrastructure"/>, so they cannot drift apart in how they talk to the database.
 /// </summary>
 public static class DependencyInjection
 {
-    /// <summary>Name of the connection string in appsettings and in the environment.</summary>
-    public const string ConnectionStringName = "Postgres";
+    /// <summary>The configuration key holding the PostgreSQL connection string.</summary>
+    public const string PostgresConnectionName = "Postgres";
 
-    /// <summary>
-    /// Registers <see cref="AppDbContext"/> against PostgreSQL.
-    /// </summary>
-    /// <param name="services">The host's service collection.</param>
-    /// <param name="connectionString">
-    /// Usually <c>configuration.GetConnectionString("Postgres")</c>.
-    /// </param>
-    public static IServiceCollection AddPersistence(
+    public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        string? connectionString)
+        IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
 
+        var connectionString = configuration.GetConnectionString(PostgresConnectionName);
+
+        // Whitespace, not just null: appsettings.json declares the key with an empty value so
+        // the shape of the configuration is discoverable, and an empty string would otherwise
+        // sail through to Npgsql and fail with something far less helpful than this.
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new InvalidOperationException(
-                $$"""
-                  No '{{ConnectionStringName}}' connection string was found, so the application cannot
-                  reach the database.
+                $"""
+                 No PostgreSQL connection string configured.
 
-                  Set it in one of these, in order of precedence:
-                    ConnectionStrings__{{ConnectionStringName}} as an environment variable
-                    "ConnectionStrings": { "{{ConnectionStringName}}": "..." } in appsettings.Development.json
+                 Add one under ConnectionStrings:{PostgresConnectionName} in appsettings.Development.json,
+                 or set the environment variable ConnectionStrings__{PostgresConnectionName}.
 
-                  Running locally? Start the database first:  docker compose up -d
-                  """);
+                 Local default: Host=localhost;Port=5432;Database=tripsagent;Username=postgres;Password=postgres
+                 Start the database with: docker compose up -d postgres
+                 """);
         }
 
-        services.AddDbContext<AppDbContext>(options => AppDbContextOptions.Configure(options, connectionString));
+        // A clock we can replace in tests. Nothing should call DateTimeOffset.UtcNow directly.
+        services.TryAddSingletonTimeProvider();
+
+        services.AddDbContext<AppDbContext>(options =>
+        {
+            options
+                .UseNpgsql(connectionString, npgsql =>
+                {
+                    npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
+
+                    // Transient network blips are worth a retry; a deadlock is not.
+                    npgsql.EnableRetryOnFailure(
+                        maxRetryCount: 3,
+                        maxRetryDelay: TimeSpan.FromSeconds(5),
+                        errorCodesToAdd: null);
+                })
+                // users.email is citext, agencies.path is ltree, and every column is snake_case.
+                .UseSnakeCaseNamingConvention();
+        });
 
         return services;
+    }
+
+    private static void TryAddSingletonTimeProvider(this IServiceCollection services)
+    {
+        if (services.All(descriptor => descriptor.ServiceType != typeof(TimeProvider)))
+        {
+            services.AddSingleton(TimeProvider.System);
+        }
     }
 }

@@ -21,10 +21,10 @@ business rules have to stay testable without a database.
 
 Two things you mostly do not need to spell out:
 
-|                                               | Handled by                                                           |
-| --------------------------------------------- | -------------------------------------------------------------------- |
-| Table and column names in `snake_case`        | `UseSnakeCaseNamingConvention()`                                     |
-| `*Minor` money properties → `bigint`          | [`MoneyMinorConvention`](../Conventions/MoneyMinorConvention.cs)     |
-| `DateTimeOffset` → `timestamp with time zone` | [`UtcTimestampConvention`](../Conventions/UtcTimestampConvention.cs) |
+|                                                | Handled by                                                    |
+| ---------------------------------------------- | ------------------------------------------------------------- |
+| Table and column names in `snake_case`         | `UseSnakeCaseNamingConvention()`                              |
+| `Money` properties → `bigint` of minor units   | [`MoneyConventions`](../Conventions/MoneyConventions.cs)      |
+| `CreatedAt` / `UpdatedAt` stamped on every save | `AppDbContext.StampTimestamps`, for `IAuditableEntity`        |
 
 A new tenant-scoped table also needs `agency_id` and a global query filter — see CLAUDE.md rule 3.

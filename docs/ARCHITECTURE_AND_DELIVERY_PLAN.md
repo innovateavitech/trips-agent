@@ -530,7 +530,7 @@ Configured as a **GitHub ruleset** on `innovateavitech/trips-agent` targeting `m
 |---|---|
 | `.github/pull_request_template.md` | What changed · why · how to test it · screenshots for UI · linked issue · the DoD checklist as tick-boxes |
 | `.github/ISSUE_TEMPLATE/bug_report.md` · `feature_request.md` · `task.md` | Consistent, well-formed issues |
-| `CODEOWNERS` | Routes reviews automatically — you own `/services/**/Payments/`, `/db/migrations/`, `.github/`, and anything touching the ledger or supplier adapters, so money-path and schema changes always reach you |
+| `CODEOWNERS` | Routes reviews automatically — you own `/backend/services/**/Payments/`, the persistence layer, `.github/`, and anything touching the ledger or supplier adapters, so money-path and schema changes always reach you |
 | `.env.example` | Every variable, with a comment and a safe dummy value. Real secrets never enter the repo |
 | `docs/adr/` | Architecture Decision Records — one short file per significant decision (why Postgres, why Hangfire + MassTransit, why squash-merge). Teaches the team that decisions have reasons and can be revisited |
 | `docs/onboarding.md` | A guided first week: read these three things, run the app, pick a `good-first-issue`, ship it |

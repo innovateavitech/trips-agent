@@ -25,9 +25,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\services\TripsAgent.Domain\TripsAgent.Domain.csproj" />
     <ProjectReference Include="..\..\services\TripsAgent.Application\TripsAgent.Application.csproj" />
-    <!-- The EF conventions live in Infrastructure and need no database to test: they run while
-         the model is built, in memory. Anything needing a real Postgres belongs in
-         TripsAgent.IntegrationTests instead. -->
     <ProjectReference Include="..\..\services\TripsAgent.Infrastructure\TripsAgent.Infrastructure.csproj" />
   </ItemGroup>
 

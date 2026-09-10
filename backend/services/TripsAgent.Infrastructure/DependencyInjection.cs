@@ -35,7 +35,7 @@ public static class DependencyInjection
                  Add one under ConnectionStrings:{PostgresConnectionName} in appsettings.Development.json,
                  or set the environment variable ConnectionStrings__{PostgresConnectionName}.
 
-                 Local default: Host=localhost;Port=5432;Database=tripsagent;Username=postgres;Password=postgres
+                 Local default: {AppDbContextFactory.LocalDevelopmentConnectionString}
                  Start the database with: docker compose up -d postgres
                  """);
         }

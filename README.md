@@ -450,6 +450,24 @@ Commands are listed with the directory they run from. `dotnet` lives in `backend
 | Mailpit *(all outbound email lands here)* | <http://localhost:8025> |
 | RabbitMQ management | <http://localhost:15672> |
 
+**The Hangfire dashboard is off unless you turn it on.** It can requeue, delete and trigger jobs,
+and some of those jobs move money, so it is disabled by default and refuses anyone who is not a
+signed-in `platform-admin`. In Development it also lets through requests from your own machine,
+which is what makes the link above work — `appsettings.Development.json` sets both flags. Never
+set `AllowLocalRequestsWithoutAuthentication` anywhere else: behind a load balancer every request
+looks local, and that flag would publish the dashboard to the internet.
+
+**Jobs and events are different things**, and they run in the same process for different reasons:
+
+| | Handled by | Example |
+|---|---|---|
+| Something happened | MassTransit, over RabbitMQ | payment captured → confirm with the supplier |
+| The clock says so | Hangfire | poll supplier booking status every 30 seconds |
+
+Both live in `TripsAgent.Worker`, which is a **separate process from the API** and scales on queue
+depth rather than request rate. The API can publish messages; it never consumes them.
+See [ADR-0004](docs/adr/0004-masstransit-v8-and-hangfire.md).
+
 ---
 
 ## 9. Test accounts and seed data

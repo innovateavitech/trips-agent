@@ -1,11 +1,27 @@
 using System.Diagnostics;
+using Hangfire;
+using TripsAgent.Api.Scheduling;
 using TripsAgent.Infrastructure;
+using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Scheduling;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// The API publishes; it never consumes. Consumers run in TripsAgent.Worker so that the two scale
+// on different signals — the API on request rate, the Worker on queue depth.
+builder.Services.AddMessagePublishing(builder.Configuration);
+
+// Storage and client only. AddJobProcessing — the part that actually executes jobs — is called by
+// the Worker and must never be called here: every API instance would then race to run the cron.
+builder.Services.AddJobScheduling(builder.Configuration);
+
+var hangfireOptions =
+    builder.Configuration.GetSection(HangfireOptions.SectionName).Get<HangfireOptions>()
+    ?? new HangfireOptions();
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("postgres");
@@ -25,6 +41,27 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapHealthChecks("/health");
+
+// The Hangfire dashboard can requeue, delete and trigger jobs, several of which move money. It is
+// off unless switched on, and even then it is behind HangfireDashboardPolicy — which denies
+// everyone until identity lands in issue #12, apart from local requests in Development.
+if (hangfireOptions.DashboardEnabled)
+{
+    var dashboardPolicy = new HangfireDashboardPolicy(
+        hangfireOptions.DashboardRole,
+        allowUnauthenticatedLocalRequests:
+            hangfireOptions.AllowLocalRequestsWithoutAuthentication && app.Environment.IsDevelopment());
+
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        Authorization = [new HangfireDashboardAuthorizationFilter(dashboardPolicy)],
+
+        // Read-only would be safer, but a dashboard you cannot requeue from is not much use during
+        // an incident. The protection is the authorisation filter above, not this flag.
+        IsReadOnlyFunc = _ => false,
+        DisplayStorageConnectionString = false,
+    });
+}
 
 app.MapGet("/", () => Results.Ok(new
 {

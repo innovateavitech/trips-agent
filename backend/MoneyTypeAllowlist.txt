@@ -1,0 +1,17 @@
+# Money-type allowlist — the only exceptions to analyser TRIPS001 (CLAUDE.md rule 2).
+#
+# TRIPS001 fails the build when a field, property, parameter or local named like money
+# (*Amount, *Price, *Fare, *Balance, *Fee, *Minor) is a decimal, double or float. Money is a
+# long of minor units — kobo — or TripsAgent.Domain.Common.Money. Nothing else.
+#
+# Something belongs here only if it genuinely is not an amount being stored or added up:
+# a display-formatting helper, percentage maths, a deliberately-wrong test fixture.
+# "The analyser is in my way" is not a reason — rename the member, or use a long.
+#
+# Format: one entry per line, and every entry gets a comment saying WHY.
+#   A type allows everything inside it:   TripsAgent.Some.Namespace.TypeName
+#   A member allows just that member:     TripsAgent.Some.Namespace.TypeName.MemberName
+#   Nested types are joined with dots. Whole namespaces are not accepted, on purpose.
+
+# A deliberately-wrong probe entity: proves ModelRules reports a decimal column.
+TripsAgent.UnitTests.Persistence.ModelConventionTests.HasADecimal

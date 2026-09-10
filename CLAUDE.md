@@ -57,7 +57,9 @@ decimal price = 1500.00m;   // ❌ never
 long priceMinor = 150000;   // ✅ ₦1,500.00 in kobo
 ```
 Columns are named `*_minor`. Floating-point money loses kobo, and in a double-entry ledger that
-is unrecoverable.
+is unrecoverable. Analyser `TRIPS001` fails the build on a money-named `decimal`/`double`/`float`;
+the only exceptions live in `backend/MoneyTypeAllowlist.txt`. **Do not add an entry just to make
+the build pass.** Rename the member or use `long`.
 
 ### 3. Never bypass the tenant filter
 Every business table has `agency_id` and EF Core filters it automatically.

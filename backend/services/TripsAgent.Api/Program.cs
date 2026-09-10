@@ -1,11 +1,23 @@
 using System.Diagnostics;
+using TripsAgent.Infrastructure;
+using TripsAgent.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>("postgres");
 
 var app = builder.Build();
+
+// `dotnet run --project services/TripsAgent.Api -- migrate` applies pending migrations and
+// exits, rather than serving traffic. Kept out of startup on purpose: see DatabaseMigrator.
+if (DatabaseMigrator.IsMigrationCommand(args))
+{
+    return await DatabaseMigrator.RunAsync(app.Services);
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -34,7 +46,9 @@ app.Use(async (context, next) =>
     await next();
 });
 
-app.Run();
+await app.RunAsync();
+
+return 0;
 
 /// <summary>Exposed so integration tests can use WebApplicationFactory&lt;Program&gt;.</summary>
 public partial class Program;

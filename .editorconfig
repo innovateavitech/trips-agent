@@ -66,3 +66,4 @@ end_of_line = lf
 [backend/tests/**/*.cs]
 dotnet_diagnostic.CA1707.severity = none    # underscores in member names
 dotnet_diagnostic.CA1515.severity = none    # types can be public in test projects
+dotnet_diagnostic.CA1711.severity = none    # xUnit collection fixtures end in 'Collection'

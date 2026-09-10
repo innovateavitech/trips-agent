@@ -12,6 +12,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\services\TripsAgent.Domain\TripsAgent.Domain.csproj" />
     <ProjectReference Include="..\..\services\TripsAgent.Application\TripsAgent.Application.csproj" />
+    <ProjectReference Include="..\..\services\TripsAgent.Infrastructure\TripsAgent.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

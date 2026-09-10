@@ -43,6 +43,20 @@ else
   printf '  %s\n\n' "${YELLOW}!${NC} npx not found — install Node first"
 fi
 
+# ----------------------------------------------------------- dotnet tools
+printf '%s\n' "${BOLD}.NET tools${NC}"
+if command -v dotnet >/dev/null 2>&1; then
+  # dotnet-ef is pinned in backend/.config/dotnet-tools.json so everyone runs the same version
+  # as the EF Core packages. Without this, ./scripts/ef.sh cannot create or apply a migration.
+  if (cd backend && dotnet tool restore >/dev/null 2>&1); then
+    printf '  %s\n\n' "${GREEN}✓${NC} dotnet-ef    ${DIM}pinned version restored${NC}"
+  else
+    printf '  %s\n\n' "${YELLOW}!${NC} dotnet-ef    ${DIM}restore failed — run: cd backend && dotnet tool restore${NC}"
+  fi
+else
+  printf '  %s\n\n' "${YELLOW}!${NC} dotnet not found — skipping tool restore"
+fi
+
 # ------------------------------------------------------------- git identity
 printf '%s\n' "${BOLD}Git identity${NC}"
 name=$(git config --get user.name || true)

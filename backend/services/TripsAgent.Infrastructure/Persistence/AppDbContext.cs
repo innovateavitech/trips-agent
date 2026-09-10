@@ -5,6 +5,7 @@ using TripsAgent.Application.Auditing;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
+using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Infrastructure.Persistence.Interceptors;
 
@@ -97,6 +98,30 @@ public class AppDbContext : DbContext
 
     /// <summary>Per-agency logo, colours and contact details. One row per agency.</summary>
     public DbSet<AgencyBranding> AgencyBranding => Set<AgencyBranding>();
+
+    /// <summary>People who can sign in — agency staff and Trips back-office staff.</summary>
+    public DbSet<User> Users => Set<User>();
+
+    /// <summary>Named bundles of permissions. Null agency means a system role.</summary>
+    public DbSet<Role> Roles => Set<Role>();
+
+    /// <summary>The platform-wide permission catalogue. Seeded, never created at runtime.</summary>
+    public DbSet<Permission> Permissions => Set<Permission>();
+
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+
+    public DbSet<UserRole> UserRoles => Set<UserRole>();
+
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+
+    public DbSet<OtpCode> OtpCodes => Set<OtpCode>();
+
+    /// <summary>The audit trail behind the lockout rule.</summary>
+    public DbSet<LoginAttempt> LoginAttempts => Set<LoginAttempt>();
+
+    public DbSet<UserInvitation> UserInvitations => Set<UserInvitation>();
 
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.
@@ -209,6 +234,36 @@ public class AppDbContext : DbContext
             AllowCrossTenantAccess
             || agency.Id == CurrentAgencyId
             || agency.ParentAgencyId == CurrentAgencyId);
+
+        // Users, roles and invitations carry a *nullable* agency — null means Trips platform
+        // staff, or a system role shared by everyone — so they cannot implement ITenantScoped,
+        // which requires a non-nullable one. Their filters are written out instead.
+        //
+        // A system role (null agency) is visible to every agency by design: they are the Owner,
+        // Manager and Agent roles we ship. A platform *user* is not.
+        modelBuilder.Entity<User>().HasQueryFilter(user =>
+            AllowCrossTenantAccess || user.AgencyId == CurrentAgencyId);
+
+        modelBuilder.Entity<Role>().HasQueryFilter(role =>
+            AllowCrossTenantAccess || role.AgencyId == CurrentAgencyId || role.AgencyId == null);
+
+        modelBuilder.Entity<UserInvitation>().HasQueryFilter(invitation =>
+            AllowCrossTenantAccess || invitation.AgencyId == CurrentAgencyId);
+
+        // Credentials are reached through their user, so they follow that user's agency. Written
+        // as a subquery rather than a join so the filter composes with any query EF builds.
+        modelBuilder.Entity<RefreshToken>().HasQueryFilter(token =>
+            AllowCrossTenantAccess
+            || Users.Any(user => user.Id == token.UserId && user.AgencyId == CurrentAgencyId));
+
+        modelBuilder.Entity<PasswordResetToken>().HasQueryFilter(token =>
+            AllowCrossTenantAccess
+            || Users.Any(user => user.Id == token.UserId && user.AgencyId == CurrentAgencyId));
+
+        // Permissions are a platform-wide catalogue with no owner, and login attempts are
+        // deliberately unfiltered: the ones worth investigating are against addresses that match
+        // no account, so there is no agency to attribute them to. Both are read only by
+        // platform tooling and by the sign-in path itself, never by an agency-facing query.
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

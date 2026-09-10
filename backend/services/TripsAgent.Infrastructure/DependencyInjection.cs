@@ -2,9 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Auditing;
+using TripsAgent.Application.Identity;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Identity;
 using TripsAgent.Infrastructure.Tenancy;
 
 namespace TripsAgent.Infrastructure;
@@ -56,6 +58,9 @@ public static class DependencyInjection
         services.AddScoped<TenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
         services.AddScoped<IPlatformScope, PlatformScope>();
+
+        // Stateless and thread-safe, so one instance serves the whole process.
+        services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
 
         // The service-provider overload: the audit interceptor below has to come from the scoped
         // provider so it sees the actor for *this* request.

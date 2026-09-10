@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Identity;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Identity;
 using TripsAgent.Infrastructure.Tenancy;
 
 namespace TripsAgent.Infrastructure;
@@ -52,6 +54,9 @@ public static class DependencyInjection
         services.AddScoped<TenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
         services.AddScoped<IPlatformScope, PlatformScope>();
+
+        // Stateless and thread-safe, so one instance serves the whole process.
+        services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
 
         services.AddDbContext<AppDbContext>(options =>
         {

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Tenancy;
+using TripsAgent.Infrastructure.Identity;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Tenancy;
 
@@ -192,9 +193,10 @@ public class AgencySettingsPersistenceTests
     {
         await using var context = await MigratedDatabaseAsync();
 
-        var created = await DatabaseSeeder.SeedAsync(context, _tenancy.Scope);
+        var created = await DatabaseSeeder.SeedAsync(context, _tenancy.Scope, new Argon2PasswordHasher());
 
-        created.Should().Be(2);
+        // Two demo agencies plus a third left unverified, so the KYB queue has something in it.
+        created.Should().Be(3);
 
         context.ChangeTracker.Clear();
 
@@ -209,8 +211,8 @@ public class AgencySettingsPersistenceTests
         subAgent.Path.Should().StartWith(principal.Path);
 
         // Each gets its own settings and branding row.
-        (await context.AgencySettings.CountAsync()).Should().Be(2);
-        (await context.AgencyBranding.CountAsync()).Should().Be(2);
+        (await context.AgencySettings.CountAsync()).Should().Be(3);
+        (await context.AgencyBranding.CountAsync()).Should().Be(3);
     }
 
     [Fact]
@@ -218,13 +220,15 @@ public class AgencySettingsPersistenceTests
     {
         await using var context = await MigratedDatabaseAsync();
 
-        await DatabaseSeeder.SeedAsync(context, _tenancy.Scope);
-        var second = await DatabaseSeeder.SeedAsync(context, _tenancy.Scope);
+        var hasher = new Argon2PasswordHasher();
+
+        await DatabaseSeeder.SeedAsync(context, _tenancy.Scope, hasher);
+        var second = await DatabaseSeeder.SeedAsync(context, _tenancy.Scope, hasher);
 
         second.Should().Be(0);
 
         using var _ = _tenancy.Scope.Enter("test — counting seeded rows across agencies");
-        (await context.Agencies.CountAsync()).Should().Be(2);
+        (await context.Agencies.CountAsync()).Should().Be(3);
     }
 
     private static Agency NewPrincipal(string slug) =>

@@ -23,10 +23,18 @@ namespace TripsAgent.IntegrationTests.Persistence;
 /// </remarks>
 public sealed class PostgresFixture : IAsyncLifetime
 {
+    // The default of 100 is not enough. Every test creates its own uniquely-named database —
+    // and therefore its own Npgsql connection pool, since pooling keys on the exact connection
+    // string — and with a hundred-plus integration tests across the suite, pools from tests that
+    // finished minutes ago can still be holding an idle connection open when a later test opens
+    // its own. Postgres then refuses new connections with "sorry, too many clients already",
+    // which looks like a failure in whatever test happened to run last, not in the one that
+    // actually exhausted the limit.
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:16-alpine")
         .WithDatabase("tripsagent_test")
         .WithUsername("postgres")
         .WithPassword("postgres")
+        .WithCommand("-c", "max_connections=300")
         .Build();
 
     public string ConnectionString => _container.GetConnectionString();

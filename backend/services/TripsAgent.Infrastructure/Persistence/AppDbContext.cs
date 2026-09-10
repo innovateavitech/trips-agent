@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Application.Auditing;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
+using TripsAgent.Domain.Messaging;
 
 namespace TripsAgent.Infrastructure.Persistence;
 
@@ -49,6 +50,12 @@ public class AppDbContext : DbContext
     /// set is for reading and for the interceptor that writes it, and nothing else.
     /// </summary>
     public DbSet<AuditLogEntry> AuditLogs => Set<AuditLogEntry>();
+
+    /// <summary>Events waiting to be published. See issue #30 and <c>TripsAgent.Domain.Messaging.OutboxMessage</c>.</summary>
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
+    /// <summary>Consumer-side delivery records, for dedupe under at-least-once delivery.</summary>
+    public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
 
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.

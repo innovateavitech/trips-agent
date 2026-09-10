@@ -23,6 +23,11 @@ builder.Services.AddMessageConsuming(builder.Configuration);
 
 builder.Services.AddJobProcessing(builder.Configuration);
 
+// Publishes whatever the outbox is holding, on its own clock — see issue #30. Worker-only,
+// same reasoning as AddMessageConsuming just above: one process polling the table, not every
+// Api instance racing to do it.
+builder.Services.AddOutboxDispatching();
+
 // Graceful shutdown, the host half. On SIGTERM — which is what Docker, Kubernetes and systemd all
 // send first — the host gives every hosted service this long to stop before killing the process.
 //

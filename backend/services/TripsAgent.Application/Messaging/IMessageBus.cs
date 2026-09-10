@@ -41,4 +41,31 @@ public interface IMessageBus
         MessageQueue queue,
         CancellationToken cancellationToken = default)
         where TCommand : class;
+
+    /// <summary>
+    /// Announces that something happened, exactly like <see cref="PublishAsync{TEvent}"/> — but
+    /// takes the event's type as a runtime value rather than a compile-time generic parameter.
+    /// </summary>
+    /// <remarks>
+    /// Exists for <c>OutboxDispatcher</c> (issue #30), which reads an event back from storage as
+    /// a <c>string</c> type name plus a JSON payload and has no compile-time type to hand the
+    /// generic overload. Application code with a real event in hand should use
+    /// <see cref="PublishAsync{TEvent}"/> instead — it is the same publish, with the compiler
+    /// checking that <paramref name="message"/> actually is a <paramref name="messageType"/>.
+    /// </remarks>
+    /// <param name="message">The event, already an instance of <paramref name="messageType"/>.</param>
+    /// <param name="messageType">The event's runtime type. What the broker routes on.</param>
+    /// <param name="messageId">
+    /// Sets the envelope's <c>MessageId</c> explicitly instead of letting the transport assign a
+    /// random one. <c>OutboxDispatcher</c> passes the outbox row's own id, so a consumer reading
+    /// <c>ConsumeContext.MessageId</c> has a stable value to hand <see cref="IInboxDeduplicator"/>
+    /// that survives redelivery unchanged. Leave null for an ordinary publish with no outbox
+    /// behind it.
+    /// </param>
+    /// <param name="cancellationToken">Cancels the publish, not the work the event triggers.</param>
+    public Task PublishAsync(
+        object message,
+        Type messageType,
+        Guid? messageId = null,
+        CancellationToken cancellationToken = default);
 }

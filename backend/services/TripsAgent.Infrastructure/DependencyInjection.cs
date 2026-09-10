@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Auditing;
+using TripsAgent.Application.Messaging;
 using TripsAgent.Infrastructure.Auditing;
+using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence;
 
 namespace TripsAgent.Infrastructure;
@@ -46,6 +48,7 @@ public static class DependencyInjection
         services.TryAddSingletonTimeProvider();
 
         services.AddAuditing(configuration);
+        services.AddOutboxMessaging(configuration);
 
         services.AddDbContext<AppDbContext>((serviceProvider, options) =>
         {
@@ -101,6 +104,51 @@ public static class DependencyInjection
 
         services.AddScoped<AuditSaveChangesInterceptor>();
         services.AddScoped<IAuditLogMaintenance, AuditLogPartitionMaintenance>();
+    }
+
+    /// <summary>
+    /// The outbox and inbox: <see cref="IOutboxWriter"/> to stage events, <see cref="IInboxDeduplicator"/>
+    /// to dedupe consumption, and <see cref="IOutboxDispatcher"/> to publish what is staged.
+    /// </summary>
+    /// <remarks>
+    /// Available in every host, Api and Worker alike — any request handler or consumer may need
+    /// to stage an event or dedupe a delivery. What is <em>not</em> registered here is the
+    /// dispatcher's clock: see <c>AddOutboxDispatching</c>, which only the Worker calls.
+    /// </remarks>
+    private static void AddOutboxMessaging(this IServiceCollection services, IConfiguration configuration)
+    {
+        var section = configuration.GetSection(OutboxOptions.SectionName);
+
+        // Bound and validated twice on purpose, matching MessageRetryOptions just above. This
+        // throwaway instance fails the app at startup, synchronously, with a message naming the
+        // setting — the same reason DependencyInjection.AddInfrastructure checks the Postgres
+        // connection string up front instead of waiting for the first request to hit a bad
+        // config. The AddOptions<T> registration below is what OutboxDispatcher and
+        // OutboxDispatcherHostedService actually resolve later; it needs no second validation
+        // step because this one already proved the section is sound.
+        (section.Get<OutboxOptions>() ?? new OutboxOptions()).Validate();
+
+        services.AddOptions<OutboxOptions>().Configure(options => section.Bind(options));
+
+        // Scoped, against the same AppDbContext instance as everything else in the unit of
+        // work — that shared instance is the entire transactional guarantee.
+        services.AddScoped<IOutboxWriter, OutboxWriter>();
+        services.AddScoped<IInboxDeduplicator, InboxDeduplicator>();
+        services.AddScoped<IOutboxDispatcher, OutboxDispatcher>();
+    }
+
+    /// <summary>
+    /// Puts the outbox dispatcher on a clock. Call this from the Worker only — see
+    /// <see cref="OutboxDispatcherHostedService"/> for why running it from the Api as well would
+    /// mean every Api instance polling the same table on the same schedule.
+    /// </summary>
+    public static IServiceCollection AddOutboxDispatching(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddHostedService<OutboxDispatcherHostedService>();
+
+        return services;
     }
 
     private static void TryAddSingletonTimeProvider(this IServiceCollection services)

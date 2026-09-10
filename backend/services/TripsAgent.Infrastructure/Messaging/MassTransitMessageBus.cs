@@ -41,4 +41,19 @@ public sealed class MassTransitMessageBus(
 
         await endpoint.Send(command, cancellationToken);
     }
+
+    /// <inheritdoc />
+    public Task PublishAsync(
+        object message,
+        Type messageType,
+        Guid? messageId = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(messageType);
+
+        return messageId is { } id
+            ? publishEndpoint.Publish(message, messageType, context => context.MessageId = id, cancellationToken)
+            : publishEndpoint.Publish(message, messageType, cancellationToken);
+    }
 }

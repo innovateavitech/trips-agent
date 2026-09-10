@@ -1,0 +1,76 @@
+# ---- Secrets. NEVER commit these. ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+appsettings.Local.json
+appsettings.*.local.json
+secrets.json
+
+# ---- .NET ----
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+*.userprefs
+.vs/
+TestResults/
+coverage/
+*.coverage
+*.trx
+BenchmarkDotNet.Artifacts/
+
+# ---- Node / front end ----
+node_modules/
+dist/
+build/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+.eslintcache
+.pnpm-store/
+coverage/
+
+# ---- Playwright ----
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# ---- Docker / local infra volumes ----
+.docker-data/
+postgres-data/
+minio-data/
+
+# ---- Editors ----
+.idea/
+.fleet/
+*.swp
+*.swo
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+
+# ---- OS ----
+.DS_Store
+.DS_Store?
+Thumbs.db
+desktop.ini
+._*
+
+# ---- Logs / temp ----
+*.log
+npm-debug.log*
+pnpm-debug.log*
+tmp/
+temp/
+
+# ---- Generated. Do not edit by hand; regenerate with `pnpm generate:api`. ----
+# (Committed deliberately so CI can verify freshness — listed here as a reminder,
+#  not ignored.)
+# packages/api-client/src/generated/

@@ -1,0 +1,34 @@
+# CODEOWNERS
+#
+# GitHub uses this to request reviews automatically. The LAST matching pattern wins.
+#
+# The principle: anything that can lose money, leak one agency's data to another, or
+# permanently change the database gets reviewed by the team lead. Everything else can
+# be reviewed by any teammate.
+#
+# TODO: replace @innovateavitech/leads and @sayrikey with real GitHub handles/teams.
+
+# Default — any teammate can review
+*                                           @innovateavitech/team
+
+# --- Money. Mistakes here cost real cash. -----------------------------------
+/services/TripsAgent.Domain/Payments/        @sayrikey
+/services/TripsAgent.Domain/Pricing/         @sayrikey
+/services/TripsAgent.Integrations.Paystack/  @sayrikey
+
+# --- Supplier integration. Mistakes here issue or lose real tickets. --------
+/services/TripsAgent.Integrations.TripsAfrica/  @sayrikey
+
+# --- Database. Migrations are hard to undo in production. -------------------
+/db/                                        @sayrikey
+/services/TripsAgent.Infrastructure/Persistence/  @sayrikey
+
+# --- Tenancy. A mistake here leaks one agency's data to another. -----------
+/services/TripsAgent.Infrastructure/Tenancy/  @sayrikey
+
+# --- Process, security and infrastructure ----------------------------------
+/.github/                                   @sayrikey
+/infra/                                     @sayrikey
+/CONTRIBUTING.md                            @sayrikey
+/README.md                                  @sayrikey
+/docs/adr/                                  @sayrikey

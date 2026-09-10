@@ -1,0 +1,54 @@
+# Keeps formatting consistent across macOS, Windows and every editor.
+# https://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+max_line_length = 120
+
+[*.{cs,csx}]
+indent_size = 4
+
+# --- C# conventions (enforced by `dotnet format`) ---
+[*.cs]
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+csharp_using_directive_placement = outside_namespace:warning
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_prefer_braces = true:warning
+csharp_style_var_when_type_is_apparent = true:suggestion
+dotnet_style_readonly_field = true:warning
+dotnet_style_require_accessibility_modifiers = always:warning
+
+# Treat these as errors — they catch real bugs, not style preferences
+dotnet_diagnostic.CA2007.severity = none    # ConfigureAwait not needed in ASP.NET Core
+dotnet_diagnostic.CS8600.severity = error   # null assigned to non-nullable
+dotnet_diagnostic.CS8602.severity = error   # dereference of a possible null
+dotnet_diagnostic.CS8618.severity = error   # non-nullable field left uninitialised
+
+[*.{json,jsonc,yml,yaml}]
+indent_size = 2
+
+[*.{ts,tsx,js,jsx,mjs,cjs}]
+indent_size = 2
+quote_type = single
+
+[*.{csproj,props,targets,config,sln}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false   # two trailing spaces mean "line break" in markdown
+max_line_length = off
+
+[Makefile]
+indent_style = tab
+
+[*.sh]
+indent_size = 2
+end_of_line = lf

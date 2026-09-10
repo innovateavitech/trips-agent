@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using TripsAgent.Application.Tenancy;
 
 namespace TripsAgent.Infrastructure.Persistence;
 
@@ -48,6 +49,7 @@ public static partial class DatabaseMigrator
             .CreateLogger(typeof(DatabaseMigrator));
 
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var platformScope = scope.ServiceProvider.GetRequiredService<IPlatformScope>();
 
         try
         {
@@ -56,17 +58,24 @@ public static partial class DatabaseMigrator
             if (pending.Length == 0)
             {
                 LogAlreadyUpToDate(logger);
-                return 0;
+            }
+            else
+            {
+                // Joined into a local first: this runs once per migrate command so the cost is
+                // irrelevant, and CA1873 objects to building a string inline in a logging argument.
+                var migrationNames = string.Join(", ", pending);
+                LogApplying(logger, pending.Length, migrationNames);
+
+                await dbContext.Database.MigrateAsync(cancellationToken);
+
+                LogApplied(logger);
             }
 
-            // Joined into a local first: this runs once per migrate command so the cost is
-            // irrelevant, and CA1873 objects to building a string inline in a logging argument.
-            var migrationNames = string.Join(", ", pending);
-            LogApplying(logger, pending.Length, migrationNames);
+            // Always, even with no schema change: a permission added in code needs no migration,
+            // and would otherwise never reach a production database.
+            await ReferenceDataSeeder.EnsureAsync(dbContext, platformScope, cancellationToken);
+            LogReferenceDataEnsured(logger);
 
-            await dbContext.Database.MigrateAsync(cancellationToken);
-
-            LogApplied(logger);
             return 0;
         }
         catch (Exception ex)
@@ -90,6 +99,11 @@ public static partial class DatabaseMigrator
         Level = LogLevel.Information,
         Message = "Migrations applied successfully.")]
     private static partial void LogApplied(ILogger logger);
+
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "Reference data (permissions and system roles) is present.")]
+    private static partial void LogReferenceDataEnsured(ILogger logger);
 
     [LoggerMessage(
         Level = LogLevel.Error,

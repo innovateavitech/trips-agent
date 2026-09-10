@@ -1,11 +1,14 @@
 using System.Diagnostics;
+using TripsAgent.Api.Identity;
 using TripsAgent.Api.Tenancy;
+using TripsAgent.Application;
 using TripsAgent.Infrastructure;
 using TripsAgent.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddHealthChecks()
@@ -37,6 +40,8 @@ if (app.Environment.IsDevelopment())
 app.UseTenantContext();
 
 app.MapHealthChecks("/health");
+
+app.MapRegistrationEndpoints();
 
 app.MapGet("/", () => Results.Ok(new
 {

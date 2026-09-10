@@ -2,7 +2,7 @@
 
 **Epic:** [#71](https://github.com/innovateavitech/trips-agent/issues/71) ·
 **Module:** Security · **Milestone:** M3 — Network, monetisation & back-office
-**Status:** breakdown proposed, child issues not yet created
+**Status:** child issues created (#102–#110); #71 stays open as the tracking epic until all nine close
 
 ---
 
@@ -47,20 +47,17 @@ the cross-cutting work, and the proof that the rest of it holds.
 
 ## The split
 
-`S1`–`S9` are placeholders. They become real issue numbers when the issues are created, and the
-`Depends on:` lines must be rewritten to match at that point.
-
-| | Proposed issue | Size | Depends on |
+| | Issue | Size | Depends on |
 |---|---|---|---|
-| S1 | Rate limiting per IP, user and agency | ~2 days | #16, Redis (see gaps) |
-| S2 | RLS enforcement test suite | ~2 days | #12, #7 |
-| S3 | PII encryption at rest for traveller documents | ~2 days | #32, #41 |
-| S4 | Data retention policy and the purge job | ~2 days | #21, #31, #32 |
-| S5 | NDPA erasure as anonymisation 🚫 | ~2 days | #21, #22, #62 — **blocked** |
-| S6 | Security headers, CORS and cookie hardening | ~1 day | #16, #59, #60 |
-| S7 | Dependency and secret scanning in CI | ~1 day | #7 |
-| S8 | Load test the search endpoint, cold and warm | ~2 days | #33, #40 |
-| S9 | Penetration test — scope, execution, remediation | ~2 days + vendor | S1–S8 |
+| S1 | [#102](https://github.com/innovateavitech/trips-agent/issues/102) Rate limiting per IP, user and agency | ~2 days | #16, Redis (see gaps) |
+| S2 | [#103](https://github.com/innovateavitech/trips-agent/issues/103) RLS enforcement test suite | ~2 days | #12, #7 |
+| S3 | [#104](https://github.com/innovateavitech/trips-agent/issues/104) PII encryption at rest for traveller documents | ~2 days | #32, #41 |
+| S4 | [#105](https://github.com/innovateavitech/trips-agent/issues/105) Data retention policy and the purge job | ~2 days | #21, #31, #32 |
+| S5 | [#106](https://github.com/innovateavitech/trips-agent/issues/106) NDPA erasure as anonymisation 🚫 | ~2 days | #21, #22, #62 — **blocked** |
+| S6 | [#107](https://github.com/innovateavitech/trips-agent/issues/107) Security headers, CORS and cookie hardening | ~1 day | #16, #59, #60 |
+| S7 | [#108](https://github.com/innovateavitech/trips-agent/issues/108) Dependency and secret scanning in CI | ~1 day | #7 |
+| S8 | [#109](https://github.com/innovateavitech/trips-agent/issues/109) Load test the search endpoint, cold and warm | ~2 days | #33, #40 |
+| S9 | [#110](https://github.com/innovateavitech/trips-agent/issues/110) Penetration test — scope, execution, remediation | ~2 days + vendor | #102–#109 |
 
 All nine carry `module:security` and the `M3` milestone. S5 additionally carries `blocked` and
 `needs-decision`.
@@ -73,11 +70,11 @@ you already know is unfinished, and you pay for the report twice.
 
 ## The issues in full
 
-Each block below is the issue body, ready to create as-is.
+Kept here for context; the live copies are the issue bodies on #102–#110.
 
 ---
 
-### S1 · `Security: Rate limiting per IP, user and agency`
+### S1 · [#102](https://github.com/innovateavitech/trips-agent/issues/102) `Security: Rate limiting per IP, user and agency`
 
 #### What
 ASP.NET Core rate limiting middleware, backed by Redis so a limit means the same thing however
@@ -113,7 +110,7 @@ header unconditionally lets anyone set their own IP and walk straight past the l
 
 ---
 
-### S2 · `Security: RLS enforcement test suite`
+### S2 · [#103](https://github.com/innovateavitech/trips-agent/issues/103) `Security: RLS enforcement test suite`
 
 #### What
 The test suite that proves the PostgreSQL Row-Level Security backstop from
@@ -143,7 +140,7 @@ backstop nobody knows is broken.
 
 ---
 
-### S3 · `Security: PII encryption at rest for traveller documents`
+### S3 · [#104](https://github.com/innovateavitech/trips-agent/issues/104) `Security: PII encryption at rest for traveller documents`
 
 #### What
 Column-level encryption for the traveller PII the plan already marks as encrypted:
@@ -168,7 +165,7 @@ Column-level encryption for the traveller PII the plan already marks as encrypte
 
 ---
 
-### S4 · `Security: Data retention policy and the purge job`
+### S4 · [#105](https://github.com/innovateavitech/trips-agent/issues/105) `Security: Data retention policy and the purge job`
 
 #### What
 A written retention schedule, and the scheduled job that enforces it.
@@ -194,7 +191,7 @@ how you find out you got a `WHERE` clause wrong before it costs you a customer's
 
 ---
 
-### S5 · `Security: NDPA erasure as anonymisation` 🚫
+### S5 · [#106](https://github.com/innovateavitech/trips-agent/issues/106) `Security: NDPA erasure as anonymisation` 🚫
 
 #### What
 An erasure request against a customer or traveller anonymises their PII in place while leaving
@@ -226,7 +223,7 @@ Labelled `blocked` and `needs-decision` for exactly that reason.
 
 ---
 
-### S6 · `Security: Security headers, CORS and cookie hardening`
+### S6 · [#107](https://github.com/innovateavitech/trips-agent/issues/107) `Security: Security headers, CORS and cookie hardening`
 
 #### What
 The response headers and cookie flags that stop a browser doing something on our behalf.
@@ -254,7 +251,7 @@ domain.
 
 ---
 
-### S7 · `Security: Dependency and secret scanning in CI`
+### S7 · [#108](https://github.com/innovateavitech/trips-agent/issues/108) `Security: Dependency and secret scanning in CI`
 
 #### What
 Automated scanning in the CI pipeline, so known-vulnerable packages and committed secrets are
@@ -280,7 +277,7 @@ protect everything built after it, rather than waiting for M3.
 
 ---
 
-### S8 · `Security: Load test the search endpoint, cold and warm cache`
+### S8 · [#109](https://github.com/innovateavitech/trips-agent/issues/109) `Security: Load test the search endpoint, cold and warm cache`
 
 #### What
 A repeatable load test of flight search at expected peak, reported separately for a cold and a
@@ -310,7 +307,7 @@ write it into the issue — otherwise the test proves nothing in particular.
 
 ---
 
-### S9 · `Security: Penetration test — scope, execution and remediation`
+### S9 · [#110](https://github.com/innovateavitech/trips-agent/issues/110) `Security: Penetration test — scope, execution and remediation`
 
 #### What
 Commission the test, run it, and track the fixes.
@@ -333,7 +330,7 @@ Commission the test, run it, and track the fixes.
 Runs last. A penetration test of a system you already know is unfinished tells you what you
 already knew, and you pay for the report twice.
 
-**Depends on:** S1–S8 (rewrite with real numbers when created)
+**Depends on:** #102, #103, #104, #105, #106, #107, #108, #109 (S1–S8)
 
 ---
 
@@ -389,13 +386,16 @@ picked up.
 
 ## Next steps
 
-1. Review and merge this breakdown
-2. Post it as a comment on [#71](https://github.com/innovateavitech/trips-agent/issues/71)
-3. Create S1–S9 with `module:security` + `M3` (S5 also `blocked` + `needs-decision`), rewriting
-   the `Depends on:` lines with real numbers
-4. Raise the Redis registration issue against Platform Foundation
-5. Comment on [#12](https://github.com/innovateavitech/trips-agent/issues/12) about exposing the
-   tenant-scoped table list
-6. Close #71 as broken down, or keep it open as the tracking epic — repo convention to be decided
-   on the first epic, which is this one
-7. `./scripts/generate-backlog.sh`
+1. ✅ Review and merge this breakdown — #77
+2. ✅ Post it as a comment on [#71](https://github.com/innovateavitech/trips-agent/issues/71)
+3. ✅ Create S1–S9 as [#102](https://github.com/innovateavitech/trips-agent/issues/102)–[#110](https://github.com/innovateavitech/trips-agent/issues/110),
+   with `module:security` + `M3` (S5/#106 also `blocked` + `needs-decision`)
+4. ✅ **Convention decided:** #71 stays open as the tracking epic, and closes only once S1–S9 all
+   close. This is the first of sixteen epics broken down, so the same convention applies to the
+   rest.
+5. Still open — not done here, needs someone to pick them up:
+   - Raise the Redis registration issue against Platform Foundation (see
+     [Gaps §1](#1-nothing-owns-standing-redis-up-in-the-api))
+   - Comment on [#12](https://github.com/innovateavitech/trips-agent/issues/12) about exposing
+     the tenant-scoped table list (see [Gaps §2](#2-s2-is-easier-if-12-leaves-a-way-to-enumerate-tenant-scoped-tables))
+   - `./scripts/generate-backlog.sh` once these land on `main`

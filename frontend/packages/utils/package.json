@@ -6,12 +6,13 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "lint": "echo no-op",
+    "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "echo no-op"
   },
   "devDependencies": {
     "@trips/config": "workspace:*",
+    "eslint": "^9.17.0",
     "typescript": "^5.7.2"
   }
 }

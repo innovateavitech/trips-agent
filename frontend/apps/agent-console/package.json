@@ -7,7 +7,7 @@
     "dev": "vite --port 5173",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --port 5173",
-    "lint": "eslint src --max-warnings 0",
+    "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },

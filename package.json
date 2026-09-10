@@ -13,7 +13,11 @@
     "typecheck": "turbo run typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:design && pnpm test && dotnet test",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:design && pnpm check:migrations && pnpm test && dotnet test",
+    "db:migrate": "dotnet run --project services/TripsAgent.Api -- migrate",
+    "db:new-migration": "./scripts/new-migration.sh",
+    "db:reset": "dotnet ef database drop --force --project services/TripsAgent.Infrastructure && pnpm db:migrate",
+    "check:migrations": "./scripts/check-migrations.sh",
     "generate:api": "echo 'TODO: generate TS client from OpenAPI \u2014 see issue #7'",
     "check:design": "./scripts/check-design.sh"
   },

@@ -407,9 +407,11 @@ Still stuck after 30 minutes? **Ask.** That is not failure, it is the correct mo
 | Agent console only | `pnpm --filter agent-console dev` |
 | Storefront only | `pnpm --filter storefront dev` |
 | Backend tests | `dotnet test` |
+| Check migrations are in step | `./scripts/check-migrations.sh` |
 | Front-end tests | `pnpm test` |
 | Everything CI runs | `pnpm verify` |
-| New migration | `dotnet ef migrations add <Name> -p services/TripsAgent.Infrastructure` |
+| New migration | `./scripts/new-migration.sh <Name>` |
+| Apply migrations | `dotnet run --project services/TripsAgent.Api -- migrate` |
 | Reset the database | `pnpm db:reset` |
 | Regenerate the API client | `pnpm generate:api` |
 

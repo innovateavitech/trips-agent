@@ -1,0 +1,60 @@
+name: migrations
+
+# Guards the persistence layer on every pull request:
+#   1. the solution compiles
+#   2. the persistence unit tests pass (money is bigint, instants are DateTimeOffset, snake_case)
+#   3. the EF Core model has a migration to match
+#
+# Deliberately standalone and narrow, mirroring the design workflow, so it is useful before the
+# full build/test/lint pipeline lands in issue #7. When #7 arrives, fold these steps into it and
+# delete this file rather than running both.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'services/**'
+      - 'tests/**'
+      - 'Directory.Packages.props'
+      - 'Directory.Build.props'
+      - 'TripsAgent.slnx'
+      - 'scripts/check-migrations.sh'
+      - '.github/workflows/migrations.yml'
+  push:
+    branches: [main]
+
+jobs:
+  check-migrations:
+    name: build, test and check migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore TripsAgent.slnx
+
+      # TreatWarningsAsErrors is on for every project, so this also enforces the null-safety
+      # and code-style rules in Directory.Build.props.
+      - name: Build
+        run: dotnet build TripsAgent.slnx --no-restore --configuration Release
+
+      # No database service here on purpose. These tests build the EF model in memory to assert
+      # how it maps, and never open a connection. Tests that need a real PostgreSQL belong in
+      # TripsAgent.IntegrationTests, which runs Testcontainers and arrives with issue #10.
+      - name: Unit tests
+        run: >-
+          dotnet test tests/TripsAgent.UnitTests
+          --no-build --configuration Release --verbosity normal
+
+      - name: Architecture tests
+        run: >-
+          dotnet test tests/TripsAgent.ArchitectureTests
+          --no-build --configuration Release --verbosity normal
+
+      # Same reasoning: EF compares the model against the migration snapshot in memory.
+      - name: Check the model against its migrations
+        run: ./scripts/check-migrations.sh

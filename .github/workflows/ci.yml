@@ -1,0 +1,294 @@
+name: ci
+
+# The pull request gate. Every job here must pass before a change reaches main.
+#
+# Job names are load-bearing: docs/BRANCH_PROTECTION.md Step 4 lists them as required
+# status checks, and GitHub matches them by exact string. Renaming a job silently
+# detaches its protection rule, so rename here and there together.
+#
+# The jobs are independent on purpose. Each one restores and builds what it needs rather
+# than passing artefacts between jobs, so they all start at once and a failure in one
+# still lets the others report. That costs a little compute and buys a much shorter wall
+# clock and a much simpler file.
+#
+# The repository has two self-contained roots, so every step says which one it runs in:
+# `dotnet` in backend/, `pnpm` in frontend/, and scripts/ from the repository root. There
+# is no package.json or .slnx at the top level for a bare command to find.
+#
+# This replaces .github/workflows/backend.yml, which asked to be absorbed here rather than
+# run alongside — it built and tested the same solution these jobs do. design.yml stays: it
+# is a fast, narrow check with no overlap.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# A second push to the same branch cancels the first. Without this, a branch pushed three
+# times in a minute occupies three sets of runners to tell you about the same code.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  NODE_VERSION: '22'
+
+  # Turborepo builds only the packages a change actually touched. It works out "touched"
+  # by diffing against these two commits, which only exist on a pull request — on a push
+  # to main the flag is left off and everything is built.
+  TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha }}
+  TURBO_SCM_HEAD: ${{ github.event.pull_request.head.sha }}
+  AFFECTED: ${{ github.event_name == 'pull_request' && '--affected' || '' }}
+
+  DOTNET_NOLOGO: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  # ----------------------------------------------------------------- .NET
+
+  build-api:
+    name: build-api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # Central Package Management means every version lives in Directory.Packages.props,
+      # so that file plus the project files fully describe the dependency set.
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        working-directory: backend
+        run: dotnet restore TripsAgent.slnx
+
+      # TreatWarningsAsErrors is set for every project in Directory.Build.props, so this
+      # step also enforces the null-safety and code-style rules declared there.
+      - name: Build
+        working-directory: backend
+        run: dotnet build TripsAgent.slnx --no-restore --configuration Release
+
+  test-api:
+    name: test-api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        working-directory: backend
+        run: dotnet restore TripsAgent.slnx
+
+      - name: Build
+        working-directory: backend
+        run: dotnet build TripsAgent.slnx --no-restore --configuration Release
+
+      # Solution-wide on purpose: a new test project is picked up automatically instead of
+      # needing someone to remember to add it here.
+      #
+      # No database service is declared. The integration tests use Testcontainers, which
+      # starts its own PostgreSQL through the Docker daemon that ubuntu-latest already
+      # runs — a `services:` block here would just be a second, unused database.
+      - name: Test
+        working-directory: backend
+        run: >-
+          dotnet test TripsAgent.slnx
+          --no-build --configuration Release --verbosity normal
+
+  migrations:
+    name: migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        working-directory: backend
+        run: dotnet restore TripsAgent.slnx
+
+      - name: Build
+        working-directory: backend
+        run: dotnet build TripsAgent.slnx --no-restore --configuration Release
+
+      # Catches an entity that changed without a migration to describe the change. EF builds
+      # the model in memory and compares it to the last migration's snapshot; it never opens
+      # a connection, so there is no database to start here.
+      - name: Check the model against its migrations
+        run: ./scripts/ef.sh check
+
+  # ----------------------------------------------------------------- Front ends
+
+  build-web:
+    name: build-web
+    runs-on: ubuntu-latest
+    steps:
+      # Turborepo needs the history either side of the change to work out what is affected.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # pnpm first: setup-node's pnpm cache needs the pnpm binary to already exist.
+      # The version comes from the "packageManager" field in package.json.
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      # tsc runs first because packages/ui and packages/utils have no build step of their
+      # own — without this nothing would ever type-check them.
+      - name: Typecheck
+        working-directory: frontend
+        run: pnpm turbo run typecheck ${{ env.AFFECTED }}
+
+      - name: Build
+        working-directory: frontend
+        run: pnpm turbo run build ${{ env.AFFECTED }}
+
+  test-web:
+    name: test-web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        working-directory: frontend
+        run: pnpm turbo run test ${{ env.AFFECTED }}
+
+  # ----------------------------------------------------------------- Lint
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj', 'backend/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Install
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      # Formatting is checked before linting because a formatting failure is one command to
+      # fix (`pnpm format`) and it is kinder to report that first.
+      - name: Prettier
+        working-directory: frontend
+        run: pnpm format:check
+
+      - name: ESLint
+        working-directory: frontend
+        run: pnpm turbo run lint ${{ env.AFFECTED }}
+
+      - name: Restore
+        working-directory: backend
+        run: dotnet restore TripsAgent.slnx
+
+      - name: dotnet format
+        working-directory: backend
+        run: dotnet format TripsAgent.slnx --verify-no-changes --verbosity diagnostic
+
+  # ----------------------------------------------------------------- Pull request hygiene
+
+  commitlint:
+    name: commitlint
+    runs-on: ubuntu-latest
+    # There is no pull request title to check on a push to main.
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      # Merges are squash-only and squash_merge_commit_title is PR_TITLE (see
+      # docs/BRANCH_PROTECTION.md Step 1), so the pull request title becomes the commit
+      # message on main. That is why the title, not the branch's commits, is what gets
+      # validated here.
+      #
+      # It reuses .githooks/commit-msg rather than restating the rules, so the hook that
+      # rejects a bad message locally and the check that rejects it in CI cannot drift.
+      #
+      # The title goes through an environment variable, never string-interpolated into the
+      # script: a title containing backticks or $( ) would otherwise run as shell.
+      - name: Validate the pull request title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          printf '%s\n' "$PR_TITLE" > "$RUNNER_TEMP/pr-title.txt"
+          .githooks/commit-msg "$RUNNER_TEMP/pr-title.txt"

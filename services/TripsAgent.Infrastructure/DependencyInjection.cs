@@ -28,16 +28,16 @@ public static class DependencyInjection
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new InvalidOperationException(
-                $"""
-                 No '{ConnectionStringName}' connection string was found, so the application cannot
-                 reach the database.
+                $$"""
+                  No '{{ConnectionStringName}}' connection string was found, so the application cannot
+                  reach the database.
 
-                 Set it in one of these, in order of precedence:
-                   ConnectionStrings__{ConnectionStringName} as an environment variable
-                   "ConnectionStrings": {{ "{ConnectionStringName}": "..." }} in appsettings.Development.json
+                  Set it in one of these, in order of precedence:
+                    ConnectionStrings__{{ConnectionStringName}} as an environment variable
+                    "ConnectionStrings": { "{{ConnectionStringName}}": "..." } in appsettings.Development.json
 
-                 Running locally? Start the database first:  docker compose up -d
-                 """);
+                  Running locally? Start the database first:  docker compose up -d
+                  """);
         }
 
         services.AddDbContext<AppDbContext>(options => AppDbContextOptions.Configure(options, connectionString));

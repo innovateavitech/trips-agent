@@ -80,7 +80,22 @@ month's revenue.
 Retrying issues a second real ticket that cannot easily be refunded.
 Full reasoning: [docs/adr/0003-never-retry-ticket-issuance.md](docs/adr/0003-never-retry-ticket-issuance.md)
 
-### 7. Never commit secrets
+### 7. Never hard-code a colour, font or spacing value
+`packages/ui/src/styles/tokens.css` is the **only** file allowed to contain a raw colour.
+Everywhere else uses a token: `bg-primary`, `text-muted-foreground`, `border-border`.
+
+```tsx
+<div className="bg-primary" />          // ✅
+<div className="bg-[#325DEC]" />        // ❌ fails pnpm check:design
+<div className="bg-blue-500" />         // ❌ our preset replaces Tailwind's palette — renders unstyled
+```
+
+Brand primary is **#325DEC**, typeface is **Inter**. Components live in `packages/ui` and are
+built with `cva` — need a different look? Add a variant there, never style inline at the call
+site. Run `pnpm check:design` before you finish.
+Full guide: [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md)
+
+### 8. Never commit secrets
 No API keys, tokens, passwords, `.env`. The pre-commit hook scans for these. If one is
 committed by accident, the fix is **rotate it**, not amend the commit — it stays in history.
 
@@ -200,6 +215,7 @@ Full glossary: [README.md §3](README.md#3-glossary--read-this-first)
 | [README.md](README.md) | The product, personas, glossary, setup, "where do I find X" |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Full git workflow, PR process, recovery from mistakes |
 | [docs/WORKING_WITH_CLAUDE.md](docs/WORKING_WITH_CLAUDE.md) | How developers here work with you: issue → plan → review → PR → reviewer |
+| [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) | Tokens, components, and what `check:design` enforces |
 | [docs/ARCHITECTURE_AND_DELIVERY_PLAN.md](docs/ARCHITECTURE_AND_DELIVERY_PLAN.md) | Schema, background jobs, checkout saga, milestones, open questions |
 | [docs/TRIPS_AFRICA_API_NOTES.md](docs/TRIPS_AFRICA_API_NOTES.md) | Supplier endpoints, hash validation, reversal rules |
 | [docs/adr/](docs/adr/) | Why things are the way they are |

@@ -1,0 +1,26 @@
+name: design
+
+# Runs the deterministic design-drift detector on every pull request.
+# Deliberately standalone and fast so it stays useful before the full CI
+# pipeline lands in issue #7.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'scripts/check-design.sh'
+      - '.github/workflows/design.yml'
+  push:
+    branches: [main]
+
+jobs:
+  check-design:
+    name: check-design
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the design token check
+        run: ./scripts/check-design.sh

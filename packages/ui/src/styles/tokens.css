@@ -1,0 +1,106 @@
+/**
+ * ============================================================================
+ *  DESIGN TOKENS — the single source of truth for colour and type.
+ * ============================================================================
+ *
+ *  ⚠️  This is the ONLY file in the repository allowed to contain a raw colour
+ *      value. Everywhere else uses a token: `bg-primary`, `text-muted-foreground`.
+ *
+ *      A hard-coded hex anywhere else fails `pnpm check:design`.
+ *      Why: the moment two blues exist, nobody knows which is correct, and every
+ *      later screen picks whichever it saw last. That is drift, and it is much
+ *      cheaper to prevent than to undo.
+ *
+ *  Adding a colour? Add a token here first, then use it. If you cannot name it,
+ *  you probably do not need it.
+ *
+ *  Values are `H S% L%` (no `hsl()` wrapper) so Tailwind can add opacity:
+ *  `bg-primary/10` works only in this format.
+ * ============================================================================
+ */
+
+:root {
+  /* -- Brand ---------------------------------------------------------------
+     #325DEC — 5.37:1 against white, so white text on a primary button
+     passes WCAG AA for normal text. Do not lighten it without re-checking. */
+  --primary: 226 83% 56%;
+  --primary-foreground: 0 0% 100%;
+  --primary-hover: 226 83% 47%;
+  --primary-active: 226 83% 38%;
+  --primary-subtle: 226 83% 97%;
+  --primary-border: 226 83% 86%;
+
+  /* -- Surfaces ----------------------------------------------------------- */
+  --background: 0 0% 100%;
+  --foreground: 226 20% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 226 20% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 226 20% 12%;
+
+  /* -- Secondary / muted / accent ------------------------------------------ */
+  --secondary: 226 20% 96%;
+  --secondary-foreground: 226 20% 20%;
+  --muted: 226 20% 96%;
+  --muted-foreground: 226 12% 45%;
+  --accent: 226 20% 96%;
+  --accent-foreground: 226 20% 20%;
+
+  /* -- Status --------------------------------------------------------------
+     Used for booking states, wallet warnings and the resolution queue. */
+  --destructive: 0 72% 45%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 152 60% 34%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 42%;
+  --warning-foreground: 0 0% 100%;
+  --info: 226 83% 56%;
+  --info-foreground: 0 0% 100%;
+
+  /* -- Lines and focus ----------------------------------------------------- */
+  --border: 226 16% 90%;
+  --input: 226 16% 90%;
+  --ring: 226 83% 56%;
+
+  /* -- Shape --------------------------------------------------------------- */
+  --radius: 0.5rem;
+}
+
+.dark {
+  --primary: 226 83% 63%;
+  --primary-foreground: 226 40% 10%;
+  --primary-hover: 226 83% 70%;
+  --primary-active: 226 83% 76%;
+  --primary-subtle: 226 40% 16%;
+  --primary-border: 226 40% 26%;
+
+  --background: 226 24% 8%;
+  --foreground: 226 12% 94%;
+  --card: 226 22% 11%;
+  --card-foreground: 226 12% 94%;
+  --popover: 226 22% 11%;
+  --popover-foreground: 226 12% 94%;
+
+  --secondary: 226 18% 17%;
+  --secondary-foreground: 226 12% 94%;
+  --muted: 226 18% 17%;
+  --muted-foreground: 226 10% 62%;
+  --accent: 226 18% 17%;
+  --accent-foreground: 226 12% 94%;
+
+  --destructive: 0 70% 58%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 152 50% 45%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 88% 55%;
+  --warning-foreground: 226 40% 10%;
+  --info: 226 83% 63%;
+  --info-foreground: 226 40% 10%;
+
+  --border: 226 18% 20%;
+  --input: 226 18% 20%;
+  --ring: 226 83% 63%;
+}
+
+/* Base element styles live in tailwind.preset.ts (addBase), not here — this file
+   must stay import-order independent so it can be pulled in before @tailwind. */

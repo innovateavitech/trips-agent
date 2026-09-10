@@ -321,7 +321,7 @@ review.
 | PDFs | QuestPDF | Invoices and vouchers |
 | Storefront | Next.js 15 | Agent sites must rank on Google. That requires server-side rendering |
 | Consoles | React 19 + Vite | No SEO requirement, so a fast SPA is the right tool |
-| Styling | Tailwind + shadcn/ui | One design system across three apps |
+| Styling | Tailwind + shadcn/ui conventions | One design system across three apps. Brand `#325DEC`, Inter. Drift is blocked by `pnpm check:design` — see [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) |
 | Monorepo | pnpm workspaces + Turborepo | Only rebuilds what changed |
 | Tests | xUnit, Testcontainers, Playwright | Integration tests run against a real Postgres, not a fake |
 

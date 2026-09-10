@@ -201,6 +201,7 @@ will not always respect. If you see any of these, push back before committing.
 | A retry around the ticket-issue call | Issues a **second real ticket** we cannot easily refund | *"Read docs/adr/0003 — issue is never retried"* |
 | `git commit --no-verify` suggested | Skips the hooks that stop secrets and bad commits | *"Why is the hook failing? Fix the cause, not the check."* |
 | Hard-coded "Trips" in anything a traveller sees | The whole product is that we are invisible | *"This is traveller-facing — pull branding from the agency record"* |
+| A hard-coded colour, or `bg-blue-500` | Our preset replaces Tailwind's palette, so it renders **unstyled**. And two blues means drift | *"Use a token — see docs/DESIGN_SYSTEM.md"* |
 | A real API key or password in a file | Ends up in git history permanently | *"Move to .env and add a placeholder to .env.example"* |
 | Deleting or weakening a test to make it pass | Hides the bug instead of fixing it | *"Restore the test. Why is it actually failing?"* |
 | Way more files changed than the issue needs | Unreviewable, and mixes unrelated risk | *"Revert the extras — that's a separate PR"* |
@@ -216,7 +217,7 @@ channel.
 Do not take "the tests pass" on trust. Run them, and then actually use the thing.
 
 ```bash
-pnpm verify        # everything CI will run
+pnpm verify        # everything CI will run, including check:design
 ```
 
 Then run the app and exercise the feature by hand. The issue's **How to test** section tells you

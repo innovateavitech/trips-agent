@@ -5,3 +5,11 @@ dist
 coverage
 pnpm-lock.yaml
 **/generated/**
+
+# Markdown is hand-authored here, not machine-formatted.
+#
+# README.md, CLAUDE.md, CONTRIBUTING.md and everything under docs/ are written
+# with deliberate line breaks, aligned tables and ASCII diagrams that Prettier
+# would rewrite. Reformatting them adds no value and would conflict with every
+# open documentation branch. Prose is reviewed by people, not by a formatter.
+*.md

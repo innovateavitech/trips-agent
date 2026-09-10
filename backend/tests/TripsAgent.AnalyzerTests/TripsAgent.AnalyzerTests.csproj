@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Referenced as an ordinary library so the tests can instantiate the analyser directly.
+         It is NOT wired in as an Analyzer here: this project deliberately contains source that
+         violates TA0001, as strings, and running the rule over itself proves nothing. -->
+    <ProjectReference Include="..\..\analyzers\TripsAgent.Analyzers\TripsAgent.Analyzers.csproj" />
+  </ItemGroup>
+
+</Project>

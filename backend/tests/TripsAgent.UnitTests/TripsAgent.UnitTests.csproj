@@ -5,6 +5,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+
+    <!-- ModelConventionTests.HasADecimal is a probe entity that declares a decimal price ON
+         PURPOSE, to prove the EF Core convention rejects a decimal column. TA0001 is right to
+         flag it and wrong to fail the build over it — the violation is the test. -->
+    <TripsAgentMoneyAllowedMembers>HasADecimal.Price</TripsAgentMoneyAllowedMembers>
   </PropertyGroup>
 
   <ItemGroup>

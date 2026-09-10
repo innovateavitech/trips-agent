@@ -32,4 +32,33 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- TA0001: money must not be decimal/double/float. Wired in here rather than per-project so
+       a new project cannot be created without it — the guard you have to remember to add is the
+       guard that is missing from the one project that needed it.
+
+       The analyser project is excluded because a project cannot analyse itself, and its test
+       project because it holds deliberate violations as source strings. -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'TripsAgent.Analyzers'
+                    and '$(MSBuildProjectName)' != 'TripsAgent.AnalyzerTests'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)analyzers\TripsAgent.Analyzers\TripsAgent.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- The TA0001 allowlist. Empty here on purpose — a project that genuinely holds a
+       non-money member ending in Amount/Price/Fare/Balance/Fee sets this in its OWN csproj,
+       so the exemption is reviewed by whoever owns that code:
+
+           <TripsAgentMoneyAllowedMembers>TypeName.MemberName</TripsAgentMoneyAllowedMembers>
+
+       Qualify it with the type wherever you can. A bare member name exempts that name in every
+       type in the project, which is almost never what you meant. -->
+  <PropertyGroup>
+    <TripsAgentMoneyAllowedMembers Condition="'$(TripsAgentMoneyAllowedMembers)' == ''"></TripsAgentMoneyAllowedMembers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="TripsAgentMoneyAllowedMembers" />
+  </ItemGroup>
+
 </Project>

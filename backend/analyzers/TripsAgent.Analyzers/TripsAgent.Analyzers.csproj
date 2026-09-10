@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Analysers run inside the compiler, which is .NET Standard 2.0. This is the one project
+       in the solution that does NOT target net10.0, and it must not — Roslyn will refuse to
+       load it. That is why TargetFramework is overridden here rather than inherited. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- PrivateAssets="all": the compiler already supplies Roslyn at runtime. Shipping our own
+         copy alongside the analyser is how you get a version conflict that only appears on
+         someone else's machine. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Release tracking for RS2008. Every diagnostic we add is listed in Unshipped.md. -->
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+  </ItemGroup>
+
+</Project>

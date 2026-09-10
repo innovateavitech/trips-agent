@@ -31,6 +31,17 @@
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.12" />
   </ItemGroup>
 
+  <ItemGroup Label="Analysers">
+    <!-- Roslyn, for the TA0001 money analyser. Matched to the compiler the .NET 10 SDK hosts:
+         an analyser built against a NEWER Roslyn than the compiler loading it fails to load
+         silently, and the rule simply stops enforcing.
+
+         Do not lower this. CentralPackageTransitivePinningEnabled applies this version to every
+         transitive reference too, and Microsoft.EntityFrameworkCore.Design requires >= 5.0.0 —
+         so a "safer" older pin here breaks the migration tooling instead. -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Testing">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />

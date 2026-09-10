@@ -59,6 +59,15 @@ long priceMinor = 150000;   // ✅ ₦1,500.00 in kobo
 Columns are named `*_minor`. Floating-point money loses kobo, and in a double-entry ledger that
 is unrecoverable.
 
+This is enforced, not trusted. A property or field ending in `Amount`, `Price`, `Fare`, `Balance`
+or `Fee` typed `decimal`, `double` or `float` **fails the build** with `TA0001`. A ratio is fine —
+`TaxRate`, `Percent` and `FxRate` are not amounts and are not flagged. If a member genuinely is
+not money, exempt it in its own csproj:
+
+```xml
+<TripsAgentMoneyAllowedMembers>TypeName.MemberName</TripsAgentMoneyAllowedMembers>
+```
+
 ### 3. Never bypass the tenant filter
 Every business table has `agency_id` and EF Core filters it automatically.
 `.IgnoreQueryFilters()` reads **every agency's data at once**. There are two or three legitimate

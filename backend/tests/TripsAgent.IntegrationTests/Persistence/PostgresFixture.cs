@@ -56,9 +56,22 @@ public sealed class PostgresFixture : IAsyncLifetime
             // it properly rather than trusting the caller.
             var quoted = Quote(databaseName);
 
+            // WITH (FORCE) terminates any connection still open against the old database.
+            // Npgsql pools connections, so a context disposed moments ago can still be holding
+            // one — and the cases of an xUnit [Theory] share a database name, so the second
+            // case would otherwise fail with "database is being accessed by other users".
             await using var command = admin.CreateCommand();
-            command.CommandText = $"DROP DATABASE IF EXISTS {quoted}; CREATE DATABASE {quoted};";
+            command.CommandText = $"DROP DATABASE IF EXISTS {quoted} WITH (FORCE); CREATE DATABASE {quoted};";
             await command.ExecuteNonQueryAsync();
+        }
+
+        // FORCE killed those connections server-side, but the pool on this side still holds
+        // them as idle and would hand one straight to the next context, which then fails with
+        // "terminating connection due to administrator command". Discard them.
+        var target = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString) { Database = databaseName };
+        using (var stale = new Npgsql.NpgsqlConnection(target.ConnectionString))
+        {
+            Npgsql.NpgsqlConnection.ClearPool(stale);
         }
 
         return Connect(databaseName, tenantContext, platformScope);

@@ -1,32 +1,41 @@
-import { Button, Input } from '@trips/ui';
-import { formatMoney } from '@trips/utils';
+import { useState } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { RouterProvider } from 'react-router-dom';
+import { createQueryClient } from './api/query-client';
+import { AuthProvider } from './auth/auth-context';
+import { WalletApiProvider } from './features/wallet';
+import { mockWalletApi } from './features/wallet/mock/mock-wallet-api';
+import { router } from './routes';
 
 /**
- * Placeholder shell. Replaced by the real app in issue #48.
- * Everything below uses design tokens — no hard-coded colours anywhere.
+ * Provider order matters.
+ *
+ * `QueryClientProvider` sits OUTSIDE `AuthProvider` because the agency switcher
+ * calls `useQueryClient()` to drop the previous agency's cached data. React
+ * Router sits inside both, so every route can reach the session and the cache.
  */
 export function App() {
-  return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-8">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Trips Agent Console
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Scaffold only — see docs/BACKLOG.md for what gets built here.
-        </p>
-      </header>
+  /* Created once per mount rather than at module scope, so each test gets a
+     clean cache instead of inheriting the previous test's. */
+  const [queryClient] = useState(createQueryClient);
 
-      <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-        <p className="text-sm text-card-foreground">
-          Wallet balance: <span className="font-medium">{formatMoney(150000, 'NGN')}</span>
-        </p>
-        <Input label="Top-up amount" placeholder="0.00" hint="Minimum ₦1,000" />
-        <div className="flex gap-2">
-          <Button>Top up</Button>
-          <Button variant="outline">Cancel</Button>
-        </div>
-      </section>
-    </main>
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        {/*
+          TEMPORARY, and the line the wallet's mock adapter was written to be
+          swapped at: when #26 ships the real top-up endpoints, this becomes the
+          real client and `features/wallet/mock/` is deleted. Until then the
+          wallet screens that landed in #86 run on in-memory data.
+
+          They were previously unreachable — nothing routed to them and no
+          provider was mounted, so `useWalletApi()` would have thrown. Wiring
+          this up is what makes #86's work actually visible in the app.
+        */}
+        <WalletApiProvider value={mockWalletApi}>
+          <RouterProvider router={router} />
+        </WalletApiProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }

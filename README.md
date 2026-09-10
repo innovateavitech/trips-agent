@@ -11,7 +11,7 @@
 | **Product** | Trips Agent Platform (NG) |
 | **Product Manager** | Divine Anyanwu |
 | **Business Analyst** | Boluwatife Sodipo |
-| **Backend** | C# / .NET 9 |
+| **Backend** | C# / .NET 10 |
 | **Frontend** | React 19 + TypeScript (Next.js for the storefront) |
 | **Database** | PostgreSQL 16 |
 | **Full plan** | [`docs/ARCHITECTURE_AND_DELIVERY_PLAN.md`](docs/ARCHITECTURE_AND_DELIVERY_PLAN.md) |
@@ -311,10 +311,10 @@ review.
 
 | Layer | Choice | Why |
 |---|---|---|
-| Backend | .NET 9, ASP.NET Core | Team standard |
+| Backend | .NET 10, ASP.NET Core | Team standard |
 | Architecture | Clean Architecture + MediatR | Keeps business rules testable and out of controllers |
 | Database | PostgreSQL 16 | Free, portable between AWS and Azure, and has the specific features we need (`ltree` for the agency hierarchy, `jsonb`, table partitioning, row-level security) |
-| ORM | EF Core 9 + Npgsql | Automatic tenant filtering; Dapper where we need raw speed for reports |
+| ORM | EF Core 10 + Npgsql | Automatic tenant filtering; Dapper where we need raw speed for reports |
 | Cache | Redis | Flight search caching, domain lookups, and locks that stop double-booking |
 | Scheduled jobs | Hangfire | Reliable cron with a web dashboard, and no cloud lock-in |
 | Events and sagas | MassTransit + RabbitMQ | Multi-step booking flows with retries; swaps to SQS or Service Bus once we pick a cloud |
@@ -340,8 +340,8 @@ without rewriting features. Locally, Docker Compose stands in for all of it.
 
 | Tool | Version | Check with |
 |---|---|---|
-| .NET SDK | 9.x | `dotnet --version` |
-| Node.js | 22.x LTS | `node --version` |
+| .NET SDK | 10.x | `dotnet --version` |
+| Node.js | 22.x LTS or newer | `node --version` |
 | pnpm | 9.x | `pnpm --version` |
 | Docker Desktop | latest, **running** | `docker ps` |
 | Git | 2.4x | `git --version` |
@@ -353,22 +353,30 @@ without rewriting features. Locally, Docker Compose stands in for all of it.
 git clone https://github.com/innovateavitech/trips-agent.git
 cd trips-agent
 
-# 2. Copy the environment template and fill in the blanks (ask the team lead for secrets)
-cp .env.example .env
+# 2. Install the shared git hooks and check your tooling  <-- DO THIS FIRST
+./scripts/setup.sh
 
-# 3. Start Postgres, Redis, RabbitMQ, MinIO and Mailpit
+# 3. Fill in the secrets (ask the team lead)
+#    setup.sh creates .env for you from the template
+$EDITOR .env
+
+# 4. Start Postgres, Redis, RabbitMQ, MinIO and Mailpit
 docker compose up -d
 
-# 4. Install front-end dependencies
+# 5. Install front-end dependencies
 pnpm install
 
-# 5. Create the database schema and load test data
+# 6. Create the database schema and load test data
 dotnet run --project services/TripsAgent.Api -- migrate
 dotnet run --project services/TripsAgent.Api -- seed
 
-# 6. Start everything
+# 7. Start everything
 pnpm dev
 ```
+
+> **Step 2 is not optional.** It installs the git hooks that stop you pushing to `main`,
+> committing a secret, or writing a malformed commit message. Without it you get none of
+> those safety nets. It is safe to re-run at any time.
 
 Then open <http://localhost:5173> and log in with the test agent from §9.
 
@@ -467,8 +475,8 @@ team lead for keys. **Never commit them.**
 
 **Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before your first commit.** The essentials:
 
-- **Nobody pushes to `main`.** It is protected. All changes arrive by pull request, reviewed by
-  at least one person.
+- **Nobody pushes to `main`.** Git hooks block it locally (run `./scripts/setup.sh` once), and
+  all changes arrive by pull request, reviewed by at least one person.
 - **Branch names:** `feat/M1-wallet-topup`, `fix/login-lockout-counter`, `chore/upgrade-efcore`
 - **Commit messages** follow [Conventional Commits](https://www.conventionalcommits.org/):
   `feat(wallet): credit agent wallet on successful top-up`. A hook checks this locally, so a bad

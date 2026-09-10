@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+#
+# pre-commit — catches the three mistakes that are expensive to undo:
+#   1. committing directly on a protected branch
+#   2. committing a secret
+#   3. committing a large binary
+#
+# Bypass (use sparingly, and know why):  git commit --no-verify
+
+set -uo pipefail
+
+RED=$'\033[0;31m'; YELLOW=$'\033[0;33m'; GREEN=$'\033[0;32m'
+BOLD=$'\033[1m'; DIM=$'\033[2m'; NC=$'\033[0m'
+FAILED=0
+
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+# ---------------------------------------------------------------- 1. branch
+if [ "${ALLOW_MAIN_COMMIT:-0}" != "1" ]; then
+  case "$branch" in
+    main|master)
+      cat >&2 <<EOF
+
+${RED}${BOLD}✖  You are committing directly on '${branch}'.${NC}
+
+Work happens on a branch, never on ${branch}. Branch first — your staged
+changes come with you, nothing is lost:
+
+  ${GREEN}git checkout -b feat/short-description${NC}
+
+then commit again. Naming guide: CONTRIBUTING.md §2
+
+${DIM}Repository owner doing an emergency fix?  ALLOW_MAIN_COMMIT=1 git commit ...${NC}
+
+EOF
+      FAILED=1
+      ;;
+  esac
+fi
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+
+# ---------------------------------------------------------------- 2. secrets
+if [ -n "$staged" ]; then
+  # Filenames that should never be committed
+  while IFS= read -r f; do
+    case "$f" in
+      .env|.env.*|*.pem|*.key|*.p12|*.pfx|*secrets.json|appsettings.*.local.json)
+        [ "$f" = ".env.example" ] && continue
+        printf '%s\n' "" >&2
+        printf '%s\n' "${RED}${BOLD}✖  Refusing to commit ${f}${NC}" >&2
+        printf '%s\n' "   Secrets belong in .env (git-ignored), never in the repo." >&2
+        FAILED=1
+        ;;
+    esac
+  done <<< "$staged"
+
+  # Secret-shaped content in the staged diff
+  patterns='(sk_live_|sk_test_|pk_live_)[A-Za-z0-9]{10,}
+gh[pousr]_[A-Za-z0-9]{20,}
+AKIA[0-9A-Z]{16}
+-----BEGIN [A-Z ]*PRIVATE KEY-----
+(MerchantKey|merchant_key)["'"'"'[:space:]:=]+[A-Za-z0-9_-]{16,}
+(password|passwd|secret|api_?key|token)["'"'"'[:space:]:=]+["'"'"'][A-Za-z0-9_\-]{16,}["'"'"']'
+
+  while IFS= read -r pat; do
+    [ -z "$pat" ] && continue
+    hits=$(git diff --cached -U0 | grep -nEi "^\+.*${pat}" 2>/dev/null | head -3 || true)
+    if [ -n "$hits" ]; then
+      printf '%s\n' "" >&2
+      printf '%s\n' "${RED}${BOLD}✖  A staged line looks like a secret:${NC}" >&2
+      printf '%s\n' "${DIM}${hits}${NC}" >&2
+      printf '%s\n' "" >&2
+      printf '%s\n' "   If it is real: remove it, put it in .env, and ${BOLD}rotate it${NC} —" >&2
+      printf '%s\n' "   assume anything that reached a file is already compromised." >&2
+      printf '%s\n' "   If it is a false positive: ${DIM}git commit --no-verify${NC}" >&2
+      FAILED=1
+    fi
+  done <<< "$patterns"
+
+  # ------------------------------------------------------------- 3. big files
+  while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    size=$(wc -c < "$f" 2>/dev/null | tr -d ' ')
+    if [ "${size:-0}" -gt 5242880 ]; then
+      printf '%s\n' "" >&2
+      printf '%s\n' "${YELLOW}${BOLD}⚠  ${f} is $((size / 1048576))MB.${NC}" >&2
+      printf '%s\n' "   Large binaries live in git history forever and slow every clone." >&2
+      printf '%s\n' "   Sure? ${DIM}git commit --no-verify${NC}" >&2
+      FAILED=1
+    fi
+  done <<< "$staged"
+fi
+
+if [ "$FAILED" -ne 0 ]; then
+  printf '%s\n' "" >&2
+  exit 1
+fi
+
+exit 0

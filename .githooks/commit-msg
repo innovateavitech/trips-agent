@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+#
+# commit-msg — enforces Conventional Commits.
+# Pure bash on purpose: this works before the Node toolchain exists.
+#
+# Bypass:  git commit --no-verify
+
+set -uo pipefail
+
+RED=$'\033[0;31m'; GREEN=$'\033[0;32m'; BOLD=$'\033[1m'; DIM=$'\033[2m'; NC=$'\033[0m'
+
+msg_file="$1"
+subject=$(grep -v '^#' "$msg_file" | sed '/^[[:space:]]*$/d' | head -1)
+
+# git's own generated commits are exempt
+case "$subject" in
+  "Merge "*|"Revert "*|"fixup!"*|"squash!"*|"Initial commit") exit 0 ;;
+esac
+
+TYPES='feat|fix|docs|refactor|test|chore|perf|build|ci|style|revert'
+PATTERN="^(${TYPES})(\([a-z0-9;/._-]+\))?!?: .{1,}$"
+
+fail() {
+  cat >&2 <<EOF
+
+${RED}${BOLD}✖  Commit message rejected.${NC}
+
+${BOLD}You wrote:${NC}
+  ${subject:-<empty>}
+
+$1
+
+${BOLD}Format:${NC}  ${GREEN}<type>(<scope>): <subject>${NC}
+
+${BOLD}Examples:${NC}
+  ${GREEN}feat(wallet): credit agent wallet on successful top-up${NC}
+  ${GREEN}fix(auth): reset failed_login_count after a successful login${NC}
+  ${GREEN}docs(readme): add local setup troubleshooting table${NC}
+
+${BOLD}Types:${NC}  feat fix docs refactor test chore perf build ci style revert
+${BOLD}Scopes:${NC} auth wallet supplier catalog storefront admin crm ui db deps
+
+${DIM}Your message was kept — rerun with:  git commit -e -F .git/COMMIT_EDITMSG
+Why we do this: CONTRIBUTING.md §3${NC}
+
+EOF
+  exit 1
+}
+
+[ -z "$subject" ] && fail "The message is empty."
+
+if ! printf '%s' "$subject" | grep -qE "$PATTERN"; then
+  if printf '%s' "$subject" | grep -qE "^(${TYPES})(\(.*\))?!?[^:]"; then
+    fail "Missing the colon and space after the type."
+  elif printf '%s' "$subject" | grep -qE '^[A-Za-z]+:'; then
+    fail "'$(printf '%s' "$subject" | cut -d: -f1)' is not a valid type."
+  else
+    fail "No type prefix found."
+  fi
+fi
+
+# Style checks — real, but only after the shape is right
+body=$(printf '%s' "$subject" | sed -E "s/^(${TYPES})(\([^)]*\))?!?: //")
+
+case "$body" in
+  [A-Z]*) fail "Subject should start lowercase — '$(printf '%s' "$body" | cut -c1)' is capitalised." ;;
+esac
+case "$body" in
+  *.) fail "Subject should not end with a full stop." ;;
+esac
+[ "${#subject}" -gt 72 ] && fail "Subject is ${#subject} characters — keep it under 72."
+
+exit 0

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Card } from '@trips/ui';
+import { Alert, Button, Card, EmptyState, ErrorState } from '@trips/ui';
 import type { StatementFilters } from '../types';
 import { isLowBalance } from '../top-up-rules';
 import { STATEMENT_PAGE_SIZE, useStatement, useWalletSummary } from '../wallet-queries';
@@ -9,7 +9,6 @@ import { LowBalanceAlert } from '../components/low-balance-alert';
 import { StatementFiltersBar } from '../components/statement-filters-bar';
 import { StatementPagination } from '../components/statement-pagination';
 import { StatementTable, StatementTableSkeleton } from '../components/statement-table';
-import { EmptyState, ErrorState } from '../components/states';
 import { TopUpPanel } from '../components/top-up-panel';
 import { UnfinishedTopUpAlert } from '../components/unfinished-top-up-alert';
 
@@ -45,11 +44,20 @@ export function WalletPage() {
       <UnfinishedTopUpAlert />
 
       {summary.isError ? (
-        <ErrorState
+        /* A banner rather than the shared <ErrorState> panel: this sits above
+           the balance card, where a full-height centred panel would push the
+           whole screen down for what is a recoverable read failure. */
+        <Alert
+          tone="destructive"
           title="We could not load your wallet"
-          detail="Your balance is safe — this is a problem reading it, not a problem with your money."
-          onRetry={() => void summary.refetch()}
-        />
+          action={
+            <Button size="sm" variant="outline" onClick={() => void summary.refetch()}>
+              Try again
+            </Button>
+          }
+        >
+          Your balance is safe — this is a problem reading it, not a problem with your money.
+        </Alert>
       ) : null}
 
       {summary.isPending ? <BalanceCardSkeleton /> : null}
@@ -97,7 +105,7 @@ export function WalletPage() {
             <div className="p-4">
               <ErrorState
                 title="We could not load your statement"
-                detail="Nothing is wrong with your balance. Please try again."
+                description="Nothing is wrong with your balance. Please try again."
                 onRetry={() => void statement.refetch()}
               />
             </div>
@@ -106,11 +114,15 @@ export function WalletPage() {
           {statement.isPending ? <StatementTableSkeleton /> : null}
 
           {statement.data && statement.data.totalCount === 0 ? (
-            <EmptyState title="Nothing to show">
-              {isFiltered
-                ? 'No movements match these filters. Try widening the date range, or clear the filters.'
-                : 'Once you add funds or make a booking, every movement will be listed here.'}
-            </EmptyState>
+            <EmptyState
+              title="Nothing to show"
+              description={
+                isFiltered
+                  ? 'No movements match these filters. Try widening the date range, or clear the filters.'
+                  : 'Once you add funds or make a booking, every movement will be listed here.'
+              }
+              className="border-0"
+            />
           ) : null}
 
           {statement.data && statement.data.totalCount > 0 && summary.data ? (

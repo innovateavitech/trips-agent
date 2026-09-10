@@ -2,8 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Auditing;
+using TripsAgent.Application.Identity;
+using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
+using TripsAgent.Infrastructure.Identity;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Tenancy;
 
 namespace TripsAgent.Infrastructure;
 
@@ -47,8 +51,23 @@ public static class DependencyInjection
 
         services.AddAuditing(configuration);
 
+        // Tenancy is scoped: one resolved agency per request, and nothing shared between them.
+        // TenantContext is registered as itself as well as behind the interface, because
+        // middleware needs the concrete type to call SetTenant while everything downstream
+        // should only be able to read.
+        services.AddScoped<TenantContext>();
+        services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
+        services.AddScoped<IPlatformScope, PlatformScope>();
+
+        // Stateless and thread-safe, so one instance serves the whole process.
+        services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
+
+        // The service-provider overload: the audit interceptor below has to come from the scoped
+        // provider so it sees the actor for *this* request.
         services.AddDbContext<AppDbContext>((serviceProvider, options) =>
         {
+            // The tenant write guard is not registered here: AppDbContext installs it in
+            // OnConfiguring, so it is present however the context was constructed.
             options
                 .UseNpgsql(connectionString, npgsql =>
                 {

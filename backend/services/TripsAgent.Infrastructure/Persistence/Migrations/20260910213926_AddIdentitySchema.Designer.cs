@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TripsAgent.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using TripsAgent.Infrastructure.Persistence;
 namespace TripsAgent.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260910213926_AddIdentitySchema")]
+    partial class AddIdentitySchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -23,89 +26,6 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "ltree");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("TripsAgent.Domain.Auditing.AuditLogEntry", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTimeOffset>("OccurredAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("occurred_at");
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("action");
-
-                    b.Property<string>("ActorIpAddress")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("actor_ip_address");
-
-                    b.Property<string>("ActorType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("actor_type");
-
-                    b.Property<Guid?>("ActorUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("actor_user_id");
-
-                    b.Property<string>("AfterState")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("after_state");
-
-                    b.Property<Guid?>("AgencyId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("agency_id");
-
-                    b.Property<string>("BeforeState")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("before_state");
-
-                    b.Property<string>("CorrelationId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("correlation_id");
-
-                    b.Property<string>("EntityId")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("entity_id");
-
-                    b.Property<string>("EntityType")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("entity_type");
-
-                    b.Property<string>("Reason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("reason");
-
-                    b.HasKey("Id", "OccurredAt")
-                        .HasName("pk_audit_logs");
-
-                    b.HasIndex("ActorUserId", "OccurredAt")
-                        .IsDescending(false, true)
-                        .HasDatabaseName("ix_audit_logs_actor");
-
-                    b.HasIndex("AgencyId", "OccurredAt")
-                        .IsDescending(false, true)
-                        .HasDatabaseName("ix_audit_logs_agency");
-
-                    b.HasIndex("EntityType", "EntityId", "OccurredAt")
-                        .IsDescending(false, false, true)
-                        .HasDatabaseName("ix_audit_logs_entity");
-
-                    b.ToTable("audit_logs", "platform");
-                });
 
             modelBuilder.Entity("TripsAgent.Domain.Identity.LoginAttempt", b =>
                 {

@@ -2,9 +2,12 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.Logging.Abstractions;
+using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Common;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Persistence.Conventions;
+using TripsAgent.Infrastructure.Tenancy;
 
 namespace TripsAgent.UnitTests.Persistence;
 
@@ -151,7 +154,14 @@ public class ModelConventionTests
     /// <summary>The finalised model of the real context, built without touching a database.</summary>
     private static IModel RealModel()
     {
-        using var context = new AppDbContext(NpgsqlOptions<AppDbContext>(), TimeProvider.System);
+        var tenant = new TenantContext();
+
+        using var context = new AppDbContext(
+            NpgsqlOptions<AppDbContext>(),
+            TimeProvider.System,
+            tenant,
+            new PlatformScope(tenant, NullLogger<PlatformScope>.Instance));
+
         return DesignTimeModelOf(context);
     }
 

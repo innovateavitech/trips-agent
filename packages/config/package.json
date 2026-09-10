@@ -1,0 +1,13 @@
+{
+  "name": "@trips/config",
+  "version": "0.0.0",
+  "private": true,
+  "files": [
+    "tsconfig.base.json"
+  ],
+  "scripts": {
+    "lint": "echo no-op",
+    "typecheck": "echo no-op",
+    "test": "echo no-op"
+  }
+}

@@ -28,6 +28,12 @@ dotnet_style_require_accessibility_modifiers = always:warning
 
 # Treat these as errors — they catch real bugs, not style preferences
 dotnet_diagnostic.CA2007.severity = none    # ConfigureAwait not needed in ASP.NET Core
+
+# Performance analysers: useful guidance, but not worth failing a build over.
+# Demoted to suggestions so they inform without blocking.
+dotnet_diagnostic.CA1848.severity = suggestion  # prefer LoggerMessage delegates
+dotnet_diagnostic.CA1727.severity = suggestion  # PascalCase log placeholders
+dotnet_diagnostic.CA1812.severity = suggestion  # uninstantiated internal class
 dotnet_diagnostic.CS8600.severity = error   # null assigned to non-nullable
 dotnet_diagnostic.CS8602.severity = error   # dereference of a possible null
 dotnet_diagnostic.CS8618.severity = error   # non-nullable field left uninitialised
@@ -52,3 +58,11 @@ indent_style = tab
 [*.sh]
 indent_size = 2
 end_of_line = lf
+
+# --- Test projects ---------------------------------------------------------
+# Underscored test names (Thing_should_do_other_thing) are the convention and
+# read far better than PascalCase in a test explorer. The analyser disagrees;
+# the analyser is wrong for tests.
+[tests/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none    # underscores in member names
+dotnet_diagnostic.CA1515.severity = none    # types can be public in test projects

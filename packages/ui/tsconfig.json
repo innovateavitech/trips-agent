@@ -1,0 +1,1 @@
+{ "extends": "@trips/config/tsconfig.base.json", "include": ["src"] }

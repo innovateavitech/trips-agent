@@ -1,0 +1,39 @@
+<Project>
+
+  <!-- Central Package Management: versions live HERE, never in individual .csproj files.
+       Add a package with:  dotnet add <proj> package <name>
+       then move the Version attribute up into this file. -->
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup Label="ASP.NET Core">
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup Label="Transitive pins (security)">
+    <!-- Microsoft.AspNetCore.OpenApi 10.0.10 pulls Microsoft.OpenApi 2.0.0, which has a
+         known high-severity advisory (GHSA-v5pm-xwqc-g5wc). Pinned forward to the latest
+         patched 2.x — same major version, so the ASP.NET Core dependency stays satisfied.
+         Remove this pin once the framework package ships a patched transitive dependency. -->
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.12.2" />
+  </ItemGroup>
+
+  <ItemGroup Label="Testing">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />
+    <PackageVersion Include="FluentAssertions" Version="6.12.2" />
+  </ItemGroup>
+
+  <!-- Added as the milestones need them:
+       Npgsql.EntityFrameworkCore.PostgreSQL, EFCore.NamingConventions, MediatR,
+       FluentValidation, MassTransit.RabbitMQ, Hangfire.PostgreSql, StackExchange.Redis,
+       QuestPDF, Polly, Serilog.AspNetCore, Testcontainers.PostgreSql -->
+
+</Project>

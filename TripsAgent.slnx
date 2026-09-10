@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/services/">
+    <Project Path="services/TripsAgent.Api/TripsAgent.Api.csproj" />
+    <Project Path="services/TripsAgent.Application/TripsAgent.Application.csproj" />
+    <Project Path="services/TripsAgent.Contracts/TripsAgent.Contracts.csproj" />
+    <Project Path="services/TripsAgent.Documents/TripsAgent.Documents.csproj" />
+    <Project Path="services/TripsAgent.Domain/TripsAgent.Domain.csproj" />
+    <Project Path="services/TripsAgent.Infrastructure/TripsAgent.Infrastructure.csproj" />
+    <Project Path="services/TripsAgent.Integrations.Paystack/TripsAgent.Integrations.Paystack.csproj" />
+    <Project Path="services/TripsAgent.Integrations.TripsAfrica/TripsAgent.Integrations.TripsAfrica.csproj" />
+    <Project Path="services/TripsAgent.Worker/TripsAgent.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TripsAgent.ArchitectureTests/TripsAgent.ArchitectureTests.csproj" />
+    <Project Path="tests/TripsAgent.IntegrationTests/TripsAgent.IntegrationTests.csproj" />
+    <Project Path="tests/TripsAgent.UnitTests/TripsAgent.UnitTests.csproj" />
+  </Folder>
+</Solution>

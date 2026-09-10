@@ -20,6 +20,12 @@
          patched 2.x — same major version, so the ASP.NET Core dependency stays satisfied.
          Remove this pin once the framework package ships a patched transitive dependency. -->
     <PackageVersion Include="Microsoft.OpenApi" Version="2.12.2" />
+
+    <!-- Hangfire.Core asks for Newtonsoft.Json >= 11.0.1, and NuGet resolves the lowest version
+         that satisfies a range. 11.0.1 carries a known high-severity advisory
+         (GHSA-5crp-9r3c-p9vr), fixed in 13.0.1. Pinned forward to the latest 13.x.
+         Remove this pin once Hangfire's floor is above 13.0.1. -->
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
   <ItemGroup Label="Persistence (EF Core + Npgsql)">
@@ -31,6 +37,22 @@
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.12" />
   </ItemGroup>
 
+  <!-- MassTransit is pinned to 8.x deliberately. Version 9 moved to a commercial licence
+       (Massient, Inc.); 8.x is the last Apache-2.0 line. See
+       docs/adr/0004-masstransit-v8-and-hangfire.md before bumping the major. -->
+  <ItemGroup Label="Messaging (MassTransit + RabbitMQ)">
+    <PackageVersion Include="MassTransit" Version="8.5.10" />
+    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.10" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup Label="Background jobs (Hangfire)">
+    <PackageVersion Include="Hangfire.Core" Version="1.8.25" />
+    <PackageVersion Include="Hangfire.NetCore" Version="1.8.25" />
+    <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.25" />
+    <PackageVersion Include="Hangfire.PostgreSql" Version="1.21.1" />
+  </ItemGroup>
+
   <ItemGroup Label="Testing">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
@@ -40,10 +62,10 @@
     <PackageVersion Include="FluentAssertions" Version="6.12.2" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.15.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.12" />
   </ItemGroup>
 
   <!-- Added as the milestones need them:
-       MediatR, FluentValidation, MassTransit.RabbitMQ, Hangfire.PostgreSql,
-       StackExchange.Redis, QuestPDF, Polly, Serilog.AspNetCore -->
+       MediatR, FluentValidation, StackExchange.Redis, QuestPDF, Polly, Serilog.AspNetCore -->
 
 </Project>

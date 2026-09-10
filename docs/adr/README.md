@@ -50,3 +50,4 @@ afternoon.
 | [0001](0001-postgresql-as-the-database.md) | PostgreSQL as the database | Accepted |
 | [0002](0002-protected-main-and-squash-merge.md) | Protected `main` and squash-merge only | Accepted |
 | [0003](0003-never-retry-ticket-issuance.md) | Never retry the supplier's ticket-issue call | Accepted |
+| [0004](0004-masstransit-v8-and-hangfire.md) | Pin MassTransit to v8, and split cron from events | Proposed |

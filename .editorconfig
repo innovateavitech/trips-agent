@@ -34,6 +34,7 @@ dotnet_diagnostic.CA2007.severity = none    # ConfigureAwait not needed in ASP.N
 dotnet_diagnostic.CA1848.severity = suggestion  # prefer LoggerMessage delegates
 dotnet_diagnostic.CA1727.severity = suggestion  # PascalCase log placeholders
 dotnet_diagnostic.CA1812.severity = suggestion  # uninstantiated internal class
+dotnet_diagnostic.CA1873.severity = suggestion  # argument may be expensive if logging is off
 dotnet_diagnostic.CS8600.severity = error   # null assigned to non-nullable
 dotnet_diagnostic.CS8602.severity = error   # dereference of a possible null
 dotnet_diagnostic.CS8618.severity = error   # non-nullable field left uninitialised

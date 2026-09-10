@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Application.Auditing;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
+using TripsAgent.Domain.Tenancy;
 
 namespace TripsAgent.Infrastructure.Persistence;
 
@@ -49,6 +50,15 @@ public class AppDbContext : DbContext
     /// set is for reading and for the interceptor that writes it, and nothing else.
     /// </summary>
     public DbSet<AuditLogEntry> AuditLogs => Set<AuditLogEntry>();
+
+    /// <summary>Travel businesses — the tenant every other business row belongs to.</summary>
+    public DbSet<Agency> Agencies => Set<Agency>();
+
+    /// <summary>Per-agency operational preferences. One row per agency.</summary>
+    public DbSet<AgencySettings> AgencySettings => Set<AgencySettings>();
+
+    /// <summary>Per-agency logo, colours and contact details. One row per agency.</summary>
+    public DbSet<AgencyBranding> AgencyBranding => Set<AgencyBranding>();
 
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.

@@ -43,6 +43,12 @@ if (AuditLogMaintenanceCommand.IsMaintenanceCommand(args))
     return await AuditLogMaintenanceCommand.RunAsync(app.Services);
 }
 
+// `dotnet run --project services/TripsAgent.Api -- seed` loads the development dataset.
+if (DatabaseSeeder.IsSeedCommand(args))
+{
+    return await DatabaseSeeder.RunAsync(app.Services);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

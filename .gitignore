@@ -74,3 +74,14 @@ temp/
 # (Committed deliberately so CI can verify freshness — listed here as a reminder,
 #  not ignored.)
 # packages/api-client/src/generated/
+
+# ---- AI design skills ----
+# Skill CONTENT is committed (.agents/skills/**, .claude/skills/**/*.md) so the
+# standard is pinned and reviewable. These are generated per-developer by
+# scripts/setup.sh and must NOT be committed:
+#   - settings.local.json : per-developer overrides
+#   - skills/*/scripts/   : 12MB platform binaries + a 1MB generated font index
+# NOTE: gitignore has no trailing comments — a "#" mid-line is part of the pattern.
+.claude/settings.local.json
+.claude/skills/*/scripts/
+.impeccable/cache/

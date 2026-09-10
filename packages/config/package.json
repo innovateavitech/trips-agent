@@ -9,5 +9,8 @@
     "lint": "echo no-op",
     "typecheck": "echo no-op",
     "test": "echo no-op"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
   }
 }

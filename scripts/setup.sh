@@ -27,6 +27,22 @@ printf '  %s\n' "${GREEN}✓${NC} pre-commit   ${DIM}blocks commits on main, sec
 printf '  %s\n' "${GREEN}✓${NC} commit-msg   ${DIM}enforces Conventional Commits${NC}"
 printf '  %s\n\n' "${GREEN}✓${NC} pre-push     ${DIM}blocks pushes to main${NC}"
 
+# --------------------------------------------------------------- ai skills
+printf '%s\n' "${BOLD}Design skills${NC}"
+if [ "${SKIP_SKILLS:-0}" = "1" ]; then
+  printf '  %s\n\n' "${YELLOW}!${NC} skipped (SKIP_SKILLS=1)"
+elif command -v npx >/dev/null 2>&1; then
+  # Impeccable ships a ~12MB platform-specific binary, so it is installed per
+  # developer rather than committed. Both hooks no-op if it is missing.
+  npx --yes impeccable@4 install --project --providers=claude -y >/dev/null 2>&1 \
+    && printf '  %s\n' "${GREEN}✓${NC} impeccable   ${DIM}23 commands + 61 drift detectors${NC}" \
+    || printf '  %s\n' "${YELLOW}!${NC} impeccable   ${DIM}install failed — run manually${NC}"
+  printf '  %s\n' "${GREEN}✓${NC} frontend-design, emil-design-eng ${DIM}(committed in .agents/skills)${NC}"
+  printf '\n'
+else
+  printf '  %s\n\n' "${YELLOW}!${NC} npx not found — install Node first"
+fi
+
 # ------------------------------------------------------------- git identity
 printf '%s\n' "${BOLD}Git identity${NC}"
 name=$(git config --get user.name || true)

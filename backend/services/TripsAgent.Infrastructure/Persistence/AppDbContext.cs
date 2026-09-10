@@ -7,7 +7,9 @@ using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Identity;
+using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Tenancy;
+using TripsAgent.Domain.Tenancy.Kyb;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence.Interceptors;
 
@@ -124,6 +126,15 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<LoginAttempt> LoginAttempts => Set<LoginAttempt>();
 
     public DbSet<UserInvitation> UserInvitations => Set<UserInvitation>();
+
+    /// <summary>One row per attempt an agency makes at proving it is a real business.</summary>
+    public DbSet<KybSubmission> KybSubmissions => Set<KybSubmission>();
+
+    /// <summary>The files attached to those submissions.</summary>
+    public DbSet<KybDocument> KybDocuments => Set<KybDocument>();
+
+    /// <summary>Things in the platform that need a person to act. Read across agencies.</summary>
+    public DbSet<AdminAlert> AdminAlerts => Set<AdminAlert>();
 
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.

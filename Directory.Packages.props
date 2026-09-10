@@ -22,6 +22,12 @@
     <PackageVersion Include="Microsoft.OpenApi" Version="2.12.2" />
   </ItemGroup>
 
+  <ItemGroup Label="Persistence">
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageVersion Include="EFCore.NamingConventions" Version="10.0.1" />
+  </ItemGroup>
+
   <ItemGroup Label="Testing">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
@@ -32,8 +38,7 @@
   </ItemGroup>
 
   <!-- Added as the milestones need them:
-       Npgsql.EntityFrameworkCore.PostgreSQL, EFCore.NamingConventions, MediatR,
-       FluentValidation, MassTransit.RabbitMQ, Hangfire.PostgreSql, StackExchange.Redis,
-       QuestPDF, Polly, Serilog.AspNetCore, Testcontainers.PostgreSql -->
+       MediatR, FluentValidation, MassTransit.RabbitMQ, Hangfire.PostgreSql,
+       StackExchange.Redis, QuestPDF, Polly, Serilog.AspNetCore, Testcontainers.PostgreSql -->
 
 </Project>

@@ -101,8 +101,16 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
 
         // --- "the process", before it dies -------------------------------------------------
         Guid eventAgencyId;
+        string connectionString;
         await using (var context = await MessagingDatabase.MigratedAsync(postgres, databaseName))
         {
+            // Captured before the context is disposed, because a real restart reconnects to the
+            // database that is already there — it does not drop and recreate it. Calling
+            // MigratedAsync a second time would do exactly that and fail with "database is being
+            // accessed by other users" the moment Npgsql's connection pool still holds this
+            // context's connection open underneath it.
+            connectionString = context.Database.GetConnectionString()!;
+
             var writer = new OutboxWriter(context, new MutableTimeProvider(Now));
             eventAgencyId = Guid.CreateVersion7();
 
@@ -117,8 +125,9 @@ public sealed class OutboxAndInboxTests(PostgresFixture postgres)
 
         // --- "the process", restarted --------------------------------------------------------
         // A brand new context, a brand new dispatcher, a brand new bus — nothing here is the
-        // same instance as before the "crash".
-        await using var restarted = await MessagingDatabase.MigratedAsync(postgres, databaseName);
+        // same instance as before the "crash". The migration already ran once above; connecting
+        // fresh to the same, still-existing database is the whole point of this half.
+        await using var restarted = MessagingDatabase.Connect(connectionString, new MutableTimeProvider(Now.AddMinutes(5)));
         var bus = new RecordingMessageBus();
         var dispatcher = Dispatcher(restarted, bus, new MutableTimeProvider(Now.AddMinutes(5)));
 

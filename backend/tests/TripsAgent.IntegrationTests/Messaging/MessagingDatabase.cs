@@ -27,10 +27,24 @@ internal static class MessagingDatabase
     }
 
     /// <summary>A second context on the same database, running on <paramref name="clock"/>.</summary>
-    public static AppDbContext As(AppDbContext existing, TimeProvider clock)
+    public static AppDbContext As(AppDbContext existing, TimeProvider clock) =>
+        Connect(existing.Database.GetConnectionString()!, clock);
+
+    /// <summary>
+    /// A context pointed at an already-existing database, given its connection string directly
+    /// rather than another live context.
+    /// </summary>
+    /// <remarks>
+    /// This is what a real restart is: a fresh connection to the database that was already
+    /// there, not <see cref="PostgresFixture.CreateEmptyDatabaseAsync"/> called a second time —
+    /// that drops and recreates the database, which fails with "database is being accessed by
+    /// other users" the moment anything still holds a pooled connection to it, and would defeat
+    /// the point of a restart test by destroying the very row the restart is supposed to find.
+    /// </remarks>
+    public static AppDbContext Connect(string connectionString, TimeProvider clock)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(existing.Database.GetConnectionString())
+            .UseNpgsql(connectionString)
             .UseSnakeCaseNamingConvention()
             .Options;
 

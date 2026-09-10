@@ -15,7 +15,7 @@ namespace TripsAgent.Domain.Tenancy;
 /// sees the agent's business, never ours (CLAUDE.md rule 4).
 /// </para>
 /// </remarks>
-public sealed class AgencyBranding : Entity, IAuditableEntity, ITenantOwnedEntity
+public sealed class AgencyBranding : Entity, IAuditableEntity, ITenantScoped
 {
     /// <summary>Used until an agency picks its own. Neutral rather than Trips blue, on purpose.</summary>
     public const string DefaultPrimaryColor = "#1F2933";

@@ -64,7 +64,7 @@ public interface IAuditableEntity
 /// The filter is applied automatically — see CLAUDE.md rule 3. Do not reach for
 /// <c>IgnoreQueryFilters()</c> to work around it; ask first.
 /// </remarks>
-public interface ITenantOwnedEntity
+public interface ITenantScoped
 {
     public Guid AgencyId { get; }
 }

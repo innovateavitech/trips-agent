@@ -2,8 +2,10 @@ using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Tenancy;
 
 namespace TripsAgent.IntegrationTests.Persistence;
 
@@ -15,6 +17,10 @@ namespace TripsAgent.IntegrationTests.Persistence;
 public class AgencyHierarchyTests
 {
     private readonly PostgresFixture _postgres;
+
+    // These tests inspect several agencies at once, which is inherently a cross-tenant view —
+    // so they hold the scope their context reads and enter it where they read back through EF.
+    private readonly (TenantContext Tenant, PlatformScope Scope) _tenancy = TestTenancy.None();
 
     public AgencyHierarchyTests(PostgresFixture postgres) => _postgres = postgres;
 
@@ -89,6 +95,8 @@ public class AgencyHierarchyTests
             $"UPDATE tenancy.agencies SET parent_agency_id = {second.Id} WHERE id = {subAgent.Id}");
 
         context.ChangeTracker.Clear();
+
+        using var _ = _tenancy.Scope.Enter("test — reading an agency from outside its own tenant");
         var reloaded = await context.Agencies.SingleAsync(a => a.Id == subAgent.Id);
 
         reloaded.Path.Should().Be($"{second.Path}.{subAgent.Id.ToString().Replace('-', '_')}");
@@ -312,7 +320,9 @@ public class AgencyHierarchyTests
     private async Task<AppDbContext> MigratedDatabaseAsync([CallerMemberName] string testName = "")
     {
         var name = testName.ToLowerInvariant();
-        var context = await _postgres.CreateEmptyDatabaseAsync(name[..Math.Min(name.Length, 60)]);
+        var context = await _postgres.CreateEmptyDatabaseAsync(
+            name[..Math.Min(name.Length, 60)], _tenancy.Tenant, _tenancy.Scope);
+
         await context.Database.MigrateAsync();
         return context;
     }

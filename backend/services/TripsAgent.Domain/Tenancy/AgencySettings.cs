@@ -9,7 +9,7 @@ namespace TripsAgent.Domain.Tenancy;
 /// Split from <see cref="Agency"/> rather than adding columns to it, because these change often
 /// and independently — an agency edits its invoice prefix without touching anything KYB verified.
 /// </remarks>
-public sealed class AgencySettings : Entity, IAuditableEntity, ITenantOwnedEntity
+public sealed class AgencySettings : Entity, IAuditableEntity, ITenantScoped
 {
     private AgencySettings()
     {

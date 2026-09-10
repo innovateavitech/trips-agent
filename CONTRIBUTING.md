@@ -444,6 +444,21 @@ long priceMinor = 150000;      // ✅ ₦1,500.00 in kobo
 Floating-point arithmetic loses fractions of kobo. In a ledger that must balance to the last
 unit, that is unrecoverable. A build analyser enforces this.
 
+That analyser is **`TRIPS001`**, in `backend/analyzers/TripsAgent.Analyzers`. It fails the build
+when a field, property, parameter or local variable whose name ends in `Amount`, `Price`, `Fare`,
+`Balance`, `Fee` or `Minor` (plurals included) is a `decimal`, `double` or `float`. Wrapping the
+type does not hide it: `decimal?` and `List<decimal>` count too.
+
+When it fires, the fix is almost always to use `long` and add `Minor` to the name
+(`decimal NetPrice` becomes `long NetPriceMinor`), or to use `TripsAgent.Domain.Common.Money`.
+A percentage or an exchange rate is a ratio, not an amount. Name it that way (`MarkupPercent`,
+`ExchangeRate`) and the analyser leaves it alone.
+
+A handful of things legitimately need a money-named decimal, such as a display formatter or a
+deliberately-wrong test fixture. They are listed in **`backend/MoneyTypeAllowlist.txt`**, one type
+or member per line, each with a comment saying why. Adding a line there is a decision, so say why
+in the PR. "The build was failing" is not a reason.
+
 ### Never bypass the tenant filter
 
 Queries are automatically scoped to the current agency. If you write

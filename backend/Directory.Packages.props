@@ -53,6 +53,15 @@
     <PackageVersion Include="Hangfire.PostgreSql" Version="1.21.1" />
   </ItemGroup>
 
+  <ItemGroup Label="Roslyn analysers">
+    <!-- Kept at the versions Microsoft.EntityFrameworkCore.Design already pulls in transitively.
+         Transitive pinning (above) applies these to EF's copy too, so a lower version here would
+         be a downgrade error and a higher one would silently move EF's tooling. An analyser built
+         against Roslyn 5.0 also loads in any .NET 10 SDK, all of which ship Roslyn 5.0 or later. -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Testing">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />

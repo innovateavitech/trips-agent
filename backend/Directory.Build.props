@@ -32,4 +32,17 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- The money-type analyser, TRIPS001 (issue #9): the build fails when something named like
+       money — *Amount, *Price, *Fare, *Balance, *Fee, *Minor — is a decimal, double or float.
+       Loaded into the compiler as an analyser rather than referenced as a library, so nothing
+       ships with it. The only exceptions live in MoneyTypeAllowlist.txt, next to this file.
+       Skipped for the analyser itself (it cannot analyse its own build) and for its tests,
+       which reference it as an ordinary library instead. -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'TripsAgent.Analyzers' and '$(MSBuildProjectName)' != 'TripsAgent.AnalyzerTests'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)analyzers/TripsAgent.Analyzers/TripsAgent.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)MoneyTypeAllowlist.txt" />
+  </ItemGroup>
+
 </Project>

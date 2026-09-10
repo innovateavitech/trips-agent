@@ -16,6 +16,8 @@
 /backend/services/TripsAgent.Domain/Payments/             @Sayrikey1
 /backend/services/TripsAgent.Domain/Pricing/              @Sayrikey1
 /backend/services/TripsAgent.Integrations.Paystack/       @Sayrikey1
+/backend/analyzers/                                       @Sayrikey1
+/backend/MoneyTypeAllowlist.txt                           @Sayrikey1
 
 # --- Supplier integration. Mistakes here issue or lose real tickets. --------
 /backend/services/TripsAgent.Integrations.TripsAfrica/    @Sayrikey1

@@ -252,6 +252,8 @@ public class ModelConventionTests
         public Money NetRate { get; set; }
     }
 
+    // Deliberately wrong, so it is listed in backend/MoneyTypeAllowlist.txt — without that entry
+    // the TRIPS001 analyser would (rightly) refuse to compile it.
     private sealed class HasADecimal
     {
         public Guid Id { get; set; }

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Roslyn analysers that run inside the compiler for every project in the solution — they are
+       wired up once, in backend/Directory.Build.props. The compiler loads analysers into its own
+       process, which is why this targets netstandard2.0 rather than net10.0: it is the one
+       framework every compiler host (dotnet build, Visual Studio, Rider, VS Code) can load. -->
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+
+    <!-- RS2008 asks for AnalyzerReleases.*.md release-tracking files. They exist for analysers
+         shipped as NuGet packages to other teams; ours never leaves this repository. -->
+    <NoWarn>$(NoWarn);RS2008</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- PrivateAssets: the compiler already provides these at build time, so they must not flow
+         on to anything that references this project. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

@@ -1,10 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MailKit.Security;
 using TripsAgent.Application.Identity;
+using TripsAgent.Application.Notifications;
+using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Identity;
+using TripsAgent.Infrastructure.Notifications;
 using TripsAgent.Infrastructure.Tenancy;
 
 namespace TripsAgent.Infrastructure;
@@ -58,6 +62,12 @@ public static class DependencyInjection
         // Stateless and thread-safe, so one instance serves the whole process.
         services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
 
+        // Resolved lazily, so `migrate` and `seed` run without a hashing key configured — only a
+        // request that actually hashes a token needs one, and it fails clearly if it is missing.
+        services.AddSingleton<ITokenHasher>(_ => new HmacTokenHasher(ReadTokenHashKey(configuration)));
+
+        services.AddSingleton<IEmailSender>(_ => new SmtpEmailSender(ReadSmtpOptions(configuration)));
+
         services.AddDbContext<AppDbContext>(options =>
         {
             // The tenant write guard is not registered here: AppDbContext installs it in
@@ -77,7 +87,63 @@ public static class DependencyInjection
                 .UseSnakeCaseNamingConvention();
         });
 
+        // Use cases see the database through this port; it is the same scoped context, so the
+        // same tenant filters and write guard apply.
+        services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+
         return services;
+    }
+
+    /// <summary>The configuration key holding the base64 HMAC key for generated secrets.</summary>
+    public const string TokenHashKeySetting = "Security:TokenHashKey";
+
+    private static byte[] ReadTokenHashKey(IConfiguration configuration)
+    {
+        var encoded = configuration[TokenHashKeySetting];
+
+        if (string.IsNullOrWhiteSpace(encoded))
+        {
+            throw new InvalidOperationException(
+                $"""
+                 No token hashing key configured at {TokenHashKeySetting}.
+
+                 It keys the HMAC used to store verification codes and tokens, and it must be at
+                 least {HmacTokenHasher.MinimumKeyBytes} random bytes, base64-encoded. Generate one with:
+
+                     openssl rand -base64 32
+
+                 then set it as the environment variable Security__TokenHashKey. Never commit a
+                 production key — rotating it invalidates every outstanding code, which is the
+                 point if it leaks.
+                 """);
+        }
+
+        try
+        {
+            return Convert.FromBase64String(encoded);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidOperationException($"{TokenHashKeySetting} is not valid base64.", ex);
+        }
+    }
+
+    private static SmtpOptions ReadSmtpOptions(IConfiguration configuration)
+    {
+        var smtp = configuration.GetSection("Smtp");
+
+        return new SmtpOptions
+        {
+            Host = smtp["Host"] ?? "localhost",
+            Port = int.TryParse(smtp["Port"], System.Globalization.CultureInfo.InvariantCulture, out var port) ? port : 1025,
+            SecureSocket = Enum.TryParse<SecureSocketOptions>(smtp["SecureSocket"], ignoreCase: true, out var secure)
+                ? secure
+                : SecureSocketOptions.StartTls,
+            Username = smtp["Username"],
+            Password = smtp["Password"],
+            FromAddress = smtp["FromAddress"] ?? "no-reply@tripsagent.test",
+            FromName = smtp["FromName"] ?? "Trips Agent",
+        };
     }
 
     private static void TryAddSingletonTimeProvider(this IServiceCollection services)

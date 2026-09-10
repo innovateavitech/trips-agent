@@ -45,7 +45,8 @@ public sealed class PostgresFixture : IAsyncLifetime
     public async Task<AppDbContext> CreateEmptyDatabaseAsync(
         string databaseName,
         ITenantContext? tenantContext = null,
-        IPlatformScope? platformScope = null)
+        IPlatformScope? platformScope = null,
+        TimeProvider? clock = null)
     {
         await using (var admin = new Npgsql.NpgsqlConnection(ConnectionString))
         {
@@ -74,7 +75,7 @@ public sealed class PostgresFixture : IAsyncLifetime
             Npgsql.NpgsqlConnection.ClearPool(stale);
         }
 
-        return Connect(databaseName, tenantContext, platformScope);
+        return Connect(databaseName, tenantContext, platformScope, clock);
     }
 
     /// <summary>
@@ -89,7 +90,8 @@ public sealed class PostgresFixture : IAsyncLifetime
     public AppDbContext Connect(
         string databaseName,
         ITenantContext? tenantContext = null,
-        IPlatformScope? platformScope = null)
+        IPlatformScope? platformScope = null,
+        TimeProvider? clock = null)
     {
         var builder = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString)
         {
@@ -106,7 +108,7 @@ public sealed class PostgresFixture : IAsyncLifetime
 
         return new AppDbContext(
             options,
-            TimeProvider.System,
+            clock ?? TimeProvider.System,
             tenantContext ?? fallback.Tenant,
             platformScope ?? fallback.Scope);
     }

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Tenancy;
 
 namespace TripsAgent.Infrastructure.Persistence;
@@ -51,6 +52,7 @@ public static partial class DatabaseSeeder
             .CreateLogger(typeof(DatabaseSeeder));
 
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var platformScope = scope.ServiceProvider.GetRequiredService<IPlatformScope>();
 
         try
         {
@@ -62,7 +64,7 @@ public static partial class DatabaseSeeder
                 return 1;
             }
 
-            var created = await SeedAsync(dbContext, cancellationToken);
+            var created = await SeedAsync(dbContext, platformScope, cancellationToken);
 
             if (created == 0)
             {
@@ -89,9 +91,18 @@ public static partial class DatabaseSeeder
     /// Exposed separately from <see cref="RunAsync"/> so integration tests can seed a database
     /// without building a service provider first.
     /// </remarks>
-    public static async Task<int> SeedAsync(AppDbContext dbContext, CancellationToken cancellationToken = default)
+    public static async Task<int> SeedAsync(
+        AppDbContext dbContext,
+        IPlatformScope platformScope,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
+        ArgumentNullException.ThrowIfNull(platformScope);
+
+        // Seeding is platform work: it creates rows for several agencies, and its "have I run
+        // already?" check has to see across all of them. Without the scope the tenant filter
+        // hides the rows it just wrote and the seeder would insert duplicates on every run.
+        using var _ = platformScope.Enter("database seeding — writes and verifies rows across agencies");
 
         if (await dbContext.Agencies.AnyAsync(a => a.Slug == PrincipalSlug, cancellationToken))
         {

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
+using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Persistence;
 
 namespace TripsAgent.IntegrationTests.Persistence;
@@ -41,10 +42,11 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// Each test gets its own database rather than its own container: creating a database is
     /// milliseconds, starting PostgreSQL is seconds. Tests stay isolated without the wait.
     /// </remarks>
-    public async Task<AppDbContext> CreateEmptyDatabaseAsync(string databaseName)
+    public async Task<AppDbContext> CreateEmptyDatabaseAsync(
+        string databaseName,
+        ITenantContext? tenantContext = null,
+        IPlatformScope? platformScope = null)
     {
-        var builder = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString);
-
         await using (var admin = new Npgsql.NpgsqlConnection(ConnectionString))
         {
             await admin.OpenAsync();
@@ -52,22 +54,52 @@ public sealed class PostgresFixture : IAsyncLifetime
             // The database name comes from a test method's own [CallerMemberName], never from
             // user input, but it is still an identifier being concatenated into DDL — so quote
             // it properly rather than trusting the caller.
-            var quoted = "\"" + databaseName.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
+            var quoted = Quote(databaseName);
 
             await using var command = admin.CreateCommand();
             command.CommandText = $"DROP DATABASE IF EXISTS {quoted}; CREATE DATABASE {quoted};";
             await command.ExecuteNonQueryAsync();
         }
 
-        builder.Database = databaseName;
+        return Connect(databaseName, tenantContext, platformScope);
+    }
+
+    /// <summary>
+    /// Opens another context against a database that already exists, optionally acting as a
+    /// different tenant.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="CreateEmptyDatabaseAsync"/>, which drops and recreates. Reaching
+    /// for the wrong one silently wipes the rows a test has just set up — the whole test then
+    /// passes or fails for reasons unrelated to what it is checking.
+    /// </remarks>
+    public AppDbContext Connect(
+        string databaseName,
+        ITenantContext? tenantContext = null,
+        IPlatformScope? platformScope = null)
+    {
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString)
+        {
+            Database = databaseName,
+        };
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(builder.ConnectionString)
             .UseSnakeCaseNamingConvention()
             .Options;
 
-        return new AppDbContext(options, TimeProvider.System);
+        // Defaults to no tenant, which is what a migration or a seed run looks like.
+        var fallback = TestTenancy.None();
+
+        return new AppDbContext(
+            options,
+            TimeProvider.System,
+            tenantContext ?? fallback.Tenant,
+            platformScope ?? fallback.Scope);
     }
+
+    private static string Quote(string identifier) =>
+        "\"" + identifier.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
 }
 
 /// <summary>

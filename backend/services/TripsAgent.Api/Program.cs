@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using TripsAgent.Api.Tenancy;
 using TripsAgent.Infrastructure;
 using TripsAgent.Infrastructure.Persistence;
 
@@ -29,6 +30,11 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+// Resolves the caller's agency for the rest of the request. Everything that touches the
+// database depends on this having run, so it goes before the endpoints. It will sit after
+// UseAuthentication() once JWT issuance lands in #16.
+app.UseTenantContext();
 
 app.MapHealthChecks("/health");
 

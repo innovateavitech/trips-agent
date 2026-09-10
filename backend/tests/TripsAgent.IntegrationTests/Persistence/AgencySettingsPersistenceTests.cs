@@ -2,8 +2,10 @@ using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Tenancy;
 
 namespace TripsAgent.IntegrationTests.Persistence;
 
@@ -17,14 +19,19 @@ public class AgencySettingsPersistenceTests
 {
     private readonly PostgresFixture _postgres;
 
+    // xUnit builds a fresh instance per test, so this is per-test state. Holding it on the class
+    // is what lets a test enter the very scope its DbContext reads — creating a second one
+    // inside a helper looks identical and silently does nothing.
+    private readonly (TenantContext Tenant, PlatformScope Scope) _tenancy = TestTenancy.None();
+
     public AgencySettingsPersistenceTests(PostgresFixture postgres) => _postgres = postgres;
 
     [Fact]
     public async Task Settings_round_trip_including_the_jsonb_currency_list()
     {
-        await using var context = await MigratedDatabaseAsync();
-
         var agency = NewPrincipal("settings-agency");
+        await using var context = await ActingAsAsync(agency);
+
         var settings = AgencySettings.CreateDefault(agency);
         settings.SetSupportedCurrencies(["USD", "GBP"], agency.BaseCurrency);
 
@@ -43,9 +50,9 @@ public class AgencySettingsPersistenceTests
     [Fact]
     public async Task The_currency_list_really_is_jsonb_in_the_database()
     {
-        await using var context = await MigratedDatabaseAsync();
-
         var agency = NewPrincipal("jsonb-agency");
+        await using var context = await ActingAsAsync(agency);
+
         context.Agencies.Add(agency);
         context.AgencySettings.Add(AgencySettings.CreateDefault(agency));
         await context.SaveChangesAsync();
@@ -72,9 +79,9 @@ public class AgencySettingsPersistenceTests
     [Fact]
     public async Task Branding_round_trips()
     {
-        await using var context = await MigratedDatabaseAsync();
-
         var agency = NewPrincipal("branding-agency");
+        await using var context = await ActingAsAsync(agency);
+
         var branding = AgencyBranding.CreateDefault(agency);
         branding.SetColors("#325DEC", "#FF9900");
         branding.SetContactAddress("12 Awolowo Road, Ikoyi, Lagos");
@@ -95,9 +102,9 @@ public class AgencySettingsPersistenceTests
     [Fact]
     public async Task The_database_rejects_a_malformed_colour()
     {
-        await using var context = await MigratedDatabaseAsync();
-
         var agency = NewPrincipal("colour-agency");
+        await using var context = await ActingAsAsync(agency);
+
         context.Agencies.Add(agency);
         context.AgencyBranding.Add(AgencyBranding.CreateDefault(agency));
         await context.SaveChangesAsync();
@@ -113,9 +120,9 @@ public class AgencySettingsPersistenceTests
     [Fact]
     public async Task Adding_a_second_settings_row_through_EF_replaces_the_first()
     {
-        await using var context = await MigratedDatabaseAsync();
-
         var agency = NewPrincipal("single-settings");
+        await using var context = await ActingAsAsync(agency);
+
         context.Agencies.Add(agency);
         context.AgencySettings.Add(AgencySettings.CreateDefault(agency));
         await context.SaveChangesAsync();
@@ -137,9 +144,9 @@ public class AgencySettingsPersistenceTests
     [Fact]
     public async Task The_database_still_refuses_a_duplicate_settings_row()
     {
-        await using var context = await MigratedDatabaseAsync();
-
         var agency = NewPrincipal("duplicate-settings");
+        await using var context = await ActingAsAsync(agency);
+
         context.Agencies.Add(agency);
         context.AgencySettings.Add(AgencySettings.CreateDefault(agency));
         await context.SaveChangesAsync();
@@ -163,9 +170,9 @@ public class AgencySettingsPersistenceTests
     [Fact]
     public async Task Deleting_an_agency_takes_its_settings_and_branding_with_it()
     {
-        await using var context = await MigratedDatabaseAsync();
-
         var agency = NewPrincipal("cascade-agency");
+        await using var context = await ActingAsAsync(agency);
+
         context.Agencies.Add(agency);
         context.AgencySettings.Add(AgencySettings.CreateDefault(agency));
         context.AgencyBranding.Add(AgencyBranding.CreateDefault(agency));
@@ -185,11 +192,13 @@ public class AgencySettingsPersistenceTests
     {
         await using var context = await MigratedDatabaseAsync();
 
-        var created = await DatabaseSeeder.SeedAsync(context);
+        var created = await DatabaseSeeder.SeedAsync(context, _tenancy.Scope);
 
         created.Should().Be(2);
 
         context.ChangeTracker.Clear();
+
+        using var _ = _tenancy.Scope.Enter("test — verifying seed data across agencies");
 
         var principal = await context.Agencies.SingleAsync(a => a.Slug == DatabaseSeeder.PrincipalSlug);
         var subAgent = await context.Agencies.SingleAsync(a => a.Slug == DatabaseSeeder.SubAgentSlug);
@@ -209,10 +218,12 @@ public class AgencySettingsPersistenceTests
     {
         await using var context = await MigratedDatabaseAsync();
 
-        await DatabaseSeeder.SeedAsync(context);
-        var second = await DatabaseSeeder.SeedAsync(context);
+        await DatabaseSeeder.SeedAsync(context, _tenancy.Scope);
+        var second = await DatabaseSeeder.SeedAsync(context, _tenancy.Scope);
 
         second.Should().Be(0);
+
+        using var _ = _tenancy.Scope.Enter("test — counting seeded rows across agencies");
         (await context.Agencies.CountAsync()).Should().Be(2);
     }
 
@@ -222,8 +233,28 @@ public class AgencySettingsPersistenceTests
     private async Task<AppDbContext> MigratedDatabaseAsync([CallerMemberName] string testName = "")
     {
         var name = testName.ToLowerInvariant();
-        var context = await _postgres.CreateEmptyDatabaseAsync(name[..Math.Min(name.Length, 60)]);
+        var context = await _postgres.CreateEmptyDatabaseAsync(
+            name[..Math.Min(name.Length, 60)], _tenancy.Tenant, _tenancy.Scope);
+
         await context.Database.MigrateAsync();
         return context;
+    }
+
+    /// <summary>
+    /// A migrated database plus a context already acting as <paramref name="agency"/>, so reads
+    /// come back through the tenant filter exactly as they would in a real request.
+    /// </summary>
+    private async Task<AppDbContext> ActingAsAsync(Agency agency, [CallerMemberName] string testName = "")
+    {
+        var name = testName.ToLowerInvariant();
+        name = name[..Math.Min(name.Length, 60)];
+
+        await using (var setup = await _postgres.CreateEmptyDatabaseAsync(name))
+        {
+            await setup.Database.MigrateAsync();
+        }
+
+        var tenancy = TestTenancy.For(agency.Id);
+        return _postgres.Connect(name, tenancy.Tenant, tenancy.Scope);
     }
 }

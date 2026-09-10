@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Tenancy;
 
 namespace TripsAgent.Infrastructure;
 
@@ -43,8 +45,18 @@ public static class DependencyInjection
         // A clock we can replace in tests. Nothing should call DateTimeOffset.UtcNow directly.
         services.TryAddSingletonTimeProvider();
 
+        // Tenancy is scoped: one resolved agency per request, and nothing shared between them.
+        // TenantContext is registered as itself as well as behind the interface, because
+        // middleware needs the concrete type to call SetTenant while everything downstream
+        // should only be able to read.
+        services.AddScoped<TenantContext>();
+        services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
+        services.AddScoped<IPlatformScope, PlatformScope>();
+
         services.AddDbContext<AppDbContext>(options =>
         {
+            // The tenant write guard is not registered here: AppDbContext installs it in
+            // OnConfiguring, so it is present however the context was constructed.
             options
                 .UseNpgsql(connectionString, npgsql =>
                 {

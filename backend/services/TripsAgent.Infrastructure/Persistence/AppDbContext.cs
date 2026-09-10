@@ -1,7 +1,10 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Tenancy;
+using TripsAgent.Infrastructure.Persistence.Interceptors;
 
 namespace TripsAgent.Infrastructure.Persistence;
 
@@ -24,12 +27,47 @@ namespace TripsAgent.Infrastructure.Persistence;
 public class AppDbContext : DbContext
 {
     private readonly TimeProvider _clock;
+    private readonly ITenantContext _tenantContext;
+    private readonly IPlatformScope _platformScope;
 
-    public AppDbContext(DbContextOptions<AppDbContext> options, TimeProvider clock)
+    public AppDbContext(
+        DbContextOptions<AppDbContext> options,
+        TimeProvider clock,
+        ITenantContext tenantContext,
+        IPlatformScope platformScope)
         : base(options)
     {
         _clock = clock;
+        _tenantContext = tenantContext;
+        _platformScope = platformScope;
     }
+
+    /// <summary>
+    /// The agency the global query filters compare against.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Read by the filter expressions below. It has to be a property on the context rather than a
+    /// value captured while the model was built: EF caches one model per context type, so a
+    /// captured value would freeze the first request's tenant into every later request's queries.
+    /// Reading it through <c>this</c> makes EF treat it as a query parameter and re-evaluate it
+    /// every time.
+    /// </para>
+    /// <para>
+    /// <see cref="Guid.Empty"/> when no tenant is resolved, which matches no rows. Returning
+    /// nothing is the safe failure; returning everything is the leak.
+    /// </para>
+    /// </remarks>
+    public Guid CurrentAgencyId => _tenantContext.AgencyId ?? Guid.Empty;
+
+    /// <summary>
+    /// True while an audited <see cref="IPlatformScope"/> is open, which lifts the filters.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not <c>IgnoreQueryFilters()</c>. That is a per-query escape hatch with no
+    /// record of who used it or why; this one is centralised and logged.
+    /// </remarks>
+    public bool AllowCrossTenantAccess => _platformScope.IsActive;
 
     /// <summary>Travel businesses — the tenant every other business row belongs to.</summary>
     public DbSet<Agency> Agencies => Set<Agency>();
@@ -39,6 +77,25 @@ public class AppDbContext : DbContext
 
     /// <summary>Per-agency logo, colours and contact details. One row per agency.</summary>
     public DbSet<AgencyBranding> AgencyBranding => Set<AgencyBranding>();
+
+    /// <summary>
+    /// Installs the tenant write guard.
+    /// </summary>
+    /// <remarks>
+    /// Added here rather than at registration on purpose. An interceptor wired up in
+    /// <c>AddDbContext</c> is only present when whoever composed the options remembered it —
+    /// and a test, a background worker or a one-off tool that builds its own
+    /// <see cref="DbContextOptions"/> would silently run without the guard. Doing it in the
+    /// context means every instance has it, however it was constructed.
+    /// </remarks>
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(optionsBuilder);
+
+        base.OnConfiguring(optionsBuilder);
+
+        optionsBuilder.AddInterceptors(new TenantStampingInterceptor(_tenantContext, _platformScope));
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,6 +109,58 @@ public class AppDbContext : DbContext
         modelBuilder.HasPostgresExtension("ltree");
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        ApplyTenantQueryFilters(modelBuilder);
+    }
+
+    /// <summary>
+    /// Adds a global query filter to every entity that belongs to an agency.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Applied by convention over <see cref="ITenantScoped"/> rather than entity by entity,
+    /// because entity-by-entity is a list somebody eventually forgets to add to — and the
+    /// consequence of forgetting is one agency reading another's customers and prices.
+    /// <c>TenantFilterCoverageTests</c> fails the build if an entity slips through.
+    /// </para>
+    /// <para>
+    /// <see cref="Agency"/> itself is filtered separately: it is not owned by an agency, it
+    /// <i>is</i> one, so the predicate is "me and my sub-agents" rather than a column match.
+    /// </para>
+    /// </remarks>
+    private void ApplyTenantQueryFilters(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            var clrType = entityType.ClrType;
+
+            if (!typeof(ITenantScoped).IsAssignableFrom(clrType))
+            {
+                continue;
+            }
+
+            // Builds:  entity => AllowCrossTenantAccess || entity.AgencyId == CurrentAgencyId
+            var entity = Expression.Parameter(clrType, "entity");
+            var context = Expression.Constant(this);
+
+            var agencyIdOfRow = Expression.Property(entity, nameof(ITenantScoped.AgencyId));
+            var currentAgencyId = Expression.Property(context, nameof(CurrentAgencyId));
+            var bypass = Expression.Property(context, nameof(AllowCrossTenantAccess));
+
+            var predicate = Expression.OrElse(
+                bypass,
+                Expression.Equal(agencyIdOfRow, currentAgencyId));
+
+            modelBuilder.Entity(clrType)
+                .HasQueryFilter(Expression.Lambda(predicate, entity));
+        }
+
+        // An agency sees itself and, if it is a principal, its own sub-agents. Depth is capped at
+        // 2, so "parent is me" is the whole subtree below me.
+        modelBuilder.Entity<Agency>().HasQueryFilter(agency =>
+            AllowCrossTenantAccess
+            || agency.Id == CurrentAgencyId
+            || agency.ParentAgencyId == CurrentAgencyId);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

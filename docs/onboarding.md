@@ -60,15 +60,15 @@ up their wallet.**
 Follow the path with your editor's "go to definition":
 
 ```
-apps/agent-console/src/features/wallet/     the button the agent clicks
+frontend/apps/agent-console/src/features/wallet/   the button the agent clicks
         ↓
-services/TripsAgent.Api/Endpoints/           the endpoint it calls
+backend/services/TripsAgent.Api/Endpoints/         the endpoint it calls
         ↓
-services/TripsAgent.Application/             the use case — what happens
+backend/services/TripsAgent.Application/           the use case — what happens
         ↓
-services/TripsAgent.Domain/Payments/         the business rules
+backend/services/TripsAgent.Domain/Payments/       the business rules
         ↓
-services/TripsAgent.Infrastructure/          how it is saved
+backend/services/TripsAgent.Infrastructure/        how it is saved
         ↓
 PostgreSQL                                   the wallet + ledger rows
 ```

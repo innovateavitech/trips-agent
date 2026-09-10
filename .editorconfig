@@ -64,6 +64,6 @@ end_of_line = lf
 # Underscored test names (Thing_should_do_other_thing) are the convention and
 # read far better than PascalCase in a test explorer. The analyser disagrees;
 # the analyser is wrong for tests.
-[tests/**/*.cs]
+[backend/tests/**/*.cs]
 dotnet_diagnostic.CA1707.severity = none    # underscores in member names
 dotnet_diagnostic.CA1515.severity = none    # types can be public in test projects

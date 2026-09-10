@@ -73,7 +73,7 @@ temp/
 # ---- Generated. Do not edit by hand; regenerate with `pnpm generate:api`. ----
 # (Committed deliberately so CI can verify freshness — listed here as a reminder,
 #  not ignored.)
-# packages/api-client/src/generated/
+# frontend/packages/api-client/src/generated/
 
 # ---- AI design skills ----
 # Skill CONTENT is committed (.agents/skills/**, .claude/skills/**/*.md) so the

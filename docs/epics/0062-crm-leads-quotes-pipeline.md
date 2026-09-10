@@ -226,7 +226,7 @@ been broken down yet.
       persisted as `*_minor`
 - [ ] Abuse controls — per-IP and per-host rate limiting plus a honeypot field. This is an
       unauthenticated write endpoint on a public website (see findings)
-- [ ] The widget itself as a storefront component, using `packages/ui` tokens only
+- [ ] The widget itself as a storefront component, using `frontend/packages/ui` tokens only
 - [ ] Test: a request with `Host` set to agency A's domain cannot create a lead against agency B
 
 **Depends on:** C1, C2, #45, **#60**
@@ -389,7 +389,7 @@ The screens an agent lives in: new leads, the board, and one customer.
       reason prompt rather than moving optimistically and failing silently
 - [ ] Customer 360 screen — profile, bookings, quotes, documents, timeline, tasks
 - [ ] Search across name, email and phone
-- [ ] Built from `packages/ui` with `cva` variants. **No hard-coded colour, font or spacing**
+- [ ] Built from `frontend/packages/ui` with `cva` variants. **No hard-coded colour, font or spacing**
       ([hard rule #7](../../CLAUDE.md)); `pnpm check:design` passes
 - [ ] Empty states are written, not left blank. An agency's first week has no leads, and this is
       the screen they will judge the product on

@@ -101,6 +101,11 @@ ${BOLD}Next${NC}
   2. Read ${BLUE}CONTRIBUTING.md${NC}   ${DIM}how we work${NC}
   3. Read ${BLUE}docs/onboarding.md${NC} ${DIM}your first week${NC}
 
+${BOLD}Where to run things${NC}
+  ${DIM}cd backend  && dotnet build     the .NET solution lives here
+  cd frontend && pnpm install     the pnpm workspace lives here
+  ./scripts/check-design.sh       repo-root scripts work from anywhere${NC}
+
 ${BOLD}Starting a task${NC}
   ${DIM}git checkout main && git pull origin main
   git checkout -b feat/M1-my-task${NC}

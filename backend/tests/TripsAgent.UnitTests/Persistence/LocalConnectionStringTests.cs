@@ -5,12 +5,12 @@ using TripsAgent.Infrastructure.Persistence;
 namespace TripsAgent.UnitTests.Persistence;
 
 /// <summary>
-/// The local connection string lives in three places, and they have to agree.
+/// The local connection string lives in four places, and they have to agree.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <c>docker compose up</c> creates the database from <c>.env.example</c>; <c>dotnet run</c>
-/// connects with <c>appsettings.Development.json</c>; <c>./scripts/ef.sh update</c> connects with
+/// <c>docker compose up</c> creates the database from <c>.env.example</c>; the API and the Worker
+/// connect with their own <c>appsettings.Development.json</c>; <c>./scripts/ef.sh update</c> connects with
 /// <see cref="AppDbContextFactory"/>. They drifted once already — compose created
 /// <c>trips_agent</c> as <c>trips</c> while the code asked for <c>tripsagent</c> as
 /// <c>postgres</c> — and a new developer following the README got an authentication failure on
@@ -23,11 +23,15 @@ namespace TripsAgent.UnitTests.Persistence;
 /// </remarks>
 public class LocalConnectionStringTests
 {
-    [Fact]
-    public void Appsettings_should_connect_to_the_database_docker_compose_creates()
+    [Theory]
+    [InlineData("TripsAgent.Api")]
+    [InlineData("TripsAgent.Worker")]
+    public void Appsettings_should_connect_to_the_database_docker_compose_creates(string host)
     {
-        Appsettings().Should().Be(EnvExample(),
-            "`dotnet run` must reach the database that `docker compose up` created from .env.example");
+        // The Worker is listed explicitly because it is the copy that drifted second: it gained
+        // a Postgres connection for Hangfire's job storage and arrived with the old credentials.
+        Appsettings(host).Should().Be(EnvExample(),
+            $"`dotnet run --project services/{host}` must reach the database that `docker compose up` created from .env.example");
     }
 
     [Fact]
@@ -48,10 +52,10 @@ public class LocalConnectionStringTests
         return line![key.Length..].Trim();
     }
 
-    private static string Appsettings()
+    private static string Appsettings(string host)
     {
         var path = Path.Combine(
-            RepositoryRoot(), "backend", "services", "TripsAgent.Api", "appsettings.Development.json");
+            RepositoryRoot(), "backend", "services", host, "appsettings.Development.json");
 
         using var document = JsonDocument.Parse(File.ReadAllText(path));
         return document.RootElement.GetProperty("ConnectionStrings").GetProperty("Postgres").GetString()!;

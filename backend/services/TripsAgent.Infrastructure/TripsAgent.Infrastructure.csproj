@@ -8,10 +8,25 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="EFCore.NamingConventions" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <!-- GetSection(...).Get<T>() lives here, not in Abstractions. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
 
     <!-- Design-time only: IDesignTimeDbContextFactory and the `dotnet ef` tooling. PrivateAssets
          keeps it out of anything that references Infrastructure, so it never ships to production. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Sagas, domain events and everything on the booking/money path. -->
+    <PackageReference Include="MassTransit" />
+    <PackageReference Include="MassTransit.RabbitMQ" />
+
+    <!-- Recurring jobs. Hangfire.NetCore is the DI half (AddHangfire, AddHangfireServer) and
+         carries no ASP.NET Core dependency, which is what keeps this project a plain class
+         library. The dashboard half, Hangfire.AspNetCore, is referenced by the API instead. -->
+    <PackageReference Include="Hangfire.Core" />
+    <PackageReference Include="Hangfire.NetCore" />
+    <PackageReference Include="Hangfire.PostgreSql" />
   </ItemGroup>
 
   <PropertyGroup>

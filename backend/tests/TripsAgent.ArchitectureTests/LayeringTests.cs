@@ -86,6 +86,46 @@ public class LayeringTests
              """);
     }
 
+    [Fact]
+    public void Application_should_not_depend_on_a_specific_message_broker()
+    {
+        var result = Types.InAssembly(Application)
+            .ShouldNot()
+            .HaveDependencyOnAny("MassTransit", "RabbitMQ", "Hangfire")
+            .GetResult();
+
+        Assert.True(
+            result.IsSuccessful,
+            $"""
+             Application talks to the broker through IMessageBus, never through MassTransit
+             directly. Cloud is not chosen yet — moving to SQS or Service Bus must mean writing
+             one new class in Infrastructure, not editing every handler that publishes an event.
+
+             Offending types: {Format(result)}
+
+             Fix: add what you need to IMessageBus in Application/Messaging/, and implement it in
+             Infrastructure/Messaging/MassTransitMessageBus.cs.
+             """);
+    }
+
+    [Fact]
+    public void Domain_should_not_depend_on_a_specific_message_broker()
+    {
+        var result = Types.InAssembly(Domain)
+            .ShouldNot()
+            .HaveDependencyOnAny("MassTransit", "RabbitMQ", "Hangfire")
+            .GetResult();
+
+        Assert.True(
+            result.IsSuccessful,
+            $"""
+             Domain depends on nothing, and that includes the message broker. A domain event is a
+             plain record; what carries it is somebody else's problem.
+
+             Offending types: {Format(result)}
+             """);
+    }
+
     private static string Format(TestResult result) =>
         result.FailingTypeNames is null
             ? "(none reported)"

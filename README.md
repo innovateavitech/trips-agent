@@ -253,42 +253,62 @@ and every tenant-scoped feature must pass it.
 
 ## 5. Repository map
 
+The two stacks live in two self-contained roots. `backend/` is the whole .NET solution;
+`frontend/` is the whole pnpm workspace. Each owns its build configuration, so you run
+`dotnet` commands from `backend/` and `pnpm` commands from `frontend/`, and neither stack's
+tooling has to know the other exists.
+
 ```
 trips-agent/
-├─ apps/                        Front ends (React + TypeScript)
-│  ├─ agent-console/            Where agents work. Vite SPA, login required
-│  ├─ storefront/               Traveller-facing agent sites. Next.js, server-rendered for SEO
-│  ├─ admin-console/            Trips back-office. Vite SPA, staff only
-│  └─ marketing-site/           tripsagent.com — our own marketing and signup
+├─ backend/                     The .NET solution — run dotnet commands from here
+│  ├─ services/
+│  │  ├─ TripsAgent.Api/           HTTP endpoints. Thin — no business logic lives here
+│  │  ├─ TripsAgent.Worker/        Background jobs and queue consumers
+│  │  ├─ TripsAgent.Domain/        Entities and business rules. Depends on NOTHING
+│  │  ├─ TripsAgent.Application/   Use cases. One class per thing a user can do
+│  │  ├─ TripsAgent.Infrastructure/ Database, caching, outbox. The "how"
+│  │  │  └─ Persistence/Migrations/ Database schema changes, in order
+│  │  ├─ TripsAgent.Contracts/     DTOs and events. Source of the generated TS types
+│  │  ├─ TripsAgent.Integrations.TripsAfrica/  Flight and bus supplier
+│  │  ├─ TripsAgent.Integrations.Paystack/     Payments
+│  │  └─ TripsAgent.Documents/     PDF invoices and vouchers
+│  ├─ tests/
+│  │  ├─ TripsAgent.UnitTests/         Fast, no database
+│  │  ├─ TripsAgent.IntegrationTests/  Real Postgres in Docker
+│  │  └─ TripsAgent.ArchitectureTests/ Enforces the layering rules below
+│  ├─ TripsAgent.slnx            The solution
+│  ├─ Directory.Build.props      Compiler settings applied to every project
+│  ├─ Directory.Packages.props   Central package versions — never version a .csproj
+│  └─ .config/dotnet-tools.json  Pinned dotnet-ef, restored by scripts/setup.sh
 │
-├─ packages/                    Shared front-end code
-│  ├─ ui/                       Design system. Buttons, forms, tables — used by all three apps
-│  ├─ api-client/               TypeScript API client. GENERATED — never edit by hand
-│  ├─ contracts/                Shared TypeScript types. Also generated
-│  ├─ config/                   Shared ESLint / TypeScript / Tailwind config
-│  └─ utils/                    Shared helpers
+├─ frontend/                    The pnpm workspace — run pnpm commands from here
+│  ├─ apps/
+│  │  ├─ agent-console/         Where agents work. Vite SPA, login required
+│  │  ├─ storefront/            Traveller-facing agent sites. Next.js, server-rendered for SEO
+│  │  ├─ admin-console/         Trips back-office. Vite SPA, staff only
+│  │  └─ marketing-site/        tripsagent.com — our own marketing and signup
+│  ├─ packages/
+│  │  ├─ ui/                    Design system. Buttons, forms, tables — used by all three apps
+│  │  ├─ api-client/            TypeScript API client. GENERATED — never edit by hand
+│  │  ├─ contracts/             Shared TypeScript types. Also generated
+│  │  ├─ config/                Shared ESLint / TypeScript / Tailwind config
+│  │  └─ utils/                 Shared helpers
+│  ├─ package.json              Workspace root scripts
+│  └─ pnpm-workspace.yaml · turbo.json · pnpm-lock.yaml
 │
-├─ services/                    Backend (.NET)
-│  ├─ TripsAgent.Api/           HTTP endpoints. Thin — no business logic lives here
-│  ├─ TripsAgent.Worker/        Background jobs and queue consumers
-│  ├─ TripsAgent.Domain/        Entities and business rules. Depends on NOTHING
-│  ├─ TripsAgent.Application/   Use cases. One class per thing a user can do
-│  ├─ TripsAgent.Infrastructure/ Database, caching, outbox. The "how"
-│  ├─ TripsAgent.Contracts/     DTOs and events. Source of the generated TS types
-│  ├─ TripsAgent.Integrations.TripsAfrica/  Flight and bus supplier
-│  ├─ TripsAgent.Integrations.Paystack/     Payments
-│  └─ TripsAgent.Documents/     PDF invoices and vouchers
-│
-├─ tests/
-│  ├─ TripsAgent.UnitTests/         Fast, no database
-│  ├─ TripsAgent.IntegrationTests/  Real Postgres in Docker
-│  ├─ TripsAgent.ArchitectureTests/ Enforces the layering rules below
-│  └─ e2e/                          Playwright, drives real browsers
-│
-├─ db/migrations/               Database schema changes, in order
+├─ e2e/                         Playwright, drives real browsers against both stacks
 ├─ infra/                       Docker, Terraform, deployment
+├─ scripts/                     setup.sh · check-design.sh · ef.sh — shared by both stacks
 ├─ docs/                        The plan, ADRs, runbooks, the FRD
 └─ .github/                     CI pipelines, PR and issue templates
+```
+
+Which directory am I in?
+
+```bash
+cd backend  && dotnet build      # dotnet test, dotnet run --project services/TripsAgent.Api
+cd frontend && pnpm build        # pnpm dev, pnpm typecheck, pnpm test
+./scripts/check-design.sh        # repo-root scripts work from anywhere
 ```
 
 ### The layering rule
@@ -364,14 +384,16 @@ $EDITOR .env
 docker compose up -d
 
 # 5. Install front-end dependencies
-pnpm install
+cd frontend && pnpm install && cd ..
 
 # 6. Create the database schema and load test data
+cd backend
 dotnet run --project services/TripsAgent.Api -- migrate
 dotnet run --project services/TripsAgent.Api -- seed
+cd ..
 
 # 7. Start everything
-pnpm dev
+cd frontend && pnpm dev
 ```
 
 > **Step 2 is not optional.** It installs the git hooks that stop you pushing to `main`,
@@ -388,7 +410,7 @@ Then open <http://localhost:5173> and log in with the test agent from §9.
 | `port 5432 is already allocated` | Another Postgres is running | `docker ps` to find it, or change `POSTGRES_PORT` in `.env` |
 | `relation "agencies" does not exist` | Migrations were not applied | Re-run step 5 |
 | API starts, front end shows 401 on everything | `.env` is missing or has no JWT secret | Re-do step 2 |
-| TypeScript errors in `packages/api-client` | The generated client is stale | `pnpm generate:api` |
+| TypeScript errors in `frontend/packages/api-client` | The generated client is stale | `pnpm generate:api` |
 | `pnpm: command not found` | pnpm not installed | `npm install -g pnpm` |
 
 Still stuck after 30 minutes? **Ask.** That is not failure, it is the correct move — see §11.
@@ -399,19 +421,23 @@ Still stuck after 30 minutes? **Ask.** That is not failure, it is the correct mo
 
 > Available once the scaffold lands.
 
-| What | Command |
-|---|---|
-| Everything at once | `pnpm dev` |
-| API only | `dotnet watch --project services/TripsAgent.Api` |
-| Background worker | `dotnet watch --project services/TripsAgent.Worker` |
-| Agent console only | `pnpm --filter agent-console dev` |
-| Storefront only | `pnpm --filter storefront dev` |
-| Backend tests | `dotnet test` |
-| Front-end tests | `pnpm test` |
-| Everything CI runs | `pnpm verify` |
-| New migration | `dotnet ef migrations add <Name> -p services/TripsAgent.Infrastructure` |
-| Reset the database | `pnpm db:reset` |
-| Regenerate the API client | `pnpm generate:api` |
+Commands are listed with the directory they run from. `dotnet` lives in `backend/`,
+`pnpm` lives in `frontend/`, and `scripts/` works from anywhere.
+
+| What | Where | Command |
+|---|---|---|
+| Everything at once | `frontend/` | `pnpm dev` |
+| API only | `backend/` | `dotnet watch --project services/TripsAgent.Api` |
+| Background worker | `backend/` | `dotnet watch --project services/TripsAgent.Worker` |
+| Agent console only | `frontend/` | `pnpm --filter agent-console dev` |
+| Storefront only | `frontend/` | `pnpm --filter storefront dev` |
+| Backend tests | `backend/` | `dotnet test` |
+| Front-end tests | `frontend/` | `pnpm test` |
+| Design token check | anywhere | `./scripts/check-design.sh` |
+| New migration | anywhere | `./scripts/ef.sh add <Name>` |
+| Apply migrations | anywhere | `./scripts/ef.sh update` |
+| Reset the database | `frontend/` | `pnpm db:reset` |
+| Regenerate the API client | `frontend/` | `pnpm generate:api` |
 
 | Service | URL |
 |---|---|
@@ -451,22 +477,22 @@ team lead for keys. **Never commit them.**
 
 | I want to change… | Look in |
 |---|---|
-| A screen an agent sees | `apps/agent-console/src/features/` |
-| A page a traveller sees | `apps/storefront/app/` |
-| A screen Trips staff see | `apps/admin-console/src/features/` |
-| A button, input or table style | `packages/ui/` |
-| An API endpoint | `services/TripsAgent.Api/Endpoints/` |
-| What happens when a user does something | `services/TripsAgent.Application/` |
-| A business rule | `services/TripsAgent.Domain/` |
-| A database table | `services/TripsAgent.Infrastructure/Persistence/Configurations/` |
-| The database schema itself | `db/migrations/` |
-| How we talk to Trips Africa | `services/TripsAgent.Integrations.TripsAfrica/` |
-| How we take payment | `services/TripsAgent.Integrations.Paystack/` |
-| A background job | `services/TripsAgent.Worker/Jobs/` |
-| How prices and markup are calculated | `services/TripsAgent.Domain/Pricing/` |
-| Wallet and ledger logic | `services/TripsAgent.Domain/Payments/` |
-| An invoice or voucher layout | `services/TripsAgent.Documents/` |
-| An email template | `services/TripsAgent.Infrastructure/Notifications/Templates/` |
+| A screen an agent sees | `frontend/apps/agent-console/src/features/` |
+| A page a traveller sees | `frontend/apps/storefront/app/` |
+| A screen Trips staff see | `frontend/apps/admin-console/src/features/` |
+| A button, input or table style | `frontend/packages/ui/` |
+| An API endpoint | `backend/services/TripsAgent.Api/Endpoints/` |
+| What happens when a user does something | `backend/services/TripsAgent.Application/` |
+| A business rule | `backend/services/TripsAgent.Domain/` |
+| A database table | `backend/services/TripsAgent.Infrastructure/Persistence/Configurations/` |
+| The database schema itself | `backend/services/TripsAgent.Infrastructure/Persistence/Migrations/` |
+| How we talk to Trips Africa | `backend/services/TripsAgent.Integrations.TripsAfrica/` |
+| How we take payment | `backend/services/TripsAgent.Integrations.Paystack/` |
+| A background job | `backend/services/TripsAgent.Worker/Jobs/` |
+| How prices and markup are calculated | `backend/services/TripsAgent.Domain/Pricing/` |
+| Wallet and ledger logic | `backend/services/TripsAgent.Domain/Payments/` |
+| An invoice or voucher layout | `backend/services/TripsAgent.Documents/` |
+| An email template | `backend/services/TripsAgent.Infrastructure/Notifications/Templates/` |
 | CI pipelines | `.github/workflows/` |
 
 ---

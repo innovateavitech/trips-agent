@@ -10,11 +10,7 @@
 export type MinorUnits = number;
 
 /** Formats minor units for display. `formatMoney(150000, 'NGN')` → "₦1,500.00" */
-export function formatMoney(
-  amountMinor: MinorUnits,
-  currency: string,
-  locale = 'en-NG',
-): string {
+export function formatMoney(amountMinor: MinorUnits, currency: string, locale = 'en-NG'): string {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,

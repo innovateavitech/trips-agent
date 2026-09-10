@@ -16,8 +16,8 @@ BOLD=$'\033[1m'; DIM=$'\033[2m'; NC=$'\033[0m'
 
 FAILED=0
 BRAND_PRIMARY_HSL="226 83% 56%"
-TOKENS="packages/ui/src/styles/tokens.css"
-PRESET="packages/ui/tailwind.preset.ts"
+TOKENS="frontend/packages/ui/src/styles/tokens.css"
+PRESET="frontend/packages/ui/tailwind.preset.ts"
 
 # Files allowed to contain raw colour values.
 is_allowed() {
@@ -29,10 +29,10 @@ is_allowed() {
 
 # Everything we lint: app and package source only.
 sources() {
-  # Directory pathspecs, not globs: `git ls-files 'apps/**/*.tsx'` silently
+  # Directory pathspecs, not globs: `git ls-files 'frontend/apps/**/*.tsx'` silently
   # misses nested paths, which would let drift through unnoticed.
   # --others --exclude-standard includes new files that are not yet committed.
-  git ls-files --cached --others --exclude-standard -- apps packages 2>/dev/null \
+  git ls-files --cached --others --exclude-standard -- frontend/apps frontend/packages 2>/dev/null \
     | grep -E '\.(tsx|ts|css)$' \
     | grep -v '/generated/' \
     | grep -v 'node_modules' \

@@ -463,7 +463,7 @@ markup next month must not silently rewrite last month's revenue.
 
 Trips Africa will not tell us when a ticket is issued. We poll. If you are adding anything that
 depends on a booking's final state, it belongs in a background job, not a request handler. See
-`services/TripsAgent.Worker/Jobs/`.
+`backend/services/TripsAgent.Worker/Jobs/`.
 
 ### Everything the traveller sees is the agent's brand
 
@@ -472,7 +472,8 @@ logo and colours from the agency's branding record. The traveller must not know 
 
 ### Never edit generated files
 
-`packages/api-client/` and `packages/contracts/` are generated from the .NET code. Edit the C#
+`frontend/packages/api-client/` and `frontend/packages/contracts/` are generated from the .NET
+code. Edit the C#
 DTO and run `pnpm generate:api`. CI fails if the committed client is out of date.
 
 ---

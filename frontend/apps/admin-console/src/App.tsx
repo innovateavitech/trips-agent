@@ -9,7 +9,9 @@ export function App() {
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 p-8">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Trips Agent Console</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          Trips Admin Console
+        </h1>
         <p className="text-sm text-muted-foreground">
           Scaffold only — see docs/BACKLOG.md for what gets built here.
         </p>

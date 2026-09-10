@@ -30,7 +30,12 @@ internal static class AuditDatabase
             .UseSnakeCaseNamingConvention()
             .Options;
 
-        return new AppDbContext(options, TimeProvider.System, actor);
+        // No tenant resolved on purpose: what these tests exercise is the audit log's own
+        // visibility rule, which keys off IAuditContext. AuditLogEntry is deliberately not
+        // ITenantScoped, so the tenancy filters added in #11 do not apply to it.
+        var tenancy = TestTenancy.None();
+
+        return new AppDbContext(options, TimeProvider.System, tenancy.Tenant, tenancy.Scope, actor);
     }
 
     /// <summary>A minimal valid row. The time comes from the clock, never DateTimeOffset.UtcNow.</summary>

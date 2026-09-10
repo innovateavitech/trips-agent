@@ -77,6 +77,25 @@ public class MigrationTests
     }
 
     [Fact]
+    public async Task The_migrate_command_loads_reference_data()
+    {
+        await using var context = await NewDatabaseAsync();
+
+        (await DatabaseMigrator.RunAsync(BuildServiceProviderFor(context))).Should().Be(0);
+
+        // Registration needs the Owner role on the very first signup, in every environment. It
+        // used to come only from the dev `seed` command, which production never runs.
+        await using var connection = new NpgsqlConnection(context.Database.GetConnectionString());
+        await connection.OpenAsync();
+
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            "SELECT count(*) FROM identity.roles WHERE agency_id IS NULL AND name = 'Owner'";
+
+        (await command.ExecuteScalarAsync()).Should().Be(1L);
+    }
+
+    [Fact]
     public async Task The_migrate_command_succeeds_when_there_is_nothing_to_do()
     {
         await using var context = await NewDatabaseAsync();
@@ -97,7 +116,9 @@ public class MigrationTests
             .UseSnakeCaseNamingConvention()
             .Options;
 
-        await using var unreachable = new AppDbContext(options, TimeProvider.System);
+        var tenancy = TestTenancy.None();
+        await using var unreachable = new AppDbContext(
+            options, TimeProvider.System, tenancy.Tenant, tenancy.Scope);
 
         var exitCode = await DatabaseMigrator.RunAsync(BuildServiceProviderFor(unreachable));
 
@@ -199,9 +220,12 @@ public class MigrationTests
     /// </summary>
     private static ServiceProvider BuildServiceProviderFor(AppDbContext context)
     {
+        // The migrator now also loads reference data, which it does inside an audited platform
+        // scope — so the container needs one.
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton(context);
+        services.AddSingleton<TripsAgent.Application.Tenancy.IPlatformScope>(TestTenancy.None().Scope);
         return services.BuildServiceProvider();
     }
 }

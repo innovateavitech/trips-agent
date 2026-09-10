@@ -31,10 +31,14 @@ public class AuditInterceptorEndToEndTests
     [Fact]
     public async Task Saving_an_audited_entity_writes_a_redacted_row_to_the_partitioned_table()
     {
-        await using var context = await ProbeContextAsync();
+        // The probe is ITenantScoped, so the context has to be acting as the agency the row
+        // belongs to — the tenant write guard from #11 refuses a save into another agency.
+        var agencyId = Guid.CreateVersion7();
+
+        await using var context = await ProbeContextAsync(agencyId);
         var probe = new AuditedProbe
         {
-            AgencyId = Guid.CreateVersion7(),
+            AgencyId = agencyId,
             Name = "Kano Travels Ltd",
             PasswordHash = "$2a$12$abcdefghijklmnopqrstuv",
         };
@@ -54,7 +58,9 @@ public class AuditInterceptorEndToEndTests
     }
 
     /// <summary>A migrated database, the probe table, and the real context with the interceptor.</summary>
-    private async Task<AppDbContext> ProbeContextAsync([CallerMemberName] string testName = "")
+    private async Task<AppDbContext> ProbeContextAsync(
+        Guid agencyId,
+        [CallerMemberName] string testName = "")
     {
         await using (var setup = await AuditDatabase.MigratedAsync(_postgres, testName))
         {
@@ -79,7 +85,9 @@ public class AuditInterceptorEndToEndTests
                 .ReplaceService<IModelCacheKeyFactory, FreshModelFactory>()
                 .Options;
 
-            return new AppDbContext(options, TimeProvider.System, actor);
+            var tenancy = TestTenancy.For(agencyId);
+
+            return new AppDbContext(options, TimeProvider.System, tenancy.Tenant, tenancy.Scope, actor);
         }
     }
 
@@ -107,7 +115,7 @@ public class AuditInterceptorEndToEndTests
             (context?.GetType(), Guid.NewGuid(), designTime);
     }
 
-    private sealed class AuditedProbe : Entity, IAuditLogged, ITenantOwnedEntity
+    private sealed class AuditedProbe : Entity, IAuditLogged, ITenantScoped
     {
         public Guid AgencyId { get; set; }
 

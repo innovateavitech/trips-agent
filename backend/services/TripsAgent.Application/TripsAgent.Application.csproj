@@ -5,6 +5,14 @@
     <ProjectReference Include="..\TripsAgent.Contracts\TripsAgent.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Use cases query through IAppDbContext, which exposes DbSet<T>. The layering rule this
+         repository enforces is Application-must-not-reference-Infrastructure; EF Core's own
+         abstractions are allowed, and hiding them behind a hand-rolled repository per table
+         would be ceremony a small team pays for on every feature. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

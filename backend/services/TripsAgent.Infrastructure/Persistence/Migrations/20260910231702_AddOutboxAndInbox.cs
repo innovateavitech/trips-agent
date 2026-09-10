@@ -11,9 +11,6 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.EnsureSchema(
-                name: "platform");
-
             migrationBuilder.CreateTable(
                 name: "inbox_messages",
                 schema: "platform",

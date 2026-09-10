@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Logging.Abstractions;
+using TripsAgent.Application.Tenancy;
+using TripsAgent.Infrastructure.Tenancy;
 
 namespace TripsAgent.Infrastructure.Persistence;
 
@@ -40,6 +43,14 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
             .UseSnakeCaseNamingConvention()
             .Options;
 
-        return new AppDbContext(options, TimeProvider.System);
+        // No tenant at design time, and none needed: query filters shape what a request can
+        // read, not what the schema looks like, so they have no bearing on a generated migration.
+        var tenantContext = new TenantContext();
+
+        return new AppDbContext(
+            options,
+            TimeProvider.System,
+            tenantContext,
+            new PlatformScope(tenantContext, NullLogger<PlatformScope>.Instance));
     }
 }

@@ -44,7 +44,7 @@ public class DomainEventOutboxTests
         outboxRow.MessageType.Should().Contain(nameof(ProbeAggregateEvent));
         outboxRow.Payload.Should().Contain("first");
         outboxRow.Status.Should().Be(OutboxMessageStatus.Pending);
-        outboxRow.AgencyId.Should().BeNull("ProbeAggregate does not implement ITenantOwnedEntity");
+        outboxRow.AgencyId.Should().BeNull("ProbeAggregate does not implement ITenantScoped");
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class DomainEventOutboxTests
             .ReplaceService<IModelCacheKeyFactory, FreshModelFactory>()
             .Options;
 
-        var context = new AppDbContext(options, TimeProvider.System);
+        var context = new AppDbContext(options, TimeProvider.System, TestTenancy.None().Tenant, TestTenancy.None().Scope);
 
         await context.Database.ExecuteSqlRawAsync(
             """

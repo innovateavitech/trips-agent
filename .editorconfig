@@ -61,6 +61,13 @@ indent_size = 2
 end_of_line = lf
 
 # --- Test projects ---------------------------------------------------------
+# CA1711 reserves a handful of type-name suffixes — Permission, Flags, Delegate — from the
+# .NET Framework's old code-access-security types. "Permission" is simply the right word for a
+# thing a user is allowed to do, and renaming the domain to appease a rule about a dead API
+# would make the model harder to read, not safer.
+[backend/services/TripsAgent.Domain/**/*.cs]
+dotnet_diagnostic.CA1711.severity = none
+
 # Underscored test names (Thing_should_do_other_thing) are the convention and
 # read far better than PascalCase in a test explorer. The analyser disagrees;
 # the analyser is wrong for tests.

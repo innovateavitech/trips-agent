@@ -148,7 +148,7 @@ public class MassTransitOutboxPublisherTests
             .UseSnakeCaseNamingConvention()
             .Options;
 
-        return new AppDbContext(options, TimeProvider.System);
+        return new AppDbContext(options, TimeProvider.System, TestTenancy.None().Tenant, TestTenancy.None().Scope);
     }
 
     private static async Task<InMemoryBus> StartInMemoryBusAsync(ProbeOutboxEventLog log)

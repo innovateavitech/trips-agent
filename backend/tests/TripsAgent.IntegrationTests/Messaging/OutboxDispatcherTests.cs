@@ -204,7 +204,7 @@ public class OutboxDispatcherTests
             .UseSnakeCaseNamingConvention()
             .Options;
 
-        return new AppDbContext(options, TimeProvider.System);
+        return new AppDbContext(options, TimeProvider.System, TestTenancy.None().Tenant, TestTenancy.None().Scope);
     }
 
     private static async Task<Guid> EnqueueAsync(AppDbContext context, string detail, DateTimeOffset? occurredAt = null)

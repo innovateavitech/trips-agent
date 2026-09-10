@@ -1,11 +1,15 @@
+using MailKit.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Auditing;
 using TripsAgent.Application.Identity;
+using TripsAgent.Application.Notifications;
+using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Identity;
+using TripsAgent.Infrastructure.Notifications;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Tenancy;
 
@@ -62,6 +66,17 @@ public static class DependencyInjection
         // Stateless and thread-safe, so one instance serves the whole process.
         services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
 
+        // Resolved lazily, so `migrate` and `seed` run without a hashing key configured — only a
+        // request that actually hashes a token needs one, and it fails clearly if it is missing.
+        services.AddSingleton<ITokenHasher>(_ => new HmacTokenHasher(ReadTokenHashKey(configuration)));
+
+        services.AddSingleton<IEmailSender>(_ => new SmtpEmailSender(ReadSmtpOptions(configuration)));
+
+        services.AddSingleton(ReadJwtOptions(configuration));
+        services.AddSingleton<IAccessTokenIssuer>(sp => new JwtAccessTokenIssuer(
+            sp.GetRequiredService<JwtOptions>(),
+            sp.GetRequiredService<TimeProvider>()));
+
         // The service-provider overload: the audit interceptor below has to come from the scoped
         // provider so it sees the actor for *this* request.
         services.AddDbContext<AppDbContext>((serviceProvider, options) =>
@@ -88,7 +103,86 @@ public static class DependencyInjection
                 .AddInterceptors(serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>());
         });
 
+        // Use cases see the database through this port; it is the same scoped context, so the
+        // same tenant filters, audit interceptor and write guard all still apply.
+        services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+
         return services;
+    }
+
+    /// <summary>The configuration key holding the base64 HMAC key for generated secrets.</summary>
+    public const string TokenHashKeySetting = "Security:TokenHashKey";
+
+    /// <summary>
+    /// Reads the JWT settings. Public because the API needs the same values to <i>validate</i>
+    /// tokens that this assembly uses to <i>issue</i> them — two readers of one section, never
+    /// two copies of the defaults.
+    /// </summary>
+    public static JwtOptions ReadJwtOptions(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var jwt = configuration.GetSection("Jwt");
+
+        return new JwtOptions
+        {
+            Issuer = jwt["Issuer"] ?? "https://tripsagent.local",
+            Audience = jwt["Audience"] ?? "trips-agent-api",
+            SigningKey = jwt["SigningKey"] ?? string.Empty,
+            AccessTokenLifetime = int.TryParse(
+                jwt["AccessTokenMinutes"], System.Globalization.CultureInfo.InvariantCulture, out var minutes)
+                ? TimeSpan.FromMinutes(minutes)
+                : TimeSpan.FromMinutes(15),
+        };
+    }
+
+    private static byte[] ReadTokenHashKey(IConfiguration configuration)
+    {
+        var encoded = configuration[TokenHashKeySetting];
+
+        if (string.IsNullOrWhiteSpace(encoded))
+        {
+            throw new InvalidOperationException(
+                $"""
+                 No token hashing key configured at {TokenHashKeySetting}.
+
+                 It keys the HMAC used to store verification codes and tokens, and it must be at
+                 least {HmacTokenHasher.MinimumKeyBytes} random bytes, base64-encoded. Generate one with:
+
+                     openssl rand -base64 32
+
+                 then set it as the environment variable Security__TokenHashKey. Never commit a
+                 production key — rotating it invalidates every outstanding code, which is the
+                 point if it leaks.
+                 """);
+        }
+
+        try
+        {
+            return Convert.FromBase64String(encoded);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidOperationException($"{TokenHashKeySetting} is not valid base64.", ex);
+        }
+    }
+
+    private static SmtpOptions ReadSmtpOptions(IConfiguration configuration)
+    {
+        var smtp = configuration.GetSection("Smtp");
+
+        return new SmtpOptions
+        {
+            Host = smtp["Host"] ?? "localhost",
+            Port = int.TryParse(smtp["Port"], System.Globalization.CultureInfo.InvariantCulture, out var port) ? port : 1025,
+            SecureSocket = Enum.TryParse<SecureSocketOptions>(smtp["SecureSocket"], ignoreCase: true, out var secure)
+                ? secure
+                : SecureSocketOptions.StartTls,
+            Username = smtp["Username"],
+            Password = smtp["Password"],
+            FromAddress = smtp["FromAddress"] ?? "no-reply@tripsagent.test",
+            FromName = smtp["FromName"] ?? "Trips Agent",
+        };
     }
 
     /// <summary>

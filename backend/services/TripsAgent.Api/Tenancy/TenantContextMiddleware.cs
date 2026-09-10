@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using TripsAgent.Application.Identity;
 using TripsAgent.Application.Tenancy;
 
 namespace TripsAgent.Api.Tenancy;
@@ -23,12 +24,6 @@ namespace TripsAgent.Api.Tenancy;
 /// </remarks>
 public sealed partial class TenantContextMiddleware
 {
-    /// <summary>Claim holding the agency the caller is acting as.</summary>
-    public const string AgencyIdClaim = "agency_id";
-
-    /// <summary>Claim holding the principal at the top of that agency's tree.</summary>
-    public const string RootAgencyIdClaim = "root_agency_id";
-
     private readonly RequestDelegate _next;
     private readonly ILogger<TenantContextMiddleware> _logger;
 
@@ -47,14 +42,14 @@ public sealed partial class TenantContextMiddleware
 
         if (user?.Identity?.IsAuthenticated == true)
         {
-            var userId = ReadGuid(user, ClaimTypes.NameIdentifier) ?? ReadGuid(user, "sub");
-            var agencyId = ReadGuid(user, AgencyIdClaim);
+            var userId = ReadGuid(user, TripsClaimTypes.Subject) ?? ReadGuid(user, ClaimTypes.NameIdentifier);
+            var agencyId = ReadGuid(user, TripsClaimTypes.AgencyId);
 
             if (agencyId.HasValue)
             {
                 tenantContext.SetTenant(
                     agencyId.Value,
-                    ReadGuid(user, RootAgencyIdClaim),
+                    ReadGuid(user, TripsClaimTypes.RootAgencyId),
                     userId);
             }
             else if (userId.HasValue)

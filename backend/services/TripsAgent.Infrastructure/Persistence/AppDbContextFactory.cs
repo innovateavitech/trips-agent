@@ -20,14 +20,20 @@ namespace TripsAgent.Infrastructure.Persistence;
 /// </remarks>
 public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
-    private const string FallbackConnectionString =
-        "Host=localhost;Port=5432;Database=tripsagent;Username=postgres;Password=postgres";
+    /// <summary>
+    /// The local database that <c>docker compose up</c> creates. Must match
+    /// <c>ConnectionStrings__Postgres</c> in <c>.env.example</c> and the Postgres entry in
+    /// <c>appsettings.Development.json</c> — <c>LocalConnectionStringTests</c> fails if any of the
+    /// three drift apart.
+    /// </summary>
+    public const string LocalDevelopmentConnectionString =
+        "Host=localhost;Port=5432;Database=trips_agent;Username=trips;Password=trips_local_dev";
 
     public AppDbContext CreateDbContext(string[] args)
     {
         var connectionString =
             Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
-            ?? FallbackConnectionString;
+            ?? LocalDevelopmentConnectionString;
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName))

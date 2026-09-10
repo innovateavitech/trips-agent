@@ -87,7 +87,9 @@ it to the Application layer, and returns a response. That is deliberate — busi
 Pick an issue labelled **`good-first-issue`**. These are chosen to be genuinely small and safe —
 they never touch payments, tenancy or the supplier integration.
 
-Then run the loop from [`CONTRIBUTING.md` §4](../CONTRIBUTING.md#4-the-everyday-workflow):
+Then run the loop. If you are using Claude Code, follow
+[`WORKING_WITH_CLAUDE.md`](WORKING_WITH_CLAUDE.md) — it covers briefing it and, more importantly,
+reviewing what it gives you. Otherwise, [`CONTRIBUTING.md` §4](../CONTRIBUTING.md#4-the-everyday-workflow):
 
 ```bash
 git checkout main && git pull origin main

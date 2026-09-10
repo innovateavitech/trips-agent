@@ -11,7 +11,8 @@ This file is the map. GitHub is the source of truth for status — if the two di
 
 1. Find an unassigned issue whose dependencies are **closed**
 2. Assign it to yourself, so nobody duplicates your work
-3. Branch, build, PR — see [CONTRIBUTING.md §4](../CONTRIBUTING.md#4-the-everyday-workflow)
+3. Branch, build, PR — see [WORKING_WITH_CLAUDE.md](WORKING_WITH_CLAUDE.md) if you are using
+   Claude Code, or [CONTRIBUTING.md §4](../CONTRIBUTING.md#4-the-everyday-workflow) if not
 
 New to the codebase? Start with a **[`good-first-issue`](https://github.com/innovateavitech/trips-agent/labels/good-first-issue)**.
 These are deliberately self-contained and never touch payments, tenancy or the supplier integration —

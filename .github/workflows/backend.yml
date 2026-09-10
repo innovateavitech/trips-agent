@@ -58,6 +58,12 @@ jobs:
         working-directory: backend
         run: dotnet tool restore
 
+      # `dotnet ef` builds the project to read the model, so the packages have to be restored
+      # too. Without this the check fails with NETSDK1004 long before it looks at a migration.
+      - name: Restore
+        working-directory: backend
+        run: dotnet restore TripsAgent.slnx
+
       - name: Check for a model change with no migration
         # An entity edited without `./scripts/ef.sh add <Name>` builds and tests perfectly well,
         # and then fails on deploy against a schema that never grew the column. Catch it here.

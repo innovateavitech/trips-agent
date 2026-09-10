@@ -65,13 +65,30 @@ case "$command" in
   check)
     # Exits non-zero when the model and the migrations have drifted apart. CI runs this so a
     # forgotten migration is caught in the pull request, not on the deploy.
-    if ef migrations has-pending-model-changes; then
+    # has-pending-model-changes also exits non-zero when it could not run at all — a compile
+    # error, a missing restore. That is a completely different problem from a forgotten
+    # migration, so tell them apart rather than blaming the migration for a broken build.
+    set +e
+    output="$(ef migrations has-pending-model-changes 2>&1)"
+    status=$?
+    set -e
+
+    if [ "$status" -eq 0 ]; then
       echo "Model and migrations are in sync."
-    else
+    elif printf '%s' "$output" | grep -qiE 'changes have been made to the model|pending model changes'; then
       echo
       echo "The EF Core model has changes with no matching migration." >&2
       echo "Fix: ./scripts/ef.sh add <DescriptiveName>" >&2
       exit 1
+    else
+      echo
+      echo "The migration check could not run. This is NOT a missing migration." >&2
+      echo >&2
+      printf '%s\n' "$output" >&2
+      echo >&2
+      echo "EF Core could not build the model. Fix the build first:" >&2
+      echo "  cd backend && dotnet build TripsAgent.slnx" >&2
+      exit "$status"
     fi
     ;;
 

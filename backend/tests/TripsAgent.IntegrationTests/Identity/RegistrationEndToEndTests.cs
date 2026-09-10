@@ -48,7 +48,12 @@ public sealed class RegistrationEndToEndTests : IAsyncLifetime, IDisposable
     {
         await _mailpit.StartAsync();
 
-        const string database = "registration_end_to_end";
+        // A unique database per test, not a shared name. xUnit builds a new instance for every
+        // test, so a fixed name would be dropped and recreated between them — and Npgsql caches
+        // its type catalogue per host/port/database. The recreated database hands out new OIDs
+        // for citext and ltree while the cached catalogue still holds the old ones, and every
+        // read of those columns then fails with DataTypeName '-.-'.
+        var database = $"reg_e2e_{Guid.NewGuid():N}";
         await using (var setup = await _postgres.CreateEmptyDatabaseAsync(database))
         {
             await setup.Database.MigrateAsync();
@@ -215,3 +220,4 @@ public sealed class RegistrationEndToEndTests : IAsyncLifetime, IDisposable
         throw new TimeoutException($"No email to {to} reached Mailpit within five seconds.");
     }
 }
+

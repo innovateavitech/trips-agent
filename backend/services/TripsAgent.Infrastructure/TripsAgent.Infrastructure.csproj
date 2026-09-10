@@ -10,6 +10,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="MailKit" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
 
     <!-- Design-time only: IDesignTimeDbContextFactory and the `dotnet ef` tooling. PrivateAssets
          keeps it out of anything that references Infrastructure, so it never ships to production. -->

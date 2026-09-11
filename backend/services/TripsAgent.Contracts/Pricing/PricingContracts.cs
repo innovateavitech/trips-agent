@@ -5,7 +5,7 @@ namespace TripsAgent.Contracts.Pricing;
 /// </summary>
 /// <param name="Scope"><c>Global</c>, <c>Supplier</c>, <c>ProductType</c> or <c>Product</c>.</param>
 /// <param name="ProductType">
-/// <c>Flight</c>, <c>Bus</c>, <c>Tour</c>, <c>Visa</c> or <c>GroupDeparture</c>. Required for the
+/// <c>Flight</c>, <c>Bus</c>, <c>Tour</c>, <c>Package</c>, <c>Visa</c> or <c>GroupDeparture</c>. Required for the
 /// <c>ProductType</c> and <c>Product</c> scopes, and only allowed there.
 /// </param>
 /// <param name="CalculationType"><c>Percentage</c> or <c>Fixed</c>.</param>
@@ -139,7 +139,7 @@ public sealed record PriceQuoteWithMarginResponse(
 /// "What would this sell for?" — a sample net price for the pricing screen's preview. Nothing is
 /// stored; no quote is made.
 /// </summary>
-/// <param name="ProductType"><c>Flight</c>, <c>Bus</c>, <c>Tour</c>, <c>Visa</c> or <c>GroupDeparture</c>.</param>
+/// <param name="ProductType"><c>Flight</c>, <c>Bus</c>, <c>Tour</c>, <c>Package</c>, <c>Visa</c> or <c>GroupDeparture</c>.</param>
 /// <param name="ProductId">A specific product, to see whether a product rule wins.</param>
 /// <param name="SupplierCode">A supplier, e.g. <c>trips_africa</c>, to see whether a supplier rule wins.</param>
 /// <param name="Currency">Omitted means the agency's base currency.</param>

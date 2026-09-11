@@ -268,6 +268,46 @@ public sealed class PricingEndpointTests : IClassFixture<RedisFixture>, IAsyncLi
     }
 
     [Fact]
+    public async Task A_rule_can_target_packages_and_a_package_can_be_quoted()
+    {
+        using var created = await SendAsync(
+            HttpMethod.Post,
+            "/api/v1/pricing/markup-rules",
+            new MarkupRuleRequest("ProductType", "Package", null, null, "NGN", "Percentage", 2_000, null, null, null, 0, true, null, null),
+            PermissionCodes.MarginEdit);
+
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        var rule = await created.Content.ReadFromJsonAsync<MarkupRuleResponse>();
+        rule!.ProductType.Should().Be("Package");
+
+        using (var package = await SendAsync(
+                   HttpMethod.Post, "/api/v1/pricing/preview", new PricePreviewRequest("Package", null, null, null, 100_000), PermissionCodes.MarginView))
+        {
+            package.StatusCode.Should().Be(HttpStatusCode.OK);
+            var price = await package.Content.ReadFromJsonAsync<PricePreviewResponse>();
+            price!.WinningRule!.Id.Should().Be(rule.Id, "a product-type rule beats the global one");
+            price.MarkupAmountMinor.Should().Be(20_000);
+        }
+
+        using (var tour = await SendAsync(
+                   HttpMethod.Post, "/api/v1/pricing/preview", new PricePreviewRequest("Tour", null, null, null, 100_000), PermissionCodes.MarginView))
+        {
+            var price = await tour.Content.ReadFromJsonAsync<PricePreviewResponse>();
+            price!.WinningRule!.Id.Should().Be(_ruleId, "a package rule says nothing about tours");
+        }
+
+        // A stored quote carries the type by name; the product-type CHECK has to accept "Package".
+        await using var scope = _factory.Services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<TenantContext>().SetTenant(_agencyId, _agencyId);
+
+        var quote = await scope.ServiceProvider.GetRequiredService<PricingService>().QuoteAsync(
+            new PricingSubject(PricedProductType.Package, "NGN", Guid.CreateVersion7()), new Money(100_000));
+
+        quote.ProductType.Should().Be(PricedProductType.Package);
+        quote.MarkupRuleId.Should().Be(rule.Id);
+    }
+
+    [Fact]
     public async Task The_settings_give_the_currency_and_the_rates_on_every_price()
     {
         using var response = await GetAsync("/api/v1/pricing/settings", PermissionCodes.MarginView);

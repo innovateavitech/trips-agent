@@ -8,11 +8,10 @@ namespace TripsAgent.Infrastructure.Assets;
 /// </summary>
 /// <remarks>
 /// <para>
-/// No scanner has been chosen yet (ClamAV, a cloud provider's malware scanning, a commercial
-/// API — it is a product and budget decision). This exists so the pipeline can be run and tested
-/// end to end on a laptop: every file comes back clean except the EICAR string, which every real
-/// antivirus engine also detects and which exists precisely so scanners can be tested without
-/// handling real malware.
+/// The real scanner is <see cref="ClamAvVirusScanner"/>. This exists so the pipeline can be run and
+/// tested end to end on a laptop without clamd and its gigabyte of signatures: every file comes back
+/// clean except the EICAR string, which every real antivirus engine also detects and which exists
+/// precisely so scanners can be tested without handling real malware.
 /// </para>
 /// <para>
 /// <see cref="AssetProcessingRegistration"/> never uses this outside the Development environment;

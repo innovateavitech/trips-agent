@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using TripsAgent.Api.Assets;
 using TripsAgent.Api.Authorization;
+using TripsAgent.Api.Catalog;
 using TripsAgent.Api.Identity;
 using TripsAgent.Api.Networking;
 using TripsAgent.Api.Payments;
@@ -181,6 +182,7 @@ app.MapPricingEndpoints();
 app.MapSearchEndpoints();
 
 app.MapAssetEndpoints();
+app.MapCatalogEndpoints();
 
 // Anonymous and signature-authenticated, standing in for an object store's presigned URLs while
 // files live on local disk. Maps nothing once a cloud adapter is registered.

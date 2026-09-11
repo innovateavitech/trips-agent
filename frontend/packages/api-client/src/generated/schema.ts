@@ -567,6 +567,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListProducts"];
+        put?: never;
+        post: operations["CreateProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetProduct"];
+        put: operations["SaveProduct"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PublishProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/unpublish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UnpublishProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ArchiveProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListProductCategories"];
+        put?: never;
+        post: operations["CreateProductCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -648,6 +744,16 @@ export interface components {
             availableSeats: number | string;
             seatNumbers: string[];
         };
+        CategoryRequest: {
+            name: string;
+            type: string;
+        };
+        CategoryResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            type: string;
+        };
         CurrentUserResponse: {
             /** Format: uuid */
             userId: string;
@@ -705,6 +811,14 @@ export interface components {
                 [key: string]: string[];
             };
         };
+        InclusionRequest: {
+            kind: string;
+            text: string;
+        };
+        InclusionResponse: {
+            kind: string;
+            text: string;
+        };
         InheritedMarkupRuleResponse: {
             /** Format: uuid */
             id: string;
@@ -730,6 +844,22 @@ export interface components {
             /** Format: date-time */
             effectiveTo: null | string;
             summary: string;
+        };
+        ItineraryDayRequest: {
+            /** Format: int32 */
+            dayNumber: number | string;
+            title: string;
+            description: string;
+            meals: string[];
+            accommodation: string;
+        };
+        ItineraryDayResponse: {
+            /** Format: int32 */
+            dayNumber: number | string;
+            title: string;
+            description: string;
+            meals: string[];
+            accommodation: string;
         };
         KybDocumentResponse: {
             /** Format: uuid */
@@ -951,6 +1081,30 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        PriceVariantRequest: {
+            name: string;
+            paxType: string;
+            /** Format: int32 */
+            occupancy: null | number | string;
+            /** Format: int32 */
+            minGroupSize: null | number | string;
+            /** Format: int32 */
+            maxGroupSize: null | number | string;
+            /** Format: int64 */
+            priceMinor: number | string;
+        };
+        PriceVariantResponse: {
+            name: string;
+            paxType: string;
+            /** Format: int32 */
+            occupancy: null | number | string;
+            /** Format: int32 */
+            minGroupSize: null | number | string;
+            /** Format: int32 */
+            maxGroupSize: null | number | string;
+            /** Format: int64 */
+            priceMinor: number | string;
+        };
         PricingSettingsResponse: {
             currency: string;
             /** Format: int32 */
@@ -969,6 +1123,101 @@ export interface components {
             status?: null | number | string;
             detail?: null | string;
             instance?: null | string;
+        };
+        ProductMediaRequest: {
+            /** Format: uuid */
+            assetId: string;
+            caption: string;
+        };
+        ProductMediaResponse: {
+            /** Format: uuid */
+            assetId: string;
+            caption: string;
+            previewUrl: null | string;
+        };
+        ProductRequest: {
+            productType: string;
+            title: string;
+            slug: null | string;
+            summary: string;
+            description: string;
+            destinationCountry: string;
+            destinationCity: string;
+            /** Format: int32 */
+            durationDays: null | number | string;
+            currency: string;
+            /** Format: int64 */
+            basePriceMinor: number | string;
+            /** Format: date */
+            availableFrom: null | string;
+            /** Format: date */
+            availableTo: null | string;
+            /** Format: uuid */
+            heroAssetId: null | string;
+            media: components["schemas"]["ProductMediaRequest"][];
+            categoryIds: string[];
+            itinerary: components["schemas"]["ItineraryDayRequest"][];
+            inclusions: components["schemas"]["InclusionRequest"][];
+            priceVariants: components["schemas"]["PriceVariantRequest"][];
+            visa: null | components["schemas"]["VisaDetailsRequest"];
+        };
+        ProductResponse: {
+            /** Format: uuid */
+            id: string;
+            productType: string;
+            title: string;
+            slug: string;
+            summary: string;
+            description: string;
+            destinationCountry: string;
+            destinationCity: string;
+            /** Format: int32 */
+            durationDays: null | number | string;
+            currency: string;
+            /** Format: int64 */
+            basePriceMinor: number | string;
+            /** Format: date */
+            availableFrom: null | string;
+            /** Format: date */
+            availableTo: null | string;
+            /** Format: uuid */
+            heroAssetId: null | string;
+            media: components["schemas"]["ProductMediaResponse"][];
+            categoryIds: string[];
+            itinerary: components["schemas"]["ItineraryDayResponse"][];
+            inclusions: components["schemas"]["InclusionResponse"][];
+            priceVariants: components["schemas"]["PriceVariantResponse"][];
+            visa: null | components["schemas"]["VisaDetailsResponse"];
+            status: string;
+            /** Format: date-time */
+            publishedAt: null | string;
+            /** Format: date-time */
+            updatedAt: string;
+            publishProblems: components["schemas"]["PublishProblemResponse"][];
+        };
+        ProductSummaryResponse: {
+            /** Format: uuid */
+            id: string;
+            productType: string;
+            title: string;
+            slug: string;
+            status: string;
+            destinationCity: string;
+            destinationCountry: string;
+            /** Format: int32 */
+            durationDays: null | number | string;
+            /** Format: int64 */
+            basePriceMinor: number | string;
+            currency: string;
+            heroPreviewUrl: null | string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: int32 */
+            publishProblemCount: number | string;
+        };
+        PublishProblemResponse: {
+            field: string;
+            message: string;
         };
         RefreshTokenRequest: {
             refreshToken: string;
@@ -1057,6 +1306,40 @@ export interface components {
             reference: string;
             /** Format: int64 */
             amountMinor: null | number | string;
+        };
+        VisaDetailsRequest: {
+            visaType: string;
+            entryType: string;
+            /** Format: int32 */
+            processingTimeDays: number | string;
+            /** Format: int32 */
+            validityDays: number | string;
+            /** Format: int64 */
+            consularFeeMinor: number | string;
+            /** Format: int64 */
+            serviceFeeMinor: number | string;
+            documents: components["schemas"]["VisaDocumentRequest"][];
+        };
+        VisaDetailsResponse: {
+            visaType: string;
+            entryType: string;
+            /** Format: int32 */
+            processingTimeDays: number | string;
+            /** Format: int32 */
+            validityDays: number | string;
+            /** Format: int64 */
+            consularFeeMinor: number | string;
+            /** Format: int64 */
+            serviceFeeMinor: number | string;
+            documents: components["schemas"]["VisaDocumentResponse"][];
+        };
+        VisaDocumentRequest: {
+            label: string;
+            isMandatory: boolean;
+        };
+        VisaDocumentResponse: {
+            label: string;
+            isMandatory: boolean;
         };
         WalletBalanceResponse: {
             /** Format: int64 */
@@ -2072,6 +2355,365 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListProducts: {
+        parameters: {
+            query?: {
+                type?: string;
+                status?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductSummaryResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SaveProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    PublishProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UnpublishProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ArchiveProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListProductCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryResponse"][];
+                };
+            };
+        };
+    };
+    CreateProductCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

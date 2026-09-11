@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Assets;
+using TripsAgent.Application.Catalog;
 using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
@@ -79,6 +80,10 @@ public static class DependencyInjection
         services.AddScoped<CompleteAssetUploadHandler>();
         services.AddScoped<GetAssetHandler>();
         services.AddScoped<AssetDelivery>();
+
+        // The agent-authored catalog: tours, packages and visas, and their categories (#160, #161).
+        services.AddScoped<ProductCatalogService>();
+        services.AddScoped<ProductCategoryService>();
 
         // Stages notifications in the caller's unit of work; the Worker sends them.
         services.AddScoped<INotifier, Notifier>();

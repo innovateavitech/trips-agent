@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Domain.Assets;
+using TripsAgent.Domain.Catalog;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Notifications;
@@ -98,6 +99,15 @@ public interface IAppDbContext
 
     /// <summary>The WebP renditions of image assets.</summary>
     public DbSet<AssetVariant> AssetVariants { get; }
+
+    /// <summary>
+    /// Each agency's own tours, packages and visas. Load one with its children to change it: a save
+    /// replaces the whole product, and the rows it is made of are reached through it.
+    /// </summary>
+    public DbSet<Product> Products { get; }
+
+    /// <summary>Each agency's own categories and themes.</summary>
+    public DbSet<ProductCategory> ProductCategories { get; }
 
     /// <summary>Every message sent to anyone, and what happened to it. Tenant-scoped.</summary>
     public DbSet<Notification> Notifications { get; }

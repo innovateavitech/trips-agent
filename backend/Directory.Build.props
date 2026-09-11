@@ -17,6 +17,22 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
+  <!-- Known-vulnerable packages (issue #108). Restore still checks every package, transitive ones
+       included, and prints NU1901-NU1904 as warnings. They are not errors here, even with
+       TreatWarningsAsErrors, because the gate is one named CI job: audit-api, which runs
+       scripts/audit_dependencies.py and fails on High or Critical.
+
+       If restore failed as well, an advisory published overnight would break every build, test
+       and migration job at once with an error that never mentions the runbook, and even a Low
+       would do it. It would also leave a tolerated advisory needing to be suppressed in two
+       places. One gate, one allowlist (VulnerabilityAllowlist.txt), one runbook:
+       docs/runbooks/vulnerable-dependency.md -->
+  <PropertyGroup>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+  </PropertyGroup>
+
   <!-- Money must never be floating point. These null-safety warnings are real bugs. -->
   <PropertyGroup>
     <WarningsAsErrors>

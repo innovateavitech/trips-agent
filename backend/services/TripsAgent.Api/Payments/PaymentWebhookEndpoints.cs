@@ -68,6 +68,12 @@ public static class PaymentWebhookEndpoints
                     : Results.Ok(new { received = true });
             })
             .AllowAnonymous()
+
+            // Never throttled. Paystack delivers from a handful of addresses, so a busy hour would
+            // put every payment notification in one bucket — and a 429 here is a dropped payment
+            // notification, which costs real money. The body cap above and the signature check are
+            // what stand in front of this endpoint instead.
+            .DisableRateLimiting()
             .WithTags("Webhooks")
             .WithName("ReceivePaystackWebhook")
 

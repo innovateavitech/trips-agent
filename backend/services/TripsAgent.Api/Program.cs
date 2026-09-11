@@ -7,8 +7,10 @@ using TripsAgent.Api.Assets;
 using TripsAgent.Api.Authorization;
 using TripsAgent.Api.Catalog;
 using TripsAgent.Api.Identity;
+using TripsAgent.Api.Networking;
 using TripsAgent.Api.Payments;
 using TripsAgent.Api.Pricing;
+using TripsAgent.Api.RateLimiting;
 using TripsAgent.Api.Scheduling;
 using TripsAgent.Api.Search;
 using TripsAgent.Api.Storage;
@@ -40,6 +42,15 @@ builder.Services.AddTripsAfrica(builder.Configuration);
 // Storage and client only. AddJobProcessing — the part that actually executes jobs — is called by
 // the Worker and must never be called here: every API instance would then race to run the cron.
 builder.Services.AddJobScheduling(builder.Configuration);
+
+// Which proxies' X-Forwarded-For header to believe. Only those: from anyone else the header is a
+// claim the caller made about itself, and believing it would let them pick the address the rate
+// limiter counts. See ForwardedHeadersSetup.
+builder.Services.AddTrustedProxies(builder.Configuration);
+
+// Per address, per user and per agency, counted in Redis so every instance shares one count
+// (issue #102). Refuses to start when switched on with no Redis to count in. See RateLimitingSetup.
+builder.Services.AddSharedRateLimiting(builder.Configuration);
 
 var hangfireOptions =
     builder.Configuration.GetSection(HangfireOptions.SectionName).Get<HangfireOptions>()
@@ -112,12 +123,22 @@ if (DatabaseSeeder.IsSeedCommand(args))
     return await DatabaseSeeder.RunAsync(app.Services);
 }
 
+// First, before anything reads the client's address: the rate limiter, the login-attempt log and the
+// audit log all do, and until this runs they would all see the load balancer instead.
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
 app.UseAuthentication();
+
+// After authentication, so a signed-in caller is counted as themselves and their agency rather than
+// as the address their office shares; before authorisation, so a flood of forbidden requests is
+// still counted.
+app.UseSharedRateLimiting();
+
 app.UseAuthorization();
 
 // Resolves the caller's agency for the rest of the request, from the claims the token carries.
@@ -128,7 +149,9 @@ app.UseTenantContext();
 // which is exactly the question the log exists to answer.
 app.UseAuditContext();
 
-app.MapHealthChecks("/health");
+// Never throttled. A load balancer probes this from one address every few seconds, and a 429 here
+// reads as "unhealthy" — the orchestrator would restart healthy instances.
+app.MapHealthChecks("/health").DisableRateLimiting();
 
 // The Hangfire dashboard can requeue, delete and trigger jobs, several of which move money. It is
 // off unless switched on, and even then it is behind HangfireDashboardPolicy — which denies

@@ -5,6 +5,7 @@ using TripsAgent.Infrastructure.Assets;
 using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Payments;
+using TripsAgent.Infrastructure.Retention;
 using TripsAgent.Infrastructure.Scheduling;
 using TripsAgent.Infrastructure.Suppliers;
 using TripsAgent.Integrations.Paystack;
@@ -83,6 +84,11 @@ LedgerIntegrityAuditSchedule.Register(recurringJobs);
 // Keeps the supplier call log's monthly partitions ahead of the calendar. Without it every supplier
 // call fails to record once the prepared months run out.
 SupplierApiCallMaintenanceSchedule.Register(recurringJobs);
+
+// The retention schedule (issue #105, docs/DATA_RETENTION.md). Dry run until DataRetention__DryRun is
+// set to false deliberately: it counts and records what it would delete, and deletes nothing. It never
+// touches financial records or the audit log. Runbook: docs/runbooks/data-retention.md.
+DataRetentionSchedule.Register(recurringJobs);
 
 // Expires uploads that never arrived and re-enqueues processing that was lost. The complete step
 // enqueues each asset directly, so like the webhook drain this normally finds nothing.

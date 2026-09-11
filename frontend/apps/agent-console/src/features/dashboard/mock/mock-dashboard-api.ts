@@ -70,7 +70,7 @@ function bookings(): BookingSummary[] {
       product: 'flight',
       origin: 'LOS',
       destination: 'ABV',
-      carrier: 'Air Peace P7 7121',
+      carrier: 'Air Peace P4 7121',
       departsAt: at(18 * HOUR),
       status: 'ticketed',
       sellMinor: 14_250_000,

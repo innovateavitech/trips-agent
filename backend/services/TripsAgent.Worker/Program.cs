@@ -1,6 +1,7 @@
 using Hangfire;
 using TripsAgent.Application;
 using TripsAgent.Infrastructure;
+using TripsAgent.Infrastructure.Assets;
 using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Payments;
@@ -39,6 +40,11 @@ builder.Services.AddOutboxDispatcher();
 
 builder.Services.AddJobProcessing(builder.Configuration);
 
+// The asset pipeline (issue #18): virus scan, EXIF strip, resize, WebP. Here and only here, so the
+// API never loads a scanner or an image decoder. Throws — and so the Worker does not start — when
+// no real virus scanner is configured outside Development. See AssetProcessingRegistration.
+builder.Services.AddAssetProcessing(builder.Configuration, builder.Environment);
+
 // Graceful shutdown, the host half. On SIGTERM — which is what Docker, Kubernetes and systemd all
 // send first — the host gives every hosted service this long to stop before killing the process.
 //
@@ -71,5 +77,9 @@ PaymentWebhookDrainSchedule.Register(recurringJobs);
 // The nightly proof that the books balance. Everything it looks for should be impossible, which
 // is precisely why it is checked — an unverified control and a broken one look identical.
 LedgerIntegrityAuditSchedule.Register(recurringJobs);
+
+// Expires uploads that never arrived and re-enqueues processing that was lost. The complete step
+// enqueues each asset directly, so like the webhook drain this normally finds nothing.
+AssetSweepSchedule.Register(recurringJobs);
 
 await host.RunAsync();

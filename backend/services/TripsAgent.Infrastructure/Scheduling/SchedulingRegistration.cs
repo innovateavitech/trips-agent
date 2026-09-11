@@ -2,7 +2,9 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Assets;
 using TripsAgent.Application.Payments;
+using TripsAgent.Infrastructure.Assets;
 using TripsAgent.Infrastructure.Payments;
 
 namespace TripsAgent.Infrastructure.Scheduling;
@@ -132,6 +134,7 @@ public static class SchedulingRegistration
         // client becomes available. Both hosts get it: the API enqueues, the Worker executes.
         services.AddScoped<IWebhookDispatcher, HangfireWebhookDispatcher>();
         services.AddScoped<PaymentWebhookDrainJob>();
+        services.AddScoped<IAssetPipelineDispatcher, HangfireAssetPipelineDispatcher>();
 
         return services;
     }

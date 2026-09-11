@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Assets;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
 using TripsAgent.Application.Payments;
@@ -42,6 +43,14 @@ public static class DependencyInjection
         services.AddScoped<IPaymentWebhookProcessor>(sp => sp.GetRequiredService<PaymentWebhookHandler>());
 
         services.AddScoped<ILedgerIntegrityAudit, LedgerIntegrityAudit>();
+
+        // The request-side half of an upload. The pipeline itself — ProcessAssetHandler — is
+        // registered by AddAssetProcessing in the Worker only, because it needs a virus scanner
+        // and an image library that the API has no business loading.
+        services.AddScoped<RequestAssetUploadHandler>();
+        services.AddScoped<CompleteAssetUploadHandler>();
+        services.AddScoped<GetAssetHandler>();
+        services.AddScoped<AssetDelivery>();
 
         return services;
     }

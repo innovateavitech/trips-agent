@@ -74,7 +74,7 @@ public static class FileSignature
         // enough — a WAV file starts identically.
         if (StartsWith(leadingBytes, [0x52, 0x49, 0x46, 0x46])
             && leadingBytes.Length >= 12
-            && leadingBytes[8..12].SequenceEqual([0x57, 0x45, 0x42, 0x50]))
+            && StartsWith(leadingBytes[8..], [0x57, 0x45, 0x42, 0x50]))
         {
             return MediaTypes.Webp;
         }

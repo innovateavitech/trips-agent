@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Application.Auditing;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Identity;
@@ -158,6 +159,12 @@ public class AppDbContext : DbContext, IAppDbContext
 
     /// <summary>Discrepancies the nightly integrity audit found. Not tenant-scoped; see IAppDbContext.</summary>
     public DbSet<ReconciliationException> ReconciliationExceptions => Set<ReconciliationException>();
+
+    /// <summary>Uploaded files, and where each is in the scan-and-process pipeline.</summary>
+    public DbSet<Asset> Assets => Set<Asset>();
+
+    /// <summary>The WebP renditions of image assets.</summary>
+    public DbSet<AssetVariant> AssetVariants => Set<AssetVariant>();
 
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.

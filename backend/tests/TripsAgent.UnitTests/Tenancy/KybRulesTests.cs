@@ -1,5 +1,6 @@
 using FluentAssertions;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
 
@@ -37,6 +38,33 @@ public class FileSignatureTests
     [InlineData(new byte[] { })]                                           // empty
     public void Anything_else_is_refused(byte[] leadingBytes) =>
         FileSignature.Detect(leadingBytes).Should().BeNull();
+
+    [Fact]
+    public void A_webp_is_recognised()
+    {
+        // RIFF, four bytes of length, then WEBP at offset 8.
+        byte[] webp = [0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50];
+
+        FileSignature.Detect(webp).Should().Be(MediaTypes.Webp);
+    }
+
+    [Fact]
+    public void A_wav_is_not_mistaken_for_a_webp()
+    {
+        // Same RIFF container, different form type. The prefix alone would have accepted it.
+        byte[] wav = [0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45];
+
+        FileSignature.Detect(wav).Should().BeNull();
+    }
+
+    [Fact]
+    public void A_webp_is_recognised_but_is_not_a_kyb_document()
+    {
+        byte[] webp = [0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50];
+
+        // Recognising a format and accepting it are two different decisions.
+        KybDocumentRules.IsAllowedContentType(FileSignature.Detect(webp)).Should().BeFalse();
+    }
 
     [Fact]
     public void A_truncated_png_signature_is_refused()

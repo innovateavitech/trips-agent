@@ -46,6 +46,9 @@ public static class AssetRules
     /// <summary>How long a filename we keep. Matches the column.</summary>
     public const int MaxFileNameLength = 200;
 
+    /// <summary>How much of a scanner's finding we keep. Matches the column.</summary>
+    public const int MaxScanSignatureLength = 200;
+
     /// <summary>
     /// How long an upload window stays open.
     /// </summary>
@@ -54,6 +57,19 @@ public static class AssetRules
     /// presigned URL is worthless by the time it is found.
     /// </remarks>
     public static TimeSpan UploadWindow { get; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>How long one pipeline run owns an asset before another may take it over.</summary>
+    /// <remarks>
+    /// Comfortably longer than the slowest real run — a 20MB photo rendered four times takes
+    /// seconds — so a live run is never overtaken, and short enough that a dead Worker's asset is
+    /// picked up by the next sweep.
+    /// </remarks>
+    public static TimeSpan ProcessingLease { get; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// How long an uploaded asset may sit untouched before the sweep assumes its job was lost.
+    /// </summary>
+    public static TimeSpan StalledAfter { get; } = TimeSpan.FromMinutes(15);
 
     /// <summary>How long a link to a processed asset stays valid.</summary>
     /// <remarks>An hour, so a storefront page's images survive the page being open.</remarks>
@@ -84,6 +100,16 @@ public static class AssetRules
     /// also the worst-case memory cost of one job. Raising it means raising the Worker's memory.
     /// </remarks>
     public const long AbsoluteMaxSizeBytes = 20L * 1024 * 1024;
+
+    /// <summary>
+    /// The most pixels an image may decode to.
+    /// </summary>
+    /// <remarks>
+    /// A size cap on the file is not a cap on memory: a 2MB PNG of one flat colour can declare
+    /// 50,000 × 50,000 pixels and decode to ten gigabytes. Forty megapixels is comfortably above
+    /// any phone camera and bounds one decode to roughly 160MB.
+    /// </remarks>
+    public const long MaxPixels = 40_000_000;
 
     /// <summary>The size cap for one purpose.</summary>
     public static long MaxSizeBytes(AssetPurpose purpose) => purpose switch
@@ -141,7 +167,29 @@ public static class AssetRules
     public static string UploadKey(Guid agencyId, Guid assetId) =>
         $"assets/{agencyId:N}/{assetId:N}/upload";
 
+    /// <summary>
+    /// The storage key for a byte-for-byte copy of a scanned file that is not an image.
+    /// </summary>
+    /// <remarks>
+    /// A new key rather than the upload key, because the upload key is still writable through its
+    /// presigned URL until the window closes — see <see cref="Asset.ReplaceOriginal"/>.
+    /// </remarks>
+    public static string VerbatimKey(Guid agencyId, Guid assetId, string contentType) =>
+        $"assets/{agencyId:N}/{assetId:N}/original{ExtensionFor(contentType)}";
+
     /// <summary>The storage key for one rendition.</summary>
     public static string VariantKey(Guid agencyId, Guid assetId, AssetVariantKind kind) =>
         $"assets/{agencyId:N}/{assetId:N}/{kind.ToString().ToLowerInvariant()}.webp";
+
+    /// <summary>The extension a stored copy is given, so a bucket listing is readable.</summary>
+    public static string ExtensionFor(string contentType) =>
+        Extensions.TryGetValue(contentType, out var extension) ? extension : string.Empty;
+
+    private static readonly Dictionary<string, string> Extensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [MediaTypes.Pdf] = ".pdf",
+        [MediaTypes.Jpeg] = ".jpg",
+        [MediaTypes.Png] = ".png",
+        [MediaTypes.Webp] = ".webp",
+    };
 }

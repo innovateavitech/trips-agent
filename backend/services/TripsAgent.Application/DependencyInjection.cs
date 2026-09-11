@@ -47,6 +47,9 @@ public static class DependencyInjection
         services.AddScoped<PricingService>();
         services.AddScoped<MarkupRuleService>();
 
+        // Zero until subscription tiers (#64) supply each agency's transaction fee.
+        services.AddSingleton<IPlatformFeePolicy, NoPlatformFeePolicy>();
+
         return services;
     }
 }

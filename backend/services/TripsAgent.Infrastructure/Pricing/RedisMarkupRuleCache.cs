@@ -44,7 +44,8 @@ public sealed class MarkupRuleCacheOptions
 public sealed partial class RedisMarkupRuleCache : IMarkupRuleCache
 {
     /// <summary>Bump the version segment whenever the stored JSON shape changes.</summary>
-    private const string KeyPrefix = "pricing:markup-rules:v1:";
+    // v2: the set gained the agency's VAT rate. A v1 entry read as v2 would price with 0% VAT.
+    private const string KeyPrefix = "pricing:markup-rules:v2:";
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -152,13 +153,13 @@ public sealed partial class RedisMarkupRuleCache : IMarkupRuleCache
     /// The stored shape: explicit and flat, so the JSON in Redis does not change whenever a domain
     /// type gains a property. Money is plain minor units here, as everywhere outside the domain.
     /// </summary>
-    private sealed record CachedRuleSet(Guid AgencyId, Guid? ParentAgencyId, List<CachedRule> Rules)
+    private sealed record CachedRuleSet(Guid AgencyId, Guid? ParentAgencyId, int VatRateBasisPoints, List<CachedRule> Rules)
     {
         public static CachedRuleSet From(MarkupRuleSet set) =>
-            new(set.AgencyId, set.ParentAgencyId, set.Rules.Select(CachedRule.From).ToList());
+            new(set.AgencyId, set.ParentAgencyId, set.VatRateBasisPoints, set.Rules.Select(CachedRule.From).ToList());
 
         public MarkupRuleSet ToRuleSet() =>
-            new(AgencyId, ParentAgencyId, Rules.Select(rule => rule.ToDefinition()).ToList());
+            new(AgencyId, ParentAgencyId, VatRateBasisPoints, Rules.Select(rule => rule.ToDefinition()).ToList());
     }
 
     private sealed record CachedRule(

@@ -82,8 +82,13 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     currency = table.Column<string>(type: "character(3)", fixedLength: true, maxLength: 3, nullable: false),
                     net_amount_minor = table.Column<long>(type: "bigint", nullable: false),
                     markup_amount_minor = table.Column<long>(type: "bigint", nullable: false),
+                    tax_amount_minor = table.Column<long>(type: "bigint", nullable: false),
+                    platform_fee_minor = table.Column<long>(type: "bigint", nullable: false),
                     gross_amount_minor = table.Column<long>(type: "bigint", nullable: false),
                     markup_rule_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    fx_rate_billionths = table.Column<long>(type: "bigint", nullable: false),
+                    breakdown = table.Column<string>(type: "jsonb", nullable: false),
+                    expires_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
@@ -269,14 +274,35 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
             // ------------------------------------------------------------------- quote arithmetic
             //
             // No margin without an explanation: a non-zero markup must name the rule behind it.
-            // Tax and the platform fee join the gross in #29, which will widen ck_price_quotes_gross.
+            //
+            // gross = net + markup + VAT. The platform fee is deliberately NOT in it: the fee comes out
+            // of the agency's margin and is never added to what the traveller pays (plan §7, open
+            // question 4). A fee that crept into the gross would fail this constraint, which is the point.
             migrationBuilder.Sql("""
                 ALTER TABLE pricing.price_quotes
                     ADD CONSTRAINT ck_price_quotes_amounts_not_negative
-                        CHECK (net_amount_minor >= 0 AND markup_amount_minor >= 0),
+                        CHECK (net_amount_minor >= 0
+                           AND markup_amount_minor >= 0
+                           AND tax_amount_minor >= 0
+                           AND platform_fee_minor >= 0),
 
                     ADD CONSTRAINT ck_price_quotes_gross
-                        CHECK (gross_amount_minor = net_amount_minor + markup_amount_minor),
+                        CHECK (gross_amount_minor = net_amount_minor + markup_amount_minor + tax_amount_minor),
+
+                    -- A rate in billionths (1000000000 = 1), a whole number for the same reason money is:
+                    -- exactly 1 while agencies sell only in their base currency (open question 17). Zero
+                    -- or negative would turn any price into nonsense.
+                    ADD CONSTRAINT ck_price_quotes_fx_rate
+                        CHECK (fx_rate_billionths > 0),
+
+                    -- A quote that expired the moment it was made could never be checked out, and one that
+                    -- expired before it was made is a clock bug. Either way, refuse it here.
+                    ADD CONSTRAINT ck_price_quotes_expiry
+                        CHECK (expires_at > created_at),
+
+                    -- The breakdown explains the figures; an array or a bare number explains nothing.
+                    ADD CONSTRAINT ck_price_quotes_breakdown_is_object
+                        CHECK (jsonb_typeof(breakdown) = 'object'),
 
                     ADD CONSTRAINT ck_price_quotes_markup_explained
                         CHECK (markup_amount_minor = 0 OR markup_rule_id IS NOT NULL),

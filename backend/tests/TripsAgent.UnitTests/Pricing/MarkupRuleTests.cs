@@ -103,8 +103,8 @@ public class MarkupRuleTests
         var subject = new PricingSubject(PricedProductType.Tour, "NGN", Guid.CreateVersion7());
         var rule = MarkupRule.Create(Agency, Terms(1_000));
 
-        var price = MarkupEngine.Price(subject, new Money(100_000), Start.AddDays(1), Agency, null, [rule.ToDefinition()]);
-        var quote = PriceQuote.Record(Agency, subject, price);
+        var price = MarkupEngine.Price(subject, new Money(100_000), Start.AddDays(1), Agency, null, [rule.ToDefinition()], new PricingRates(0, 0));
+        var quote = PriceQuote.Record(Agency, subject, price, Start.AddDays(1), TimeSpan.FromMinutes(30));
 
         quote.MarkupRuleId.Should().Be(rule.Id);
         quote.NetAmountMinor.Should().Be(new Money(100_000));
@@ -119,9 +119,9 @@ public class MarkupRuleTests
         var naira = new PricingSubject(PricedProductType.Tour, "NGN");
         var dollars = new PricingSubject(PricedProductType.Tour, "USD");
 
-        var price = MarkupEngine.Price(dollars, new Money(100), Start, Agency, null, []);
+        var price = MarkupEngine.Price(dollars, new Money(100), Start, Agency, null, [], new PricingRates(0, 0));
 
-        var act = () => PriceQuote.Record(Agency, naira, price);
+        var act = () => PriceQuote.Record(Agency, naira, price, Start, TimeSpan.FromMinutes(30));
 
         act.Should().Throw<ArgumentException>();
     }

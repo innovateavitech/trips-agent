@@ -12,9 +12,15 @@ namespace TripsAgent.Application.Pricing;
 /// from PostgreSQL, so that is what the cache saves.
 /// </remarks>
 /// <param name="ParentAgencyId">The principal whose rules a sub-agent inherits. Null for a principal.</param>
+/// <param name="VatRateBasisPoints">
+/// The agency's own VAT rate. Cached with the rules because every price needs it, and reading it
+/// separately would put back the round trip the cache exists to save. Nothing changes it yet; the
+/// endpoint that does must invalidate this agency's entry, exactly as a rule change does.
+/// </param>
 public sealed record MarkupRuleSet(
     Guid AgencyId,
     Guid? ParentAgencyId,
+    int VatRateBasisPoints,
     IReadOnlyList<MarkupRuleDefinition> Rules);
 
 /// <summary>

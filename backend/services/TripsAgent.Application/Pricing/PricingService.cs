@@ -28,6 +28,8 @@ public sealed class PricingService
     private readonly ITenantContext _tenant;
     private readonly IPlatformScope _platformScope;
     private readonly IMarkupRuleCache _cache;
+    private readonly IPlatformFeePolicy _platformFees;
+    private readonly PriceQuoteOptions _quoteOptions;
     private readonly TimeProvider _clock;
 
     public PricingService(
@@ -35,23 +37,82 @@ public sealed class PricingService
         ITenantContext tenant,
         IPlatformScope platformScope,
         IMarkupRuleCache cache,
+        IPlatformFeePolicy platformFees,
+        PriceQuoteOptions quoteOptions,
         TimeProvider clock)
     {
         _db = db;
         _tenant = tenant;
         _platformScope = platformScope;
         _cache = cache;
+        _platformFees = platformFees;
+        _quoteOptions = quoteOptions;
         _clock = clock;
     }
 
-    /// <summary>Works out what <paramref name="net"/> sells for, without recording anything.</summary>
-    public async Task<PriceBreakdown> PriceAsync(
+    /// <summary>
+    /// Works out what <paramref name="net"/> sells for, without recording anything. What the
+    /// pricing screen's "which rule wins" preview shows, and what search results are priced with.
+    /// </summary>
+    public Task<PriceBreakdown> PriceAsync(
+        PricingSubject subject,
+        Money net,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(subject);
+        return PriceAtAsync(subject, net, _clock.GetUtcNow(), cancellationToken);
+    }
+
+    /// <summary>
+    /// Prices <paramref name="net"/> and stores the result as a quote, winning rule id included.
+    /// </summary>
+    /// <remarks>
+    /// The quote is the record that makes a margin explainable later: it holds the figures as they
+    /// were, the id of the rule that produced them, and the whole calculation. Rules are never
+    /// edited in place, so that id points at exactly the terms that were used, for as long as the
+    /// quote exists.
+    /// </remarks>
+    public async Task<PriceQuote> QuoteAsync(
         PricingSubject subject,
         Money net,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(subject);
 
+        // One reading of the clock for both the rules' windows and the quote's expiry, so a quote
+        // can never be priced by a rule that was not in force at the instant it claims.
+        var now = _clock.GetUtcNow();
+        var price = await PriceAtAsync(subject, net, now, cancellationToken);
+        var quote = PriceQuote.Record(RequireAgency(), subject, price, now, _quoteOptions.Validity);
+
+        _db.PriceQuotes.Add(quote);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return quote;
+    }
+
+    /// <summary>The calling agency's currency, VAT and fee rates, and how long its quotes last.</summary>
+    public async Task<PricingSettings> SettingsAsync(CancellationToken cancellationToken = default)
+    {
+        var agencyId = RequireAgency();
+
+        var agency = await _db.Agencies
+            .AsNoTracking()
+            .Where(candidate => candidate.Id == agencyId)
+            .Select(candidate => new { candidate.BaseCurrency, candidate.VatRateBasisPoints })
+            .SingleAsync(cancellationToken);
+
+        var feeBasisPoints = await _platformFees.FeeBasisPointsAsync(agencyId, cancellationToken);
+
+        return new PricingSettings(agency.BaseCurrency, agency.VatRateBasisPoints, feeBasisPoints, _quoteOptions.Validity);
+    }
+
+    private async Task<PriceBreakdown> PriceAtAsync(
+        PricingSubject subject,
+        Money net,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
         var agencyId = RequireAgency();
 
         var own = await _cache.GetOrLoadAsync(
@@ -67,32 +128,11 @@ public sealed class PricingService
             candidates = [.. own.Rules, .. inherited.Rules];
         }
 
-        return MarkupEngine.Price(
-            subject, net, _clock.GetUtcNow(), agencyId, own.ParentAgencyId, candidates);
-    }
+        // The seller's own VAT rate, never the principal's: a sub-agent is its own taxable business.
+        var feeBasisPoints = await _platformFees.FeeBasisPointsAsync(agencyId, cancellationToken);
+        var rates = new PricingRates(own.VatRateBasisPoints, feeBasisPoints);
 
-    /// <summary>
-    /// Prices <paramref name="net"/> and stores the result as a quote, winning rule id included.
-    /// </summary>
-    /// <remarks>
-    /// The quote is the record that makes a margin explainable later: it holds the figures as they
-    /// were, and the id of the rule that produced them. Rules are never edited in place, so that
-    /// id points at exactly the terms that were used, for as long as the quote exists.
-    /// </remarks>
-    public async Task<PriceQuote> QuoteAsync(
-        PricingSubject subject,
-        Money net,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(subject);
-
-        var price = await PriceAsync(subject, net, cancellationToken);
-        var quote = PriceQuote.Record(RequireAgency(), subject, price);
-
-        _db.PriceQuotes.Add(quote);
-        await _db.SaveChangesAsync(cancellationToken);
-
-        return quote;
+        return MarkupEngine.Price(subject, net, now, agencyId, own.ParentAgencyId, candidates, rates);
     }
 
     private Guid RequireAgency() =>
@@ -122,7 +162,7 @@ public sealed class PricingService
         var agency = await _db.Agencies
             .AsNoTracking()
             .Where(candidate => candidate.Id == agencyId)
-            .Select(candidate => new { candidate.ParentAgencyId })
+            .Select(candidate => new { candidate.ParentAgencyId, candidate.VatRateBasisPoints })
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new InvalidOperationException($"Agency {agencyId} does not exist, so it has no markup rules.");
 
@@ -137,6 +177,7 @@ public sealed class PricingService
         return new MarkupRuleSet(
             agencyId,
             agency.ParentAgencyId,
+            agency.VatRateBasisPoints,
             rules.Select(rule => rule.ToDefinition()).ToList());
     }
 }

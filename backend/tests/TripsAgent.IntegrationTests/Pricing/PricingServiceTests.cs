@@ -54,8 +54,55 @@ public sealed class PricingServiceTests : IClassFixture<RedisFixture>
         stored.MarkupRuleId.Should().Be(flights.Id, "the product-type rule beats the global one");
         stored.NetAmountMinor.Should().Be(new Money(200_000));
         stored.MarkupAmountMinor.Should().Be(new Money(10_000));
-        stored.GrossAmountMinor.Should().Be(new Money(210_000));
+        stored.TaxAmountMinor.Should().Be(new Money(750), "7.5% VAT on the ₦100 markup");
+        stored.PlatformFeeMinor.Should().Be(Money.Zero, "no fee until subscription tiers exist");
+        stored.GrossAmountMinor.Should().Be(new Money(210_750));
+        stored.FxRate.Should().Be(1m);
         stored.AgencyId.Should().Be(world.PrincipalId);
+
+        // The breakdown survived the round trip through jsonb and still explains the price alone.
+        var breakdown = stored.ReadBreakdown();
+        breakdown.MarkupRule!.Id.Should().Be(flights.Id);
+        breakdown.MarkupRule.Summary.Should().Be("5% of the net rate");
+        breakdown.VatBaseMinor.Should().Be(10_000);
+        breakdown.GrossAmountMinor.Should().Be(210_750);
+    }
+
+    [Fact]
+    public async Task A_quote_expires_after_the_configured_validity_by_the_clock()
+    {
+        var world = await WorldAsync();
+        await world.SeedRuleAsync(world.PrincipalId, Global(percent: 1_000));
+        var pricedAt = world.Clock.GetUtcNow();
+
+        await using var principal = world.SessionFor(world.PrincipalId, validity: TimeSpan.FromMinutes(20));
+        var quote = await principal.Pricing.QuoteAsync(Flight, new Money(100_000));
+
+        await using var check = world.SessionFor(world.PrincipalId);
+        var stored = await check.Db.PriceQuotes.AsNoTracking().SingleAsync(candidate => candidate.Id == quote.Id);
+
+        stored.CreatedAt.Should().Be(pricedAt);
+        stored.ExpiresAt.Should().Be(pricedAt.AddMinutes(20));
+
+        world.Clock.Advance(TimeSpan.FromMinutes(19));
+        stored.Invoking(q => q.EnsureUsableAt(world.Clock.GetUtcNow())).Should().NotThrow();
+
+        world.Clock.Advance(TimeSpan.FromMinutes(1));
+        stored.Invoking(q => q.EnsureUsableAt(world.Clock.GetUtcNow())).Should().Throw<PriceQuoteExpiredException>();
+    }
+
+    [Fact]
+    public async Task A_sub_agent_charges_its_own_vat_rate_on_its_principals_markup()
+    {
+        var world = await WorldAsync();
+        await world.SeedRuleAsync(world.PrincipalId, Global(percent: 1_000));
+        await world.SetVatRateAsync(world.SubAgentId, 500);
+
+        await using var subAgent = world.SessionFor(world.SubAgentId);
+        var quote = await subAgent.Pricing.QuoteAsync(Flight, new Money(100_000));
+
+        quote.MarkupAmountMinor.Should().Be(new Money(10_000), "the principal's rule is inherited");
+        quote.TaxAmountMinor.Should().Be(new Money(500), "but the VAT is the seller's own, at 5%");
     }
 
     [Fact]
@@ -67,6 +114,7 @@ public sealed class PricingServiceTests : IClassFixture<RedisFixture>
         var quote = await principal.Pricing.QuoteAsync(Flight, new Money(200_000));
 
         quote.MarkupRuleId.Should().BeNull();
+        quote.TaxAmountMinor.Should().Be(Money.Zero, "no markup, so nothing new to tax");
         quote.GrossAmountMinor.Should().Be(new Money(200_000));
     }
 
@@ -93,6 +141,9 @@ public sealed class PricingServiceTests : IClassFixture<RedisFixture>
         var oldRule = await check.Db.MarkupRules.AsNoTracking().SingleAsync(rule => rule.Id == old.MarkupRuleId);
 
         old.MarkupAmountMinor.Should().Be(new Money(10_000));
+        old.TaxAmountMinor.Should().Be(new Money(750));
+        old.GrossAmountMinor.Should().Be(new Money(110_750));
+        old.ReadBreakdown().MarkupRule!.PercentBasisPoints.Should().Be(1_000, "the breakdown keeps the terms that priced it");
         oldRule.PercentBasisPoints.Should().Be(1_000);
         oldRule.SupersededById.Should().Be(replacement.Id);
     }
@@ -219,8 +270,8 @@ public sealed class PricingServiceTests : IClassFixture<RedisFixture>
     {
         var cache = NewCache(_redis.Connection);
         var agencyId = Guid.CreateVersion7();
-        var stale = new MarkupRuleSet(agencyId, null, []);
-        var fresh = new MarkupRuleSet(agencyId, null, [Definition(agencyId)]);
+        var stale = new MarkupRuleSet(agencyId, null, Agency.DefaultVatRateBasisPoints, []);
+        var fresh = new MarkupRuleSet(agencyId, null, Agency.DefaultVatRateBasisPoints, [Definition(agencyId)]);
 
         // Request A reads the old rules; while it is doing so, request B commits a change and
         // invalidates. A then writes what it read. With a plain "delete the key" this stale write
@@ -247,7 +298,7 @@ public sealed class PricingServiceTests : IClassFixture<RedisFixture>
     {
         var cache = NewCache(_redis.Connection);
         var agencyId = Guid.CreateVersion7();
-        var set = new MarkupRuleSet(agencyId, Guid.CreateVersion7(), [Definition(agencyId)]);
+        var set = new MarkupRuleSet(agencyId, Guid.CreateVersion7(), Agency.DefaultVatRateBasisPoints, [Definition(agencyId)]);
 
         await cache.GetOrLoadAsync(agencyId, _ => Task.FromResult(set));
 
@@ -364,16 +415,31 @@ public sealed class PricingServiceTests : IClassFixture<RedisFixture>
         public ManualClock Clock { get; } = new(new DateTimeOffset(2026, 9, 11, 9, 0, 0, TimeSpan.Zero));
 
         /// <summary>The services as a request from <paramref name="agencyId"/> would get them.</summary>
-        public Session SessionFor(Guid agencyId, IMarkupRuleCache? cache = null)
+        public Session SessionFor(Guid agencyId, IMarkupRuleCache? cache = null, TimeSpan? validity = null)
         {
             var tenancy = TestTenancy.For(agencyId);
             var db = _postgres.Connect(_database, tenancy.Tenant, tenancy.Scope, Clock);
             var chosen = cache ?? _cache;
+            var quoteOptions = validity is { } minutes ? new PriceQuoteOptions { Validity = minutes } : new PriceQuoteOptions();
 
             return new Session(
                 db,
-                new PricingService(db, tenancy.Tenant, tenancy.Scope, chosen, Clock),
+                new PricingService(db, tenancy.Tenant, tenancy.Scope, chosen, new NoPlatformFeePolicy(), quoteOptions, Clock),
                 new MarkupRuleService(db, tenancy.Tenant, chosen, Clock));
+        }
+
+        /// <summary>
+        /// Changes an agency's VAT rate — before anything is cached for it, so the first price reads it.
+        /// </summary>
+        /// <remarks>
+        /// Raw SQL as the owner. Through EF the agency filter would need a tenant to find the row, and
+        /// nothing in the product changes a VAT rate yet, so there is no service to go through.
+        /// </remarks>
+        public async Task SetVatRateAsync(Guid agencyId, int basisPoints)
+        {
+            await using var owner = _postgres.Connect(_database, asApplicationRole: false);
+            await owner.Database.ExecuteSqlRawAsync(
+                "UPDATE tenancy.agencies SET vat_rate_basis_points = {0} WHERE id = {1}", basisPoints, agencyId);
         }
 
         /// <summary>

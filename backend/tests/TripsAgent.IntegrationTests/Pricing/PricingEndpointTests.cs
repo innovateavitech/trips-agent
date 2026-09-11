@@ -40,9 +40,12 @@ public sealed class PricingEndpointTests : IClassFixture<RedisFixture>, IAsyncLi
 {
     private const long Net = 123_457;
     private const long Markup = 12_346;   // 10% of 123,457 kobo, rounded half up
-    private const long Gross = Net + Markup;
+    private const long Tax = 926;         // 7.5% VAT on the markup: 925.95, rounded half up
+    private const long Gross = Net + Markup + Tax;
 
-    private static readonly string[] MarginFields = ["netAmountMinor", "markupAmountMinor", "markupRuleId"];
+    // The VAT is margin too: charged on the markup alone, it gives the markup away at a known rate.
+    private static readonly string[] MarginFields =
+        ["netAmountMinor", "markupAmountMinor", "markupRuleId", "taxAmountMinor", "platformFeeMinor"];
 
     private readonly PostgresFixture _postgres;
     private readonly RedisFixture _redis;
@@ -51,7 +54,9 @@ public sealed class PricingEndpointTests : IClassFixture<RedisFixture>, IAsyncLi
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _api = null!;
 
+    private string _database = string.Empty;
     private Guid _agencyId;
+    private Guid _subAgentId;
     private Guid _ruleId;
     private Guid _quoteId;
 
@@ -64,6 +69,7 @@ public sealed class PricingEndpointTests : IClassFixture<RedisFixture>, IAsyncLi
     public async Task InitializeAsync()
     {
         var database = $"pricing_api_{Guid.NewGuid():N}";
+        _database = database;
 
         await using (var setup = await _postgres.CreateEmptyDatabaseAsync(database))
         {
@@ -73,6 +79,12 @@ public sealed class PricingEndpointTests : IClassFixture<RedisFixture>, IAsyncLi
             setup.Agencies.Add(agency);
             await setup.SaveChangesAsync();
             _agencyId = agency.Id;
+
+            // With no rules of its own, so it inherits the principal's — for the preview's "inherited".
+            var subAgent = Agency.RegisterSubAgent(agency, "Lagos Travel Ikeja Limited", "lagos-travel-ikeja");
+            setup.Agencies.Add(subAgent);
+            await setup.SaveChangesAsync();
+            _subAgentId = subAgent.Id;
         }
 
         // Environment variables, because a configuration source added through the factory loses to
@@ -149,7 +161,7 @@ public sealed class PricingEndpointTests : IClassFixture<RedisFixture>, IAsyncLi
         var properties = json.RootElement.EnumerateObject().Select(property => property.Name).ToList();
 
         // Exactly these, so a margin field added under a name nobody thought to forbid fails too.
-        properties.Should().BeEquivalentTo("id", "productType", "currency", "grossAmountMinor", "createdAt");
+        properties.Should().BeEquivalentTo("id", "productType", "currency", "grossAmountMinor", "createdAt", "expiresAt");
         properties.Should().NotContain(MarginFields);
 
         json.RootElement.GetProperty("grossAmountMinor").GetInt64().Should().Be(Gross);
@@ -176,7 +188,94 @@ public sealed class PricingEndpointTests : IClassFixture<RedisFixture>, IAsyncLi
         root.GetProperty("netAmountMinor").GetInt64().Should().Be(Net);
         root.GetProperty("markupAmountMinor").GetInt64().Should().Be(Markup);
         root.GetProperty("markupRuleId").GetGuid().Should().Be(_ruleId);
+        root.GetProperty("taxAmountMinor").GetInt64().Should().Be(Tax);
+        root.GetProperty("platformFeeMinor").GetInt64().Should().Be(0);
+        root.GetProperty("fxRate").GetDecimal().Should().Be(1m);
         root.GetProperty("grossAmountMinor").GetInt64().Should().Be(Gross);
+    }
+
+    // ------------------------------------------------------------------ the preview
+
+    [Fact]
+    public async Task The_preview_names_the_winning_rule_and_stores_nothing()
+    {
+        var before = await QuoteCountAsync();
+
+        using var response = await SendAsync(
+            HttpMethod.Post, "/api/v1/pricing/preview", new PricePreviewRequest("Flight", null, null, null, Net), PermissionCodes.MarginView);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var preview = await response.Content.ReadFromJsonAsync<PricePreviewResponse>();
+
+        preview!.Currency.Should().Be("NGN", "an omitted currency means the agency's base currency");
+        preview.NetAmountMinor.Should().Be(Net);
+        preview.MarkupAmountMinor.Should().Be(Markup);
+        preview.VatRateBasisPoints.Should().Be(750);
+        preview.TaxAmountMinor.Should().Be(Tax);
+        preview.PlatformFeeMinor.Should().Be(0);
+        preview.AgentMarginMinor.Should().Be(Markup);
+        preview.GrossAmountMinor.Should().Be(Gross);
+        preview.WinningRule!.Id.Should().Be(_ruleId);
+        preview.WinningRule.Scope.Should().Be("Global");
+        preview.WinningRule.Inherited.Should().BeFalse();
+        preview.WinningRule.Summary.Should().Be("10% of the net rate");
+
+        (await QuoteCountAsync()).Should().Be(before, "a preview is not a quote");
+    }
+
+    [Fact]
+    public async Task A_sub_agents_preview_says_the_winning_rule_is_its_principals()
+    {
+        using var response = await SendAsync(
+            HttpMethod.Post,
+            "/api/v1/pricing/preview",
+            new PricePreviewRequest("Tour", null, null, "NGN", 100_000),
+            _subAgentId,
+            PermissionCodes.MarginView);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var preview = await response.Content.ReadFromJsonAsync<PricePreviewResponse>();
+
+        preview!.WinningRule!.Id.Should().Be(_ruleId);
+        preview.WinningRule.Inherited.Should().BeTrue();
+        preview.MarkupAmountMinor.Should().Be(10_000);
+    }
+
+    [Fact]
+    public async Task The_preview_is_margin_and_is_refused_without_margin_view()
+    {
+        using var response = await SendAsync(
+            HttpMethod.Post, "/api/v1/pricing/preview", new PricePreviewRequest("Flight", null, null, null, Net), PermissionCodes.BookingSearch);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Theory]
+    [InlineData("Hotel", 100_000, null, "productType")]
+    [InlineData("Flight", -1, null, "between zero")]
+    [InlineData("Flight", 100_000, "Not A Supplier!", "supplier code")]
+    public async Task A_preview_that_makes_no_sense_is_refused_with_a_reason(
+        string productType, long net, string? supplierCode, string reason)
+    {
+        using var response = await SendAsync(
+            HttpMethod.Post,
+            "/api/v1/pricing/preview",
+            new PricePreviewRequest(productType, null, supplierCode, null, net),
+            PermissionCodes.MarginView);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain(reason);
+    }
+
+    [Fact]
+    public async Task The_settings_give_the_currency_and_the_rates_on_every_price()
+    {
+        using var response = await GetAsync("/api/v1/pricing/settings", PermissionCodes.MarginView);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var settings = await response.Content.ReadFromJsonAsync<PricingSettingsResponse>();
+
+        settings.Should().Be(new PricingSettingsResponse("NGN", 750, 0, 30));
     }
 
     [Fact]
@@ -266,11 +365,21 @@ public sealed class PricingEndpointTests : IClassFixture<RedisFixture>, IAsyncLi
         return SendAndDisposeRequestAsync(request);
     }
 
-    private Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object body, params string[] permissions)
+    private Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object body, params string[] permissions) =>
+        SendAsync(method, path, body, _agencyId, permissions);
+
+    private Task<HttpResponseMessage> SendAsync(
+        HttpMethod method, string path, object body, Guid agencyId, params string[] permissions)
     {
         var request = new HttpRequestMessage(method, path) { Content = JsonContent.Create(body) };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", TokenFor(_agencyId, permissions));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", TokenFor(agencyId, permissions));
         return SendAndDisposeRequestAsync(request);
+    }
+
+    private async Task<int> QuoteCountAsync()
+    {
+        await using var owner = _postgres.Connect(_database, asApplicationRole: false);
+        return await owner.PriceQuotes.CountAsync();
     }
 
     private async Task<HttpResponseMessage> SendAndDisposeRequestAsync(HttpRequestMessage request)

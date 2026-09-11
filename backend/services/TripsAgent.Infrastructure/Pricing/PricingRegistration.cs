@@ -7,7 +7,10 @@ using TripsAgent.Application.Pricing;
 
 namespace TripsAgent.Infrastructure.Pricing;
 
-/// <summary>Wires the markup rule cache: Redis when configured, the database alone when not.</summary>
+/// <summary>
+/// Wires the markup rule cache — Redis when configured, the database alone when not — and how long a
+/// price quote lasts.
+/// </summary>
 public static class PricingRegistration
 {
     /// <summary>The configuration key holding the Redis connection string.</summary>
@@ -20,6 +23,7 @@ public static class PricingRegistration
 
         var options = ReadOptions(configuration);
         services.AddSingleton(options);
+        services.AddSingleton(ReadQuoteOptions(configuration));
 
         var connectionString = configuration.GetConnectionString(RedisConnectionName);
 
@@ -51,22 +55,36 @@ public static class PricingRegistration
         return services;
     }
 
-    private static MarkupRuleCacheOptions ReadOptions(IConfiguration configuration)
+    private static MarkupRuleCacheOptions ReadOptions(IConfiguration configuration) =>
+        ReadMinutes(configuration, "RuleCacheMinutes") is { } lifetime
+            ? new MarkupRuleCacheOptions { EntryLifetime = lifetime }
+            : new MarkupRuleCacheOptions();
+
+    private static PriceQuoteOptions ReadQuoteOptions(IConfiguration configuration) =>
+        ReadMinutes(configuration, "QuoteValidityMinutes") is { } validity
+            ? new PriceQuoteOptions { Validity = validity }
+            : new PriceQuoteOptions();
+
+    /// <summary>
+    /// A whole number of minutes, at least 1, or null when unset. A bad value stops startup rather
+    /// than falling back to the default: a typo in production config should be loud.
+    /// </summary>
+    private static TimeSpan? ReadMinutes(IConfiguration configuration, string name)
     {
-        var minutes = configuration[$"{MarkupRuleCacheOptions.SectionName}:RuleCacheMinutes"];
+        var key = $"{MarkupRuleCacheOptions.SectionName}:{name}";
+        var minutes = configuration[key];
 
         if (string.IsNullOrWhiteSpace(minutes))
         {
-            return new MarkupRuleCacheOptions();
+            return null;
         }
 
         if (!int.TryParse(minutes, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) || value < 1)
         {
             throw new InvalidOperationException(
-                $"{MarkupRuleCacheOptions.SectionName}:RuleCacheMinutes must be a whole number of minutes, at least 1. "
-                + $"It was '{minutes}'.");
+                $"{key} must be a whole number of minutes, at least 1. It was '{minutes}'.");
         }
 
-        return new MarkupRuleCacheOptions { EntryLifetime = TimeSpan.FromMinutes(value) };
+        return TimeSpan.FromMinutes(value);
     }
 }

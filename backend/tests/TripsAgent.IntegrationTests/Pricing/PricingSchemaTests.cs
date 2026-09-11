@@ -224,6 +224,113 @@ public sealed class PricingSchemaTests
         (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be("23503");
     }
 
+    [Fact]
+    public async Task A_gross_that_leaves_out_the_vat_cannot_be_stored()
+    {
+        await using var world = await WorldAsync();
+        var rule = await world.AddRuleAsync();
+
+        var act = () => world.InsertQuoteAsync(net: 100_000, markup: 10_000, tax: 750, gross: 110_000, ruleId: rule.Id);
+
+        (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(CheckViolation);
+    }
+
+    [Fact]
+    public async Task A_platform_fee_added_to_the_travellers_price_cannot_be_stored()
+    {
+        await using var world = await WorldAsync();
+        var rule = await world.AddRuleAsync();
+
+        // The fee comes out of the agency's margin (open question 4). Folding it into the gross
+        // would charge the traveller for the agency's subscription.
+        var act = () => world.InsertQuoteAsync(
+            net: 100_000, markup: 10_000, tax: 750, fee: 500, gross: 111_250, ruleId: rule.Id);
+
+        (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(CheckViolation);
+    }
+
+    [Fact]
+    public async Task A_quote_with_vat_and_a_fee_that_add_up_is_stored()
+    {
+        await using var world = await WorldAsync();
+        var rule = await world.AddRuleAsync();
+
+        // The control for the two above.
+        await world.InsertQuoteAsync(net: 100_000, markup: 10_000, tax: 750, fee: 500, gross: 110_750, ruleId: rule.Id);
+
+        (await world.Db.PriceQuotes.CountAsync()).Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task An_fx_rate_that_is_not_positive_cannot_be_stored(long fxRateBillionths)
+    {
+        await using var world = await WorldAsync();
+
+        var act = () => world.InsertQuoteAsync(net: 100_000, markup: 0, gross: 100_000, ruleId: null, fxRateBillionths: fxRateBillionths);
+
+        (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(CheckViolation);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public async Task A_quote_that_expires_before_it_exists_cannot_be_stored(int expiresInMinutes)
+    {
+        await using var world = await WorldAsync();
+
+        var act = () => world.InsertQuoteAsync(
+            net: 100_000, markup: 0, gross: 100_000, ruleId: null, expiresInMinutes: expiresInMinutes);
+
+        (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(CheckViolation);
+    }
+
+    [Fact]
+    public async Task A_breakdown_that_is_not_an_object_cannot_be_stored()
+    {
+        await using var world = await WorldAsync();
+
+        var act = () => world.InsertQuoteAsync(net: 100_000, markup: 0, gross: 100_000, ruleId: null, breakdown: "[]");
+
+        (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(CheckViolation);
+    }
+
+    // ------------------------------------------------------------------ a quote never changes
+
+    [Theory]
+    [InlineData("tax_amount_minor = 0")]
+    [InlineData("platform_fee_minor = platform_fee_minor + 1")]
+    [InlineData("gross_amount_minor = gross_amount_minor")]
+    [InlineData("fx_rate_billionths = 2000000000")]
+    [InlineData("expires_at = expires_at + interval '1 day'")]
+    [InlineData("breakdown = jsonb_build_object('rewritten', true)")]
+    public async Task A_quotes_figures_cannot_be_updated_even_by_the_owner(string change)
+    {
+        await using var world = await WorldAsync();
+        var rule = await world.AddRuleAsync();
+        await world.InsertQuoteAsync(net: 100_000, markup: 10_000, tax: 750, gross: 110_750, ruleId: rule.Id);
+
+        // As the owner, which no REVOKE binds: the trigger is the wall under test, and it refuses
+        // even a no-op. EF1002: `change` is one of the [InlineData] constants above.
+#pragma warning disable EF1002
+        var act = () => world.Owner.Database.ExecuteSqlRawAsync($"UPDATE pricing.price_quotes SET {change}");
+#pragma warning restore EF1002
+
+        (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(RestrictViolation);
+    }
+
+    [Fact]
+    public async Task The_application_role_cannot_update_a_quote_at_all()
+    {
+        await using var world = await WorldAsync();
+        await world.InsertQuoteAsync(net: 100_000, markup: 0, gross: 100_000, ruleId: null);
+
+        var act = () => world.Db.Database.ExecuteSqlRawAsync("UPDATE pricing.price_quotes SET tax_amount_minor = 1");
+
+        (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(InsufficientPrivilege);
+    }
+
     // ------------------------------------------------------------------ tenancy
 
     [Fact]
@@ -319,18 +426,35 @@ public sealed class PricingSchemaTests
             return rule;
         }
 
-        public Task<int> InsertQuoteAsync(long net, long markup, long gross, Guid? ruleId) =>
+        /// <summary>
+        /// A quote written in raw SQL, past the domain. Defaults are an honest quote with no VAT,
+        /// no fee, the base-currency rate and half an hour to live; each test overrides the one
+        /// figure it is about.
+        /// </summary>
+        public Task<int> InsertQuoteAsync(
+            long net,
+            long markup,
+            long gross,
+            Guid? ruleId,
+            long tax = 0,
+            long fee = 0,
+            long fxRateBillionths = PriceQuote.FxRateScale,
+            int expiresInMinutes = 30,
+            string breakdown = "{}") =>
             Db.Database.ExecuteSqlRawAsync(
                 """
                 INSERT INTO pricing.price_quotes
                     (id, agency_id, product_type, currency, net_amount_minor, markup_amount_minor,
-                     gross_amount_minor, markup_rule_id, created_at, updated_at)
-                VALUES (gen_random_uuid(), {0}, 'Tour', 'NGN', {1}, {2}, {3}, {4}, now(), now())
+                     tax_amount_minor, platform_fee_minor, gross_amount_minor, markup_rule_id,
+                     fx_rate_billionths, breakdown, expires_at, created_at, updated_at)
+                VALUES (gen_random_uuid(), {0}, 'Tour', 'NGN', {1}, {2}, {3}, {4}, {5}, {6},
+                        {7}, CAST({8} AS jsonb), now() + make_interval(mins => {9}), now(), now())
                 """,
-                AgencyId, net, markup, gross,
+                AgencyId, net, markup, tax, fee, gross,
                 // Typed, because a null carries no type of its own: EF cannot map a bare DBNull to a
                 // store type, and throws before PostgreSQL ever sees the statement.
-                new NpgsqlParameter("markup_rule_id", NpgsqlDbType.Uuid) { Value = (object?)ruleId ?? DBNull.Value });
+                new NpgsqlParameter("markup_rule_id", NpgsqlDbType.Uuid) { Value = (object?)ruleId ?? DBNull.Value },
+                fxRateBillionths, breakdown, expiresInMinutes);
 
         public async ValueTask DisposeAsync()
         {

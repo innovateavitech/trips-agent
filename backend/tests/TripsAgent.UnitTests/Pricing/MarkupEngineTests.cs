@@ -18,6 +18,9 @@ public class MarkupEngineTests
 
     private static readonly Guid ProductId = Guid.Parse("0197a000-0000-7000-8000-0000000000f1");
 
+    /// <summary>These tests are about which rule wins; VAT and the fee are PriceCalculationTests'.</summary>
+    private static readonly PricingRates NoTaxOrFee = new(0, 0);
+
     private static readonly Guid SmallestId = Guid.Parse("00000000-0000-0000-0000-000000000001");
     private static readonly Guid LargestId = Guid.Parse("ffffffff-ffff-ffff-ffff-fffffffffffe");
 
@@ -243,7 +246,7 @@ public class MarkupEngineTests
         var global = Rule(MarkupScope.Global, percent: 500);
         var product = Rule(MarkupScope.Product, percent: 1_000);
 
-        var price = MarkupEngine.Price(Subject, new Money(200_000), Now, Agency, null, [global, product]);
+        var price = MarkupEngine.Price(Subject, new Money(200_000), Now, Agency, null, [global, product], NoTaxOrFee);
 
         price.MarkupRuleId.Should().Be(product.Id);
         price.MarkupAmountMinor.Should().Be(new Money(20_000));
@@ -256,7 +259,7 @@ public class MarkupEngineTests
     [Fact]
     public void With_no_rule_the_markup_is_zero_and_no_rule_is_named()
     {
-        var price = MarkupEngine.Price(Subject, new Money(200_000), Now, Agency, null, []);
+        var price = MarkupEngine.Price(Subject, new Money(200_000), Now, Agency, null, [], NoTaxOrFee);
 
         price.MarkupAmountMinor.Should().Be(Money.Zero);
         price.GrossAmountMinor.Should().Be(new Money(200_000));
@@ -268,7 +271,7 @@ public class MarkupEngineTests
     {
         var principals = Rule(MarkupScope.Global, agency: Parent);
 
-        var price = MarkupEngine.Price(Subject, new Money(10_000), Now, Agency, Parent, [principals]);
+        var price = MarkupEngine.Price(Subject, new Money(10_000), Now, Agency, Parent, [principals], NoTaxOrFee);
 
         price.MarkupRuleId.Should().Be(principals.Id);
         price.MarkupRuleInherited.Should().BeTrue();
@@ -277,7 +280,7 @@ public class MarkupEngineTests
     [Fact]
     public void A_negative_net_rate_is_refused()
     {
-        var act = () => MarkupEngine.Price(Subject, new Money(-1), Now, Agency, null, []);
+        var act = () => MarkupEngine.Price(Subject, new Money(-1), Now, Agency, null, [], NoTaxOrFee);
 
         act.Should().Throw<ArgumentOutOfRangeException>();
     }

@@ -69,6 +69,13 @@ public sealed class PriceQuoteConfiguration : IEntityTypeConfiguration<PriceQuot
         builder.Property(quote => quote.SupplierCode).HasMaxLength(MarkupRuleTerms.MaxSupplierCodeLength);
         builder.Property(quote => quote.Currency).HasMaxLength(3).IsFixedLength().IsRequired();
 
+        // The rate is stored as FxRateBillionths, a bigint; this is the same value read as a decimal.
+        builder.Ignore(quote => quote.FxRate);
+
+        // jsonb, so the calculation can be queried in psql — "every quote priced by this rule at
+        // more than 15%" — without a schema change for each question.
+        builder.Property(quote => quote.Breakdown).HasColumnType("jsonb").IsRequired();
+
         builder.HasOne<Agency>()
             .WithMany()
             .HasForeignKey(quote => quote.AgencyId)

@@ -25,7 +25,7 @@ public sealed partial record MarkupRuleTerms
     public const int MaxPercentBasisPoints = 100_000;
 
     /// <summary>Basis points in 100%.</summary>
-    public const int BasisPointsPerWhole = 10_000;
+    public const int BasisPointsPerWhole = BasisPoints.PerWhole;
 
     public const int MaxSupplierCodeLength = 40;
 
@@ -113,7 +113,7 @@ public sealed partial record MarkupRuleTerms
 
         var markup = CalculationType switch
         {
-            MarkupCalculationType.Percentage => PercentOf(net, PercentBasisPoints ?? 0),
+            MarkupCalculationType.Percentage => BasisPoints.Of(net, PercentBasisPoints ?? 0),
             MarkupCalculationType.Fixed => ValueMinor ?? Money.Zero,
             _ => throw new InvalidOperationException($"Unknown calculation type {CalculationType}."),
         };
@@ -129,6 +129,36 @@ public sealed partial record MarkupRuleTerms
         }
 
         return markup;
+    }
+
+    /// <summary>
+    /// The rule in one line, for a quote's breakdown and the pricing screen: "10% of the net rate,
+    /// at least NGN 2000.00" or "a fixed NGN 1500.00".
+    /// </summary>
+    /// <remarks>
+    /// Stored on the quote as written at the time, so the explanation of a price never depends on
+    /// re-reading a rule — or on this wording, should it change later.
+    /// </remarks>
+    public string Describe()
+    {
+        if (CalculationType == MarkupCalculationType.Fixed)
+        {
+            return $"a fixed {Currency} {(ValueMinor ?? Money.Zero).ToString()}";
+        }
+
+        var text = $"{BasisPoints.Format(PercentBasisPoints ?? 0)} of the net rate";
+
+        if (MinMarkupMinor is { } floor)
+        {
+            text += $", at least {Currency} {floor.ToString()}";
+        }
+
+        if (MaxMarkupMinor is { } ceiling)
+        {
+            text += $", at most {Currency} {ceiling.ToString()}";
+        }
+
+        return text;
     }
 
     /// <summary>
@@ -246,20 +276,6 @@ public sealed partial record MarkupRuleTerms
             : throw new ArgumentException(
                 $"'{supplierCode}' is not a supplier code. Use lower-case letters, digits and underscores, e.g. 'trips_africa'.",
                 nameof(supplierCode));
-    }
-
-    /// <summary>
-    /// <paramref name="basisPoints"/> of <paramref name="net"/>, rounded half up to the kobo.
-    /// </summary>
-    /// <remarks>
-    /// <see cref="Int128"/> for the intermediate product, so a large fare times a large percentage
-    /// cannot overflow before the division brings it back down. The final conversion is checked:
-    /// a result too big for a <see cref="long"/> throws rather than wrapping to a negative price.
-    /// </remarks>
-    private static Money PercentOf(Money net, int basisPoints)
-    {
-        var scaled = ((Int128)net.AmountMinor * basisPoints) + (BasisPointsPerWhole / 2);
-        return new Money(checked((long)(scaled / BasisPointsPerWhole)));
     }
 
     private static void Forbid(bool condition, string message)

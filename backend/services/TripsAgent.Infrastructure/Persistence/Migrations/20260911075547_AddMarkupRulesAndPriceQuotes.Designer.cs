@@ -12,7 +12,7 @@ using TripsAgent.Infrastructure.Persistence;
 namespace TripsAgent.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260911072034_AddMarkupRulesAndPriceQuotes")]
+    [Migration("20260911075547_AddMarkupRulesAndPriceQuotes")]
     partial class AddMarkupRulesAndPriceQuotes
     {
         /// <inheritdoc />
@@ -1383,6 +1383,11 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("agency_id");
 
+                    b.Property<string>("Breakdown")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("breakdown");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -1393,6 +1398,14 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character(3)")
                         .HasColumnName("currency")
                         .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<long>("FxRateBillionths")
+                        .HasColumnType("bigint")
+                        .HasColumnName("fx_rate_billionths");
 
                     b.Property<long>("GrossAmountMinor")
                         .HasColumnType("bigint")
@@ -1410,6 +1423,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("net_amount_minor");
 
+                    b.Property<long>("PlatformFeeMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("platform_fee_minor");
+
                     b.Property<Guid?>("ProductId")
                         .HasColumnType("uuid")
                         .HasColumnName("product_id");
@@ -1424,6 +1441,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
                         .HasColumnName("supplier_code");
+
+                    b.Property<long>("TaxAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_amount_minor");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")

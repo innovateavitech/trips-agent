@@ -11,9 +11,15 @@ using TripsAgent.Domain.Pricing;
 
 namespace TripsAgent.Api.Pricing;
 
-/// <summary>Markup rules, and reading back a quote with or without its margin.</summary>
+/// <summary>Markup rules, the price preview, and reading back a quote with or without its margin.</summary>
 public static class PricingEndpoints
 {
+    /// <summary>
+    /// ₦100 billion. Far above any real fare; it keeps a mistyped sample from reaching the checked
+    /// arithmetic and coming back as a 500 instead of a sentence.
+    /// </summary>
+    private const long MaxPreviewNetMinor = 10_000_000_000_000;
+
     public static IEndpointRouteBuilder MapPricingEndpoints(this IEndpointRouteBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);
@@ -80,6 +86,62 @@ public static class PricingEndpoints
             .WithName("RetireMarkupRule")
             .Produces<MarkupRuleResponse>();
 
+        // The pricing screen's "which rule wins" explainer. Prices a sample without storing a quote,
+        // so an agent can try a hundred figures and leave no trace in the margin history. Margin
+        // view, because the answer is margin: the net, the markup, and the rule behind it.
+        group.MapPost("/preview", async (
+                PricePreviewRequest request,
+                PricingService pricing,
+                CancellationToken cancellationToken) =>
+            {
+                ArgumentNullException.ThrowIfNull(request);
+
+                if (!TryParseEnum<PricedProductType>(request.ProductType, out var productType))
+                {
+                    return PreviewProblem("productType must be one of Flight, Bus, Tour, Visa or GroupDeparture.");
+                }
+
+                if (request.NetAmountMinor is < 0 or > MaxPreviewNetMinor)
+                {
+                    return PreviewProblem("The sample net price must be between zero and ₦100 billion.");
+                }
+
+                var currency = request.Currency
+                               ?? (await pricing.SettingsAsync(cancellationToken)).Currency;
+
+                PricingSubject subject;
+
+                try
+                {
+                    subject = new PricingSubject(productType, currency, request.ProductId, request.SupplierCode);
+                }
+                catch (ArgumentException ex)
+                {
+                    return PreviewProblem(ex.Message);
+                }
+
+                var price = await pricing.PriceAsync(subject, new Money(request.NetAmountMinor), cancellationToken);
+
+                return Results.Ok(ToPreview(price));
+            })
+            .RequireAuthorization(PermissionPolicies.For(PermissionCodes.MarginView))
+            .WithName("PreviewPrice")
+            .Produces<PricePreviewResponse>();
+
+        group.MapGet("/settings", async (PricingService pricing, CancellationToken cancellationToken) =>
+            {
+                var settings = await pricing.SettingsAsync(cancellationToken);
+
+                return Results.Ok(new PricingSettingsResponse(
+                    settings.Currency,
+                    settings.VatRateBasisPoints,
+                    settings.PlatformFeeBasisPoints,
+                    (int)settings.QuoteValidity.TotalMinutes));
+            })
+            .RequireAuthorization(PermissionPolicies.For(PermissionCodes.MarginView))
+            .WithName("GetPricingSettings")
+            .Produces<PricingSettingsResponse>();
+
         // Anyone who sells can read a quote; only margin.view sees what it is made of.
         group.MapGet("/quotes/{quoteId:guid}", async (
                 Guid quoteId,
@@ -116,7 +178,13 @@ public static class PricingEndpoints
     }
 
     private static PriceQuoteResponse WithoutMargin(PriceQuote quote) =>
-        new(quote.Id, quote.ProductType.ToString(), quote.Currency, quote.GrossAmountMinor.AmountMinor, quote.CreatedAt);
+        new(
+            quote.Id,
+            quote.ProductType.ToString(),
+            quote.Currency,
+            quote.GrossAmountMinor.AmountMinor,
+            quote.CreatedAt,
+            quote.ExpiresAt);
 
     private static PriceQuoteWithMarginResponse WithMargin(PriceQuote quote) =>
         new(
@@ -126,8 +194,40 @@ public static class PricingEndpoints
             quote.GrossAmountMinor.AmountMinor,
             quote.NetAmountMinor.AmountMinor,
             quote.MarkupAmountMinor.AmountMinor,
+            quote.TaxAmountMinor.AmountMinor,
+            quote.PlatformFeeMinor.AmountMinor,
+            quote.FxRate,
             quote.MarkupRuleId,
-            quote.CreatedAt);
+            quote.CreatedAt,
+            quote.ExpiresAt);
+
+    private static PricePreviewResponse ToPreview(PriceBreakdown price) =>
+        new(
+            price.Currency,
+            price.NetAmountMinor.AmountMinor,
+            price.MarkupAmountMinor.AmountMinor,
+            price.VatRateBasisPoints,
+            price.TaxAmountMinor.AmountMinor,
+            price.PlatformFeeBasisPoints,
+            price.PlatformFeeMinor.AmountMinor,
+            price.AgentMarginMinor.AmountMinor,
+            price.GrossAmountMinor.AmountMinor,
+            price.MarkupRule is { } rule
+                ? new PricePreviewRuleResponse(
+                    rule.Id,
+                    rule.Terms.Scope.ToString(),
+                    rule.Terms.ProductType?.ToString(),
+                    rule.Terms.ProductId,
+                    rule.Terms.SupplierCode,
+                    rule.Terms.CalculationType.ToString(),
+                    rule.Terms.PercentBasisPoints,
+                    rule.Terms.ValueMinor?.AmountMinor,
+                    rule.Terms.MinMarkupMinor?.AmountMinor,
+                    rule.Terms.MaxMarkupMinor?.AmountMinor,
+                    rule.Terms.Priority,
+                    price.MarkupRuleInherited,
+                    rule.Terms.Describe())
+                : null);
 
     private static MarkupRuleResponse ToResponse(MarkupRule rule) =>
         new(
@@ -242,6 +342,9 @@ public static class PricingEndpoints
                && Enum.TryParse(value.Trim(), ignoreCase: true, out result)
                && Enum.IsDefined(result);
     }
+
+    private static IResult PreviewProblem(string detail) =>
+        Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "That price cannot be previewed.", detail: detail);
 
     private static IResult BadRequest(string detail) =>
         Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "That rule does not add up.", detail: detail);

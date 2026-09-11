@@ -3,6 +3,7 @@ using TripsAgent.Application.Assets;
 using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
+using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Payments;
 using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Suppliers;
@@ -67,6 +68,9 @@ public static class DependencyInjection
         services.AddScoped<CompleteAssetUploadHandler>();
         services.AddScoped<GetAssetHandler>();
         services.AddScoped<AssetDelivery>();
+
+        // Stages notifications in the caller's unit of work; the Worker sends them.
+        services.AddScoped<INotifier, Notifier>();
 
         return services;
     }

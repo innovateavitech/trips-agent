@@ -9,6 +9,7 @@ using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
+using TripsAgent.Domain.Notifications;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Pricing;
@@ -217,6 +218,15 @@ public class AppDbContext : DbContext, IAppDbContext
 
     /// <summary>The WebP renditions of image assets.</summary>
     public DbSet<AssetVariant> AssetVariants => Set<AssetVariant>();
+
+    /// <summary>Every notification queued, and what happened to it. Tenant-scoped.</summary>
+    public DbSet<Notification> Notifications => Set<Notification>();
+
+    /// <summary>Notification wording, seeded from <c>NotificationTemplateCatalog</c>. Platform-wide.</summary>
+    public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
+
+    /// <summary>Addresses we no longer send to. Platform-wide.</summary>
+    public DbSet<SuppressedEmailAddress> SuppressedEmailAddresses => Set<SuppressedEmailAddress>();
 
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.

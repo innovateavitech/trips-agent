@@ -154,7 +154,9 @@ public sealed class PostgresFixture : IAsyncLifetime
         TimeProvider? clock = null,
         TripsAgent.Application.Auditing.IAuditContext? auditContext = null,
         bool asApplicationRole = true,
-        bool pooled = false)
+        bool pooled = false,
+        bool retryOnFailure = false,
+        IReadOnlyList<Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor>? interceptors = null)
     {
         // As the application role by default, so every test acting as a tenant runs under row-level
         // security exactly as production does (ADR-0006). A flow that only works as a superuser
@@ -179,8 +181,25 @@ public sealed class PostgresFixture : IAsyncLifetime
         };
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(builder.ConnectionString)
+            .UseNpgsql(builder.ConnectionString, npgsql =>
+            {
+                // Production turns this on (AddInfrastructure). Off by default here, because a test
+                // that fails should fail at once, not after three backed-off retries. A test about
+                // what a replay does asks for it, with delays short enough not to slow the suite.
+                if (retryOnFailure)
+                {
+                    npgsql.EnableRetryOnFailure(
+                        maxRetryCount: 3,
+                        maxRetryDelay: TimeSpan.FromMilliseconds(50),
+                        errorCodesToAdd: null);
+                }
+            })
             .UseSnakeCaseNamingConvention();
+
+        if (interceptors is { Count: > 0 })
+        {
+            optionsBuilder.AddInterceptors(interceptors);
+        }
 
         // The audit interceptor is added at composition time rather than inside AppDbContext, so
         // a context built here only audits if this adds it. Added only when an audit context was

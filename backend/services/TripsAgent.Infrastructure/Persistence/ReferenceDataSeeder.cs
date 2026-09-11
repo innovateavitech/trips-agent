@@ -5,8 +5,8 @@ using TripsAgent.Domain.Identity;
 namespace TripsAgent.Infrastructure.Persistence;
 
 /// <summary>
-/// Loads the rows the application cannot run without: the permission catalogue and the system
-/// roles. Safe in every environment, and run by <c>migrate</c> as well as by <c>seed</c>.
+/// Loads the rows the application cannot run without: the permission catalogue, the system roles
+/// and the notification templates. Safe in every environment, and run by <c>migrate</c> as well as by <c>seed</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -36,6 +36,10 @@ public static class ReferenceDataSeeder
 
         var permissions = await EnsurePermissionsAsync(dbContext, cancellationToken);
         var roles = await EnsureSystemRolesAsync(dbContext, permissions, cancellationToken);
+
+        // Templates too: the dispatcher renders from the table, so a deploy that adds a template
+        // and skips this would queue mail that can never be sent.
+        await Notifications.NotificationTemplateSeeder.EnsureAsync(dbContext, TimeProvider.System, cancellationToken);
 
         return (permissions, roles);
     }

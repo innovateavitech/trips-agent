@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
+using TripsAgent.Domain.Notifications;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Pricing;
@@ -95,6 +96,15 @@ public interface IAppDbContext
 
     /// <summary>The WebP renditions of image assets.</summary>
     public DbSet<AssetVariant> AssetVariants { get; }
+
+    /// <summary>Every message sent to anyone, and what happened to it. Tenant-scoped.</summary>
+    public DbSet<Notification> Notifications { get; }
+
+    /// <summary>The wording, per channel, locale and version. Platform-wide; seeded from the catalog.</summary>
+    public DbSet<NotificationTemplate> NotificationTemplates { get; }
+
+    /// <summary>Addresses that bounced permanently. Platform-wide.</summary>
+    public DbSet<SuppressedEmailAddress> SuppressedEmailAddresses { get; }
 
     /// <summary>
     /// Each agency's markup rules. Never edited in place — see <see cref="MarkupRule"/> — so the rule

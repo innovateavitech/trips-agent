@@ -5,13 +5,16 @@ using System.Security.Cryptography;
 using System.Text;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Payments;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Common;
+using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Tenancy;
+using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Tenancy;
 using TripsAgent.Integrations.Paystack;
@@ -387,6 +390,28 @@ public class WebhookIdempotencyTests
         world.Alerts.Should().Contain(alert => alert.Severity == AlertSeverity.P1 || alert.Severity == AlertSeverity.P2);
     }
 
+    [Fact]
+    public async Task A_receipt_that_cannot_be_queued_does_not_fail_a_credit_that_has_landed()
+    {
+        // A database blip that outlasts EF's retries reaches the receipt as RetryLimitExceededException,
+        // which is not a DbUpdateException. The posting has already committed, so letting it escape
+        // would mark a credited payment's event failed — and on the agent's path, show someone who
+        // has been charged and credited an error that invites them to pay again.
+        await using var world = await WorldAsync(withOwner: true, notifier: _ => new UnreachableNotifier());
+
+        var body = ChargeSuccess(world.Reference, paidMinor: 500_000, feeMinor: 0);
+
+        await world.Handler.ReceiveAsync(body, Sign(body));
+        await world.Drain();
+
+        using var _ = world.Tenancy.Scope.Enter("test — credited, receipt or no receipt");
+
+        (await world.Db.Wallets.AsNoTracking().SingleAsync()).BalanceMinor.AmountMinor.Should().Be(500_000);
+
+        (await world.Db.PaymentWebhookEvents.AsNoTracking().SingleAsync())
+            .ProcessingStatus.Should().Be(WebhookProcessingStatus.Processed);
+    }
+
     // ------------------------------------------------------------------- helpers
 
     /// <summary>A <c>charge.success</c> delivery, shaped like the ones Paystack documents.</summary>
@@ -404,6 +429,8 @@ public class WebhookIdempotencyTests
         long verifiedAmountMinor = 500_000,
         string gatewayStatus = "success",
         HttpStatusCode? failVerifyWith = null,
+        bool withOwner = false,
+        Func<AppDbContext, INotifier>? notifier = null,
         [CallerMemberName] string testName = "")
     {
         var name = testName.ToLowerInvariant();
@@ -431,6 +458,12 @@ public class WebhookIdempotencyTests
 
             db.Wallets.Add(Wallet.OpenFor(agency.Id, "NGN"));
 
+            // Only when asked for: with nobody to receive it, no receipt is queued at all.
+            if (withOwner)
+            {
+                db.Users.Add(User.ForAgency(agency.Id, "owner@lagos-travel.test", "argon2id$hash", "Ngozi", "Adeyemi"));
+            }
+
             db.PaymentTransactions.Add(PaymentTransaction.Start(
                 agency.Id, null, PaymentPurpose.WalletTopUp, new Money(500_000), "NGN", reference));
 
@@ -439,7 +472,7 @@ public class WebhookIdempotencyTests
 
         var transport = new StubPaystack(verifiedAmountMinor, gatewayStatus, failVerifyWith);
 
-        return new World(db, tenancy, clock, reference, transport, _postgres, name);
+        return new World(db, tenancy, clock, reference, transport, _postgres, name, notifier);
     }
 
     /// <summary>
@@ -498,6 +531,7 @@ public class WebhookIdempotencyTests
         private readonly string _databaseName;
         private readonly StubPaystack _transport;
         private readonly List<AppDbContext> _extraContexts = [];
+        private readonly Func<AppDbContext, INotifier>? _notifier;
 
         public World(
             AppDbContext db,
@@ -506,8 +540,10 @@ public class WebhookIdempotencyTests
             string reference,
             StubPaystack transport,
             PostgresFixture postgres,
-            string databaseName)
+            string databaseName,
+            Func<AppDbContext, INotifier>? notifier = null)
         {
+            _notifier = notifier;
             Db = db;
             Tenancy = tenancy;
             Clock = clock;
@@ -574,7 +610,9 @@ public class WebhookIdempotencyTests
                 tenancy.Tenant,
                 tenancy.Scope,
                 topUps,
-                new DiscardingEmailSender(),
+                // The real queue: a receipt is a row and an outbox message in this database, which is
+                // all a webhook test needs to know about email.
+                _notifier?.Invoke(db) ?? new Notifier(db, new EfOutbox(db, Clock)),
                 new RecordingAlerter(Alerts),
 
                 // The real detector, so a test proves the same code that decides in production
@@ -624,6 +662,15 @@ public class WebhookIdempotencyTests
             Task.CompletedTask;
     }
 
+    /// <summary>A notification queue whose database has been unreachable for longer than EF will retry.</summary>
+    private sealed class UnreachableNotifier : INotifier
+    {
+        public Task<bool> QueueEmailAsync(EmailNotificationRequest request, CancellationToken cancellationToken = default) =>
+            Task.FromException<bool>(new RetryLimitExceededException(
+                "The maximum number of retries (3) was exceeded while executing database operations.",
+                new InvalidOperationException("connection refused")));
+    }
+
     /// <summary>Collects alerts, so a test can assert that a dead-letter really pages someone.</summary>
     private sealed class RecordingAlerter(List<PlatformAlert> alerts) : IPlatformAlerter
     {
@@ -632,11 +679,5 @@ public class WebhookIdempotencyTests
             alerts.Add(alert);
             return Task.CompletedTask;
         }
-    }
-
-    private sealed class DiscardingEmailSender : IEmailSender
-    {
-        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
     }
 }

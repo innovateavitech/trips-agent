@@ -2,6 +2,7 @@ using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Messaging;
+using TripsAgent.Infrastructure.Notifications;
 
 namespace TripsAgent.Infrastructure.Messaging;
 
@@ -25,6 +26,19 @@ public static class MessagingRegistration
     /// </summary>
     public const string RabbitMqConnectionName = "RabbitMq";
 
+    /// <summary>
+    /// Which consumer listens on which queue. A consumer not listed here receives nothing.
+    /// </summary>
+    /// <remarks>
+    /// Explicit because MassTransit's <c>ConfigureConsumers(context)</c> attaches <em>every</em>
+    /// registered consumer to the endpoint it is called on. Called on all eleven queues, as this
+    /// class used to, one published message would be consumed eleven times — eleven emails.
+    /// </remarks>
+    public static IReadOnlyList<(MessageQueue Queue, Type Consumer)> ConsumerRoutes { get; } =
+    [
+        (MessageQueue.NotificationsEmail, typeof(NotificationQueuedConsumer)),
+    ];
+
     /// <summary>Registers a publish-only bus. Use this in the API.</summary>
     /// <param name="services">The host's service collection.</param>
     /// <param name="configuration">The host's configuration.</param>
@@ -40,8 +54,8 @@ public static class MessagingRegistration
     /// <param name="services">The host's service collection.</param>
     /// <param name="configuration">The host's configuration.</param>
     /// <param name="registerConsumers">
-    /// Where consumers get added, e.g. <c>x =&gt; x.AddConsumer&lt;IssueTicketConsumer&gt;()</c>.
-    /// Null while there are none — the queues are still declared.
+    /// Extra bus registration, e.g. for a saga. Consumers belong in <see cref="ConsumerRoutes"/>
+    /// instead, which both registers them and decides their queue.
     /// </param>
     public static IServiceCollection AddMessageConsuming(
         this IServiceCollection services,
@@ -108,6 +122,14 @@ public static class MessagingRegistration
             // explicitly, so this is here for the ones a future consumer forgets to name.
             bus.SetKebabCaseEndpointNameFormatter();
 
+            if (runReceiveEndpoints)
+            {
+                foreach (var (_, consumer) in ConsumerRoutes)
+                {
+                    bus.AddConsumer(consumer);
+                }
+            }
+
             registerConsumers?.Invoke(bus);
 
             bus.UsingRabbitMq((context, rabbit) =>
@@ -144,15 +166,18 @@ public static class MessagingRegistration
                         // docker-compose.yml does not ship. Turning it on without the plugin fails
                         // at runtime, not at startup.
                         endpoint.UseMessageRetry(policy => policy.Exponential(
-                            retryLimit: retry.RetryLimit,
+                            retryLimit: RetryLimitFor(queue, retry),
                             minInterval: retry.RetryMinInterval,
                             maxInterval: retry.RetryMaxInterval,
                             intervalDelta: retry.RetryIntervalDelta));
 
-                        // Attaches any consumer registered above whose definition names this
-                        // queue. Today that is none, and an endpoint with no consumer is a queue
-                        // that exists and holds nothing — which is what we want in M1.
-                        endpoint.ConfigureConsumers(context);
+                        // Only the consumers routed to this queue. An endpoint with none is a
+                        // queue that exists and holds nothing, which is what most are in M1.
+                        foreach (var (_, consumer) in ConsumerRoutes.Where(route => route.Queue == queue))
+                        {
+                            endpoint.ConfigureConsumer(context, consumer);
+                        }
+
                         endpoint.ConfigureSagas(context);
                     });
                 }
@@ -181,6 +206,16 @@ public static class MessagingRegistration
 
         return services;
     }
+
+    /// <summary>
+    /// Retries per queue. Notifications give up after <see cref="NotificationDispatcher.MaxAttempts"/>
+    /// attempts in total — the first delivery plus four retries — so the broker dead-letters a
+    /// message at the same moment the dispatcher marks its row failed.
+    /// </summary>
+    private static int RetryLimitFor(MessageQueue queue, MessageRetryOptions retry) =>
+        queue == MessageQueue.NotificationsEmail
+            ? Math.Min(retry.RetryLimit, NotificationDispatcher.MaxAttempts - 1)
+            : retry.RetryLimit;
 
     /// <summary>
     /// Per-queue concurrency. One switch, so "how parallel is this queue" has a single answer you

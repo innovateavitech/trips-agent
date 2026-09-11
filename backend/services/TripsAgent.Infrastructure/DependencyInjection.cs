@@ -20,6 +20,8 @@ using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Notifications;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Pricing;
+using TripsAgent.Infrastructure.RateLimiting;
+using TripsAgent.Infrastructure.Retention;
 using TripsAgent.Infrastructure.Search;
 using TripsAgent.Infrastructure.Security;
 using TripsAgent.Infrastructure.Storage;
@@ -210,6 +212,14 @@ public static class DependencyInjection
         // Net search results, per agency, for a few minutes (#40). After the pricing cache, whose
         // Redis connection it reuses.
         services.AddSearchCache(configuration);
+
+        // Request counts for the API's rate limiter (issue #102), on the same Redis connection the
+        // pricing cache registered — one multiplexer per process. Nothing at all without Redis, on
+        // purpose: see RateLimitingRegistration.
+        services.AddRateLimitStore(configuration);
+
+        // The retention schedule's purge job (issue #105). Run by the Worker, dry run by default.
+        services.AddDataRetention(configuration);
 
         return services;
     }

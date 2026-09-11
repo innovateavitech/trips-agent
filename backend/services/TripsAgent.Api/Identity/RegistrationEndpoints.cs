@@ -1,4 +1,6 @@
+using TripsAgent.Api.RateLimiting;
 using TripsAgent.Application.Identity.Registration;
+using TripsAgent.Application.RateLimiting;
 using TripsAgent.Contracts.Identity;
 
 namespace TripsAgent.Api.Identity;
@@ -46,6 +48,10 @@ public static class RegistrationEndpoints
                 };
             })
             .WithName("RegisterAgent")
+
+            // Each one creates rows and sends an email. The per-address limits on these endpoints sit
+            // in front of the handlers' own throttling, which is per email address.
+            .RequireRateLimitPolicy(RateLimitPolicyNames.Registration)
             .Produces<RegistrationAcceptedResponse>(StatusCodes.Status202Accepted)
             .ProducesValidationProblem();
 
@@ -78,6 +84,7 @@ public static class RegistrationEndpoints
                 return Results.Accepted(value: new RegistrationAcceptedResponse(AcceptedMessage));
             })
             .WithName("ResendVerification")
+            .RequireRateLimitPolicy(RateLimitPolicyNames.OtpResend)
             .Produces<RegistrationAcceptedResponse>(StatusCodes.Status202Accepted);
 
         // The wording has to be true whether or not the address has an account — see
@@ -94,6 +101,7 @@ public static class RegistrationEndpoints
                     + "instructions to it. The link expires in 30 minutes."));
             })
             .WithName("ForgotPassword")
+            .RequireRateLimitPolicy(RateLimitPolicyNames.ForgotPassword)
             .Produces<RegistrationAcceptedResponse>(StatusCodes.Status202Accepted);
 
         group.MapPost("/reset-password", async (

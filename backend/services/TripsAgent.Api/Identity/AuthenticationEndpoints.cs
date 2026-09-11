@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using TripsAgent.Api.RateLimiting;
 using TripsAgent.Application.Identity;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Persistence;
+using TripsAgent.Application.RateLimiting;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Contracts.Identity;
 
@@ -55,6 +57,9 @@ public static class AuthenticationEndpoints
                 };
             })
             .WithName("Login")
+
+            // Per client address: every attempt is a password guess. See RateLimitSettings.Defaults.
+            .RequireRateLimitPolicy(RateLimitPolicyNames.Login)
             .Produces<TokenPairResponse>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);

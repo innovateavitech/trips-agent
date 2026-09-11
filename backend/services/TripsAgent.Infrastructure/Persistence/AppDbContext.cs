@@ -7,6 +7,7 @@ using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Identity;
+using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
@@ -135,6 +136,19 @@ public class AppDbContext : DbContext, IAppDbContext
 
     /// <summary>Things in the platform that need a person to act. Read across agencies.</summary>
     public DbSet<AdminAlert> AdminAlerts => Set<AdminAlert>();
+
+    /// <summary>The double-entry ledger — the source of truth for money.</summary>
+    public DbSet<LedgerAccount> LedgerAccounts => Set<LedgerAccount>();
+
+    public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
+
+    /// <summary>Agency balances. A projection of the ledger, never an independent truth.</summary>
+    public DbSet<Wallet> Wallets => Set<Wallet>();
+
+    public DbSet<WalletHold> WalletHolds => Set<WalletHold>();
+
+    /// <summary>What the agent's statement renders.</summary>
+    public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
 
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.

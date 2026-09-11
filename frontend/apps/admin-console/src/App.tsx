@@ -1,32 +1,77 @@
-import { Button, Input } from '@trips/ui';
-import { formatMoney } from '@trips/utils';
+import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
+import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom';
+import { Card, buttonVariants } from '@trips/ui';
+import { Link } from 'react-router-dom';
+import { AppShell } from './app/app-shell';
+import { EmptyState } from './components/states';
+import { AuthProvider } from './features/auth/auth-context';
+import { RequireStaff } from './features/auth/guards';
+import { SignInPage } from './features/auth/sign-in-page';
+import { KybReviewApiProvider, kybReviewRoutes, type KybReviewApi } from './features/kyb-review';
+import type { ApiClient } from './lib/api/client';
+import { HOME_PATH } from './lib/auth/redirect';
+import type { SessionStore } from './lib/auth/session-store';
 
 /**
- * Placeholder shell. Replaced by the real app in issue #48.
- * Everything below uses design tokens — no hard-coded colours anywhere.
+ * Two route groups: the public sign-in page, and everything else behind `RequireStaff`.
+ *
+ * The router is built once at module level, not inside the component — rebuilding it on a render
+ * would remount every screen and throw away the page's state.
  */
-export function App() {
-  return (
-    <main className="mx-auto flex max-w-md flex-col gap-6 p-8">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Trips Admin Console
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Scaffold only — see docs/BACKLOG.md for what gets built here.
-        </p>
-      </header>
+const router = createBrowserRouter([
+  { path: '/sign-in', element: <SignInPage /> },
+  {
+    element: (
+      <RequireStaff>
+        <AppShell />
+      </RequireStaff>
+    ),
+    children: [
+      { index: true, element: <Navigate to={HOME_PATH} replace /> },
+      ...kybReviewRoutes,
+      { path: '*', element: <NotFoundPage /> },
+    ],
+  },
+]);
 
-      <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-        <p className="text-sm text-card-foreground">
-          Wallet balance: <span className="font-medium">{formatMoney(150000, 'NGN')}</span>
-        </p>
-        <Input label="Top-up amount" placeholder="0.00" hint="Minimum ₦1,000" />
-        <div className="flex gap-2">
-          <Button>Top up</Button>
-          <Button variant="outline">Cancel</Button>
-        </div>
-      </section>
-    </main>
+export function App({
+  client,
+  store,
+  kybReviewApi,
+  queryClient,
+}: {
+  client: ApiClient;
+  store: SessionStore;
+  kybReviewApi: KybReviewApi;
+  queryClient: QueryClient;
+}) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider client={client} store={store}>
+        <KybReviewApiProvider value={kybReviewApi}>
+          <RouterProvider router={router} />
+        </KybReviewApiProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
+
+function NotFoundPage() {
+  return (
+    <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
+      <Card>
+        <EmptyState
+          title="There is nothing at this address"
+          action={
+            <Link to={HOME_PATH} className={buttonVariants({ variant: 'outline' })}>
+              Go to KYB review
+            </Link>
+          }
+        >
+          The link may be out of date, or the screen may not be built yet — the rest of the back
+          office arrives with epic #66.
+        </EmptyState>
+      </Card>
+    </div>
   );
 }

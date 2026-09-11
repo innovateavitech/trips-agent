@@ -34,8 +34,11 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
 
     public AppDbContext CreateDbContext(string[] args)
     {
+        // The owner's connection when one is configured: ./scripts/ef.sh update applies migrations,
+        // which is DDL (ADR-0006). The application's otherwise, then the local default.
         var connectionString =
-            Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
+            Environment.GetEnvironmentVariable("ConnectionStrings__PostgresAdmin")
+            ?? Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
             ?? LocalDevelopmentConnectionString;
 
         var options = new DbContextOptionsBuilder<AppDbContext>()

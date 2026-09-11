@@ -55,7 +55,7 @@ public interface ILedgerIntegrityAudit
 public sealed partial class LedgerIntegrityAudit : ILedgerIntegrityAudit
 {
     /// <summary>How many checks a whole run performs.</summary>
-    public const int CheckCount = 4;
+    public const int CheckCount = 5;
 
     /// <summary>
     /// The most stale holds reported in one run.
@@ -65,6 +65,9 @@ public sealed partial class LedgerIntegrityAudit : ILedgerIntegrityAudit
     /// an alert listing all of them helps nobody. The oldest are the ones worth naming.
     /// </remarks>
     private const int MaxHoldsReported = 500;
+
+    /// <summary>The most unposted payments reported in one run, oldest first. See <see cref="MaxHoldsReported"/>.</summary>
+    private const int MaxPaymentsReported = 500;
 
     private readonly IAppDbContext _db;
     private readonly ILedgerIntegrityQueries _queries;
@@ -106,6 +109,7 @@ public sealed partial class LedgerIntegrityAudit : ILedgerIntegrityAudit
         findings.AddRange(await WalletDriftAsync(cancellationToken));
         findings.AddRange(await OrphanedEntriesAsync(cancellationToken));
         findings.AddRange(await ExpiredHoldsAsync(startedAt, cancellationToken));
+        findings.AddRange(await UnpostedPaymentsAsync(cancellationToken));
 
         var (created, recurring) = await RecordAsync(findings, startedAt, cancellationToken);
 
@@ -124,7 +128,7 @@ public sealed partial class LedgerIntegrityAudit : ILedgerIntegrityAudit
         return result;
     }
 
-    // --------------------------------------------------------------- the four checks
+    // --------------------------------------------------------------- the five checks
 
     private async Task<List<Finding>> UnbalancedTransactionsAsync(CancellationToken cancellationToken)
     {
@@ -203,6 +207,56 @@ public sealed partial class LedgerIntegrityAudit : ILedgerIntegrityAudit
             hold.AgencyId));
     }
 
+    /// <summary>
+    /// Payments the gateway confirmed that never reached a wallet.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The one discrepancy the other checks cannot see. They compare the ledger with itself and
+    /// with the wallets, and a payment that was never posted is in neither — so a charged payer
+    /// who was never credited leaves the books perfectly balanced.
+    /// </para>
+    /// <para>
+    /// Two ways to get here: posting failed after the gateway confirmed (it is posted in the same
+    /// save as the confirmation, so this should not happen), or the payment is under review
+    /// because the charge did not match the request. Both need a person. Served by the partial
+    /// index <c>ix_payment_transactions_awaiting_posting</c>, which in a healthy system is empty.
+    /// </para>
+    /// </remarks>
+    private async Task<List<Finding>> UnpostedPaymentsAsync(CancellationToken cancellationToken)
+    {
+        var unposted = await _db.PaymentTransactions
+            .AsNoTracking()
+            .Where(payment => payment.LedgerTransactionGroupId == null
+                              && (payment.Status == PaymentStatus.Succeeded
+                                  || payment.Status == PaymentStatus.UnderReview))
+            .OrderBy(payment => payment.CreatedAt)
+            .Take(MaxPaymentsReported)
+            .Select(payment => new
+            {
+                payment.Id,
+                payment.AgencyId,
+                payment.Reference,
+                payment.Status,
+                payment.AmountMinor,
+                payment.VerifiedAmountMinor,
+                payment.Currency,
+                payment.FailureReason,
+            })
+            .ToListAsync(cancellationToken);
+
+        return unposted.ConvertAll(payment => new Finding(
+            ReconciliationCheck.PaymentNotPosted,
+            payment.Id.ToString(),
+            $"Payment {payment.Reference} is {payment.Status} — the gateway reports {payment.VerifiedAmountMinor} "
+            + $"{payment.Currency} paid — but nothing was credited. {payment.FailureReason}".TrimEnd(),
+
+            // What the agency should have received, against what it did.
+            payment.AmountMinor,
+            Money.Zero,
+            payment.AgencyId));
+    }
+
     // --------------------------------------------------------------- recording
 
     /// <summary>
@@ -266,10 +320,29 @@ public sealed partial class LedgerIntegrityAudit : ILedgerIntegrityAudit
 
     private async Task AlertAsync(List<Finding> findings, CancellationToken cancellationToken)
     {
-        var wrongBooks = findings.FindAll(finding => finding.Severity == ReconciliationSeverity.P1);
+        // Unposted payments are P1 too, but the advice below about bypassed triggers is wrong
+        // for them, so they get an alert of their own.
+        var unposted = findings.FindAll(finding => finding.Check == ReconciliationCheck.PaymentNotPosted);
+        var wrongBooks = findings.FindAll(
+            finding => finding.Severity == ReconciliationSeverity.P1 && finding.Check != ReconciliationCheck.PaymentNotPosted);
         var behindWork = findings.FindAll(finding => finding.Severity == ReconciliationSeverity.P2);
 
-        LogFindings(_logger, findings.Count, wrongBooks.Count);
+        LogFindings(_logger, findings.Count, wrongBooks.Count + unposted.Count);
+
+        if (unposted.Count > 0)
+        {
+            await _alerter.RaiseAsync(
+                new PlatformAlert(
+                    AlertSeverity.P1,
+                    $"{unposted.Count} payment(s) were charged but never credited",
+                    Describe(unposted)
+                    + "\n\nEach payer was charged and their agency's wallet was not credited. For each one, check "
+                    + "the payment in the gateway's dashboard, then credit the agency by an adjustment or refund "
+                    + "the payer. Full detail is in payments.reconciliation_exceptions.",
+                    nameof(LedgerIntegrityAudit),
+                    unposted[0].AgencyId),
+                cancellationToken);
+        }
 
         if (wrongBooks.Count > 0)
         {

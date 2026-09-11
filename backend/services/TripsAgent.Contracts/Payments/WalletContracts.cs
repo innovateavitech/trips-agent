@@ -32,7 +32,11 @@ public sealed record TopUpLimitsResponse(long MinimumMinor, long MaximumMinor, s
 
 /// <summary>What came of verifying a payment the agent has just returned from.</summary>
 /// <param name="Status">
-/// <c>succeeded</c>, <c>pending</c> or <c>failed</c>. Pending is normal rather than an error: the
-/// webhook may simply not have arrived yet, and the console should poll rather than alarm anyone.
+/// <c>succeeded</c>, <c>pending</c> or <c>failed</c>. Succeeded means the money is in the wallet.
+/// Pending is normal rather than an error: the payer may not have finished, a transfer may not
+/// have settled, the gateway may be briefly unreachable, or the payment may be waiting for a
+/// person to review it. The console should poll rather than alarm anyone — and must never invite
+/// the agent to pay again while a top-up is pending.
 /// </param>
+/// <param name="AmountMinor">The amount of the top-up: what is, or will be, credited.</param>
 public sealed record VerifyTopUpResponse(string Status, string Reference, long? AmountMinor);

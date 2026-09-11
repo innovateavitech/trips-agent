@@ -175,7 +175,10 @@ public class TenantIsolationTests
         var world = await TwoAgenciesAsync();
 
         // No middleware ran and the entity carries nothing either — the row would be orphaned.
-        await using var anonymous = _postgres.Connect(world.Database);
+        // As the owner, which row-level security does not police, so the EF guard is the only thing
+        // that can refuse — the guard is what this test is about. RowLevelSecurityTests proves the
+        // database refuses as well.
+        await using var anonymous = _postgres.Connect(world.Database, asApplicationRole: false);
 
         var alpha = await anonymous.Agencies.IgnoreQueryFilters().SingleAsync(a => a.Id == world.AlphaId);
         var branding = AgencyBranding.CreateDefault(alpha);
@@ -221,7 +224,9 @@ public class TenantIsolationTests
     {
         var world = await TwoAgenciesAsync();
 
-        await using var asAlpha = await ActingAsAsync(world.Database, world.AlphaId);
+        // As the owner, for the same reason as the test above: this proves the EF guard in isolation.
+        var tenancy = TestTenancy.For(world.AlphaId);
+        await using var asAlpha = _postgres.Connect(world.Database, tenancy.Tenant, tenancy.Scope, asApplicationRole: false);
 
         // Hand-built so it carries Beta's id while the request is acting as Alpha.
         var beta = await ReadAgencyBypassingFiltersAsync(asAlpha, world.BetaId);

@@ -77,7 +77,11 @@ builder.Services.AddAuthorizationBuilder().AddPermissionPolicies();
 // API cannot fix a backlog the Worker or the broker is causing. See OutboxBacklogHealthCheck.
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("postgres")
-    .AddOutboxBacklogCheck();
+    .AddOutboxBacklogCheck()
+
+    // Degraded (Unhealthy in Production) when the application's role bypasses row-level security,
+    // which would otherwise switch the tenant backstop off without a word. See ADR-0006.
+    .AddRowLevelSecurityCheck();
 
 var app = builder.Build();
 

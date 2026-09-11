@@ -34,3 +34,9 @@
 /CONTRIBUTING.md                                          @Sayrikey1
 /README.md                                                @Sayrikey1
 /docs/adr/                                                @Sayrikey1
+
+# --- Dependency vulnerabilities. Allowlisting one is a security decision. ---
+/backend/VulnerabilityAllowlist.txt                       @Sayrikey1
+/frontend/VulnerabilityAllowlist.txt                      @Sayrikey1
+/scripts/audit_dependencies.py                            @Sayrikey1
+/scripts/tests/                                           @Sayrikey1

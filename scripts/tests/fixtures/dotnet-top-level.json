@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "parameters": "--vulnerable --include-transitive",
+  "sources": [
+    "https://api.nuget.org/v3/index.json"
+  ],
+  "projects": [
+    {
+      "path": "/repo/backend/services/TripsAgent.Api/TripsAgent.Api.csproj",
+      "frameworks": [
+        {
+          "framework": "net10.0",
+          "topLevelPackages": [
+            {
+              "id": "Newtonsoft.Json",
+              "requestedVersion": "12.0.1",
+              "resolvedVersion": "12.0.1",
+              "vulnerabilities": [
+                {
+                  "severity": "High",
+                  "advisoryurl": "https://github.com/advisories/GHSA-5crp-9r3c-p9vr"
+                }
+              ]
+            },
+            {
+              "id": "System.Text.Encodings.Web",
+              "requestedVersion": "4.5.0",
+              "resolvedVersion": "4.5.0",
+              "vulnerabilities": [
+                {
+                  "severity": "Critical",
+                  "advisoryurl": "https://github.com/advisories/GHSA-ghhp-997w-qr28"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

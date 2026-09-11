@@ -203,7 +203,13 @@ public class AppDbContext : DbContext, IAppDbContext
 
         base.OnConfiguring(optionsBuilder);
 
-        optionsBuilder.AddInterceptors(new TenantStampingInterceptor(_tenantContext, _platformScope));
+        optionsBuilder.AddInterceptors(
+            new TenantStampingInterceptor(_tenantContext, _platformScope),
+
+            // Tells PostgreSQL the tenant, so row-level security holds even where a filter is
+            // missing (ADR-0006). Structural for the same reason as the stamper: every context
+            // gets it, however it was constructed.
+            new TenantSessionInterceptor(_tenantContext, _platformScope));
     }
 
     /// <summary>Messages waiting to be published, and the record of those that were. See <see cref="OutboxMessage"/>.</summary>

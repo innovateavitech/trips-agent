@@ -60,10 +60,10 @@ public sealed class RegistrationEndToEndTests : IAsyncLifetime, IDisposable
             await ReferenceDataSeeder.EnsureAsync(setup, TestTenancy.None().Scope);
         }
 
-        var connectionString = new Npgsql.NpgsqlConnectionStringBuilder(_postgres.ConnectionString)
-        {
-            Database = database,
-        }.ConnectionString;
+        // The API runs as the role row-level security polices and migrates as the owner — the same
+        // split as production (ADR-0006). A flow that only works as a superuser fails here.
+        var connectionString = _postgres.ConnectionStringFor(database, asApplicationRole: true);
+        var adminConnectionString = _postgres.ConnectionStringFor(database, asApplicationRole: false);
 
         // Environment variables rather than ConfigureAppConfiguration: the host adds them after
         // appsettings.Development.json, so they win. A configuration source added through the
@@ -72,6 +72,7 @@ public sealed class RegistrationEndToEndTests : IAsyncLifetime, IDisposable
         _overrides =
         [
             ("ConnectionStrings__Postgres", connectionString),
+            ("ConnectionStrings__PostgresAdmin", adminConnectionString),
             ("Smtp__Host", _mailpit.Hostname),
             ("Smtp__Port", _mailpit.GetMappedPublicPort(SmtpPort).ToString(System.Globalization.CultureInfo.InvariantCulture)),
             ("Smtp__SecureSocket", "None"),

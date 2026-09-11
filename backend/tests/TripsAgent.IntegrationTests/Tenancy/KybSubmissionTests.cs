@@ -398,6 +398,10 @@ public sealed class KybSubmissionTests : IDisposable
         Guid agencyId;
         await using (var seed = _postgres.Connect(name, tenancy.Tenant, tenancy.Scope, clock))
         {
+            // Inside the platform scope, as every production seeder is: with no tenant resolved,
+            // row-level security refuses an unscoped insert (ADR-0006).
+            using var _ = tenancy.Scope.Enter("test setup — creating the agency, as a seed script would");
+
             var agency = Agency.RegisterPrincipal(
                 "Lagos Travel Limited", "lagos-travel", "NG", "NGN", "Africa/Lagos");
 

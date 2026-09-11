@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "demo": "pnpm --filter agent-console dev:demo",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
@@ -14,12 +15,17 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:design && pnpm test",
-    "generate:api": "echo 'TODO: generate TS client from OpenAPI \u2014 see issue #7'",
+    "generate:api": "../scripts/generate-api.sh",
     "check:design": "../scripts/check-design.sh"
   },
   "devDependencies": {
     "prettier": "^3.4.2",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "next>postcss": "^8.5.28"
+    }
   }
 }

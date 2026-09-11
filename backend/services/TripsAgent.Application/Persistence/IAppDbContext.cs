@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Payments;
@@ -86,6 +87,17 @@ public interface IAppDbContext
     /// own books, which an agency must never see. Permission controls access, not a filter.
     /// </remarks>
     public DbSet<ReconciliationException> ReconciliationExceptions { get; }
+
+    /// <summary>
+    /// What this context is about to write.
+    /// </summary>
+    /// <remarks>
+    /// Exposed for one job: throwing away a save that failed. When a concurrency check or a unique
+    /// index refuses a save, the rejected changes stay tracked, and the next
+    /// <see cref="SaveChangesAsync"/> on the same context sends them again — and fails again.
+    /// <c>ChangeTracker.Clear()</c> discards them so the caller can re-read and decide afresh.
+    /// </remarks>
+    public ChangeTracker ChangeTracker { get; }
 
     /// <summary>How each document type's numbers are written, where the agency has chosen.</summary>
     public DbSet<DocumentNumberFormat> DocumentNumberFormats { get; }

@@ -48,7 +48,9 @@ public static partial class DatabaseMigrator
             .GetRequiredService<ILoggerFactory>()
             .CreateLogger(typeof(DatabaseMigrator));
 
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        // The schema owner, not the application role: creating tables is DDL, and row-level security
+        // must not be what decides whether reference data can be seeded (ADR-0006).
+        var dbContext = scope.ServiceProvider.GetRequiredKeyedService<AppDbContext>(AdminDbContextFactory.ServiceKey);
         var platformScope = scope.ServiceProvider.GetRequiredService<IPlatformScope>();
 
         try

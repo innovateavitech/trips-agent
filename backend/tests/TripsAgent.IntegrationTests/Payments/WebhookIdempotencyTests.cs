@@ -94,11 +94,11 @@ public class WebhookIdempotencyTests
     [Fact]
     public async Task Five_deliveries_arriving_at_once_still_credit_only_once()
     {
-        // Payload and gateway agree here, so nothing distracts from what is being tested. That
-        // they can disagree — and which one wins — is its own test below.
-        await using var world = await WorldAsync(verifiedAmountMinor: 250_000);
+        // Paying exactly what was asked, so nothing distracts from what is being tested. A short
+        // payment is held for review instead, which has its own test below.
+        await using var world = await WorldAsync();
 
-        var body = ChargeSuccess(world.Reference, paidMinor: 250_000, feeMinor: 3_750);
+        var body = ChargeSuccess(world.Reference, paidMinor: 500_000, feeMinor: 7_500);
         var signature = Sign(body);
 
         // Concurrent, which is the case a check-then-act in application code would fail: five
@@ -124,7 +124,7 @@ public class WebhookIdempotencyTests
         (await world.Db.LedgerEntries.CountAsync()).Should().Be(2);
 
         var wallet = await world.Db.Wallets.AsNoTracking().SingleAsync();
-        wallet.BalanceMinor.AmountMinor.Should().Be(250_000);
+        wallet.BalanceMinor.AmountMinor.Should().Be(500_000);
     }
 
     // ------------------------------------------------------------------- signature
@@ -311,13 +311,19 @@ public class WebhookIdempotencyTests
 
         var recorded = await world.Db.PaymentWebhookEvents.AsNoTracking().SingleAsync();
         recorded.ProcessingStatus.Should().Be(WebhookProcessingStatus.Pending);
-        recorded.Attempts.Should().Be(1);
+
+        // Counted apart from Attempts on purpose: an outage is the gateway's fault, and burning
+        // the attempt budget on it would dead-letter a payment nobody has failed to make.
+        recorded.TransientFailures.Should().Be(1);
+        recorded.Attempts.Should().Be(0);
         recorded.LastError.Should().NotBeNullOrWhiteSpace();
 
         (await world.Db.LedgerEntries.CountAsync()).Should().Be(0);
 
-        // And when the gateway comes back, the retry credits it — once.
+        // And when the gateway comes back, the retry credits it — once. The failure scheduled the
+        // next try into the future, so the clock moves before the event is due again.
         world.GatewayRecovers();
+        world.Clock.Advance(TimeSpan.FromHours(1));
         await world.Drain();
 
         var wallet = await world.Db.Wallets.AsNoTracking().SingleAsync();
@@ -328,26 +334,57 @@ public class WebhookIdempotencyTests
     }
 
     [Fact]
-    public async Task An_event_that_keeps_failing_is_dead_lettered_rather_than_retried_forever()
+    public async Task An_outage_that_never_ends_is_dead_lettered_rather_than_retried_forever()
     {
         await using var world = await WorldAsync(failVerifyWith: HttpStatusCode.ServiceUnavailable);
 
         var body = ChargeSuccess(world.Reference, paidMinor: 500_000, feeMinor: 0);
         await world.Handler.ReceiveAsync(body, Sign(body));
 
-        for (var attempt = 0; attempt < PaymentWebhookEvent.MaxAttempts; attempt++)
+        // Each failure schedules the next try further out, so the clock has to move for the event
+        // to come due again — which is exactly what stops a dead gateway spinning the worker.
+        for (var attempt = 0; attempt < PaymentWebhookEvent.MaxTransientFailures; attempt++)
         {
             await world.Drain();
+            world.Clock.Advance(TimeSpan.FromDays(1));
         }
 
         using var _ = world.Tenancy.Scope.Enter("test — dead-lettered");
 
         var recorded = await world.Db.PaymentWebhookEvents.AsNoTracking().SingleAsync();
         recorded.ProcessingStatus.Should().Be(WebhookProcessingStatus.DeadLettered);
-        recorded.Attempts.Should().Be(PaymentWebhookEvent.MaxAttempts);
+        recorded.TransientFailures.Should().Be(PaymentWebhookEvent.MaxTransientFailures);
+
+        // Giving up quietly on a payment someone has been charged for is the worst thing this
+        // module could do, so giving up has to wake somebody.
+        world.Alerts.Should().Contain(alert => alert.Severity == AlertSeverity.P1);
 
         // And the drain stops picking it up, so a permanently broken event cannot spin forever.
         (await world.Drain()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task A_payment_short_of_what_was_asked_is_held_for_review_rather_than_credited()
+    {
+        // ₦4,000 paid against a ₦5,000 top-up. Crediting the smaller figure would be generous to
+        // nobody: the agent asked for ₦5,000 and the books would say they got it.
+        await using var world = await WorldAsync(verifiedAmountMinor: 400_000);
+
+        var body = ChargeSuccess(world.Reference, paidMinor: 400_000, feeMinor: 0);
+
+        await world.Handler.ReceiveAsync(body, Sign(body));
+        await world.Drain();
+
+        using var _ = world.Tenancy.Scope.Enter("test — held, not credited");
+
+        var payment = await world.Db.PaymentTransactions.AsNoTracking().SingleAsync();
+        payment.Status.Should().Be(PaymentStatus.UnderReview);
+        payment.LedgerTransactionGroupId.Should().BeNull();
+
+        (await world.Db.LedgerEntries.CountAsync()).Should().Be(0);
+        (await world.Db.Wallets.AsNoTracking().SingleAsync()).BalanceMinor.AmountMinor.Should().Be(0);
+
+        world.Alerts.Should().Contain(alert => alert.Severity == AlertSeverity.P1 || alert.Severity == AlertSeverity.P2);
     }
 
     // ------------------------------------------------------------------- helpers
@@ -375,8 +412,14 @@ public class WebhookIdempotencyTests
         var clock = new ManualClock(DateTimeOffset.UtcNow);
         var tenancy = TestTenancy.None();
 
-        var db = await _postgres.CreateEmptyDatabaseAsync(name, tenancy.Tenant, tenancy.Scope, clock);
-        await db.Database.MigrateAsync();
+        await using (var setup = await _postgres.CreateEmptyDatabaseAsync(name))
+        {
+            await setup.Database.MigrateAsync();
+        }
+
+        // As the application role, so the whole money path — receive, drain, verify, post — runs
+        // under row-level security (ADR-0006). A flow that only works as a superuser fails here.
+        var db = _postgres.Connect(name, tenancy.Tenant, tenancy.Scope, clock);
 
         var reference = $"TA-{Guid.CreateVersion7():N}"[..30];
 
@@ -482,6 +525,9 @@ public class WebhookIdempotencyTests
 
         public ManualClock Clock { get; }
 
+        /// <summary>Every alert the handlers raised, in order.</summary>
+        public List<PlatformAlert> Alerts { get; } = [];
+
         public string Reference { get; }
 
         public PaymentWebhookHandler Handler { get; }
@@ -525,9 +571,15 @@ public class WebhookIdempotencyTests
             var verify = new VerifyTopUpHandler(
                 db,
                 gateway,
+                tenancy.Tenant,
                 tenancy.Scope,
                 topUps,
                 new DiscardingEmailSender(),
+                new RecordingAlerter(Alerts),
+
+                // The real detector, so a test proves the same code that decides in production
+                // whether a failed save was a unique index picking a winner.
+                new PostgresUniqueViolationDetector(),
                 Clock,
                 NullLogger<VerifyTopUpHandler>.Instance);
 
@@ -540,6 +592,8 @@ public class WebhookIdempotencyTests
                 // processing happens is visible in the test rather than decided by Hangfire.
                 new NoOpDispatcher(),
                 verify,
+                new RecordingAlerter(Alerts),
+                new PostgresUniqueViolationDetector(),
                 Clock,
                 NullLogger<PaymentWebhookHandler>.Instance);
         }
@@ -568,6 +622,16 @@ public class WebhookIdempotencyTests
     {
         public Task EnqueueAsync(Guid webhookEventId, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+    }
+
+    /// <summary>Collects alerts, so a test can assert that a dead-letter really pages someone.</summary>
+    private sealed class RecordingAlerter(List<PlatformAlert> alerts) : IPlatformAlerter
+    {
+        public Task RaiseAsync(PlatformAlert alert, CancellationToken cancellationToken = default)
+        {
+            alerts.Add(alert);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class DiscardingEmailSender : IEmailSender

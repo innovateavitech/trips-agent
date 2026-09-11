@@ -821,6 +821,8 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_ledger_accounts_agency_id_account_type_currency");
 
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("AgencyId", "AccountType", "Currency"), false);
+
                     b.ToTable("ledger_accounts", "payments");
                 });
 
@@ -885,6 +887,11 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.HasIndex("ReferenceType", "ReferenceId")
                         .HasDatabaseName("ix_ledger_entries_reference");
 
+                    b.HasIndex("ReferenceType", "ReferenceId", "AccountId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_ledger_entries_payment_posting")
+                        .HasFilter("reference_type = 'PaymentTransaction'");
+
                     b.ToTable("ledger_entries", "payments");
                 });
 
@@ -937,6 +944,7 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnName("initiated_by_user_id");
 
                     b.Property<Guid?>("LedgerTransactionGroupId")
+                        .IsConcurrencyToken()
                         .HasColumnType("uuid")
                         .HasColumnName("ledger_transaction_group_id");
 
@@ -1003,6 +1011,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("attempts");
 
+                    b.Property<DateTimeOffset?>("ClaimExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("claim_expires_at");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -1030,6 +1042,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("last_error");
 
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
                     b.Property<string>("Payload")
                         .IsRequired()
                         .HasColumnType("text")
@@ -1049,6 +1065,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("signature_valid");
 
+                    b.Property<int>("TransientFailures")
+                        .HasColumnType("integer")
+                        .HasColumnName("transient_failures");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -1058,7 +1078,7 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("ix_payment_webhook_events_pending")
-                        .HasFilter("processing_status = 'Pending'");
+                        .HasFilter("processing_status IN ('Pending', 'Processing')");
 
                     b.HasIndex("Gateway", "EventId")
                         .IsUnique()

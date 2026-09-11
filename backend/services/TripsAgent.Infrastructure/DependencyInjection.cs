@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using TripsAgent.Application.Auditing;
+using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Payments;
@@ -11,6 +12,7 @@ using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Storage;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
+using TripsAgent.Infrastructure.Documents;
 using TripsAgent.Infrastructure.Identity;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Notifications;
@@ -107,6 +109,11 @@ public static class DependencyInjection
         // Lets Application tell "a unique index picked another writer" apart from every other
         // failed save, without Application referencing Npgsql.
         services.AddSingleton<IUniqueViolationDetector, PostgresUniqueViolationDetector>();
+
+        // Gapless document numbering. Both work through the request's AppDbContext, so the counter
+        // increment and the document insert share one transaction.
+        services.AddScoped<ITransactionRunner, EfTransactionRunner>();
+        services.AddScoped<IDocumentNumberAllocator, DocumentNumberAllocator>();
 
         // Files on disk, for local development. MinIO and a cloud adapter arrive with the upload
         // pipeline (#18) behind this same port; nothing above it knows the difference.

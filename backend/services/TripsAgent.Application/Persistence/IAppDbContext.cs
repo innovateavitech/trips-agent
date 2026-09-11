@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
@@ -97,6 +98,12 @@ public interface IAppDbContext
     /// <c>ChangeTracker.Clear()</c> discards them so the caller can re-read and decide afresh.
     /// </remarks>
     public ChangeTracker ChangeTracker { get; }
+
+    /// <summary>How each document type's numbers are written, where the agency has chosen.</summary>
+    public DbSet<DocumentNumberFormat> DocumentNumberFormats { get; }
+
+    /// <summary>Issued documents, and the gapless numbers they own.</summary>
+    public DbSet<GeneratedDocument> GeneratedDocuments { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

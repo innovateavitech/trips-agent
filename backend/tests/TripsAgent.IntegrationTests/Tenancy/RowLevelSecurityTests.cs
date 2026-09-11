@@ -48,6 +48,26 @@ public class RowLevelSecurityTests
         bypass.Should().BeFalse("BYPASSRLS skips every policy");
     }
 
+    [Fact]
+    public async Task The_application_role_owns_none_of_the_tables_it_is_policed_on()
+    {
+        await using var world = await WorldAsync();
+
+        // An owner can ALTER TABLE ... DISABLE ROW LEVEL SECURITY on its own table, and without FORCE
+        // is exempt from the policies anyway. So the role the application runs as must own nothing it
+        // is policed on — otherwise the backstop is one statement away from switched off.
+        var owned = await world.AdminListAsync(
+            """
+            SELECT n.nspname || '.' || c.relname
+              FROM pg_class c
+              JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE c.relrowsecurity
+               AND pg_get_userbyid(c.relowner) = 'tripsagent_app'
+            """);
+
+        owned.Should().BeEmpty("the application role must not own a table row-level security polices");
+    }
+
     // ------------------------------------------------------------------ reads
 
     [Fact]
@@ -295,7 +315,9 @@ public class RowLevelSecurityTests
               JOIN pg_namespace n ON n.oid = c.relnamespace
              WHERE c.relkind IN ('r', 'p')
                AND NOT c.relispartition
-               AND n.nspname IN ('tenancy', 'identity', 'payments', 'platform', 'supplier')
+               -- No schema list. The agency_id test below already excludes every system schema, so
+               -- a list could only ever do harm: each new schema someone forgot to add went silently
+               -- unchecked (documents did). Every table anywhere with an agency_id is in scope.
                AND EXISTS (SELECT 1 FROM information_schema.columns col
                             WHERE col.table_schema = n.nspname
                               AND col.table_name = c.relname
@@ -350,17 +372,27 @@ public class RowLevelSecurityTests
             b.MarkVerified(DateTimeOffset.UtcNow);
 
             var walletAccountA = LedgerAccount.ForAgency(a.Id, LedgerAccountType.AgencyWallet, "NGN", "Wallet A");
-            var clearing = LedgerAccount.ForPlatform(LedgerAccountType.GatewayClearing, "NGN", "Gateway clearing");
 
             setup.Agencies.AddRange(a, b);
             setup.Wallets.AddRange(Wallet.OpenFor(a.Id, "NGN"), Wallet.OpenFor(b.Id, "NGN"));
-            setup.LedgerAccounts.AddRange(walletAccountA, clearing);
+            setup.LedgerAccounts.Add(walletAccountA);
             await setup.SaveChangesAsync();
+
+            var clearing = await PlatformAccountAsync(setup, LedgerAccountType.GatewayClearing);
 
             return new World(_postgres, name, a.Id, b.Id, walletAccountA.Id, clearing.Id);
         }
     }
 
+
+    /// <summary>
+    /// A platform account as the HardenMoneyPath migration seeded it. There is exactly one of each
+    /// type and currency now, and the unique index refuses a second — so a fixture takes the
+    /// seeded one rather than making its own.
+    /// </summary>
+    private static Task<LedgerAccount> PlatformAccountAsync(AppDbContext db, LedgerAccountType accountType) =>
+        db.LedgerAccounts.SingleAsync(
+            a => a.AgencyId == null && a.AccountType == accountType && a.Currency == "NGN");
     private sealed class World : IAsyncDisposable
     {
         private readonly PostgresFixture _postgres;

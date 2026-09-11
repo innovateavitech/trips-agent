@@ -96,8 +96,8 @@ AKIA[0-9A-Z]{16}
   # "Foo 2.cs" beside "Foo.cs" is a sync-conflict copy (iCloud Desktop, Dropbox). .gitignore keeps
   # them out of `git add -A`, so reaching here means one was force-added.
   while IFS= read -r f; do
-    case "$(basename "$f")" in
-      *" "[0-9].*|*" "[0-9][0-9].*)
+    case "$f" in
+      *" "[0-9].*|*" "[0-9][0-9].*|*" "[0-9]/*|*" "[0-9][0-9]/*)
         printf '%s\n' "" >&2
         printf '%s\n' "${RED}${BOLD}✖  Refusing to commit ${f}${NC}" >&2
         printf '%s\n' "   It looks like a sync-conflict copy left by iCloud or Dropbox. .NET compiles" >&2

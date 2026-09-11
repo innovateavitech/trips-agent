@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using TripsAgent.Application.Auditing;
+using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Payments;
@@ -13,10 +14,12 @@ using TripsAgent.Application.Storage;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
+using TripsAgent.Infrastructure.Documents;
 using TripsAgent.Infrastructure.Identity;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Notifications;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Pricing;
 using TripsAgent.Infrastructure.Security;
 using TripsAgent.Infrastructure.Storage;
 using TripsAgent.Infrastructure.Suppliers;
@@ -110,6 +113,15 @@ public static class DependencyInjection
         // than on IAppDbContext, which deliberately exposes no way to run arbitrary SQL.
         services.AddScoped<ILedgerIntegrityQueries, Payments.LedgerIntegrityQueries>();
 
+        // Lets Application tell "a unique index picked another writer" apart from every other
+        // failed save, without Application referencing Npgsql.
+        services.AddSingleton<IUniqueViolationDetector, PostgresUniqueViolationDetector>();
+
+        // Gapless document numbering. Both work through the request's AppDbContext, so the counter
+        // increment and the document insert share one transaction.
+        services.AddScoped<ITransactionRunner, EfTransactionRunner>();
+        services.AddScoped<IDocumentNumberAllocator, DocumentNumberAllocator>();
+
         // Files on disk, for local development. MinIO and a cloud adapter arrive with the upload
         // pipeline (#18) behind this same port; nothing above it knows the difference.
         services.AddSingleton<IBlobStorage>(_ => new LocalFileBlobStorage(new LocalBlobStorageOptions
@@ -176,6 +188,10 @@ public static class DependencyInjection
             sp.GetRequiredService<AdminDbContextFactory>().Create(
                 sp.GetRequiredService<ITenantContext>(),
                 sp.GetRequiredService<IPlatformScope>()));
+
+        // Each agency's markup rules, cached in Redis — or read straight from the database when no
+        // Redis is configured. Either way pricing gives the same answer; only the speed differs.
+        services.AddPricingCache(configuration);
 
         return services;
     }

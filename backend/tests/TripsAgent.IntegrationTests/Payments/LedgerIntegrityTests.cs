@@ -234,12 +234,12 @@ public class LedgerIntegrityTests
             db.Agencies.Add(agency);
 
             var walletAccount = LedgerAccount.ForAgency(agency.Id, LedgerAccountType.AgencyWallet, "NGN", "Wallet");
-            var gatewayAccount = LedgerAccount.ForPlatform(LedgerAccountType.GatewayClearing, "NGN", "Gateway clearing");
-            var revenueAccount = LedgerAccount.ForPlatform(LedgerAccountType.PlatformRevenue, "NGN", "Platform revenue");
-            var supplierAccount = LedgerAccount.ForPlatform(LedgerAccountType.SupplierPayable, "NGN", "Supplier payable");
-
-            db.LedgerAccounts.AddRange(walletAccount, gatewayAccount, revenueAccount, supplierAccount);
+            db.LedgerAccounts.Add(walletAccount);
             await db.SaveChangesAsync();
+
+            var gatewayAccount = await PlatformAccountAsync(db, LedgerAccountType.GatewayClearing);
+            var revenueAccount = await PlatformAccountAsync(db, LedgerAccountType.PlatformRevenue);
+            var supplierAccount = await PlatformAccountAsync(db, LedgerAccountType.SupplierPayable);
 
             agencyId = agency.Id;
             wallet = walletAccount.Id;
@@ -251,6 +251,15 @@ public class LedgerIntegrityTests
         return new World(db, tenancy, clock, agencyId, wallet, gateway, revenue, supplier);
     }
 
+
+    /// <summary>
+    /// A platform account as the HardenMoneyPath migration seeded it. There is exactly one of each
+    /// type and currency now, and the unique index refuses a second — so a fixture takes the
+    /// seeded one rather than making its own.
+    /// </summary>
+    private static Task<LedgerAccount> PlatformAccountAsync(AppDbContext db, LedgerAccountType accountType) =>
+        db.LedgerAccounts.SingleAsync(
+            a => a.AgencyId == null && a.AccountType == accountType && a.Currency == "NGN");
     private sealed class World : IAsyncDisposable
     {
         public World(

@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using TripsAgent.Api.Authorization;
 using TripsAgent.Api.Identity;
 using TripsAgent.Api.Payments;
+using TripsAgent.Api.Pricing;
 using TripsAgent.Api.Scheduling;
 using TripsAgent.Api.Tenancy;
 using TripsAgent.Application;
@@ -148,6 +149,7 @@ app.MapAuthenticationEndpoints();
 app.MapKybEndpoints();
 app.MapKybReviewEndpoints();
 app.MapWalletEndpoints();
+app.MapPricingEndpoints();
 
 // Anonymous, and authenticated by signature instead of a token. Mapped after UseAuthentication
 // so the pipeline is in place, but it deliberately requires no identity — a gateway has none.

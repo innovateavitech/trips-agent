@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
 using TripsAgent.Application.Payments;
+using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy.Kyb;
 
@@ -43,6 +45,15 @@ public static class DependencyInjection
         services.AddScoped<IPaymentWebhookProcessor>(sp => sp.GetRequiredService<PaymentWebhookHandler>());
 
         services.AddScoped<ILedgerIntegrityAudit, LedgerIntegrityAudit>();
+
+        services.AddScoped<DocumentIssuer>();
+        services.AddScoped<ConfigureDocumentNumberingHandler>();
+
+        services.AddScoped<PricingService>();
+        services.AddScoped<MarkupRuleService>();
+
+        // Zero until subscription tiers (#64) supply each agency's transaction fee.
+        services.AddSingleton<IPlatformFeePolicy, NoPlatformFeePolicy>();
 
         // Picks the adapter for a supplier and product from whatever adapters the host registered.
         // Adding an aggregator is a new ISupplierAdapter registration, never a change here.

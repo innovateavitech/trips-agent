@@ -45,6 +45,10 @@ public static class ReferenceDataSeeder
         // The supplier rows adapters look themselves up by: an adapter with no row cannot audit a call.
         await EnsureSuppliersAsync(dbContext, cancellationToken);
 
+        // Website templates and the hostname denylist: every agency reads them, and the application role
+        // cannot write them, so they have to come from here.
+        await Storefront.StorefrontReferenceData.EnsureAsync(dbContext, cancellationToken);
+
         return (permissions, roles);
     }
 

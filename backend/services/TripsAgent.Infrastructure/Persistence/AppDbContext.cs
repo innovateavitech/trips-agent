@@ -15,6 +15,7 @@ using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Pricing;
+using TripsAgent.Domain.Storefront;
 using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
@@ -259,6 +260,33 @@ public class AppDbContext : DbContext, IAppDbContext
 
     /// <summary>Addresses we no longer send to. Platform-wide.</summary>
     public DbSet<SuppressedEmailAddress> SuppressedEmailAddresses => Set<SuppressedEmailAddress>();
+
+    /// <summary>Starter websites. Platform reference data, not tenant-scoped.</summary>
+    public DbSet<SiteTemplate> SiteTemplates => Set<SiteTemplate>();
+
+    /// <summary>Hostname labels refused or set aside for review. Platform reference data.</summary>
+    public DbSet<ReservedHostnameLabel> ReservedHostnameLabels => Set<ReservedHostnameLabel>();
+
+    /// <inheritdoc />
+    public DbSet<Site> Sites => Set<Site>();
+
+    /// <inheritdoc />
+    public DbSet<SiteVersion> SiteVersions => Set<SiteVersion>();
+
+    /// <inheritdoc />
+    public DbSet<SitePage> SitePages => Set<SitePage>();
+
+    /// <inheritdoc />
+    public DbSet<SiteBlock> SiteBlocks => Set<SiteBlock>();
+
+    /// <inheritdoc />
+    public DbSet<SiteTheme> SiteThemes => Set<SiteTheme>();
+
+    /// <inheritdoc />
+    public DbSet<SiteDomain> SiteDomains => Set<SiteDomain>();
+
+    /// <inheritdoc />
+    public DbSet<SiteDomainCheck> SiteDomainChecks => Set<SiteDomainCheck>();
 
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.

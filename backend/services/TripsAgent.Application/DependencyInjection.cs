@@ -9,6 +9,7 @@ using TripsAgent.Application.Orders;
 using TripsAgent.Application.Payments;
 using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Search;
+using TripsAgent.Application.Storefront;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy.Kyb;
 
@@ -84,6 +85,12 @@ public static class DependencyInjection
         // The agent-authored catalog: tours, packages and visas, and their categories (#160, #161).
         services.AddScoped<ProductCatalogService>();
         services.AddScoped<ProductCategoryService>();
+
+        // The website builder: editing the draft, and staging, publishing and rolling back versions.
+        services.AddScoped<SiteQueries>();
+        services.AddScoped<SiteBuilderService>();
+        services.AddScoped<SiteVersionService>();
+        services.AddScoped<SitePreviewTokens>();
 
         // Stages notifications in the caller's unit of work; the Worker sends them.
         services.AddScoped<INotifier, Notifier>();

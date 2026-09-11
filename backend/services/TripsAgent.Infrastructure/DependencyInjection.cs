@@ -25,6 +25,7 @@ using TripsAgent.Infrastructure.Retention;
 using TripsAgent.Infrastructure.Search;
 using TripsAgent.Infrastructure.Security;
 using TripsAgent.Infrastructure.Storage;
+using TripsAgent.Infrastructure.Storefront;
 using TripsAgent.Infrastructure.Suppliers;
 using TripsAgent.Infrastructure.Tenancy;
 
@@ -220,6 +221,9 @@ public static class DependencyInjection
 
         // The retention schedule's purge job (issue #105). Run by the Worker, dry run by default.
         services.AddDataRetention(configuration);
+
+        // The website builder's settings and the row lock publishing takes (issues 58–60).
+        services.AddStorefront(configuration);
 
         return services;
     }

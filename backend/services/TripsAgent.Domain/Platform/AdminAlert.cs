@@ -18,6 +18,12 @@ public enum AdminAlertType
 
     /// <summary>The nightly audit found the books disagreeing with themselves.</summary>
     LedgerIntegrity = 6,
+
+    /// <summary>
+    /// A website address that looks like a well-known brand, set aside until someone reviews it
+    /// (open question 20). It serves nothing until it is cleared.
+    /// </summary>
+    HostnameReview = 7,
 }
 
 /// <summary>How quickly somebody needs to look.</summary>

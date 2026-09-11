@@ -9,6 +9,7 @@ using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Pricing;
+using TripsAgent.Domain.Storefront;
 using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
@@ -117,6 +118,36 @@ public interface IAppDbContext
 
     /// <summary>Addresses that bounced permanently. Platform-wide.</summary>
     public DbSet<SuppressedEmailAddress> SuppressedEmailAddresses { get; }
+
+    /// <summary>Starter websites. Platform reference data: every agency reads them, none writes them.</summary>
+    public DbSet<SiteTemplate> SiteTemplates { get; }
+
+    /// <summary>Hostname labels refused, or set aside for review (open question 20). Platform reference data.</summary>
+    public DbSet<ReservedHostnameLabel> ReservedHostnameLabels { get; }
+
+    /// <summary>Each agency's website. One per agency.</summary>
+    public DbSet<Site> Sites { get; }
+
+    /// <summary>The draft and every frozen version of each site.</summary>
+    public DbSet<SiteVersion> SiteVersions { get; }
+
+    /// <summary>The draft's pages.</summary>
+    public DbSet<SitePage> SitePages { get; }
+
+    /// <summary>The blocks on those pages.</summary>
+    public DbSet<SiteBlock> SiteBlocks { get; }
+
+    /// <summary>Each site's typography. The logo and colours are the agency's branding.</summary>
+    public DbSet<SiteTheme> SiteThemes { get; }
+
+    /// <summary>
+    /// Every hostname a site answers on. Tenant-scoped like everything else; the one read across
+    /// agencies — Host header to agency — is <c>HostResolver</c>'s, inside an audited platform scope.
+    /// </summary>
+    public DbSet<SiteDomain> SiteDomains { get; }
+
+    /// <summary>Every DNS lookup made for a hostname. Append-only.</summary>
+    public DbSet<SiteDomainCheck> SiteDomainChecks { get; }
 
     /// <summary>
     /// Each agency's markup rules. Never edited in place — see <see cref="MarkupRule"/> — so the rule

@@ -12,6 +12,8 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="MailKit" />
+    <!-- The markup rule cache. Only Infrastructure talks to Redis; Application sees IMarkupRuleCache. -->
+    <PackageReference Include="StackExchange.Redis" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
 
     <!-- The outbox: its dispatcher is a BackgroundService, and its backlog is a health check. -->

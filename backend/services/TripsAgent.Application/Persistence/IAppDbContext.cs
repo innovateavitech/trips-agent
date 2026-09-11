@@ -4,6 +4,7 @@ using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
+using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
 
@@ -87,6 +88,15 @@ public interface IAppDbContext
     /// own books, which an agency must never see. Permission controls access, not a filter.
     /// </remarks>
     public DbSet<ReconciliationException> ReconciliationExceptions { get; }
+
+    /// <summary>
+    /// Each agency's markup rules. Never edited in place — see <see cref="MarkupRule"/> — so the rule
+    /// id stored on a quote always explains the markup on it.
+    /// </summary>
+    public DbSet<MarkupRule> MarkupRules { get; }
+
+    /// <summary>Prices as they were worked out, each naming the rule that decided its markup.</summary>
+    public DbSet<PriceQuote> PriceQuotes { get; }
 
     /// <summary>
     /// What this context is about to write.

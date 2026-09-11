@@ -3,6 +3,7 @@ using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
 using TripsAgent.Application.Payments;
+using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Tenancy.Kyb;
 
 namespace TripsAgent.Application;
@@ -46,6 +47,12 @@ public static class DependencyInjection
 
         services.AddScoped<DocumentIssuer>();
         services.AddScoped<ConfigureDocumentNumberingHandler>();
+
+        services.AddScoped<PricingService>();
+        services.AddScoped<MarkupRuleService>();
+
+        // Zero until subscription tiers (#64) supply each agency's transaction fee.
+        services.AddSingleton<IPlatformFeePolicy, NoPlatformFeePolicy>();
 
         return services;
     }

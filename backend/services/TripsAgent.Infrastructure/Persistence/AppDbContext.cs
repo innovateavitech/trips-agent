@@ -10,6 +10,7 @@ using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
+using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
 using TripsAgent.Infrastructure.Messaging;
@@ -169,6 +170,12 @@ public class AppDbContext : DbContext, IAppDbContext
     /// upsert, never by loading a row and saving it back. Deliberately absent from IAppDbContext.
     /// </summary>
     public DbSet<DocumentNumberSequence> DocumentNumberSequences => Set<DocumentNumberSequence>();
+
+    /// <inheritdoc />
+    public DbSet<MarkupRule> MarkupRules => Set<MarkupRule>();
+
+    /// <inheritdoc />
+    public DbSet<PriceQuote> PriceQuotes => Set<PriceQuote>();
 
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.

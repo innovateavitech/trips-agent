@@ -150,6 +150,12 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <summary>What the agent's statement renders.</summary>
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
 
+    /// <summary>Every attempt to take money, successful or not.</summary>
+    public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
+
+    /// <summary>Gateway deliveries, recorded so each is processed exactly once.</summary>
+    public DbSet<PaymentWebhookEvent> PaymentWebhookEvents => Set<PaymentWebhookEvent>();
+
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.
     /// </summary>

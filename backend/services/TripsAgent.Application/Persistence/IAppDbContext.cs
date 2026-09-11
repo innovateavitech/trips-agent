@@ -69,5 +69,11 @@ public interface IAppDbContext
 
     public DbSet<WalletTransaction> WalletTransactions { get; }
 
+    /// <summary>Every attempt to take money, successful or not.</summary>
+    public DbSet<PaymentTransaction> PaymentTransactions { get; }
+
+    /// <summary>Gateway deliveries, recorded so each is processed exactly once.</summary>
+    public DbSet<PaymentWebhookEvent> PaymentWebhookEvents { get; }
+
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

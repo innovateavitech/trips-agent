@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using TripsAgent.Api.Authorization;
 using TripsAgent.Api.Identity;
+using TripsAgent.Api.Payments;
 using TripsAgent.Api.Scheduling;
 using TripsAgent.Api.Tenancy;
 using TripsAgent.Application;
@@ -14,6 +15,7 @@ using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Scheduling;
+using TripsAgent.Integrations.Paystack;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +26,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // The API publishes; it never consumes. Consumers run in TripsAgent.Worker so that the two scale
 // on different signals — the API on request rate, the Worker on queue depth.
 builder.Services.AddMessagePublishing(builder.Configuration);
+
+// Paystack behind IPaymentGateway. Nothing above this line knows which gateway is in use.
+builder.Services.AddPaystack(builder.Configuration);
 
 // Storage and client only. AddJobProcessing — the part that actually executes jobs — is called by
 // the Worker and must never be called here: every API instance would then race to run the cron.
@@ -138,6 +143,11 @@ app.MapRegistrationEndpoints();
 app.MapAuthenticationEndpoints();
 app.MapKybEndpoints();
 app.MapKybReviewEndpoints();
+app.MapWalletEndpoints();
+
+// Anonymous, and authenticated by signature instead of a token. Mapped after UseAuthentication
+// so the pipeline is in place, but it deliberately requires no identity — a gateway has none.
+app.MapPaymentWebhookEndpoints();
 
 app.MapGet("/", () => Results.Ok(new
 {

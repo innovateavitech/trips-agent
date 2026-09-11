@@ -2,6 +2,8 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Payments;
+using TripsAgent.Infrastructure.Payments;
 
 namespace TripsAgent.Infrastructure.Scheduling;
 
@@ -125,6 +127,10 @@ public static class SchedulingRegistration
                     // Cheaper and safer than the transaction-scope alternative on PostgreSQL.
                     UseNativeDatabaseTransactions = true,
                 }));
+
+        // Registered here rather than in AddInfrastructure because this is where the Hangfire
+        // client becomes available. Both hosts get it: the API enqueues, the Worker executes.
+        services.AddScoped<IWebhookDispatcher, HangfireWebhookDispatcher>();
 
         return services;
     }

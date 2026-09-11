@@ -88,6 +88,11 @@ public static class DependencyInjection
         services.AddSingleton(new TripsAgent.Application.Identity.Registration.PasswordResetLinkBuilder(
             configuration["Console:PasswordResetUrl"] ?? "https://localhost:5173/reset-password"));
 
+        // Where the gateway returns the payer to. The console owns that page, so its address is
+        // configuration here for the same reason the password-reset link above is.
+        services.AddSingleton(new TripsAgent.Application.Payments.TopUpCallbackUrl(
+            configuration["Console:TopUpCallbackUrl"] ?? "https://localhost:5173/wallet/top-up/complete"));
+
         services.AddSingleton(ReadJwtOptions(configuration));
         services.AddSingleton<IAccessTokenIssuer>(sp => new JwtAccessTokenIssuer(
             sp.GetRequiredService<JwtOptions>(),

@@ -164,3 +164,92 @@ public sealed class WalletTransactionConfiguration : IEntityTypeConfiguration<Wa
             .HasDatabaseName("ix_wallet_transactions_transaction_group_id");
     }
 }
+
+public sealed class PaymentTransactionConfiguration : IEntityTypeConfiguration<PaymentTransaction>
+{
+    public void Configure(EntityTypeBuilder<PaymentTransaction> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("payment_transactions", PaymentsSchema.Name);
+        builder.HasKey(payment => payment.Id);
+        builder.Property(payment => payment.Id).ValueGeneratedNever();
+
+        builder.Property(payment => payment.Purpose)
+            .HasConversion<string>().HasMaxLength(30).IsRequired();
+
+        builder.Property(payment => payment.Status)
+            .HasConversion<string>().HasMaxLength(20).IsRequired();
+
+        builder.Property(payment => payment.Currency).HasMaxLength(3).IsFixedLength().IsRequired();
+        builder.Property(payment => payment.Reference).HasMaxLength(60).IsRequired();
+        builder.Property(payment => payment.GatewayReference).HasMaxLength(100);
+        builder.Property(payment => payment.IdempotencyKey).HasMaxLength(100);
+        builder.Property(payment => payment.FailureReason).HasMaxLength(500);
+
+        builder.HasOne<Agency>()
+            .WithMany()
+            .HasForeignKey(payment => payment.AgencyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Platform-wide unique, not per-agency: it is what we hand the gateway, and the gateway
+        // quotes it back with no agency attached. Two agencies sharing a reference would make a
+        // webhook ambiguous about whose wallet to credit.
+        builder.HasIndex(payment => payment.Reference)
+            .IsUnique()
+            .HasDatabaseName("ix_payment_transactions_reference");
+
+        // How a webhook finds its payment, and how the console lists an agency's attempts.
+        builder.HasIndex(payment => new { payment.AgencyId, payment.CreatedAt })
+            .IsDescending(false, true)
+            .HasDatabaseName("ix_payment_transactions_agency_id_created_at");
+
+        // The reconciliation query: confirmed money that has not reached the ledger. Partial, so
+        // the index stays tiny — in a healthy system it is empty.
+        builder.HasIndex(payment => payment.Status)
+            .HasFilter("ledger_transaction_group_id IS NULL")
+            .HasDatabaseName("ix_payment_transactions_awaiting_posting");
+
+        builder.HasIndex(payment => new { payment.AgencyId, payment.IdempotencyKey })
+            .IsUnique()
+            .HasFilter("idempotency_key IS NOT NULL")
+            .HasDatabaseName("ix_payment_transactions_idempotency_key");
+    }
+}
+
+public sealed class PaymentWebhookEventConfiguration : IEntityTypeConfiguration<PaymentWebhookEvent>
+{
+    public void Configure(EntityTypeBuilder<PaymentWebhookEvent> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("payment_webhook_events", PaymentsSchema.Name);
+        builder.HasKey(webhookEvent => webhookEvent.Id);
+        builder.Property(webhookEvent => webhookEvent.Id).ValueGeneratedNever();
+
+        builder.Property(webhookEvent => webhookEvent.Gateway).HasMaxLength(30).IsRequired();
+        builder.Property(webhookEvent => webhookEvent.EventId).HasMaxLength(200).IsRequired();
+        builder.Property(webhookEvent => webhookEvent.EventType).HasMaxLength(80).IsRequired();
+        builder.Property(webhookEvent => webhookEvent.LastError).HasMaxLength(1000);
+
+        // The raw body as received, so a signature can be recomputed and an argument with the
+        // gateway settled. jsonb would reformat it and break exactly that.
+        builder.Property(webhookEvent => webhookEvent.Payload).HasColumnType("text").IsRequired();
+
+        builder.Property(webhookEvent => webhookEvent.ProcessingStatus)
+            .HasConversion<string>().HasMaxLength(20).IsRequired();
+
+        // This index *is* the idempotency guarantee. Gateways retry — Paystack for 72 hours —
+        // and two retries can arrive at once, which a check-then-act in application code would
+        // let both through. The insert races and the database picks one winner.
+        builder.HasIndex(webhookEvent => new { webhookEvent.Gateway, webhookEvent.EventId })
+            .IsUnique()
+            .HasDatabaseName("ix_payment_webhook_events_gateway_event_id");
+
+        // What the drain job reads: pending work, oldest first. Partial, because everything else
+        // is history and there is a lot more of it.
+        builder.HasIndex(webhookEvent => webhookEvent.CreatedAt)
+            .HasFilter("processing_status = 'Pending'")
+            .HasDatabaseName("ix_payment_webhook_events_pending");
+    }
+}

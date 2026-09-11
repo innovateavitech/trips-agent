@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
+using TripsAgent.Application.Payments;
 using TripsAgent.Application.Tenancy.Kyb;
 
 namespace TripsAgent.Application;
@@ -30,6 +31,15 @@ public static class DependencyInjection
         services.AddScoped<GetKybStatusHandler>();
         services.AddScoped<KybReviewHandler>();
         services.AddScoped<KybDocumentLink>();
+
+        services.AddScoped<WalletTopUpService>();
+        services.AddScoped<StartTopUpHandler>();
+        services.AddScoped<VerifyTopUpHandler>();
+        services.AddScoped<PaymentWebhookHandler>();
+
+        // Hangfire resolves the processor by interface when a job runs, and the webhook handler
+        // is the implementation — one class, so the receive and process halves cannot drift.
+        services.AddScoped<IPaymentWebhookProcessor>(sp => sp.GetRequiredService<PaymentWebhookHandler>());
 
         return services;
     }

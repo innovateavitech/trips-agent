@@ -41,24 +41,34 @@ public abstract record ConfigureDocumentNumberingOutcome
 /// the numbers printed on them, and the next document takes the next value.
 /// </para>
 /// <para>
-/// Turning yearly reset on or off switches which counter is drawn from (this year's, or the single
-/// continuous one), so it can start a fresh count. The unique constraint on
-/// <c>(agency_id, document_type, document_number)</c> is the backstop if a change would ever reprint
-/// a number already issued: issuing fails loudly rather than duplicating.
+/// Turning yearly reset on or off is the exception: it switches which counter is drawn from (this
+/// year's, or the single continuous one), and the new counter's next number can print exactly like
+/// one already issued. So once a document of the type exists, that choice is refused — see
+/// <see cref="DocumentNumberFormat.FindResetChangeProblem"/>. The check and the save run under the
+/// same numbering lock the allocator takes, so a first document still being issued cannot slip
+/// past the check.
 /// </para>
 /// </remarks>
 public sealed class ConfigureDocumentNumberingHandler
 {
     private readonly IAppDbContext _db;
     private readonly ITenantContext _tenant;
+    private readonly ITransactionRunner _transactions;
+    private readonly IDocumentNumberAllocator _allocator;
 
-    public ConfigureDocumentNumberingHandler(IAppDbContext db, ITenantContext tenant)
+    public ConfigureDocumentNumberingHandler(
+        IAppDbContext db,
+        ITenantContext tenant,
+        ITransactionRunner transactions,
+        IDocumentNumberAllocator allocator)
     {
         _db = db;
         _tenant = tenant;
+        _transactions = transactions;
+        _allocator = allocator;
     }
 
-    public async Task<ConfigureDocumentNumberingOutcome> HandleAsync(
+    public Task<ConfigureDocumentNumberingOutcome> HandleAsync(
         ConfigureDocumentNumberingCommand command,
         CancellationToken cancellationToken = default)
     {
@@ -72,32 +82,57 @@ public sealed class ConfigureDocumentNumberingHandler
 
         if (problem is not null)
         {
-            return new ConfigureDocumentNumberingOutcome.Invalid(problem);
+            return Task.FromResult<ConfigureDocumentNumberingOutcome>(
+                new ConfigureDocumentNumberingOutcome.Invalid(problem));
         }
 
-        // The tenant filter scopes this to the caller's agency, so there is one row or none.
-        var format = await _db.DocumentNumberFormats
-            .FirstOrDefaultAsync(f => f.DocumentType == command.DocumentType, cancellationToken);
+        return _transactions.RunAsync<ConfigureDocumentNumberingOutcome>(
+            async token =>
+            {
+                // Waits for any document of this type still being issued, so the check below sees it.
+                await _allocator.LockNumberingAsync(command.DocumentType, token);
 
-        if (format is null)
-        {
-            format = DocumentNumberFormat.Configure(
-                agencyId,
-                command.DocumentType,
-                command.Prefix,
-                command.Padding,
-                command.IncludeYear,
-                command.ResetsYearly);
+                // The tenant filter scopes this to the caller's agency, so there is one row or none.
+                var format = await _db.DocumentNumberFormats
+                    .FirstOrDefaultAsync(f => f.DocumentType == command.DocumentType, token);
 
-            _db.DocumentNumberFormats.Add(format);
-        }
-        else
-        {
-            format.Change(command.Prefix, command.Padding, command.IncludeYear, command.ResetsYearly);
-        }
+                var currentlyResetsYearly = format?.ResetsYearly ?? DocumentNumberFormat.DefaultResetsYearly;
 
-        await _db.SaveChangesAsync(cancellationToken);
+                if (currentlyResetsYearly != command.ResetsYearly)
+                {
+                    var hasIssued = await _db.GeneratedDocuments
+                        .AnyAsync(d => d.DocumentType == command.DocumentType, token);
 
-        return new ConfigureDocumentNumberingOutcome.Configured(format);
+                    var resetProblem = DocumentNumberFormat.FindResetChangeProblem(
+                        currentlyResetsYearly, command.ResetsYearly, hasIssued);
+
+                    if (resetProblem is not null)
+                    {
+                        return new ConfigureDocumentNumberingOutcome.Invalid(resetProblem);
+                    }
+                }
+
+                if (format is null)
+                {
+                    format = DocumentNumberFormat.Configure(
+                        agencyId,
+                        command.DocumentType,
+                        command.Prefix,
+                        command.Padding,
+                        command.IncludeYear,
+                        command.ResetsYearly);
+
+                    _db.DocumentNumberFormats.Add(format);
+                }
+                else
+                {
+                    format.Change(command.Prefix, command.Padding, command.IncludeYear, command.ResetsYearly);
+                }
+
+                await _db.SaveChangesAsync(token);
+
+                return new ConfigureDocumentNumberingOutcome.Configured(format);
+            },
+            cancellationToken);
     }
 }

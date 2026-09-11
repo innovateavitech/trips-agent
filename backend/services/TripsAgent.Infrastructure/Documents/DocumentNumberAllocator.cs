@@ -66,6 +66,10 @@ public sealed class DocumentNumberAllocator : IDocumentNumberAllocator
                 """);
         }
 
+        // Before reading the format, so a format change waits for this document to commit and a
+        // format change already in progress is finished before this reads it.
+        await TakeNumberingLockAsync(agencyId, documentType, cancellationToken);
+
         // Both reads go through the tenant filter, so they can only see this agency's rows.
         var format = await _db.DocumentNumberFormats
                 .AsNoTracking()
@@ -107,5 +111,42 @@ public sealed class DocumentNumberAllocator : IDocumentNumberAllocator
             sequenceYear,
             sequenceNumber,
             format.Render(sequenceNumber, localYear));
+    }
+
+    public async Task LockNumberingAsync(DocumentType documentType, CancellationToken cancellationToken = default)
+    {
+        var agencyId = _tenant.AgencyId
+            ?? throw new InvalidOperationException(
+                "Cannot lock document numbering with no agency resolved for this request.");
+
+        if (_db.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException(
+                "The document numbering lock lasts until the transaction ends, so it needs one open. "
+                + "Use ITransactionRunner first.");
+        }
+
+        await TakeNumberingLockAsync(agencyId, documentType, cancellationToken);
+    }
+
+    /// <summary>
+    /// A PostgreSQL advisory lock on (agency, document type), released when the transaction ends.
+    /// </summary>
+    /// <remarks>
+    /// Why not lock a row? Before an agency's first document and first format change there is no
+    /// row to lock — and that first document is exactly the one a format change must not miss. An
+    /// advisory lock needs no row. It is keyed by a 64-bit hash of the name; if two names ever hash
+    /// alike, the only cost is that they wait on each other.
+    /// </remarks>
+    private async Task TakeNumberingLockAsync(
+        Guid agencyId,
+        DocumentType documentType,
+        CancellationToken cancellationToken)
+    {
+        var key = $"document-numbering:{agencyId}:{documentType}";
+
+        await _db.Database.ExecuteSqlAsync(
+            $"SELECT pg_advisory_xact_lock(hashtextextended({key}, 0))",
+            cancellationToken);
     }
 }

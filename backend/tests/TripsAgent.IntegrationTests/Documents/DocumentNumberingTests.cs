@@ -219,7 +219,7 @@ public class DocumentNumberingTests
         await using var world = await WorldAsync(MidYear);
         await using var context = world.NewContext(world.AgencyId);
 
-        var outcome = await Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
+        var outcome = await world.Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
             DocumentType.Invoice, Prefix: "acme/inv", Padding: 4, IncludeYear: false, ResetsYearly: false));
 
         outcome.Should().BeOfType<ConfigureDocumentNumberingOutcome.Configured>();
@@ -245,7 +245,7 @@ public class DocumentNumberingTests
         await issuer.IssueAsync(DocumentType.Invoice);
         await issuer.IssueAsync(DocumentType.Invoice);
 
-        await Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
+        await world.Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
             DocumentType.Invoice, "LTL", Padding: 3, IncludeYear: true, ResetsYearly: true));
 
         // Restarting at 1 under a new prefix would give the tax year two invoice number ones.
@@ -258,13 +258,144 @@ public class DocumentNumberingTests
         await using var world = await WorldAsync(MidYear);
         await using var context = world.NewContext(world.AgencyId);
 
-        var outcome = await Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
+        var outcome = await world.Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
             DocumentType.Invoice, "INV", Padding: 6, IncludeYear: false, ResetsYearly: true));
 
         outcome.Should().BeOfType<ConfigureDocumentNumberingOutcome.Invalid>()
             .Which.Reason.Should().Contain("year");
 
         (await context.DocumentNumberFormats.CountAsync()).Should().Be(0);
+    }
+
+    // ------------------------------------------------------------------------ yearly reset
+
+    [Fact]
+    public async Task Turning_yearly_reset_off_after_issuing_is_refused_and_issuing_carries_on()
+    {
+        await using var world = await WorldAsync(MidYear);
+        await using var context = world.NewContext(world.AgencyId);
+        var issuer = world.Issuer(context, world.AgencyId);
+
+        await world.Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
+            DocumentType.Invoice, "LTL", Padding: 6, IncludeYear: true, ResetsYearly: true));
+
+        (await issuer.IssueAsync(DocumentType.Invoice)).DocumentNumber.Should().Be("LTL-2026-000001");
+
+        // Switching to the continuous counter would start it at 1 and print LTL-2026-000001 again.
+        // The duplicate would be refused on every attempt, and no invoice could be issued at all.
+        var outcome = await world.Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
+            DocumentType.Invoice, "LTL", Padding: 6, IncludeYear: true, ResetsYearly: false));
+
+        outcome.Should().BeOfType<ConfigureDocumentNumberingOutcome.Invalid>()
+            .Which.Reason.Should().Contain("restarts every year");
+
+        var next = await issuer.IssueAsync(DocumentType.Invoice);
+
+        next.DocumentNumber.Should().Be("LTL-2026-000002", "the number must be one not issued before");
+        next.SequenceYear.Should().Be(2026, "the refused change must not have switched counters");
+
+        await using var reader = world.NewContext(world.AgencyId);
+        (await reader.DocumentNumberFormats.AsNoTracking().SingleAsync()).ResetsYearly.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Turning_yearly_reset_on_after_issuing_is_refused()
+    {
+        await using var world = await WorldAsync(MidYear);
+        await using var context = world.NewContext(world.AgencyId);
+        var issuer = world.Issuer(context, world.AgencyId);
+
+        await world.Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
+            DocumentType.Invoice, "LTL", Padding: 6, IncludeYear: true, ResetsYearly: false));
+
+        await issuer.IssueAsync(DocumentType.Invoice);
+        await issuer.IssueAsync(DocumentType.Invoice);
+
+        // This year's fresh counter would reach 1, then 2 — both already printed by the continuous one.
+        var outcome = await world.Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
+            DocumentType.Invoice, "LTL", Padding: 6, IncludeYear: true, ResetsYearly: true));
+
+        outcome.Should().BeOfType<ConfigureDocumentNumberingOutcome.Invalid>();
+
+        (await issuer.IssueAsync(DocumentType.Invoice)).DocumentNumber.Should().Be("LTL-2026-000003");
+    }
+
+    [Fact]
+    public async Task Turning_off_the_default_yearly_reset_after_issuing_is_refused_and_nothing_is_saved()
+    {
+        await using var world = await WorldAsync(MidYear);
+        await using var context = world.NewContext(world.AgencyId);
+
+        // No format row: the agency is on the default, which resets yearly.
+        await world.Issuer(context, world.AgencyId).IssueAsync(DocumentType.Invoice);
+
+        var outcome = await world.Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
+            DocumentType.Invoice, world.InvoicePrefix, Padding: 6, IncludeYear: true, ResetsYearly: false));
+
+        outcome.Should().BeOfType<ConfigureDocumentNumberingOutcome.Invalid>();
+
+        await using var reader = world.NewContext(world.AgencyId);
+        (await reader.DocumentNumberFormats.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task The_rest_of_the_format_can_still_change_after_issuing()
+    {
+        await using var world = await WorldAsync(MidYear);
+        await using var context = world.NewContext(world.AgencyId);
+        var issuer = world.Issuer(context, world.AgencyId);
+
+        await world.Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
+            DocumentType.Invoice, "LTL", Padding: 6, IncludeYear: true, ResetsYearly: false));
+        await issuer.IssueAsync(DocumentType.Invoice);
+
+        // Same counter, so a new look cannot reprint an old number.
+        var outcome = await world.Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
+            DocumentType.Invoice, "LTL", Padding: 4, IncludeYear: false, ResetsYearly: false));
+
+        outcome.Should().BeOfType<ConfigureDocumentNumberingOutcome.Configured>();
+        (await issuer.IssueAsync(DocumentType.Invoice)).DocumentNumber.Should().Be("LTL-0002");
+    }
+
+    [Fact]
+    public async Task Another_document_types_numbers_do_not_lock_yearly_reset()
+    {
+        await using var world = await WorldAsync(MidYear);
+        await using var context = world.NewContext(world.AgencyId);
+
+        await world.Issuer(context, world.AgencyId).IssueAsync(DocumentType.Voucher);
+
+        var outcome = await world.Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
+            DocumentType.Invoice, "LTL", Padding: 6, IncludeYear: true, ResetsYearly: false));
+
+        outcome.Should().BeOfType<ConfigureDocumentNumberingOutcome.Configured>();
+    }
+
+    [Fact]
+    public async Task A_reset_change_waits_for_a_first_document_still_being_issued_and_then_refuses()
+    {
+        await using var world = await WorldAsync(MidYear);
+
+        // The agency's first invoice is mid-issue: numbered and inserted, not yet committed.
+        await using var issuing = world.NewContext(world.AgencyId);
+        var transaction = await issuing.Database.BeginTransactionAsync();
+
+        var number = await world.Allocator(issuing, world.AgencyId).NextAsync(DocumentType.Invoice, MidYear);
+        issuing.GeneratedDocuments.Add(GeneratedDocument.Issue(world.AgencyId, number, MidYear));
+        await issuing.SaveChangesAsync();
+
+        // Without the lock, the change would see no invoices, be accepted, and then collide.
+        await using var configuring = world.NewContext(world.AgencyId);
+        var pending = world.Configure(configuring, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
+            DocumentType.Invoice, world.InvoicePrefix, Padding: 6, IncludeYear: true, ResetsYearly: false));
+
+        await WaitUntilABackendIsBlockedOnALockAsync(world.Database);
+        pending.IsCompleted.Should().BeFalse("the change must wait for the invoice being issued");
+
+        await transaction.CommitAsync();
+        await transaction.DisposeAsync();
+
+        (await pending).Should().BeOfType<ConfigureDocumentNumberingOutcome.Invalid>();
     }
 
     // -------------------------------------------------------------------------------- years
@@ -295,7 +426,7 @@ public class DocumentNumberingTests
         await using var world = await WorldAsync(new DateTimeOffset(2026, 12, 31, 22, 0, 0, TimeSpan.Zero));
         await using var context = world.NewContext(world.AgencyId);
 
-        await Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
+        await world.Configure(context, world.AgencyId).HandleAsync(new ConfigureDocumentNumberingCommand(
             DocumentType.Invoice, "LTL", Padding: 6, IncludeYear: true, ResetsYearly: false));
 
         var issuer = world.Issuer(context, world.AgencyId);
@@ -386,9 +517,6 @@ public class DocumentNumberingTests
     }
 
     // ------------------------------------------------------------------------------ helpers
-
-    private static ConfigureDocumentNumberingHandler Configure(AppDbContext context, Guid agency) =>
-        new(context, TestTenancy.For(agency).Tenant);
 
     private static async Task InsertDocumentAsync(
         World world,
@@ -501,6 +629,9 @@ public class DocumentNumberingTests
 
         public DocumentNumberAllocator Allocator(AppDbContext context, Guid agency) =>
             new(context, TestTenancy.For(agency).Tenant, Clock);
+
+        public ConfigureDocumentNumberingHandler Configure(AppDbContext context, Guid agency) =>
+            new(context, TestTenancy.For(agency).Tenant, new EfTransactionRunner(context), Allocator(context, agency));
 
         public DocumentIssuer Issuer(AppDbContext context, Guid agency)
         {

@@ -133,6 +133,40 @@ public class DocumentNumberFormatTests
         format.Padding.Should().Be(4);
     }
 
+    [Fact]
+    public void Turning_yearly_reset_on_or_off_is_refused_once_documents_are_issued()
+    {
+        // Either direction switches counters, and the new one would reprint numbers already issued.
+        DocumentNumberFormat.FindResetChangeProblem(currentlyResetsYearly: true, resetsYearly: false, hasIssuedDocuments: true)
+            .Should().Contain("restarts every year");
+        DocumentNumberFormat.FindResetChangeProblem(currentlyResetsYearly: false, resetsYearly: true, hasIssuedDocuments: true)
+            .Should().NotBeNull();
+    }
+
+    [Theory]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(true, true, true)]
+    [InlineData(false, false, true)]
+    public void Yearly_reset_is_free_before_the_first_document_or_when_left_alone(
+        bool currentlyResetsYearly,
+        bool resetsYearly,
+        bool hasIssuedDocuments)
+    {
+        DocumentNumberFormat.FindResetChangeProblem(currentlyResetsYearly, resetsYearly, hasIssuedDocuments)
+            .Should().BeNull();
+    }
+
+    [Fact]
+    public void The_default_resets_yearly()
+    {
+        var settings = AgencySettings.CreateDefault(
+            Agency.RegisterPrincipal("Lagos Travel Limited", "lagos-travel", "NG", "NGN", "Africa/Lagos"));
+
+        DocumentNumberFormat.DefaultFor(settings, DocumentType.Invoice).ResetsYearly
+            .Should().Be(DocumentNumberFormat.DefaultResetsYearly);
+    }
+
     // --------------------------------------------------------------------------------- years
 
     [Fact]

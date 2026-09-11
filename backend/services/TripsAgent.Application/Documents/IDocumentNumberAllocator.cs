@@ -36,4 +36,19 @@ public interface IDocumentNumberAllocator
         DocumentType documentType,
         DateTimeOffset issuedAt,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Holds the current agency's numbering of <paramref name="documentType"/> until the open
+    /// transaction ends. <see cref="NextAsync"/> takes the same lock before it reads the format.
+    /// </summary>
+    /// <remarks>
+    /// For work that must decide something from "has a number been issued yet?" and then act on
+    /// it — changing the format is the case. Without the lock, a first invoice still being issued in
+    /// another transaction is invisible to the check, and commits under the old format anyway.
+    /// With it, the check waits for that invoice to commit and then sees it.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// No transaction is open, or no agency is resolved for this request.
+    /// </exception>
+    public Task LockNumberingAsync(DocumentType documentType, CancellationToken cancellationToken = default);
 }

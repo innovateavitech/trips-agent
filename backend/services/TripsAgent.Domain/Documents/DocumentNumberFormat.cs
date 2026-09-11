@@ -37,6 +37,9 @@ public sealed partial class DocumentNumberFormat : Entity, IAuditableEntity, ITe
     /// <summary>Counter digits for an agency that has not chosen.</summary>
     public const int DefaultPadding = 6;
 
+    /// <summary>Whether the counter restarts each year for an agency that has not chosen.</summary>
+    public const bool DefaultResetsYearly = true;
+
     /// <summary>
     /// The sequence year used when the counter never resets. Zero is not a real year, so it can
     /// never collide with one.
@@ -123,7 +126,7 @@ public sealed partial class DocumentNumberFormat : Entity, IAuditableEntity, ITe
             prefix.Trim().TrimEnd('-', '/'),
             DefaultPadding,
             includeYear: true,
-            resetsYearly: true);
+            resetsYearly: DefaultResetsYearly);
     }
 
     /// <summary>
@@ -161,6 +164,41 @@ public sealed partial class DocumentNumberFormat : Entity, IAuditableEntity, ITe
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Says why the agency may not turn yearly reset on or off, or null if it may.
+    /// </summary>
+    /// <param name="currentlyResetsYearly">What the agency uses now — its own format, or the default.</param>
+    /// <param name="resetsYearly">What it asked for.</param>
+    /// <param name="hasIssuedDocuments">Whether it has issued any document of this type, ever.</param>
+    /// <remarks>
+    /// <para>
+    /// Changing the prefix, the padding or whether the year is shown is always safe: the counter
+    /// carries on, and two different counter values never print the same text. Yearly reset is
+    /// different. It decides <i>which</i> counter is drawn from — this year's, or the continuous one
+    /// — and the counter switched to starts again from its own count. Its next number can then print
+    /// exactly like one already issued: <c>LTL-2026-000001</c> a second time. The database refuses
+    /// the duplicate, but the counter rolls back with the refusal, so every later attempt draws the
+    /// same number and fails the same way. The agency could issue nothing more of that type.
+    /// </para>
+    /// <para>
+    /// So once a document of the type exists, the choice is final. Before the first one, it is free.
+    /// </para>
+    /// </remarks>
+    public static string? FindResetChangeProblem(
+        bool currentlyResetsYearly,
+        bool resetsYearly,
+        bool hasIssuedDocuments)
+    {
+        if (currentlyResetsYearly == resetsYearly || !hasIssuedDocuments)
+        {
+            return null;
+        }
+
+        return "Whether numbering restarts every year cannot be changed once documents of this type have been issued, "
+            + "because the new count would reuse numbers already printed. You can still change the prefix, the "
+            + "number of digits and whether the year is shown.";
     }
 
     /// <summary>

@@ -69,7 +69,11 @@ export function FlightSearchPage() {
           onResearch={() => search(request.criteria)}
           // The booking flow (#53) takes it from here.
           onSelect={(offer) =>
-            navigate('/book/flight', { state: { product: 'flight', offerId: offer.id } })
+            navigate('/book/flight', {
+              state: {
+                draft: { product: 'flight', offer, passengers: request.criteria.passengers },
+              },
+            })
           }
         />
       )}

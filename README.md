@@ -521,6 +521,8 @@ wallet screens without clicking through setup each time.
 | How we talk to Trips Africa | `backend/services/TripsAgent.Integrations.TripsAfrica/` |
 | How we take payment | `backend/services/TripsAgent.Integrations.Paystack/` |
 | A background job | `backend/services/TripsAgent.Worker/Jobs/` |
+| How long data is kept, and what deletes it | [`docs/DATA_RETENTION.md`](docs/DATA_RETENTION.md) |
+| Rate limits, and which proxies are trusted | `backend/services/TripsAgent.Api/RateLimiting/`, `.env.example` |
 | How prices and markup are calculated | `backend/services/TripsAgent.Domain/Pricing/` |
 | Wallet and ledger logic | `backend/services/TripsAgent.Domain/Payments/` |
 | An invoice or voucher layout | `backend/services/TripsAgent.Documents/` |

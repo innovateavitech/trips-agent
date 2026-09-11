@@ -12,6 +12,8 @@ import { mockAuthApi } from './auth/mock/mock-auth-api';
 import { mockCatalogApi } from './features/catalog';
 import { mockDashboardApi } from './features/dashboard';
 import { mockSearchApi } from './features/search';
+import { mockBookingFlowApi } from './features/booking';
+import { mockBookingsApi } from './features/bookings';
 import { mockWalletApi } from './features/wallet';
 import './index.css';
 
@@ -23,6 +25,8 @@ import './index.css';
  *   wallet     mock until the statement endpoints exist (#26 shipped top-ups)
  *   dashboard  mock until the orders endpoints exist (#41, #42)
  *   search     mock until the supplier search endpoints exist (#33, #34)
+ *   bookingFlow  mock until the checkout saga exists (#42)
+ *   bookings     mock until the orders endpoints exist (#42, #44)
  *   catalog    mock until the product API exists (#161)
  */
 const adapters: AppAdapters = {
@@ -30,6 +34,8 @@ const adapters: AppAdapters = {
   wallet: mockWalletApi,
   dashboard: mockDashboardApi,
   search: mockSearchApi,
+  bookingFlow: mockBookingFlowApi,
+  bookings: mockBookingsApi,
   catalog: mockCatalogApi,
 };
 

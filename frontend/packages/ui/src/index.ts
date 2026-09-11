@@ -12,6 +12,15 @@ export {
   CardTitle,
 } from './components/card';
 export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+  DialogTrigger,
+} from './components/dialog';
+export {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,

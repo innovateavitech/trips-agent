@@ -27,6 +27,8 @@ Keep each one to a page:
 ## Written
 
 - [`audit-log.md`](audit-log.md) — the platform audit log: partitions, retention, append-only
+- [`data-retention.md`](data-retention.md) — the `data-retention` purge job: a failed table,
+  switching from dry run to live, and stopping it if it deleted too much
 - [`vulnerable-dependency.md`](vulnerable-dependency.md) — `audit-api` or `audit-web` is red: a
   package has a High or Critical advisory, including when no fix exists yet
 

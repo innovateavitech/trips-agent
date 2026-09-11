@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Security.Claims;
 using TripsAgent.Api.Authorization;
 using TripsAgent.Api.Pricing;
+using TripsAgent.Api.RateLimiting;
+using TripsAgent.Application.RateLimiting;
 using TripsAgent.Application.Search;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Contracts.Search;
@@ -22,7 +24,11 @@ public static class SearchEndpoints
 
         var group = app.MapGroup("/api/v1/search")
             .WithTags("Search")
-            .RequireAuthorization(PermissionPolicies.For(PermissionCodes.BookingSearch));
+            .RequireAuthorization(PermissionPolicies.For(PermissionCodes.BookingSearch))
+
+            // Per user, tighter than the default: a search that misses the cache is a call to the
+            // supplier. The agency ceiling applies on top, as it does to every signed-in request.
+            .RequireRateLimitPolicy(RateLimitPolicyNames.Search);
 
         group.MapPost("/flights", async (
                 FlightSearchRequest request,

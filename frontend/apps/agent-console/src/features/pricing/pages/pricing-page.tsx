@@ -1,7 +1,9 @@
-import { useState, type ReactNode } from 'react';
-import { Alert, Badge, Button, Card, ErrorState, Input, LoadingState, Select } from '@trips/ui';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Alert, Badge, Button, Card, ErrorState, LoadingState, Select } from '@trips/ui';
 import { ApiError, describeError } from '../../../api/errors';
 import { PageHeader } from '../../../shell/page-header';
+import { useProducts } from '../../catalog/catalog-api';
+import { PRODUCT_TYPES as CATALOG_TYPES } from '../../catalog/catalog-rules';
 import { InheritedRules } from '../components/inherited-rules';
 import { PriceExplainer } from '../components/price-explainer';
 import { RuleForm } from '../components/rule-form';
@@ -10,7 +12,6 @@ import {
   describeRule,
   endedRules,
   isInForce,
-  parseProductId,
   pricingCopy,
   PRODUCT_TYPES,
   productRulesInForce,
@@ -94,6 +95,13 @@ function PricingRules({
 }) {
   const { currency, hasPrincipal, hasSubAgents } = settings;
 
+  // Product rules name their product: ids are for machines.
+  const catalog = useProducts();
+  const productNames = useMemo(
+    () => new Map((catalog.data ?? []).map((product) => [product.id.toLowerCase(), product.title])),
+    [catalog.data],
+  );
+
   // Which row's form is open: 'global', 'type:Flight', 'product:<id>' or 'new-product'.
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -168,7 +176,11 @@ function PricingRules({
           return (
             <RuleRow
               key={rule.id}
-              label={`${productTypeLabel(rule.productType)} · ${rule.productId ?? ''}`}
+              label={`${productTypeLabel(rule.productType)} · ${
+                (rule.productId && productNames.get(rule.productId.toLowerCase())) ??
+                rule.productId ??
+                ''
+              }`}
               rule={rule}
               emptyText=""
               currency={currency}
@@ -344,9 +356,9 @@ function RuleRow({
 }
 
 /**
- * A rule for one product. Products are chosen by ID for now: the catalog they
- * live in (tours, visas, group departures) has no picker yet, so the ID is
- * copied from the product's own page.
+ * A rule for one product, chosen by name from the agency's catalog. Archived
+ * products are left out: nobody can buy them, so there is nothing to price.
+ * Drafts are in, so a price can be ready before the product is published.
  */
 function NewProductRuleForm({
   currency,
@@ -357,38 +369,58 @@ function NewProductRuleForm({
   hasSubAgents: boolean;
   onDone: () => void;
 }) {
-  const [productType, setProductType] = useState<ProductType>('Tour');
-  const [productIdText, setProductIdText] = useState('');
-  const productId = parseProductId(productIdText);
+  const products = useProducts();
+  const [productId, setProductId] = useState('');
+  const choices = useMemo(
+    () =>
+      (products.data ?? [])
+        .filter((product) => product.status !== 'Archived')
+        .sort((a, b) => a.title.localeCompare(b.title)),
+    [products.data],
+  );
+  const chosen = choices.find((product) => product.id === productId);
 
   return (
     <RuleForm
       currency={currency}
-      slot={productId.ok ? { scope: 'Product', productType, productId: productId.value } : null}
-      slotProblem={productId.ok ? undefined : productId.error}
+      slot={
+        chosen ? { scope: 'Product', productType: chosen.productType, productId: chosen.id } : null
+      }
+      slotProblem={chosen ? undefined : 'Choose the product this rule is for.'}
       hasSubAgents={hasSubAgents}
       onDone={onDone}
     >
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="flex flex-col gap-2">
         <Select
-          label="Product type"
-          value={productType}
-          onChange={(event) => setProductType(event.target.value as ProductType)}
+          label="Product"
+          value={productId}
+          disabled={products.isPending}
+          onChange={(event) => setProductId(event.target.value)}
         >
-          {PRODUCT_TYPES.map((type) => (
-            <option key={type.value} value={type.value}>
-              {type.label}
-            </option>
-          ))}
+          <option value="">
+            {products.isPending ? 'Loading your catalog…' : 'Choose a product'}
+          </option>
+          {CATALOG_TYPES.map((type) => {
+            const group = choices.filter((product) => product.productType === type.value);
+            return group.length === 0 ? null : (
+              <optgroup key={type.value} label={type.label}>
+                {group.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.title || 'Untitled'}
+                    {product.status === 'Draft' ? ' (draft)' : ''}
+                  </option>
+                ))}
+              </optgroup>
+            );
+          })}
         </Select>
-        <div className="sm:col-span-2">
-          <Input
-            label="Product ID"
-            value={productIdText}
-            onChange={(event) => setProductIdText(event.target.value)}
-            hint="Copy it from the product's page."
-          />
-        </div>
+        {products.isError ? (
+          <p className="text-sm text-destructive">{describeError(products.error).title}</p>
+        ) : products.data && choices.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Your catalog has no products yet. Add one under Catalog, then price it here.
+          </p>
+        ) : null}
       </div>
     </RuleForm>
   );

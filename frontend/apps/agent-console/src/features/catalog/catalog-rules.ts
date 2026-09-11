@@ -19,7 +19,7 @@ import type {
  * rendering anything in `__tests__/catalog-rules.test.ts`.
  *
  * What is NOT here: whether a product can be published. That is the server's
- * rule (#160), and the screens show the `publishProblems` it sends.
+ * rule (issue 160), and the screens show the `publishProblems` it sends.
  */
 
 /* ---------------------------------------------------------------- access -- */
@@ -41,11 +41,12 @@ export function canPublishCatalog(roles: readonly string[]): boolean {
 
 /* ------------------------------------------------------------------ list -- */
 
-export const PRODUCT_TYPES: ReadonlyArray<{ value: ProductType; label: string; singular: string }> = [
-  { value: 'Tour', label: 'Tours', singular: 'tour' },
-  { value: 'Package', label: 'Packages', singular: 'package' },
-  { value: 'Visa', label: 'Visas', singular: 'visa' },
-];
+export const PRODUCT_TYPES: ReadonlyArray<{ value: ProductType; label: string; singular: string }> =
+  [
+    { value: 'Tour', label: 'Tours', singular: 'tour' },
+    { value: 'Package', label: 'Packages', singular: 'package' },
+    { value: 'Visa', label: 'Visas', singular: 'visa' },
+  ];
 
 /** In the URL: `/catalog/new/tour`. */
 export function typeFromSlug(slug: string | undefined): ProductType | null {
@@ -83,7 +84,9 @@ export function filterProducts(
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
-export function statusCounts(products: readonly ProductSummary[]): Record<ProductStatus | 'all', number> {
+export function statusCounts(
+  products: readonly ProductSummary[],
+): Record<ProductStatus | 'all', number> {
   const counts = { all: products.length, Draft: 0, Published: 0, Archived: 0 };
   for (const product of products) counts[product.status] += 1;
   return counts;
@@ -229,7 +232,11 @@ export function emptyVisa(): VisaDraft {
     consularFee: '',
     serviceFee: '',
     documents: [
-      { key: newKey(), label: 'Passport bio page, valid for at least six months', isMandatory: true },
+      {
+        key: newKey(),
+        label: 'Passport bio page, valid for at least six months',
+        isMandatory: true,
+      },
       { key: newKey(), label: 'Passport photograph on a white background', isMandatory: true },
     ],
   };
@@ -309,7 +316,8 @@ export function draftFromProduct(product: Product): ProductDraft {
 /** Field key → what is wrong with what was typed there. */
 export type FieldErrors = Record<string, string>;
 
-export type BuiltRequest = { ok: true; request: ProductRequest } | { ok: false; errors: FieldErrors };
+export type BuiltRequest =
+  { ok: true; request: ProductRequest } | { ok: false; errors: FieldErrors };
 
 /**
  * The draft as the API takes it.
@@ -442,14 +450,19 @@ export function replaceAt<T>(list: readonly T[], index: number, patch: Partial<T
 
 /** What the customer pays for a visa: the consulate's fee and the agency's. */
 export function visaTotalMinor(visa: VisaDraft): number | null {
-  const consular = visa.consularFee.trim() ? parseAmount(visa.consularFee) : { ok: true as const, value: 0 };
-  const service = visa.serviceFee.trim() ? parseAmount(visa.serviceFee) : { ok: true as const, value: 0 };
+  const consular = visa.consularFee.trim()
+    ? parseAmount(visa.consularFee)
+    : { ok: true as const, value: 0 };
+  const service = visa.serviceFee.trim()
+    ? parseAmount(visa.serviceFee)
+    : { ok: true as const, value: 0 };
   return consular.ok && service.ok ? consular.value + service.value : null;
 }
 
 /* --------------------------------------------------------------- publish -- */
 
-export type EditorSection = 'basics' | 'images' | 'itinerary' | 'inclusions' | 'prices' | 'visa' | 'categories';
+export type EditorSection =
+  'basics' | 'images' | 'itinerary' | 'inclusions' | 'prices' | 'visa' | 'categories';
 
 /** Which part of the editor a publish problem is about, so the checklist can take the agent there. */
 export function sectionOf(problem: PublishProblem): EditorSection {

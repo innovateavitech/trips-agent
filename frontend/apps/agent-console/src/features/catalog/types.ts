@@ -2,7 +2,7 @@
  * The catalog as the console sees it: the products an agency authors and sells
  * under its own brand — tours, packages and visas (#56).
  *
- * Field for field the contract in #161, so the stand-in in `mock/` and the HTTP
+ * Field for field the contract in issue 161, so the stand-in in `mock/` and the HTTP
  * adapter that replaces it return the same shapes.
  */
 

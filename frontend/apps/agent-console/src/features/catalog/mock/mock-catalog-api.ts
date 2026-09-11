@@ -14,10 +14,10 @@ import {
 
 /**
  * ============================================================================
- *  TEMPORARY. Delete this folder when the product API lands (#161).
+ *  TEMPORARY. Delete this folder when the product API lands (issue 161).
  * ============================================================================
  *
- * The catalog screens' stand-in. It keeps the server's rules as #161 states
+ * The catalog screens' stand-in. It keeps the server's rules as issue 161 states
  * them — slugs unique per agency, every publish problem at once, a published
  * product never saved into an unpublishable state — so the screens are built
  * against the behaviour they will meet, not a friendlier one.
@@ -102,7 +102,7 @@ function fromRequest(
   existing: StoredProduct | null,
   existingMedia: StoredProduct['media'],
 ): StoredProduct {
-  const id = existing?.id ?? `prd_${crypto.randomUUID().slice(0, 8)}`;
+  const id = existing?.id ?? crypto.randomUUID();
   const wanted = request.slug?.trim() ? slugify(request.slug) : null;
 
   if (wanted && slugTaken(wanted, id)) {
@@ -152,7 +152,11 @@ export const mockCatalogApi: CatalogApi = {
     const existing = mustFind(id);
 
     if (existing.status === 'Archived') {
-      throw new ApiError(409, 'Archived products cannot be changed.', 'Restore it as a draft first.');
+      throw new ApiError(
+        409,
+        'Archived products cannot be changed.',
+        'Restore it as a draft first.',
+      );
     }
 
     const next = fromRequest(request, existing, existing.media);
@@ -217,7 +221,8 @@ export const mockCatalogApi: CatalogApi = {
     if (!trimmed) throw new ApiError(422, 'Give it a name.');
     if (
       allCategories().some(
-        (category) => category.type === type && category.name.toLowerCase() === trimmed.toLowerCase(),
+        (category) =>
+          category.type === type && category.name.toLowerCase() === trimmed.toLowerCase(),
       )
     ) {
       throw new ApiError(409, `There is already a ${type.toLowerCase()} called ${trimmed}.`);

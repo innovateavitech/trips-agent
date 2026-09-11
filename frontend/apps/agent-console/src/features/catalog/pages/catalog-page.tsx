@@ -32,7 +32,12 @@ import {
   statusCounts,
 } from '../catalog-rules';
 import { ProductStatusBadge } from '../components/editor-parts';
-import { NO_PRODUCT_FILTERS, type ProductFilters, type ProductSummary, type ProductType } from '../types';
+import {
+  NO_PRODUCT_FILTERS,
+  type ProductFilters,
+  type ProductSummary,
+  type ProductType,
+} from '../types';
 
 const updatedFormat = new Intl.DateTimeFormat('en-NG', {
   day: 'numeric',
@@ -40,7 +45,7 @@ const updatedFormat = new Intl.DateTimeFormat('en-NG', {
   timeZone: 'Africa/Lagos',
 });
 
-/** #162 — every tour, package and visa the agency sells, and where each one stands. */
+/** issue 162 — every tour, package and visa the agency sells, and where each one stands. */
 export function CatalogPage() {
   const user = useCurrentUser();
   const products = useProducts();

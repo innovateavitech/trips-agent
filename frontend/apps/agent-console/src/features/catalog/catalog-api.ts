@@ -14,7 +14,7 @@ import type {
 /**
  * What the catalog screens need from the server, as one port — the same shape
  * as `SearchApi`. The stand-in in `mock/` sits behind it until the product API
- * (#161) lands; then an HTTP adapter over the generated client replaces it, in
+ * (issue 161) lands; then an HTTP adapter over the generated client replaces it, in
  * `main.tsx`, and no screen changes.
  */
 export interface CatalogApi {
@@ -122,7 +122,8 @@ export function useProductTransition(id: string) {
     mutationFn: (action: ProductTransition) => api.transition(id, action),
     onSuccess: changed,
     // A refused publish means the checklist is out of date: fetch the server's reasons.
-    onError: () => void queryClient.invalidateQueries({ queryKey: catalogKeys.product(agencyId, id) }),
+    onError: () =>
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.product(agencyId, id) }),
   });
 }
 
@@ -133,7 +134,8 @@ export function useCreateCategory() {
 
   return useMutation({
     mutationFn: (input: { name: string; type: CategoryType }) => api.createCategory(input),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: catalogKeys.categories(agencyId) }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.categories(agencyId) }),
   });
 }
 

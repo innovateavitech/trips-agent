@@ -44,7 +44,7 @@ import { VisaEditor } from '../components/visa-editor';
 import type { Product, ProductTransition } from '../types';
 
 /**
- * #162 and #163 — one editor for tours, packages and visas. `/catalog/new/tour`
+ * issue 162 and issue 163 — one editor for tours, packages and visas. `/catalog/new/tour`
  * starts a draft; the first save creates it and moves to `/catalog/:id`.
  */
 export function ProductEditorPage() {
@@ -71,7 +71,9 @@ export function ProductEditorPage() {
     );
   }
 
-  return <ProductEditor key={`new-${productType}`} product={null} initial={emptyDraft(productType)} />;
+  return (
+    <ProductEditor key={`new-${productType}`} product={null} initial={emptyDraft(productType)} />
+  );
 }
 
 function ExistingProduct({ id }: { id: string }) {
@@ -88,7 +90,13 @@ function ExistingProduct({ id }: { id: string }) {
     );
   }
 
-  return <ProductEditor key={product.data.id} product={product.data} initial={draftFromProduct(product.data)} />;
+  return (
+    <ProductEditor
+      key={product.data.id}
+      product={product.data}
+      initial={draftFromProduct(product.data)}
+    />
+  );
 }
 
 function ProductEditor({ product, initial }: { product: Product | null; initial: ProductDraft }) {
@@ -111,7 +119,8 @@ function ProductEditor({ product, initial }: { product: Product | null; initial:
   const problems = product?.publishProblems ?? [];
   const isVisa = draft.productType === 'Visa';
   const noun = singularOf(draft.productType);
-  const problemsIn = (section: SectionId) => problems.filter((problem) => sectionOf(problem) === section);
+  const problemsIn = (section: SectionId) =>
+    problems.filter((problem) => sectionOf(problem) === section);
 
   /** Applies a change, and forgets the errors about the fields it touched. */
   function update(patch: Partial<ProductDraft>) {
@@ -161,10 +170,18 @@ function ProductEditor({ product, initial }: { product: Product | null; initial:
 
       <PageHeader
         title={draft.title.trim() || (product ? 'Untitled' : `New ${noun}`)}
-        description={product ? `${draft.productType} · /${product.slug}` : `A ${noun}, saved as a draft until you publish it.`}
+        description={
+          product
+            ? `${draft.productType} · /${product.slug}`
+            : `A ${noun}, saved as a draft until you publish it.`
+        }
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {product ? <ProductStatusBadge status={product.status} /> : <Badge tone="neutral">Not saved</Badge>}
+            {product ? (
+              <ProductStatusBadge status={product.status} />
+            ) : (
+              <Badge tone="neutral">Not saved</Badge>
+            )}
             {dirty ? <span className="text-xs text-muted-foreground">Unsaved changes</span> : null}
             {canPublish && product?.status === 'Draft' ? (
               <Button
@@ -186,7 +203,11 @@ function ProductEditor({ product, initial }: { product: Product | null; initial:
               </Button>
             ) : null}
             {canEdit ? (
-              <Button onClick={onSave} loading={save.isPending} disabled={product !== null && !dirty}>
+              <Button
+                onClick={onSave}
+                loading={save.isPending}
+                disabled={product !== null && !dirty}
+              >
                 {product ? 'Save' : 'Save draft'}
               </Button>
             ) : null}
@@ -244,7 +265,9 @@ function ProductEditor({ product, initial }: { product: Product | null; initial:
                 hint={countryName(draft.destinationCountry) || 'Two letters, like NG or AE'}
                 maxLength={2}
                 value={draft.destinationCountry}
-                onChange={(event) => update({ destinationCountry: event.target.value.toUpperCase() })}
+                onChange={(event) =>
+                  update({ destinationCountry: event.target.value.toUpperCase() })
+                }
               />
               <Input
                 label={`Price from (${currency})`}
@@ -308,7 +331,9 @@ function ProductEditor({ product, initial }: { product: Product | null; initial:
               onCaption={(assetId, caption) =>
                 setDraft((current) => ({
                   ...current,
-                  media: current.media.map((item) => (item.assetId === assetId ? { ...item, caption } : item)),
+                  media: current.media.map((item) =>
+                    item.assetId === assetId ? { ...item, caption } : item,
+                  ),
                 }))
               }
               onCover={(assetId) => update({ heroAssetId: assetId })}
@@ -333,7 +358,10 @@ function ProductEditor({ product, initial }: { product: Product | null; initial:
                 description="Day by day: what happens, which meals are included, where they sleep."
                 problems={problemsIn('itinerary')}
               >
-                <ItineraryBuilder days={draft.itinerary} onChange={(itinerary) => update({ itinerary })} />
+                <ItineraryBuilder
+                  days={draft.itinerary}
+                  onChange={(itinerary) => update({ itinerary })}
+                />
               </EditorSection>
 
               <EditorSection id="inclusions" problems={problemsIn('inclusions')}>

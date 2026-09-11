@@ -16,7 +16,7 @@ import {
   visaTotalMinor,
   type ProductDraft,
 } from '../catalog-rules';
-import { findProduct, resetCatalogStore } from '../mock/catalog-store';
+import { SEED, findProduct, resetCatalogStore } from '../mock/catalog-store';
 import { NO_PRODUCT_FILTERS, type Product, type ProductSummary } from '../types';
 
 beforeEach(resetCatalogStore);
@@ -58,19 +58,47 @@ describe('who may do what', () => {
 describe('finding a product', () => {
   const products = [
     summary({}),
-    summary({ id: 'p2', title: 'Zanzibar Beach Escape', productType: 'Package', destinationCity: 'Zanzibar', destinationCountry: 'TZ', status: 'Draft', updatedAt: '2026-09-05T10:00:00Z' }),
-    summary({ id: 'p3', title: 'Dubai visa', productType: 'Visa', status: 'Archived', updatedAt: '2026-08-01T10:00:00Z' }),
+    summary({
+      id: 'p2',
+      title: 'Zanzibar Beach Escape',
+      productType: 'Package',
+      destinationCity: 'Zanzibar',
+      destinationCountry: 'TZ',
+      status: 'Draft',
+      updatedAt: '2026-09-05T10:00:00Z',
+    }),
+    summary({
+      id: 'p3',
+      title: 'Dubai visa',
+      productType: 'Visa',
+      destinationCity: 'Dubai',
+      destinationCountry: 'AE',
+      status: 'Archived',
+      updatedAt: '2026-08-01T10:00:00Z',
+    }),
   ];
 
   it('filters by type and status, newest change first', () => {
-    expect(filterProducts(products, NO_PRODUCT_FILTERS).map((p) => p.id)).toEqual(['p2', 'p1', 'p3']);
-    expect(filterProducts(products, { ...NO_PRODUCT_FILTERS, type: 'Visa' }).map((p) => p.id)).toEqual(['p3']);
-    expect(filterProducts(products, { ...NO_PRODUCT_FILTERS, status: 'Draft' }).map((p) => p.id)).toEqual(['p2']);
+    expect(filterProducts(products, NO_PRODUCT_FILTERS).map((p) => p.id)).toEqual([
+      'p2',
+      'p1',
+      'p3',
+    ]);
+    expect(
+      filterProducts(products, { ...NO_PRODUCT_FILTERS, type: 'Visa' }).map((p) => p.id),
+    ).toEqual(['p3']);
+    expect(
+      filterProducts(products, { ...NO_PRODUCT_FILTERS, status: 'Draft' }).map((p) => p.id),
+    ).toEqual(['p2']);
   });
 
   it('searches the title, the city and the country by name', () => {
-    expect(filterProducts(products, { ...NO_PRODUCT_FILTERS, query: 'tanzania' }).map((p) => p.id)).toEqual(['p2']);
-    expect(filterProducts(products, { ...NO_PRODUCT_FILTERS, query: 'OBUDU' }).map((p) => p.id)).toEqual(['p1']);
+    expect(
+      filterProducts(products, { ...NO_PRODUCT_FILTERS, query: 'tanzania' }).map((p) => p.id),
+    ).toEqual(['p2']);
+    expect(
+      filterProducts(products, { ...NO_PRODUCT_FILTERS, query: 'OBUDU' }).map((p) => p.id),
+    ).toEqual(['p1']);
   });
 
   it('counts each status', () => {
@@ -102,7 +130,10 @@ describe('saving a draft', () => {
   });
 
   it('refuses what is not a number, rather than lose what the agent meant', () => {
-    const built = buildRequest({ ...emptyDraft('Tour'), basePrice: 'about 5k', durationDays: 'three' }, 'NGN');
+    const built = buildRequest(
+      { ...emptyDraft('Tour'), basePrice: 'about 5k', durationDays: 'three' },
+      'NGN',
+    );
 
     expect(built.ok).toBe(false);
     if (built.ok) return;
@@ -114,7 +145,17 @@ describe('saving a draft', () => {
     const built = buildRequest(
       {
         ...draft,
-        variants: [{ key: newKey(), name: 'Groups', paxType: 'Adult', occupancy: '', minGroupSize: '10', maxGroupSize: '4', price: '100' }],
+        variants: [
+          {
+            key: newKey(),
+            name: 'Groups',
+            paxType: 'Adult',
+            occupancy: '',
+            minGroupSize: '10',
+            maxGroupSize: '4',
+            price: '100',
+          },
+        ],
       },
       'NGN',
     );
@@ -125,7 +166,13 @@ describe('saving a draft', () => {
   it('numbers itinerary days by position', () => {
     const draft: ProductDraft = {
       ...emptyDraft('Tour'),
-      itinerary: ['Arrive', 'Explore', 'Leave'].map((title) => ({ key: newKey(), title, description: '', meals: [], accommodation: '' })),
+      itinerary: ['Arrive', 'Explore', 'Leave'].map((title) => ({
+        key: newKey(),
+        title,
+        description: '',
+        meals: [],
+        accommodation: '',
+      })),
     };
     const moved = { ...draft, itinerary: moveItem(draft.itinerary, 2, -1) };
     const built = buildRequest(moved, 'NGN');
@@ -156,11 +203,20 @@ describe('saving a draft', () => {
   });
 
   it('reads a product back into the editor and saves it unchanged', () => {
-    for (const id of ['prd_zanzibar', 'prd_dubai_visa']) {
+    for (const id of [SEED.zanzibar, SEED.dubaiVisa]) {
       const product = stored(id);
       const built = buildRequest(draftFromProduct(product), product.currency);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id: _id, slug, status, publishedAt, updatedAt, publishProblems, media, ...content } = product;
+      // Everything the server adds is set aside; the rest is exactly what the editor sends back.
+      const {
+        id: _id,
+        slug: _slug,
+        status: _status,
+        publishedAt: _publishedAt,
+        updatedAt: _updatedAt,
+        publishProblems: _publishProblems,
+        media,
+        ...content
+      } = product;
 
       expect(built.ok && built.request).toEqual({
         ...content,
@@ -171,10 +227,12 @@ describe('saving a draft', () => {
   });
 
   it('knows a draft is unchanged even though its rows were given new keys', () => {
-    const product = stored('prd_zanzibar');
+    const product = stored(SEED.zanzibar);
 
     expect(sameDraft(draftFromProduct(product), draftFromProduct(product))).toBe(true);
-    expect(sameDraft(draftFromProduct(product), { ...draftFromProduct(product), title: 'Other' })).toBe(false);
+    expect(
+      sameDraft(draftFromProduct(product), { ...draftFromProduct(product), title: 'Other' }),
+    ).toBe(false);
   });
 });
 
@@ -188,7 +246,9 @@ describe('small things', () => {
   it('adds up a visa’s fees, and gives up on one it cannot read', () => {
     const visa = emptyDraft('Visa').visa!;
 
-    expect(visaTotalMinor({ ...visa, consularFee: '145000', serviceFee: '35000' })).toBe(18_000_000);
+    expect(visaTotalMinor({ ...visa, consularFee: '145000', serviceFee: '35000' })).toBe(
+      18_000_000,
+    );
     expect(visaTotalMinor({ ...visa, consularFee: 'lots' })).toBeNull();
   });
 

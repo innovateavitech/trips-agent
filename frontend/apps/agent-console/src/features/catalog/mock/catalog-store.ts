@@ -2,7 +2,7 @@ import type { Category, Product } from '../types';
 
 /**
  * ============================================================================
- *  TEMPORARY. Delete with the rest of `mock/` when the product API lands (#161).
+ *  TEMPORARY. Delete with the rest of `mock/` when the product API lands (issue 161).
  * ============================================================================
  *
  * The stand-in's products, in memory: six products in every state, so each
@@ -11,6 +11,19 @@ import type { Category, Product } from '../types';
  */
 
 export type StoredProduct = Omit<Product, 'publishProblems'>;
+
+/**
+ * The seeded products' ids. Real product ids are GUIDs — the pricing API binds them as
+ * one — so the stand-in's are too, fixed so tests and demo links can name them.
+ */
+export const SEED = {
+  zanzibar: '5f0c9a52-1d3e-4b7a-9c21-6e8d4f2a7b01',
+  obudu: '5f0c9a52-1d3e-4b7a-9c21-6e8d4f2a7b02',
+  lagosHeritage: '5f0c9a52-1d3e-4b7a-9c21-6e8d4f2a7b03',
+  dubaiVisa: '5f0c9a52-1d3e-4b7a-9c21-6e8d4f2a7b04',
+  ukVisa: '5f0c9a52-1d3e-4b7a-9c21-6e8d4f2a7b05',
+  capeTown: '5f0c9a52-1d3e-4b7a-9c21-6e8d4f2a7b06',
+} as const;
 
 /** `YYYY-MM-DD`, some days from today. Dates stay relative so the seed never goes stale. */
 export function isoDate(daysFromToday: number): string {
@@ -40,7 +53,7 @@ const NONE = {
 function seed(): StoredProduct[] {
   return [
     {
-      id: 'prd_zanzibar',
+      id: SEED.zanzibar,
       productType: 'Package',
       title: 'Zanzibar Beach Escape',
       slug: 'zanzibar-beach-escape',
@@ -72,7 +85,8 @@ function seed(): StoredProduct[] {
         {
           dayNumber: 2,
           title: 'Stone Town and the spice farm',
-          description: 'A guided morning walk through Stone Town, then lunch among the clove trees.',
+          description:
+            'A guided morning walk through Stone Town, then lunch among the clove trees.',
           meals: ['Breakfast', 'Lunch'],
           accommodation: 'Nungwi Dreams Hotel',
         },
@@ -145,7 +159,7 @@ function seed(): StoredProduct[] {
       updatedAt: iso(3),
     },
     {
-      id: 'prd_obudu',
+      id: SEED.obudu,
       productType: 'Tour',
       title: 'Obudu Mountain Resort Weekend',
       slug: 'obudu-mountain-resort-weekend',
@@ -215,7 +229,7 @@ function seed(): StoredProduct[] {
       updatedAt: iso(12),
     },
     {
-      id: 'prd_lagos_heritage',
+      id: SEED.lagosHeritage,
       productType: 'Tour',
       title: 'Lagos Heritage and Lekki Conservation Day Tour',
       slug: 'lagos-heritage-and-lekki-conservation-day-tour',
@@ -236,7 +250,8 @@ function seed(): StoredProduct[] {
         {
           dayNumber: 1,
           title: 'Lagos in a day',
-          description: 'Freedom Park, lunch in Lekki, the Nike Art Gallery, then the canopy walkway.',
+          description:
+            'Freedom Park, lunch in Lekki, the Nike Art Gallery, then the canopy walkway.',
           meals: ['Lunch'],
           accommodation: '',
         },
@@ -248,7 +263,7 @@ function seed(): StoredProduct[] {
       updatedAt: iso(1),
     },
     {
-      id: 'prd_dubai_visa',
+      id: SEED.dubaiVisa,
       productType: 'Visa',
       title: 'Dubai 30-day Tourist Visa',
       slug: 'dubai-30-day-tourist-visa',
@@ -286,7 +301,7 @@ function seed(): StoredProduct[] {
       updatedAt: iso(9),
     },
     {
-      id: 'prd_uk_visa',
+      id: SEED.ukVisa,
       productType: 'Visa',
       title: 'UK Standard Visitor Visa',
       slug: 'uk-standard-visitor-visa',
@@ -317,7 +332,7 @@ function seed(): StoredProduct[] {
       updatedAt: iso(2),
     },
     {
-      id: 'prd_cape_town',
+      id: SEED.capeTown,
       productType: 'Package',
       title: 'Cape Town and the Garden Route',
       slug: 'cape-town-and-the-garden-route',

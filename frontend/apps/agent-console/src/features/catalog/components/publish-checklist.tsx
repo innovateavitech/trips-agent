@@ -4,7 +4,7 @@ import { SECTION_LABELS, sectionOf } from '../catalog-rules';
 import type { Product } from '../types';
 
 /**
- * #162 — beside the editor: whether the product is live, and if it is a draft,
+ * issue 162 — beside the editor: whether the product is live, and if it is a draft,
  * what it still needs. The list is the server's `publishProblems`, never the
  * console's own guess, and each one links to the part of the editor to fix.
  */
@@ -28,8 +28,8 @@ export function PublishChecklist({ product, dirty }: { product: Product | null; 
           Live on your storefront
         </h2>
         <p className="text-sm text-muted-foreground">
-          At <span className="font-medium text-foreground">/{product.slug}</span>. Changes you save go
-          live straight away.
+          At <span className="font-medium text-foreground">/{product.slug}</span>. Changes you save
+          go live straight away.
         </p>
       </Card>
     );

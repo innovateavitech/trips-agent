@@ -18,7 +18,7 @@ const PAX_TYPES: ReadonlyArray<{ value: PaxType; label: string }> = [
 ];
 
 /**
- * #162 — prices by room, age and group size: "Double room, per adult",
+ * issue 162 — prices by room, age and group size: "Double room, per adult",
  * "Child 2–11", "Groups of 10 or more". With none, the "from" price is the price.
  */
 export function PriceVariantsEditor({
@@ -42,11 +42,15 @@ export function PriceVariantsEditor({
       ) : null}
 
       {variants.map((variant, index) => {
-        const change = (patch: Partial<VariantDraft>) => onChange(replaceAt(variants, index, patch));
+        const change = (patch: Partial<VariantDraft>) =>
+          onChange(replaceAt(variants, index, patch));
         const error = (field: string) => errors[`variants.${index}.${field}`];
 
         return (
-          <div key={variant.key} className="flex flex-col gap-3 rounded-lg border border-border p-4">
+          <div
+            key={variant.key}
+            className="flex flex-col gap-3 rounded-lg border border-border p-4"
+          >
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-foreground">
                 {variant.name.trim() || `Price ${index + 1}`}
@@ -124,7 +128,12 @@ export function PriceVariantsEditor({
       })}
 
       <div>
-        <Button type="button" variant="outline" size="sm" onClick={() => onChange([...variants, emptyVariant()])}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onChange([...variants, emptyVariant()])}
+        >
           <Plus className="h-4 w-4" aria-hidden="true" />
           Add a price
         </Button>

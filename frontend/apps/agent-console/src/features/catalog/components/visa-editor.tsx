@@ -15,7 +15,7 @@ import type { EntryType } from '../types';
 import { RowControls } from './editor-parts';
 
 /**
- * #163 — a visa as the agency sells it: the terms, the fees, and the checklist
+ * issue 163 — a visa as the agency sells it: the terms, the fees, and the checklist
  * of documents an applicant must bring. Fulfilment is manual, and the screen
  * says so: nothing here files anything with an embassy.
  */
@@ -112,19 +112,26 @@ function DocumentChecklist({
 }) {
   return (
     <fieldset className="flex flex-col gap-3">
-      <legend className="mb-1 text-sm font-semibold text-foreground">Documents the applicant provides</legend>
+      <legend className="mb-1 text-sm font-semibold text-foreground">
+        Documents the applicant provides
+      </legend>
       {documents.length === 0 ? (
         <p className="text-sm text-muted-foreground">No documents listed yet.</p>
       ) : (
         <ol className="flex flex-col gap-3">
           {documents.map((document, index) => (
-            <li key={document.key} className="flex flex-wrap items-end gap-3 rounded-lg border border-border p-3">
+            <li
+              key={document.key}
+              className="flex flex-wrap items-end gap-3 rounded-lg border border-border p-3"
+            >
               <div className="min-w-0 flex-1 basis-64">
                 <Input
                   label={`Document ${index + 1}`}
                   placeholder="Bank statement for the last three months"
                   value={document.label}
-                  onChange={(event) => onChange(replaceAt(documents, index, { label: event.target.value }))}
+                  onChange={(event) =>
+                    onChange(replaceAt(documents, index, { label: event.target.value }))
+                  }
                 />
               </div>
               <label className="flex items-center gap-2 pb-2.5 text-sm text-foreground">

@@ -5,7 +5,7 @@ import { newKey, removeAt, type InclusionDraft } from '../catalog-rules';
 import type { InclusionKind } from '../types';
 
 /**
- * #162 — what the price covers, and what it does not. The "not included" list
+ * issue 162 — what the price covers, and what it does not. The "not included" list
  * matters as much: it is what stops a customer arguing about the flights later.
  */
 export function InclusionsEditor({
@@ -53,9 +53,7 @@ function InclusionList({
   onChange: (inclusions: InclusionDraft[]) => void;
 }) {
   const [text, setText] = useState('');
-  const rows = all
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => item.kind === kind);
+  const rows = all.map((item, index) => ({ item, index })).filter(({ item }) => item.kind === kind);
   const Icon = kind === 'Inclusion' ? Check : X;
 
   function add() {
@@ -71,9 +69,15 @@ function InclusionList({
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nothing yet.</p>
       ) : (
-        <ul aria-label={title} className="flex flex-col divide-y divide-border rounded-md border border-border">
+        <ul
+          aria-label={title}
+          className="flex flex-col divide-y divide-border rounded-md border border-border"
+        >
           {rows.map(({ item, index }) => (
-            <li key={item.key} className="flex items-center justify-between gap-2 py-1 pl-3 pr-1 text-sm">
+            <li
+              key={item.key}
+              className="flex items-center justify-between gap-2 py-1 pl-3 pr-1 text-sm"
+            >
               <span className="flex min-w-0 items-center gap-2 text-foreground">
                 <Icon
                   aria-hidden="true"

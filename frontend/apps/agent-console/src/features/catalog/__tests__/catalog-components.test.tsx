@@ -19,7 +19,8 @@ function Itinerary({ initial }: { initial: DayDraft[] }) {
   return <ItineraryBuilder days={days} onChange={setDays} />;
 }
 
-const titles = () => screen.getAllByLabelText('Title').map((input) => (input as HTMLInputElement).value);
+const titles = () =>
+  screen.getAllByLabelText('Title').map((input) => (input as HTMLInputElement).value);
 
 describe('ItineraryBuilder', () => {
   it('adds the next day', () => {
@@ -37,7 +38,9 @@ describe('ItineraryBuilder', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Move day 3 up' }));
 
     expect(titles()).toEqual(['Arrive', 'Leave', 'Explore']);
-    expect(screen.getByRole('button', { name: 'Move day 1 up' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('button', { name: 'Move day 1 up' }).hasAttribute('disabled')).toBe(
+      true,
+    );
   });
 
   it('removes a day', () => {
@@ -62,7 +65,9 @@ describe('InclusionsEditor', () => {
     fireEvent.change(field, { target: { value: 'International flights' } });
     fireEvent.keyDown(field, { key: 'Enter' });
 
-    expect(within(screen.getByRole('list', { name: 'Not included' })).getByText('International flights')).toBeTruthy();
+    expect(
+      within(screen.getByRole('list', { name: 'Not included' })).getByText('International flights'),
+    ).toBeTruthy();
     expect(screen.queryByRole('list', { name: 'Included' })).toBeNull();
   });
 });
@@ -102,8 +107,12 @@ describe('PublishChecklist', () => {
     render(<PublishChecklist product={draft} dirty={false} />);
 
     expect(screen.getByText('2 things before it can be published')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Images' }).getAttribute('href')).toBe('#section-images');
-    expect(screen.getByRole('link', { name: 'Basics' }).getAttribute('href')).toBe('#section-basics');
+    expect(screen.getByRole('link', { name: 'Images' }).getAttribute('href')).toBe(
+      '#section-images',
+    );
+    expect(screen.getByRole('link', { name: 'Basics' }).getAttribute('href')).toBe(
+      '#section-basics',
+    );
   });
 
   it('says it is ready once nothing is missing, and that unsaved changes are not checked yet', () => {
@@ -114,7 +123,12 @@ describe('PublishChecklist', () => {
   });
 
   it('shows where a published product lives', () => {
-    render(<PublishChecklist product={{ ...draft, status: 'Published', publishProblems: [] }} dirty={false} />);
+    render(
+      <PublishChecklist
+        product={{ ...draft, status: 'Published', publishProblems: [] }}
+        dirty={false}
+      />,
+    );
 
     expect(screen.getByText('Live on your storefront')).toBeTruthy();
     expect(screen.getByText('/lagos-in-a-day')).toBeTruthy();

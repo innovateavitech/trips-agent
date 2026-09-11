@@ -11,7 +11,7 @@ const GROUPS: ReadonlyArray<{ type: CategoryType; label: string }> = [
 ];
 
 /**
- * #162 — categories ("International packages") and themes ("Beach"). The
+ * issue 162 — categories ("International packages") and themes ("Beach"). The
  * storefront filters by them, so a product nobody tagged is hard to find.
  */
 export function CategoryPicker({
@@ -28,7 +28,8 @@ export function CategoryPicker({
   const [name, setName] = useState('');
   const [type, setType] = useState<CategoryType>('Theme');
 
-  if (categories.isPending) return <p className="text-sm text-muted-foreground">Loading categories…</p>;
+  if (categories.isPending)
+    return <p className="text-sm text-muted-foreground">Loading categories…</p>;
   if (categories.isError) {
     return <p className="text-sm text-destructive">{describeError(categories.error).title}</p>;
   }
@@ -108,12 +109,22 @@ export function CategoryPicker({
             />
           </div>
           <div className="w-36">
-            <Select label="Kind" value={type} onChange={(event) => setType(event.target.value as CategoryType)}>
+            <Select
+              label="Kind"
+              value={type}
+              onChange={(event) => setType(event.target.value as CategoryType)}
+            >
               <option value="Theme">Theme</option>
               <option value="Category">Category</option>
             </Select>
           </div>
-          <Button type="button" variant="outline" onClick={add} loading={create.isPending} disabled={!name.trim()}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={add}
+            loading={create.isPending}
+            disabled={!name.trim()}
+          >
             Add
           </Button>
         </div>

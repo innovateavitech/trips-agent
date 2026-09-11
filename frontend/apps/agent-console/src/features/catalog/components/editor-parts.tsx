@@ -88,7 +88,13 @@ export function RowControls({
       >
         <ArrowDown className="h-4 w-4" aria-hidden="true" />
       </Button>
-      <Button type="button" variant="ghost" size="icon" aria-label={`Remove ${label}`} onClick={onRemove}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label={`Remove ${label}`}
+        onClick={onRemove}
+      >
         <Trash2 className="h-4 w-4" aria-hidden="true" />
       </Button>
     </div>

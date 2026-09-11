@@ -4,7 +4,7 @@ import { MEALS, emptyDay, moveItem, removeAt, replaceAt, type DayDraft } from '.
 import { RowControls } from './editor-parts';
 
 /**
- * #162 — the day-by-day itinerary. Days are numbered by position, so moving one
+ * issue 162 — the day-by-day itinerary. Days are numbered by position, so moving one
  * renumbers the rest; the numbers sent to the server are always 1, 2, 3…
  */
 export function ItineraryBuilder({
@@ -49,10 +49,15 @@ export function ItineraryBuilder({
                 />
                 <div className="grid items-start gap-3 sm:grid-cols-2">
                   <fieldset className="flex flex-col gap-2">
-                    <legend className="mb-2 text-sm font-medium text-foreground">Meals included</legend>
+                    <legend className="mb-2 text-sm font-medium text-foreground">
+                      Meals included
+                    </legend>
                     <div className="flex flex-wrap gap-4">
                       {MEALS.map((meal) => (
-                        <label key={meal} className="flex items-center gap-2 text-sm text-foreground">
+                        <label
+                          key={meal}
+                          className="flex items-center gap-2 text-sm text-foreground"
+                        >
                           <input
                             type="checkbox"
                             className="h-4 w-4 accent-primary"
@@ -83,7 +88,12 @@ export function ItineraryBuilder({
         </ol>
       )}
       <div>
-        <Button type="button" variant="outline" size="sm" onClick={() => onChange([...days, emptyDay()])}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onChange([...days, emptyDay()])}
+        >
           <Plus className="h-4 w-4" aria-hidden="true" />
           Add day {days.length + 1}
         </Button>

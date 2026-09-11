@@ -60,7 +60,10 @@ export function TransitionDialog({
   const copy = key ? COPY[key] : null;
 
   return (
-    <Dialog open={action !== null && product !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
+    <Dialog
+      open={action !== null && product !== null}
+      onOpenChange={(open) => (open ? undefined : onClose())}
+    >
       {copy && product ? (
         <DialogContent>
           <DialogTitle>{copy.title(product)}</DialogTitle>
@@ -69,7 +72,11 @@ export function TransitionDialog({
             <Button variant="outline" onClick={onClose} disabled={pending}>
               Not now
             </Button>
-            <Button variant={copy.destructive ? 'destructive' : undefined} onClick={onConfirm} loading={pending}>
+            <Button
+              variant={copy.destructive ? 'destructive' : undefined}
+              onClick={onConfirm}
+              loading={pending}
+            >
               {copy.confirm}
             </Button>
           </DialogFooter>

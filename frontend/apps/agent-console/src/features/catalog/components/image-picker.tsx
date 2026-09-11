@@ -7,7 +7,7 @@ import { useUploadImage } from '../catalog-api';
 import type { ProductMedia } from '../types';
 
 /**
- * #162 — the product's images. The cover is the one the storefront leads with:
+ * issue 162 — the product's images. The cover is the one the storefront leads with:
  * the chosen one, or the first. Uploads go through the asset pipeline, which
  * scans every file before it can be shown.
  */
@@ -28,7 +28,9 @@ export function ImagePicker({
 }) {
   const upload = useUploadImage();
   const [failure, setFailure] = useState<{ title: string; detail: string } | null>(null);
-  const cover = media.some((item) => item.assetId === heroAssetId) ? heroAssetId : media[0]?.assetId;
+  const cover = media.some((item) => item.assetId === heroAssetId)
+    ? heroAssetId
+    : media[0]?.assetId;
 
   async function addFiles(files: File[]) {
     setFailure(null);
@@ -78,11 +80,21 @@ export function ImagePicker({
                 />
                 <div className="flex flex-wrap gap-1">
                   {isCover ? null : (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => onCover(item.assetId)}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onCover(item.assetId)}
+                    >
                       Make cover
                     </Button>
                   )}
-                  <Button type="button" variant="ghost" size="sm" onClick={() => onRemove(item.assetId)}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onRemove(item.assetId)}
+                  >
                     Remove
                   </Button>
                 </div>

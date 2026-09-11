@@ -18,13 +18,14 @@ export type MarkupRuleRequest = Schemas['MarkupRuleRequest'];
 /** One of the principal's rules a sub-agent inherits. Read-only here. */
 export type InheritedRule = Schemas['InheritedMarkupRuleResponse'];
 
-export type ProductType = 'Flight' | 'Bus' | 'Tour' | 'Visa' | 'GroupDeparture';
+export type ProductType = 'Flight' | 'Bus' | 'Tour' | 'Package' | 'Visa' | 'GroupDeparture';
 export type CalculationType = 'Percentage' | 'Fixed';
 
 export const PRODUCT_TYPES: ReadonlyArray<{ value: ProductType; label: string }> = [
   { value: 'Flight', label: 'Flights' },
   { value: 'Bus', label: 'Buses' },
   { value: 'Tour', label: 'Tours' },
+  { value: 'Package', label: 'Packages' },
   { value: 'Visa', label: 'Visas' },
   { value: 'GroupDeparture', label: 'Group tours' },
 ];

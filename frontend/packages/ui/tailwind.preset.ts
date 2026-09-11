@@ -76,6 +76,15 @@ export const preset = {
         subtle: 'hsl(var(--warning-subtle))',
         'subtle-foreground': 'hsl(var(--warning-subtle-foreground))',
       },
+      sidebar: {
+        DEFAULT: 'hsl(var(--sidebar))',
+        foreground: 'hsl(var(--sidebar-foreground))',
+        'muted-foreground': 'hsl(var(--sidebar-muted-foreground))',
+        accent: 'hsl(var(--sidebar-accent))',
+        'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+        border: 'hsl(var(--sidebar-border))',
+        primary: 'hsl(var(--sidebar-primary))',
+      },
       info: {
         DEFAULT: 'hsl(var(--info))',
         foreground: 'hsl(var(--info-foreground))',
@@ -103,11 +112,17 @@ export const preset = {
           from: { opacity: '0', transform: 'translateY(4px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        'slide-in-left': {
+          from: { transform: 'translateX(-100%)' },
+          to: { transform: 'translateX(0)' },
+        },
       },
       animation: {
         // Short and few, on purpose. Motion earns its place or it is noise.
         'fade-in': 'fade-in 150ms ease-out',
         'slide-up': 'slide-up 200ms ease-out',
+        // The tablet navigation drawer. Answers a tap, so it is allowed to move.
+        'slide-in-left': 'slide-in-left 220ms cubic-bezier(0.16, 1, 0.3, 1)',
       },
     },
   },

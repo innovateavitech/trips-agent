@@ -21,11 +21,11 @@ public static class IdentitySeedData
     /// </remarks>
     public const string DevelopmentPassword = "Password123";
 
-    public const string SuperAdminEmail = "admin@tripsagent.test";
-    public const string OperationsAdminEmail = "ops@tripsagent.test";
-    public const string VerifiedAgentEmail = "owner@lagostravel.test";
-    public const string SubAgentEmail = "owner@ikejabranch.test";
-    public const string PendingAgentEmail = "owner@pendingtravel.test";
+    public const string SuperAdminEmail = "admin@tripsagent.example.com";
+    public const string OperationsAdminEmail = "ops@tripsagent.example.com";
+    public const string VerifiedAgentEmail = "owner@lagostravel.example.com";
+    public const string SubAgentEmail = "owner@ikejabranch.example.com";
+    public const string PendingAgentEmail = "owner@pendingtravel.example.com";
 
     /// <summary>Slug of the extra agency seeded so a pending-verification account exists.</summary>
     public const string PendingAgencySlug = "pending-travel";

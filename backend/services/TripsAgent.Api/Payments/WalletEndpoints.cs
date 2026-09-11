@@ -10,6 +10,11 @@ using TripsAgent.Domain.Identity;
 namespace TripsAgent.Api.Payments;
 
 /// <summary>The wallet, as the agent console uses it: see the balance, add funds.</summary>
+/// <remarks>
+/// Every route needs a caller with an agency. A Trips super-admin holds the wallet permissions
+/// through the all-permissions role but has no wallet, and before this check reached handlers
+/// that assumed a tenant and answered 500.
+/// </remarks>
 public static class WalletEndpoints
 {
     public static IEndpointRouteBuilder MapWalletEndpoints(this IEndpointRouteBuilder app)
@@ -18,7 +23,8 @@ public static class WalletEndpoints
 
         var group = app.MapGroup("/api/v1/wallet")
             .WithTags("Wallet")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddEndpointFilter(RequireAgencyAsync);
 
         group.MapGet("/", async (
                 IAppDbContext db,
@@ -111,39 +117,25 @@ public static class WalletEndpoints
         group.MapPost("/top-ups/{reference}/verify", async (
                 string reference,
                 VerifyTopUpHandler handler,
-                IAppDbContext db,
-                IPlatformScope platformScope,
                 CancellationToken cancellationToken) =>
             {
-                await handler.HandleAsync(reference, cancellationToken);
+                var check = await handler.CheckForAgentAsync(reference, cancellationToken);
 
-                // Read back through the reference rather than trusting the handler's return: it
-                // says "did this call credit", and a webhook having beaten us to it is a success
-                // for the agent even though this call did nothing.
-                using var scope = platformScope.Enter(
-                    "top-up status — the payment reference identifies the tenant");
-
-                var payment = await db.PaymentTransactions
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.Reference == reference, cancellationToken);
-
-                if (payment is null)
+                return check switch
                 {
-                    return Results.Problem(
+                    AgentTopUpCheck.Found found =>
+                        Results.Ok(new VerifyTopUpResponse(found.Status, found.Reference, found.AmountMinor)),
+
+                    // The same answer whether the reference does not exist or belongs to another
+                    // agency, so the response cannot be used to probe for other agencies' payments.
+                    AgentTopUpCheck.NotFound => Results.Problem(
                         statusCode: StatusCodes.Status404NotFound,
-                        title: "No payment with that reference.");
-                }
+                        title: "No payment with that reference."),
 
-                var status = payment.Status switch
-                {
-                    Domain.Payments.PaymentStatus.Succeeded => "succeeded",
-                    Domain.Payments.PaymentStatus.Failed => "failed",
-                    Domain.Payments.PaymentStatus.Abandoned => "failed",
-                    _ => "pending",
+                    AgentTopUpCheck.NoAgency => NoAgency(),
+
+                    _ => throw new InvalidOperationException($"Unhandled outcome {check.GetType().Name}."),
                 };
-
-                return Results.Ok(new VerifyTopUpResponse(
-                    status, payment.Reference, payment.VerifiedAmountMinor?.AmountMinor));
             })
             .RequireAuthorization(PermissionPolicies.For(PermissionCodes.WalletFund))
             .WithName("VerifyWalletTopUp")
@@ -151,4 +143,19 @@ public static class WalletEndpoints
 
         return app;
     }
+
+    /// <summary>403 for a caller with no agency, before any handler runs.</summary>
+    private static async ValueTask<object?> RequireAgencyAsync(
+        EndpointFilterInvocationContext context,
+        EndpointFilterDelegate next)
+    {
+        var tenant = context.HttpContext.RequestServices.GetRequiredService<ITenantContext>();
+
+        return tenant.HasTenant ? await next(context) : NoAgency();
+    }
+
+    private static IResult NoAgency() => Results.Problem(
+        statusCode: StatusCodes.Status403Forbidden,
+        title: "Wallets belong to travel agencies.",
+        detail: StartTopUpHandler.NoAgencyReason);
 }

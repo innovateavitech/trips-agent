@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, ReactNode } from 'react';
 import { forwardRef, useId } from 'react';
 import { cn } from '../lib/cn';
 
@@ -7,6 +7,12 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   /** Validation message. Presence of this switches the field to its error state. */
   error?: string;
   hint?: string;
+  /**
+   * A control sitting inside the field's right edge — a password reveal, a unit,
+   * a clear button. It overlays the input, so the input also gains right padding
+   * to keep text from running underneath it.
+   */
+  trailing?: ReactNode;
 }
 
 /**
@@ -15,7 +21,7 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
  * readers do not reliably announce it.
  */
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { className, label, error, hint, id, ...props },
+  { className, label, error, hint, id, trailing, ...props },
   ref,
 ) {
   const generatedId = useId();
@@ -28,21 +34,28 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         {label}
       </label>
 
-      <input
-        ref={ref}
-        id={inputId}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy}
-        className={cn(
-          'h-10 w-full rounded-md border bg-background px-3 py-2 text-sm',
-          'placeholder:text-muted-foreground',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-          'disabled:cursor-not-allowed disabled:opacity-50',
-          error ? 'border-destructive' : 'border-input',
-          className,
-        )}
-        {...props}
-      />
+      <div className="relative">
+        <input
+          ref={ref}
+          id={inputId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          className={cn(
+            'h-10 w-full rounded-md border bg-background px-3 py-2 text-sm',
+            'placeholder:text-muted-foreground',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+            'disabled:cursor-not-allowed disabled:opacity-50',
+            error ? 'border-destructive' : 'border-input',
+            trailing && 'pr-10',
+            className,
+          )}
+          {...props}
+        />
+
+        {trailing ? (
+          <div className="absolute inset-y-0 right-0 flex items-center pr-1">{trailing}</div>
+        ) : null}
+      </div>
 
       {hint && !error ? (
         <p id={`${inputId}-hint`} className="text-xs text-muted-foreground">

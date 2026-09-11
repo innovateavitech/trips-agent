@@ -35,8 +35,14 @@ public sealed class LedgerAccountConfiguration : IEntityTypeConfiguration<Ledger
 
         // One account per agency, type and currency. A second would split a balance in two and
         // make every total depend on remembering to add both.
+        //
+        // NULLS NOT DISTINCT, because the platform's own accounts have no agency. PostgreSQL's
+        // default treats every NULL as different from every other, so without it this index let
+        // any number of (NULL, GatewayClearing, NGN) rows exist — exactly the split it is here
+        // to prevent. PostgreSQL 15 and later.
         builder.HasIndex(account => new { account.AgencyId, account.AccountType, account.Currency })
             .IsUnique()
+            .AreNullsDistinct(false)
             .HasDatabaseName("ix_ledger_accounts_agency_id_account_type_currency");
     }
 }
@@ -74,6 +80,17 @@ public sealed class LedgerEntryConfiguration : IEntityTypeConfiguration<LedgerEn
 
         builder.HasIndex(entry => new { entry.ReferenceType, entry.ReferenceId })
             .HasDatabaseName("ix_ledger_entries_reference");
+
+        // A payment posts to each account at most once. The concurrency token on
+        // payment_transactions is what stops a second posting; this is the backstop, in case a
+        // future code path posts without going through the payment row at all.
+        //
+        // Scoped to payment postings, so a reversal or refund must reference its own record
+        // rather than the payment it undoes — which is the better audit trail anyway.
+        builder.HasIndex(entry => new { entry.ReferenceType, entry.ReferenceId, entry.AccountId })
+            .IsUnique()
+            .HasFilter("reference_type = 'PaymentTransaction'")
+            .HasDatabaseName("ix_ledger_entries_payment_posting");
     }
 }
 
@@ -187,6 +204,13 @@ public sealed class PaymentTransactionConfiguration : IEntityTypeConfiguration<P
         builder.Property(payment => payment.IdempotencyKey).HasMaxLength(100);
         builder.Property(payment => payment.FailureReason).HasMaxLength(500);
 
+        // The claim on posting. EF adds the value it read to the WHERE clause of every UPDATE, so
+        // posting a payment matches the row only while ledger_transaction_group_id is still null
+        // in the database. Of two callers that both read it as null, the second matches nothing,
+        // EF throws DbUpdateConcurrencyException, and its whole save — ledger entries, wallet,
+        // statement line — rolls back.
+        builder.Property(payment => payment.LedgerTransactionGroupId).IsConcurrencyToken();
+
         builder.HasOne<Agency>()
             .WithMany()
             .HasForeignKey(payment => payment.AgencyId)
@@ -239,6 +263,8 @@ public sealed class PaymentWebhookEventConfiguration : IEntityTypeConfiguration<
         builder.Property(webhookEvent => webhookEvent.ProcessingStatus)
             .HasConversion<string>().HasMaxLength(20).IsRequired();
 
+        builder.Property(webhookEvent => webhookEvent.TransientFailures).IsRequired();
+
         // This index *is* the idempotency guarantee. Gateways retry — Paystack for 72 hours —
         // and two retries can arrive at once, which a check-then-act in application code would
         // let both through. The insert races and the database picks one winner.
@@ -246,10 +272,10 @@ public sealed class PaymentWebhookEventConfiguration : IEntityTypeConfiguration<
             .IsUnique()
             .HasDatabaseName("ix_payment_webhook_events_gateway_event_id");
 
-        // What the drain job reads: pending work, oldest first. Partial, because everything else
-        // is history and there is a lot more of it.
+        // What the drain job reads: pending work and lapsed claims, oldest first. Partial, because
+        // everything else is history and there is a lot more of it.
         builder.HasIndex(webhookEvent => webhookEvent.CreatedAt)
-            .HasFilter("processing_status = 'Pending'")
+            .HasFilter("processing_status IN ('Pending', 'Processing')")
             .HasDatabaseName("ix_payment_webhook_events_pending");
     }
 }

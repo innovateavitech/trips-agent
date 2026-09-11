@@ -2,6 +2,7 @@ using MailKit.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using TripsAgent.Application.Auditing;
 using TripsAgent.Application.Identity;
 using TripsAgent.Application.Notifications;
@@ -27,6 +28,24 @@ public static class DependencyInjection
 {
     /// <summary>The configuration key holding the PostgreSQL connection string.</summary>
     public const string PostgresConnectionName = "Postgres";
+
+    /// <summary>
+    /// The configuration key for the schema owner's connection string — migrations and DDL only.
+    /// Falls back to <see cref="PostgresConnectionName"/> until the roles are split. See ADR-0006.
+    /// </summary>
+    public const string PostgresAdminConnectionName = "PostgresAdmin";
+
+    /// <summary>The admin connection string, or the application's when no admin one is configured.</summary>
+    public static string ReadAdminConnectionString(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var admin = configuration.GetConnectionString(PostgresAdminConnectionName);
+
+        return string.IsNullOrWhiteSpace(admin)
+            ? configuration.GetConnectionString(PostgresConnectionName) ?? string.Empty
+            : admin;
+    }
 
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
@@ -85,6 +104,10 @@ public static class DependencyInjection
         // than on IAppDbContext, which deliberately exposes no way to run arbitrary SQL.
         services.AddScoped<ILedgerIntegrityQueries, Payments.LedgerIntegrityQueries>();
 
+        // Lets Application tell "a unique index picked another writer" apart from every other
+        // failed save, without Application referencing Npgsql.
+        services.AddSingleton<IUniqueViolationDetector, PostgresUniqueViolationDetector>();
+
         // Files on disk, for local development. MinIO and a cloud adapter arrive with the upload
         // pipeline (#18) behind this same port; nothing above it knows the difference.
         services.AddSingleton<IBlobStorage>(_ => new LocalFileBlobStorage(new LocalBlobStorageOptions
@@ -140,6 +163,17 @@ public static class DependencyInjection
         // Use cases see the database through this port; it is the same scoped context, so the
         // same tenant filters, audit interceptor and write guard all still apply.
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+
+        // The schema owner's connection, for migrations and DDL only (ADR-0006). Keyed, so nothing
+        // resolves it by accident: the application's AppDbContext is the policed one.
+        services.AddSingleton(sp => new AdminDbContextFactory(
+            ReadAdminConnectionString(configuration),
+            sp.GetRequiredService<TimeProvider>()));
+
+        services.AddKeyedScoped<AppDbContext>(AdminDbContextFactory.ServiceKey, (sp, _) =>
+            sp.GetRequiredService<AdminDbContextFactory>().Create(
+                sp.GetRequiredService<ITenantContext>(),
+                sp.GetRequiredService<IPlatformScope>()));
 
         return services;
     }
@@ -265,7 +299,11 @@ public static class DependencyInjection
         services.AddScoped<IAuditContext>(provider => provider.GetRequiredService<AuditContext>());
 
         services.AddScoped<AuditSaveChangesInterceptor>();
-        services.AddScoped<IAuditLogMaintenance, AuditLogPartitionMaintenance>();
+        // Partition maintenance creates and drops tables, which only the schema owner may do, so it
+        // runs on the admin connection rather than the policed application role (ADR-0006).
+        services.AddScoped<IAuditLogMaintenance>(sp => new AuditLogPartitionMaintenance(
+            sp.GetRequiredKeyedService<AppDbContext>(AdminDbContextFactory.ServiceKey),
+            sp.GetRequiredService<IOptions<AuditLogOptions>>()));
     }
 
     private static void TryAddSingletonTimeProvider(this IServiceCollection services)

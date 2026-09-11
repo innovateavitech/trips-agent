@@ -12,6 +12,12 @@ export {
   CardTitle,
 } from './components/card';
 export { Input, type InputProps } from './components/input';
+export {
+  SegmentedControl,
+  segmentVariants,
+  type SegmentedControlProps,
+  type SegmentedOption,
+} from './components/segmented-control';
 export { Select, type SelectProps } from './components/select';
 export { Skeleton, type SkeletonProps } from './components/skeleton';
 export {
@@ -23,6 +29,7 @@ export {
   TableHeader,
   TableRow,
 } from './components/table';
+export { Textarea, type TextareaProps } from './components/textarea';
 
 export { cn } from './lib/cn';
 export { preset as tailwindPreset } from '../tailwind.preset';

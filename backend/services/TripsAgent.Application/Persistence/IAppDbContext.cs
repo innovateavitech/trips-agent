@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Notifications;
@@ -89,6 +90,12 @@ public interface IAppDbContext
     /// own books, which an agency must never see. Permission controls access, not a filter.
     /// </remarks>
     public DbSet<ReconciliationException> ReconciliationExceptions { get; }
+
+    /// <summary>Uploaded files, from the moment a slot is reserved to the moment they are servable.</summary>
+    public DbSet<Asset> Assets { get; }
+
+    /// <summary>The WebP renditions of image assets.</summary>
+    public DbSet<AssetVariant> AssetVariants { get; }
 
     /// <summary>Every message sent to anyone, and what happened to it. Tenant-scoped.</summary>
     public DbSet<Notification> Notifications { get; }

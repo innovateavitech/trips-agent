@@ -127,13 +127,21 @@ public static class DependencyInjection
         services.AddScoped<ITransactionRunner, EfTransactionRunner>();
         services.AddScoped<IDocumentNumberAllocator, DocumentNumberAllocator>();
 
-        // Files on disk, for local development. MinIO and a cloud adapter arrive with the upload
-        // pipeline (#18) behind this same port; nothing above it knows the difference.
-        services.AddSingleton<IBlobStorage>(_ => new LocalFileBlobStorage(new LocalBlobStorageOptions
-        {
-            RootPath = configuration["Storage:LocalRoot"]
-                ?? Path.Combine(Path.GetTempPath(), "tripsagent-storage"),
-        }));
+        // Files on disk, for local development. A cloud adapter arrives behind this same port once
+        // a provider is chosen; nothing above it knows the difference. Registered as itself as well,
+        // because the API's local storage endpoints stand in for the provider and need the concrete
+        // type — and are mapped only when it is the one in use.
+        services.AddSingleton(sp => new LocalBlobUrlSigner(
+            () => sp.GetRequiredService<ITokenHasher>(),
+            sp.GetRequiredService<TimeProvider>()));
+        services.AddSingleton(sp => new LocalFileBlobStorage(
+            new LocalBlobStorageOptions
+            {
+                RootPath = configuration["Storage:LocalRoot"]
+                    ?? Path.Combine(Path.GetTempPath(), "tripsagent-storage"),
+            },
+            sp.GetRequiredService<LocalBlobUrlSigner>()));
+        services.AddSingleton<IBlobStorage>(sp => sp.GetRequiredService<LocalFileBlobStorage>());
 
         // The console owns the page that receives the reset token, so its address is
         // configuration rather than something this assembly can know.

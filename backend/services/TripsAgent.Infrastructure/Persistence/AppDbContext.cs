@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Application.Auditing;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Documents;
@@ -212,6 +213,12 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <summary>The evidence trail behind any payment reversal.</summary>
     public DbSet<SupplierStatusPoll> SupplierStatusPolls => Set<SupplierStatusPoll>();
 
+    /// <summary>Uploaded files, and where each is in the scan-and-process pipeline.</summary>
+    public DbSet<Asset> Assets => Set<Asset>();
+
+    /// <summary>The WebP renditions of image assets.</summary>
+    public DbSet<AssetVariant> AssetVariants => Set<AssetVariant>();
+
     /// <summary>Every notification queued, and what happened to it. Tenant-scoped.</summary>
     public DbSet<Notification> Notifications => Set<Notification>();
 
@@ -392,6 +399,10 @@ public class AppDbContext : DbContext, IAppDbContext
 
         // Money is a long in the database, always. See MoneyConverter for why.
         Conventions.MoneyConventions.Apply(configurationBuilder);
+
+        // Instants are DateTimeOffset, always. A DateTime here fails the model build by name,
+        // rather than reaching a column that cannot say which zone it meant.
+        Conventions.UtcTimestampConvention.Apply(configurationBuilder);
     }
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)

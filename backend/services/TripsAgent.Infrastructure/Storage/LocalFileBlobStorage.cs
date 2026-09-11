@@ -17,10 +17,14 @@ public sealed class LocalBlobStorageOptions
 /// </summary>
 /// <remarks>
 /// <para>
-/// Deliberately the simplest thing that satisfies <see cref="IBlobStorage"/>. It exists so KYB
-/// uploads work on a laptop with nothing else running — no MinIO, no cloud account, no
-/// credentials. The MinIO and cloud adapters arrive with the upload pipeline (#18) behind the
-/// same interface.
+/// Deliberately the simplest thing that satisfies <see cref="IBlobStorage"/>. It exists so uploads
+/// work on a laptop with nothing else running — no MinIO, no cloud account, no credentials.
+/// </para>
+/// <para>
+/// A directory cannot sign a URL, so presigned requests are signed by
+/// <see cref="LocalBlobUrlSigner"/> and answered by the API's local storage endpoints, which do
+/// what S3 would: check the signature, then read or write the object. A real provider's adapter
+/// signs its own URLs and those endpoints go unused.
 /// </para>
 /// <para>
 /// Not suitable for production: files sit on one machine's disk, so a second API instance cannot
@@ -30,12 +34,19 @@ public sealed class LocalBlobStorageOptions
 public sealed class LocalFileBlobStorage : IBlobStorage
 {
     private readonly string _root;
+    private readonly LocalBlobUrlSigner? _signer;
 
-    public LocalFileBlobStorage(LocalBlobStorageOptions options)
+    /// <param name="options">Where the files go.</param>
+    /// <param name="signer">
+    /// Signs upload and download URLs. Optional so a test that only stores and reads can build
+    /// this with nothing else; asking such an instance for a URL fails loudly.
+    /// </param>
+    public LocalFileBlobStorage(LocalBlobStorageOptions options, LocalBlobUrlSigner? signer = null)
     {
         ArgumentNullException.ThrowIfNull(options);
 
         _root = Path.GetFullPath(options.RootPath);
+        _signer = signer;
         Directory.CreateDirectory(_root);
     }
 
@@ -85,6 +96,45 @@ public sealed class LocalFileBlobStorage : IBlobStorage
     public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default) =>
         Task.FromResult(File.Exists(ResolvePath(key)));
 
+    public Task<long?> GetSizeAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var file = new FileInfo(ResolvePath(key));
+
+        return Task.FromResult(file.Exists ? file.Length : (long?)null);
+    }
+
+    public Task<PresignedUpload> CreateUploadUrlAsync(
+        string key,
+        string contentType,
+        long maxSizeBytes,
+        DateTimeOffset expiresAt,
+        CancellationToken cancellationToken = default)
+    {
+        // Resolved now, so a key that would escape the root is refused when the URL is made rather
+        // than when somebody uses it.
+        ResolvePath(key);
+
+        var signer = RequireSigner();
+
+        return Task.FromResult(new PresignedUpload(
+            signer.UploadPath(key, contentType, maxSizeBytes, expiresAt),
+            "PUT",
+            new Dictionary<string, string> { ["Content-Type"] = contentType },
+            maxSizeBytes,
+            expiresAt));
+    }
+
+    public Task<SignedDownload> CreateDownloadUrlAsync(
+        string key,
+        string contentType,
+        DateTimeOffset expiresAt,
+        CancellationToken cancellationToken = default)
+    {
+        ResolvePath(key);
+
+        return Task.FromResult(new SignedDownload(RequireSigner().DownloadPath(key, contentType, expiresAt), expiresAt));
+    }
+
     public Task DeleteAsync(string key, CancellationToken cancellationToken = default)
     {
         var path = ResolvePath(key);
@@ -96,6 +146,11 @@ public sealed class LocalFileBlobStorage : IBlobStorage
 
         return Task.CompletedTask;
     }
+
+    private LocalBlobUrlSigner RequireSigner() =>
+        _signer ?? throw new InvalidOperationException(
+            "This LocalFileBlobStorage was built without a LocalBlobUrlSigner, so it cannot sign URLs. "
+            + "AddInfrastructure registers one; construct it with a signer anywhere URLs are needed.");
 
     /// <summary>
     /// Turns a storage key into a path inside the root, refusing anything that would escape it.

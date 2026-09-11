@@ -51,7 +51,9 @@ printf '\n%s\n' "${BOLD}Design token check${NC}"
 hits=""
 while IFS= read -r f; do
   is_allowed "$f" && continue
-  found=$(grep -nE '#[0-9a-fA-F]{3,8}\b' "$f" 2>/dev/null | grep -vE '(^\s*//|^\s*\*|#[0-9a-fA-F]*[g-zG-Z])' || true)
+  # The second grep drops comments and false positives such as `#region`. It has to allow for
+  # the `12:` prefix `grep -n` adds, or the anchors can never match a commented-out colour.
+  found=$(grep -nE '#[0-9a-fA-F]{3,8}\b' "$f" 2>/dev/null | grep -vE '^[0-9]+:[[:space:]]*(//|\*)|#[0-9a-fA-F]*[g-zG-Z]' || true)
   [ -n "$found" ] && hits+="  ${f}\n$(echo "$found" | sed 's/^/      /')\n"
 done < <(sources)
 if [ -n "$hits" ]; then

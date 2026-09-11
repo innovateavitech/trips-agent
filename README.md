@@ -419,7 +419,9 @@ Still stuck after 30 minutes? **Ask.** That is not failure, it is the correct mo
 
 ## 8. Running things
 
-> Available once the scaffold lands.
+> Walking somebody through the product rather than developing on it?
+> [`docs/DEMO.md`](docs/DEMO.md) is the runbook: a click-path from an unverified agency to a
+> real Paystack test-mode top-up, and an honest list of which screens are still mocked.
 
 Commands are listed with the directory they run from. `dotnet` lives in `backend/`,
 `pnpm` lives in `frontend/`, and `scripts/` works from anywhere.
@@ -430,6 +432,7 @@ Commands are listed with the directory they run from. `dotnet` lives in `backend
 | API only | `backend/` | `dotnet watch --project services/TripsAgent.Api` |
 | Background worker | `backend/` | `dotnet watch --project services/TripsAgent.Worker` |
 | Agent console only | `frontend/` | `pnpm --filter agent-console dev` |
+| Admin console only | `frontend/` | `pnpm --filter admin-console dev` |
 | Storefront only | `frontend/` | `pnpm --filter storefront dev` |
 | Backend tests | `backend/` | `dotnet test` |
 | Front-end tests | `frontend/` | `pnpm test` |
@@ -442,11 +445,11 @@ Commands are listed with the directory they run from. `dotnet` lives in `backend
 
 | Service | URL |
 |---|---|
-| API + Swagger | <http://localhost:5000/swagger> |
+| API + Swagger | <http://localhost:5002/swagger> |
 | Agent console | <http://localhost:5173> |
 | Storefront | <http://localhost:3000> |
 | Admin console | <http://localhost:5174> |
-| Hangfire dashboard *(watch jobs run)* | <http://localhost:5000/hangfire> |
+| Hangfire dashboard *(watch jobs run)* | <http://localhost:5002/hangfire> |
 | Mailpit *(all outbound email lands here)* | <http://localhost:8025> |
 | RabbitMQ management | <http://localhost:15672> |
 
@@ -472,23 +475,33 @@ See [ADR-0004](docs/adr/0004-masstransit-v8-and-hangfire.md).
 
 ## 9. Test accounts and seed data
 
-> Populated when seeding is built. No real credentials ever go in this file — secrets live in
-> `.env`, which is git-ignored.
+`dotnet run --project services/TripsAgent.Api -- seed` creates them, and refuses to run if
+migrations are outstanding. It is local-only and never part of a deploy.
 
-| Role | Email | Password |
+Every seeded account shares the password **`Password123`** — deliberately obvious, because it
+only ever exists on a developer's machine. Real secrets live in `.env`, which is git-ignored.
+
+| Role | Sign in at | Email |
 |---|---|---|
-| Trips Super Admin | `admin@trips.test` | *see `.env.example`* |
-| Verified Agent | `agent@demo.test` | *see `.env.example`* |
-| Sub-Agent | `subagent@demo.test` | *see `.env.example`* |
-| Pending-verification Agent | `pending@demo.test` | *see `.env.example`* |
+| Trips Super Admin | :5174 | `admin@tripsagent.example.com` |
+| Trips Operations | :5174 | `ops@tripsagent.example.com` |
+| Verified Agent | :5173 | `owner@lagostravel.example.com` |
+| Sub-Agent | :5173 | `owner@ikejabranch.example.com` |
+| Pending-verification Agent | :5173 | `owner@pendingtravel.example.com` |
 
-Seeded data includes a verified agency with a published storefront on
-`demo.localhost:3000`, a funded wallet, two tour products, one group departure, and a
-handful of customers and leads — enough to exercise every screen without clicking through
-setup each time.
+The addresses are subdomains of `example.com`, reserved by RFC 2606 so mail to them can never
+reach a real person. They are not `.test`, which would be equally safe but which **Paystack's
+API rejects** as malformed — and a wallet top-up sends the signed-in user's email.
 
-**Sandboxes:** Trips Africa staging (`api.staging.trips.ng`) and Paystack test mode. Ask the
-team lead for keys. **Never commit them.**
+The seeder stops if its principal agency already exists, so it is safe to re-run but will not
+retrofit changes. To pick up new seed data, recreate the database and migrate again.
+
+Seeded data is a principal agency, a sub-agent beneath it (so hierarchy queries have something
+to return) and a third agency still awaiting KYB — enough to exercise the onboarding, review and
+wallet screens without clicking through setup each time.
+
+**Sandboxes:** Trips Africa staging and Paystack test mode. Ask the team lead for keys.
+**Never commit them.**
 
 ---
 

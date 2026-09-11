@@ -60,6 +60,18 @@ export function LoadingState({ label = 'Loading', size, className }: LoadingStat
 
 export interface EmptyStateProps {
   title: string;
+  /**
+   * Renders the title as a heading at this level instead of as plain text.
+   *
+   * Pass it when the empty state IS the page — a route with nothing to show
+   * yet, or "we could not find that page". Those need a real heading, or the
+   * page has none at all and a screen reader has nothing to navigate by.
+   *
+   * Leave it off inside a card or a table body, which is the common case: the
+   * surrounding section already has a heading, and adding another one there
+   * puts a rung in the outline that does not describe the page's structure.
+   */
+  headingLevel?: 1 | 2 | 3;
   /** What will appear here, and how to make it appear. Never just "Nothing here". */
   children?: ReactNode;
   /** An icon, drawn at 20px. Optional — most empty states read fine without one. */
@@ -74,7 +86,19 @@ export interface EmptyStateProps {
  * An empty list is an invitation to act, not a dead end. Say what will live
  * here and offer the one action that puts it there.
  */
-export function EmptyState({ title, children, icon, action, size, className }: EmptyStateProps) {
+export function EmptyState({
+  title,
+  headingLevel,
+  children,
+  icon,
+  action,
+  size,
+  className,
+}: EmptyStateProps) {
+  // Same classes either way: the choice is about the document outline, not the
+  // look, and an empty state whose title suddenly grew would be a regression.
+  const Title = headingLevel ? (`h${headingLevel}` as const) : 'p';
+
   return (
     <div className={cn(stateVariants({ size }), className)}>
       {icon ? (
@@ -82,7 +106,7 @@ export function EmptyState({ title, children, icon, action, size, className }: E
           {icon}
         </div>
       ) : null}
-      <p className="text-sm font-medium text-foreground">{title}</p>
+      <Title className="text-sm font-medium text-foreground">{title}</Title>
       {children ? <div className="max-w-sm text-sm text-muted-foreground">{children}</div> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>

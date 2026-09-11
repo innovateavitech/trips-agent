@@ -1,0 +1,126 @@
+# Dependabot opens pull requests that keep dependencies current (issue #108).
+#
+# Three ecosystems, and the third matters as much as the first two: a GitHub Action runs inside
+# CI with the repository's token, so a compromised or abandoned action is a supply-chain path
+# straight into the pipeline that builds what we deploy.
+#
+# These are *version* updates, on a schedule. *Security* updates — a pull request opened the
+# moment an advisory affects us — are a repository setting, not this file; see
+# docs/BRANCH_PROTECTION.md Step 3.
+#
+# Pull request titles
+# -------------------
+# CI checks every pull request title against .githooks/commit-msg, which wants
+# `type(scope): subject` under 72 characters. The prefix below makes the type and scope right.
+# Updates are grouped so the title reads "chore(deps): bump the nuget-minor group in /backend with
+# 4 updates" rather than one long package name each. A title that is still too long (a single
+# major update of a long-named package) fails commitlint: edit the title, nothing else.
+#
+# Review a Dependabot pull request like any other. Major versions are grouped apart from minor and
+# patch so a breaking upgrade never holds back the safe ones.
+
+version: 2
+
+updates:
+  # Majors are deliberately NOT grouped. A bundle of majors cannot be judged or reverted piece by
+  # piece — the first one Dependabot opened (#145) carried fourteen and broke the build. Each major
+  # that is not ignored below now arrives alone.
+  - package-ecosystem: nuget
+    directory: /backend # Central Package Management: every version is in Directory.Packages.props
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Africa/Lagos
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+    labels: [dependencies]
+    ignore:
+      # Roslyn moves by hand, never by Dependabot, for two independent reasons:
+      #  1. Microsoft.EntityFrameworkCore.Design depends on an EXACT Roslyn version, and central
+      #     package management applies our pin transitively — so any bump is a restore-time
+      #     version conflict (NU1107 on Microsoft.CodeAnalysis.Common). That is what #144 hit.
+      #  2. Our analyzers (TRIPS001, TRIPS002) must not be built against a Roslyn newer than the
+      #     compiler in the .NET SDK that loads them.
+      # Update these deliberately, together with EF Core and the SDK.
+      - dependency-name: 'Microsoft.CodeAnalysis*'
+      # Majors that change the licence, not just the API. MassTransit 9 and FluentAssertions 8 are
+      # commercially licensed — ADR-0004 records why this project is on MassTransit 8. Moving to
+      # either is a business decision, never a Dependabot merge.
+      - dependency-name: 'MassTransit*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'FluentAssertions'
+        update-types: ['version-update:semver-major']
+    groups:
+      nuget-minor:
+        update-types: [minor, patch]
+
+  # "npm" is Dependabot's name for the JavaScript ecosystem; it reads pnpm-lock.yaml and updates it
+  # with pnpm.
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Africa/Lagos
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+    labels: [dependencies]
+    ignore:
+      # The toolchain moves by deliberate migration, never by Dependabot. A major here rewrites
+      # configuration, not just a version number: Tailwind 4 replaces the JavaScript preset the
+      # design system is built on with CSS-first config, TypeScript 7 is a new compiler, and Vite,
+      # Vitest, ESLint and the React plugin move in lockstep. #145 proposed all of them at once and
+      # the build did not survive it. Minor and patch updates still arrive, grouped.
+      - dependency-name: 'tailwindcss'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'vite'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'vitest'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@vitest/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@eslint/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'typescript-eslint'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@vitejs/plugin-react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react-dom'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/react-dom'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react-router-dom'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'next'
+        update-types: ['version-update:semver-major']
+    groups:
+      npm-minor:
+        update-types: [minor, patch]
+
+  # "/" means .github/workflows/. Every `uses:` line in every workflow is covered.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Africa/Lagos
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+    labels: [dependencies]
+    groups:
+      actions:
+        patterns: ['*']

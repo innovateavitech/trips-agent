@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
 using TripsAgent.Application.Payments;
@@ -43,6 +44,9 @@ public static class DependencyInjection
         services.AddScoped<IPaymentWebhookProcessor>(sp => sp.GetRequiredService<PaymentWebhookHandler>());
 
         services.AddScoped<ILedgerIntegrityAudit, LedgerIntegrityAudit>();
+
+        services.AddScoped<DocumentIssuer>();
+        services.AddScoped<ConfigureDocumentNumberingHandler>();
 
         services.AddScoped<PricingService>();
         services.AddScoped<MarkupRuleService>();

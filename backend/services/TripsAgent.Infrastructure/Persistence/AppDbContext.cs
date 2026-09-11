@@ -6,6 +6,7 @@ using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
+using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
@@ -159,6 +160,16 @@ public class AppDbContext : DbContext, IAppDbContext
 
     /// <summary>Discrepancies the nightly integrity audit found. Not tenant-scoped; see IAppDbContext.</summary>
     public DbSet<ReconciliationException> ReconciliationExceptions => Set<ReconciliationException>();
+
+    public DbSet<DocumentNumberFormat> DocumentNumberFormats => Set<DocumentNumberFormat>();
+
+    public DbSet<GeneratedDocument> GeneratedDocuments => Set<GeneratedDocument>();
+
+    /// <summary>
+    /// Read-only in practice: counters are changed only by <c>DocumentNumberAllocator</c>'s locking
+    /// upsert, never by loading a row and saving it back. Deliberately absent from IAppDbContext.
+    /// </summary>
+    public DbSet<DocumentNumberSequence> DocumentNumberSequences => Set<DocumentNumberSequence>();
 
     /// <inheritdoc />
     public DbSet<MarkupRule> MarkupRules => Set<MarkupRule>();

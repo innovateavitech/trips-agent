@@ -1,8 +1,11 @@
 using Hangfire;
+using TripsAgent.Application;
 using TripsAgent.Infrastructure;
 using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Messaging;
+using TripsAgent.Infrastructure.Payments;
 using TripsAgent.Infrastructure.Scheduling;
+using TripsAgent.Integrations.Paystack;
 
 // The Worker is a separate process from the API on purpose. Both talk to the same PostgreSQL and
 // the same RabbitMQ, but they are scaled on different signals: the API on request rate, the Worker
@@ -15,7 +18,15 @@ using TripsAgent.Infrastructure.Scheduling;
 //   Hangfire    — recurring jobs on a clock.
 var builder = Host.CreateApplicationBuilder(args);
 
+// The use cases, because Hangfire resolves them by interface when a job runs — the webhook
+// drain reaches IPaymentWebhookProcessor, which is one of these.
+builder.Services.AddApplication();
+
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// And the gateway those handlers call. The Worker verifies payments the same way the API does:
+// by asking Paystack, never by trusting a payload.
+builder.Services.AddPaystack(builder.Configuration);
 
 // Consumers are registered through the callback. There are none yet — the queues are declared and
 // sit empty until the checkout saga (issue #35) and the supplier poller (issue #38) arrive.
@@ -49,6 +60,12 @@ var host = builder.Build();
 // so this is safe on every start: a redeploy updates a schedule in place rather than duplicating it.
 // Resolving the manager connects to PostgreSQL; if that fails the Worker stops, and the orchestrator
 // restarts it — the same fail-fast rule the consumers and the job server follow.
-AuditLogMaintenanceSchedule.Register(host.Services.GetRequiredService<IRecurringJobManager>());
+var recurringJobs = host.Services.GetRequiredService<IRecurringJobManager>();
+
+AuditLogMaintenanceSchedule.Register(recurringJobs);
+
+// The backstop for a webhook that was recorded but never processed. The receiver enqueues each
+// event directly, so this normally finds nothing — which is the point of having it.
+PaymentWebhookDrainSchedule.Register(recurringJobs);
 
 await host.RunAsync();

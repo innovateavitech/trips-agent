@@ -31,6 +31,7 @@
     <ProjectReference Include="..\..\services\TripsAgent.Domain\TripsAgent.Domain.csproj" />
     <ProjectReference Include="..\..\services\TripsAgent.Application\TripsAgent.Application.csproj" />
     <ProjectReference Include="..\..\services\TripsAgent.Infrastructure\TripsAgent.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\services\TripsAgent.Integrations.Paystack\TripsAgent.Integrations.Paystack.csproj" />
   </ItemGroup>
 
 </Project>

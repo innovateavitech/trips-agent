@@ -3,20 +3,37 @@ using TripsAgent.Domain.Common;
 
 namespace TripsAgent.Domain.Payments;
 
-/// <summary>Which side of the books an entry falls on.</summary>
+/// <summary>
+/// Which side of the books an entry falls on.
+/// </summary>
+/// <remarks>
+/// Debit and credit are not "in" and "out" — that only holds for asset accounts, and reading them
+/// that way is how a wallet balance ends up negative. In double-entry:
+///
+/// <list type="bullet">
+///   <item>a <b>debit</b> increases an asset or expense, and decreases a liability or revenue</item>
+///   <item>a <b>credit</b> increases a liability or revenue, and decreases an asset or expense</item>
+/// </list>
+///
+/// An agency's wallet is a <i>liability</i> — money we hold on their behalf and owe back — so a
+/// top-up <b>credits</b> the wallet and <b>debits</b> gateway clearing, the asset the money
+/// arrived into. <see cref="LedgerAccountTypeExtensions.IsDebitNormal"/> records which way round
+/// each account type runs, so nothing has to remember.
+/// </remarks>
 public enum LedgerDirection
 {
-    /// <summary>Value into this account.</summary>
     Debit = 1,
 
-    /// <summary>Value out of this account.</summary>
     Credit = 2,
 }
 
 /// <summary>The kinds of account money moves between.</summary>
 public enum LedgerAccountType
 {
-    /// <summary>An agency's prepaid balance. One per agency per currency.</summary>
+    /// <summary>
+    /// An agency's prepaid balance. A <i>liability</i> — we hold the money and owe it back — so
+    /// credits increase it.
+    /// </summary>
     AgencyWallet = 1,
 
     /// <summary>What Trips has earned — markup, fees, commission.</summary>
@@ -28,7 +45,10 @@ public enum LedgerAccountType
     /// <summary>What a traveller owes an agency.</summary>
     CustomerReceivable = 4,
 
-    /// <summary>Money in flight at the payment gateway, not yet settled.</summary>
+    /// <summary>
+    /// Money in flight at the payment gateway, not yet settled. An <i>asset</i>, so debits
+    /// increase it.
+    /// </summary>
     GatewayClearing = 5,
 
     /// <summary>VAT collected and owed onward.</summary>
@@ -36,6 +56,45 @@ public enum LedgerAccountType
 
     /// <summary>Money returned.</summary>
     Refunds = 7,
+}
+
+/// <summary>
+/// Which direction increases each kind of account.
+/// </summary>
+/// <remarks>
+/// Encoded once, because getting it backwards for a single account type produces balances that
+/// are correct in magnitude and wrong in sign — which looks like a data problem rather than a
+/// logic one and is miserable to trace.
+/// </remarks>
+public static class LedgerAccountTypeExtensions
+{
+    /// <summary>
+    /// True for accounts a debit increases: assets and expenses.
+    /// </summary>
+    public static bool IsDebitNormal(this LedgerAccountType accountType) => accountType switch
+    {
+        // Assets: money owed to us, or money in flight towards us.
+        LedgerAccountType.CustomerReceivable => true,
+        LedgerAccountType.GatewayClearing => true,
+
+        // An expense: money going back out.
+        LedgerAccountType.Refunds => true,
+
+        // Liabilities and revenue: money we hold for someone, owe onward, or have earned.
+        LedgerAccountType.AgencyWallet => false,
+        LedgerAccountType.PlatformRevenue => false,
+        LedgerAccountType.SupplierPayable => false,
+        LedgerAccountType.TaxPayable => false,
+
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(accountType), accountType, "No normal balance defined for this account type."),
+    };
+
+    /// <summary>
+    /// The balance of an account given its totals, signed so that "more money" is always positive.
+    /// </summary>
+    public static Money BalanceOf(this LedgerAccountType accountType, Money debits, Money credits) =>
+        accountType.IsDebitNormal() ? debits - credits : credits - debits;
 }
 
 /// <summary>

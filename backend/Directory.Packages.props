@@ -81,6 +81,11 @@
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Resilience">
+    <!-- Timeouts, retries and a circuit breaker for outbound gateway calls. -->
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Email">
     <!-- Plain SMTP, so it talks to Mailpit locally and to any SMTP relay in production without
          tying us to a cloud provider's SDK (CLAUDE.md: "Cloud is not chosen yet"). -->

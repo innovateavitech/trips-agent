@@ -12,7 +12,7 @@ using TripsAgent.Infrastructure.Persistence;
 namespace TripsAgent.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260911090914_AddNotifications")]
+    [Migration("20260911091428_AddNotifications")]
     partial class AddNotifications
     {
         /// <inheritdoc />
@@ -26,6 +26,202 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "ltree");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("TripsAgent.Domain.Assets.Asset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<string>("Checksum")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("checksum");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("file_name");
+
+                    b.Property<int?>("Height")
+                        .HasColumnType("integer")
+                        .HasColumnName("height");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_at");
+
+                    b.Property<DateTimeOffset?>("ProcessingClaimedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processing_claimed_until");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("purpose");
+
+                    b.Property<string>("ScanSignature")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("scan_signature");
+
+                    b.Property<string>("ScanStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("scan_status");
+
+                    b.Property<DateTimeOffset?>("ScannedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scanned_at");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTimeOffset>("UploadExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("upload_expires_at");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.Property<int?>("Width")
+                        .HasColumnType("integer")
+                        .HasColumnName("width");
+
+                    b.HasKey("Id")
+                        .HasName("pk_assets");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_assets_storage_key");
+
+                    b.HasIndex("AgencyId", "Status")
+                        .HasDatabaseName("ix_assets_agency_id_status");
+
+                    b.HasIndex("Status", "UpdatedAt")
+                        .HasDatabaseName("ix_assets_status_updated_at");
+
+                    b.ToTable("assets", "platform", t =>
+                        {
+                            t.HasCheckConstraint("ck_assets_dimensions", "(width IS NULL OR width > 0) AND (height IS NULL OR height > 0)");
+
+                            t.HasCheckConstraint("ck_assets_ready_only_when_clean", "status <> 'Ready' OR scan_status = 'Clean'");
+
+                            t.HasCheckConstraint("ck_assets_size_bytes", "size_bytes >= 0 AND size_bytes <= 20971520");
+                        });
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Assets.AssetVariant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Height")
+                        .HasColumnType("integer")
+                        .HasColumnName("height");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("integer")
+                        .HasColumnName("width");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asset_variants");
+
+                    b.HasIndex("AssetId")
+                        .HasDatabaseName("ix_asset_variants_asset_id");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_asset_variants_storage_key");
+
+                    b.HasIndex("AgencyId", "AssetId", "Kind")
+                        .IsUnique()
+                        .HasDatabaseName("ix_asset_variants_agency_id_asset_id_kind");
+
+                    b.ToTable("asset_variants", "platform", t =>
+                        {
+                            t.HasCheckConstraint("ck_asset_variants_positive", "size_bytes > 0 AND width > 0 AND height > 0");
+                        });
+                });
 
             modelBuilder.Entity("TripsAgent.Domain.Auditing.AuditLogEntry", b =>
                 {
@@ -3371,6 +3567,33 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_outbox_messages_status", "status IN ('pending', 'dispatched', 'failed')");
                         });
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Assets.Asset", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_assets_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Assets.AssetVariant", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_variants_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_variants_assets_asset_id");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Documents.DocumentNumberFormat", b =>

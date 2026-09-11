@@ -48,6 +48,26 @@ public class RowLevelSecurityTests
         bypass.Should().BeFalse("BYPASSRLS skips every policy");
     }
 
+    [Fact]
+    public async Task The_application_role_owns_none_of_the_tables_it_is_policed_on()
+    {
+        await using var world = await WorldAsync();
+
+        // An owner can ALTER TABLE ... DISABLE ROW LEVEL SECURITY on its own table, and without FORCE
+        // is exempt from the policies anyway. So the role the application runs as must own nothing it
+        // is policed on — otherwise the backstop is one statement away from switched off.
+        var owned = await world.AdminListAsync(
+            """
+            SELECT n.nspname || '.' || c.relname
+              FROM pg_class c
+              JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE c.relrowsecurity
+               AND pg_get_userbyid(c.relowner) = 'tripsagent_app'
+            """);
+
+        owned.Should().BeEmpty("the application role must not own a table row-level security polices");
+    }
+
     // ------------------------------------------------------------------ reads
 
     [Fact]

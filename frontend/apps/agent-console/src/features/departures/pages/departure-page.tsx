@@ -55,7 +55,7 @@ const ACTION_COPY: Record<
   },
   cancel: {
     title: 'Cancel this departure?',
-    body: 'It will not run. Nobody has paid for it, so there is nothing to refund.',
+    body: 'It will not run, and it comes off your storefront. Nobody who paid loses out: each of their bookings goes to your resolution queue as a full refund.',
     confirm: 'Cancel departure',
     destructive: true,
   },
@@ -224,8 +224,8 @@ function DepartureView({ departure }: { departure: Departure }) {
             <DialogDescription>{copy.body}</DialogDescription>
             {confirming === 'cancel' && departure.capacityConfirmed > 0 ? (
               <Alert tone="warning" title={`${departure.capacityConfirmed} travellers have paid`}>
-                What happens to their deposits is still an open question with the client, so this
-                will be refused. Close bookings instead to stop new ones.
+                Each of their bookings goes to your resolution queue as a full refund, back to where
+                the money came from.
               </Alert>
             ) : null}
             <DialogFooter>

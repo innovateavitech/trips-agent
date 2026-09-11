@@ -88,12 +88,10 @@ describe('the departures stand-in', () => {
     await refused(api.saveDeparture(first.id, { ...first, capacityTotal: 5 }, first.version), 409);
   });
 
-  it('will not cancel a departure travellers have paid for, but closes and reopens it', async () => {
+  it('closes and reopens a departure, and cancels one travellers have paid for', async () => {
     const zanzibar = await settle(api.listDepartures({ productId: SEED.zanzibar }));
     const guaranteed = zanzibar.find((departure) => departure.status === 'Guaranteed');
     if (!guaranteed) throw new Error('seed missing');
-
-    await refused(api.act(guaranteed.id, 'cancel'), 409);
 
     const closed = await settle(api.act(guaranteed.id, 'close'));
     expect(closed.status).toBe('Closed');
@@ -101,6 +99,10 @@ describe('the departures stand-in', () => {
     // Reopened, it goes back to the status its seats give it.
     const reopened = await settle(api.act(guaranteed.id, 'reopen'));
     expect(reopened.status).toBe('Guaranteed');
+
+    // Decision 12: paid travellers are refunded through the resolution queue, so it can be cancelled.
+    const cancelled = await settle(api.act(guaranteed.id, 'cancel'));
+    expect(cancelled.status).toBe('Cancelled');
   });
 
   it('cancels a departure nobody has paid for', async () => {

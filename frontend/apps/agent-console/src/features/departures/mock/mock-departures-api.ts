@@ -19,8 +19,8 @@ import {
  *
  * The departure screens' stand-in. It keeps the contract's server rules:
  * versions guard against two people overwriting each other, capacity never
- * drops below seats already taken, and a departure with confirmed travellers
- * cannot be cancelled until open question 12 says what happens to deposits.
+ * drops below seats already taken, and cancelling a departure refunds everyone
+ * who paid (decision 12 in the build plan).
  */
 
 const LATENCY_MS = 350;
@@ -163,13 +163,8 @@ export const mockDeparturesApi: DeparturesApi = {
         throw new ApiError(409, 'This departure is not closed.');
       putDeparture({ ...departure, manualState: null, version: departure.version + 1 });
     } else {
-      if (departure.capacityConfirmed > 0) {
-        throw new ApiError(
-          409,
-          `${departure.capacityConfirmed} travellers have paid for this departure.`,
-          'What happens to their deposits is still an open question with the client (question 12), so it cannot be cancelled here yet. Close it to stop new bookings.',
-        );
-      }
+      // Decision 12: everyone who paid gets a full refund. The real API puts each paid booking in
+      // the resolution queue as a refund; the stand-in only records the cancellation.
       putDeparture({ ...departure, manualState: 'Cancelled', version: departure.version + 1 });
     }
 

@@ -9,7 +9,7 @@ import { createAppRouter } from './app/router';
 import { AUTH_MODE } from './app/settings';
 import { createHttpAuthApi } from './auth/http-auth-api';
 import { mockAuthApi } from './auth/mock/mock-auth-api';
-import { mockCatalogApi } from './features/catalog';
+import { httpCatalogApi, mockCatalogApi } from './features/catalog';
 import { mockCrmApi } from './features/crm';
 import { mockDashboardApi } from './features/dashboard';
 import { mockDeparturesApi } from './features/departures';
@@ -29,7 +29,7 @@ import './index.css';
  *   search     mock until the supplier search endpoints exist (#33, #34)
  *   bookingFlow  mock until the checkout saga exists (#42)
  *   bookings     mock until the orders endpoints exist (#42, #44)
- *   catalog    mock until the product API exists (issue 161)
+ *   catalog    real `/api/v1/catalog`; the stand-in only in demo mode
  *   departures mock until the departures API exists (build plan F6)
  *   crm        mock until the CRM API exists (build plan F7)
  */
@@ -40,7 +40,7 @@ const adapters: AppAdapters = {
   search: mockSearchApi,
   bookingFlow: mockBookingFlowApi,
   bookings: mockBookingsApi,
-  catalog: mockCatalogApi,
+  catalog: AUTH_MODE === 'mock' ? mockCatalogApi : httpCatalogApi,
   departures: mockDeparturesApi,
   crm: mockCrmApi,
 };

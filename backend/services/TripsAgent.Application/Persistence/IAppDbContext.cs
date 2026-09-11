@@ -4,6 +4,7 @@ using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Notifications;
+using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Pricing;
@@ -114,6 +115,24 @@ public interface IAppDbContext
 
     /// <summary>Prices as they were worked out, each naming the rule that decided its markup.</summary>
     public DbSet<PriceQuote> PriceQuotes { get; }
+
+    /// <summary>What each agency sold, with the totals as they were at the moment of sale.</summary>
+    public DbSet<Order> Orders { get; }
+
+    /// <summary>The things bought, each carrying the price it was bought at.</summary>
+    public DbSet<OrderLine> OrderLines { get; }
+
+    /// <summary>Who travels on each line. Passport numbers are ciphertext.</summary>
+    public DbSet<OrderTraveller> OrderTravellers { get; }
+
+    /// <summary>Every status an order has had. Append-only — the grants withhold UPDATE.</summary>
+    public DbSet<OrderStatusHistory> OrderStatusHistory { get; }
+
+    /// <summary>Open carts. The prices in them are indicative, not frozen.</summary>
+    public DbSet<Cart> Carts { get; }
+
+    /// <summary>What is in those carts.</summary>
+    public DbSet<CartItem> CartItems { get; }
 
     /// <summary>
     /// What this context is about to write.

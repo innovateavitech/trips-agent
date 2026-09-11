@@ -115,6 +115,7 @@ public sealed partial class DocumentNumberFormat : Entity, IAuditableEntity, ITe
             DocumentType.Voucher => $"VCH-{settings.BookingReferencePrefix}",
             DocumentType.Itinerary => $"ITN-{settings.BookingReferencePrefix}",
             DocumentType.Quote => $"QUO-{settings.BookingReferencePrefix}",
+            DocumentType.Order => $"ORD-{settings.BookingReferencePrefix}",
             _ => throw new ArgumentOutOfRangeException(nameof(documentType), documentType, "Unknown document type."),
         };
 

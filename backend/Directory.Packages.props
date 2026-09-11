@@ -84,6 +84,9 @@
   <ItemGroup Label="Resilience">
     <!-- Timeouts, retries and a circuit breaker for outbound gateway calls. -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
+    <!-- IHttpClientFactory, for the supplier client registration in Application. Deliberately
+         nothing from the resilience line: supplier clients must never retry (ADR-0003). -->
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.12" />
   </ItemGroup>
 
   <ItemGroup Label="Caching">

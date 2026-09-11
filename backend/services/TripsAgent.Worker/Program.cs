@@ -6,6 +6,7 @@ using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Payments;
 using TripsAgent.Infrastructure.Scheduling;
+using TripsAgent.Infrastructure.Suppliers;
 using TripsAgent.Integrations.Paystack;
 
 // The Worker is a separate process from the API on purpose. Both talk to the same PostgreSQL and
@@ -78,6 +79,10 @@ PaymentWebhookDrainSchedule.Register(recurringJobs);
 // The nightly proof that the books balance. Everything it looks for should be impossible, which
 // is precisely why it is checked — an unverified control and a broken one look identical.
 LedgerIntegrityAuditSchedule.Register(recurringJobs);
+
+// Keeps the supplier call log's monthly partitions ahead of the calendar. Without it every supplier
+// call fails to record once the prepared months run out.
+SupplierApiCallMaintenanceSchedule.Register(recurringJobs);
 
 // Expires uploads that never arrived and re-enqueues processing that was lost. The complete step
 // enqueues each asset directly, so like the webhook drain this normally finds nothing.

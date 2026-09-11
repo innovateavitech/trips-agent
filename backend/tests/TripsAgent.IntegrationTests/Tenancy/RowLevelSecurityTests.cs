@@ -315,7 +315,9 @@ public class RowLevelSecurityTests
               JOIN pg_namespace n ON n.oid = c.relnamespace
              WHERE c.relkind IN ('r', 'p')
                AND NOT c.relispartition
-               AND n.nspname IN ('tenancy', 'identity', 'payments', 'platform', 'pricing')
+               -- No schema list. The agency_id test below already excludes every system schema, so
+               -- a list could only ever do harm: each new schema someone forgot to add went silently
+               -- unchecked (documents did). Every table anywhere with an agency_id is in scope.
                AND EXISTS (SELECT 1 FROM information_schema.columns col
                             WHERE col.table_schema = n.nspname
                               AND col.table_name = c.relname

@@ -7,6 +7,7 @@ using TripsAgent.Api.Assets;
 using TripsAgent.Api.Authorization;
 using TripsAgent.Api.Identity;
 using TripsAgent.Api.Payments;
+using TripsAgent.Api.Pricing;
 using TripsAgent.Api.Scheduling;
 using TripsAgent.Api.Storage;
 using TripsAgent.Api.Tenancy;
@@ -150,6 +151,8 @@ app.MapAuthenticationEndpoints();
 app.MapKybEndpoints();
 app.MapKybReviewEndpoints();
 app.MapWalletEndpoints();
+app.MapPricingEndpoints();
+
 app.MapAssetEndpoints();
 
 // Anonymous and signature-authenticated, standing in for an object store's presigned URLs while

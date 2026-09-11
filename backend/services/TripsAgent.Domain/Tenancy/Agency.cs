@@ -222,6 +222,11 @@ public sealed partial class Agency : Entity, IAuditableEntity, IAuditLogged
         TaxId = string.IsNullOrWhiteSpace(taxId) ? null : taxId.Trim();
 
     /// <summary>Changes the VAT rate applied to this agency's sales, in basis points.</summary>
+    /// <remarks>
+    /// The rate is cached with the agency's markup rules (MarkupRuleSet), so whatever calls this
+    /// must invalidate that cache after saving, or prices keep the old rate until the entry expires.
+    /// Existing quotes keep the rate they were priced at, whatever happens here.
+    /// </remarks>
     public void SetVatRate(int basisPoints) => VatRateBasisPoints = ValidateVatRate(basisPoints);
 
     private static string Require(string value, string parameterName)

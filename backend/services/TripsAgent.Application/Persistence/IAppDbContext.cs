@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
+using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
 
@@ -95,6 +97,15 @@ public interface IAppDbContext
     public DbSet<AssetVariant> AssetVariants { get; }
 
     /// <summary>
+    /// Each agency's markup rules. Never edited in place — see <see cref="MarkupRule"/> — so the rule
+    /// id stored on a quote always explains the markup on it.
+    /// </summary>
+    public DbSet<MarkupRule> MarkupRules { get; }
+
+    /// <summary>Prices as they were worked out, each naming the rule that decided its markup.</summary>
+    public DbSet<PriceQuote> PriceQuotes { get; }
+
+    /// <summary>
     /// What this context is about to write.
     /// </summary>
     /// <remarks>
@@ -104,6 +115,12 @@ public interface IAppDbContext
     /// <c>ChangeTracker.Clear()</c> discards them so the caller can re-read and decide afresh.
     /// </remarks>
     public ChangeTracker ChangeTracker { get; }
+
+    /// <summary>How each document type's numbers are written, where the agency has chosen.</summary>
+    public DbSet<DocumentNumberFormat> DocumentNumberFormats { get; }
+
+    /// <summary>Issued documents, and the gapless numbers they own.</summary>
+    public DbSet<GeneratedDocument> GeneratedDocuments { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

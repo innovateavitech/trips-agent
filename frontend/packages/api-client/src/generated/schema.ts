@@ -359,14 +359,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/assets/limits": {
+    "/api/v1/pricing/markup-rules": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["GetAssetUploadLimits"];
+        get: operations["ListMarkupRules"];
+        put?: never;
+        post: operations["CreateMarkupRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pricing/markup-rules/inherited": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListInheritedMarkupRules"];
         put?: never;
         post?: never;
         delete?: never;
@@ -375,7 +391,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/assets/uploads": {
+    "/api/v1/pricing/markup-rules/{ruleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["ReplaceMarkupRule"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pricing/markup-rules/{ruleId}/retire": {
         parameters: {
             query?: never;
             header?: never;
@@ -384,14 +416,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["RequestAssetUpload"];
+        post: operations["RetireMarkupRule"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/assets/{assetId}/complete": {
+    "/api/v1/pricing/preview": {
         parameters: {
             query?: never;
             header?: never;
@@ -400,21 +432,37 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["CompleteAssetUpload"];
+        post: operations["PreviewPrice"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/assets/{assetId}": {
+    "/api/v1/pricing/settings": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["GetAsset"];
+        get: operations["GetPricingSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pricing/quotes/{quoteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPriceQuote"];
         put?: never;
         post?: never;
         delete?: never;
@@ -427,59 +475,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        AssetLinkResponse: {
-            kind: string;
-            url: string;
-            contentType: string;
-            /** Format: int32 */
-            width: null | number | string;
-            /** Format: int32 */
-            height: null | number | string;
-            /** Format: date-time */
-            expiresAt: string;
-        };
-        AssetPurposeLimitsResponse: {
-            purpose: string;
-            /** Format: int64 */
-            maxSizeBytes: number | string;
-            allowedContentTypes: string[];
-            allowedExtensions: string[];
-        };
-        AssetResponse: {
-            /** Format: uuid */
-            id: string;
-            purpose: string;
-            fileName: string;
-            status: string;
-            scanStatus: string;
-            contentType: null | string;
-            /** Format: int64 */
-            sizeBytes: number | string;
-            /** Format: int32 */
-            width: null | number | string;
-            /** Format: int32 */
-            height: null | number | string;
-            failureReason: null | string;
-            /** Format: date-time */
-            createdAt: string;
-            links: components["schemas"]["AssetLinkResponse"][];
-        };
-        AssetUploadLimitsResponse: {
-            purposes: components["schemas"]["AssetPurposeLimitsResponse"][];
-        };
-        AssetUploadResponse: {
-            /** Format: uuid */
-            assetId: string;
-            uploadUrl: string;
-            method: string;
-            headers: {
-                [key: string]: string;
-            };
-            /** Format: int64 */
-            maxSizeBytes: number | string;
-            /** Format: date-time */
-            expiresAt: string;
-        };
         CurrentUserResponse: {
             /** Format: uuid */
             userId: string;
@@ -505,6 +500,32 @@ export interface components {
             errors?: {
                 [key: string]: string[];
             };
+        };
+        InheritedMarkupRuleResponse: {
+            /** Format: uuid */
+            id: string;
+            scope: string;
+            productType: null | string;
+            /** Format: uuid */
+            productId: null | string;
+            supplierCode: null | string;
+            currency: string;
+            calculationType: string;
+            /** Format: int32 */
+            percentBasisPoints: null | number | string;
+            /** Format: int64 */
+            valueMinor: null | number | string;
+            /** Format: int64 */
+            minMarkupMinor: null | number | string;
+            /** Format: int64 */
+            maxMarkupMinor: null | number | string;
+            /** Format: int32 */
+            priority: number | string;
+            /** Format: date-time */
+            effectiveFrom: string;
+            /** Format: date-time */
+            effectiveTo: null | string;
+            summary: string;
         };
         KybDocumentResponse: {
             /** Format: uuid */
@@ -584,6 +605,145 @@ export interface components {
             email: string;
             password: string;
         };
+        MarkupRuleRequest: {
+            scope: string;
+            productType: null | string;
+            /** Format: uuid */
+            productId: null | string;
+            supplierCode: null | string;
+            currency: string;
+            calculationType: string;
+            /** Format: int32 */
+            percentBasisPoints: null | number | string;
+            /** Format: int64 */
+            valueMinor: null | number | string;
+            /** Format: int64 */
+            minMarkupMinor: null | number | string;
+            /** Format: int64 */
+            maxMarkupMinor: null | number | string;
+            /** Format: int32 */
+            priority: number | string;
+            appliesToSubAgents: boolean;
+            /** Format: date-time */
+            effectiveFrom: null | string;
+            /** Format: date-time */
+            effectiveTo: null | string;
+        };
+        MarkupRuleResponse: {
+            /** Format: uuid */
+            id: string;
+            scope: string;
+            productType: null | string;
+            /** Format: uuid */
+            productId: null | string;
+            supplierCode: null | string;
+            currency: string;
+            calculationType: string;
+            /** Format: int32 */
+            percentBasisPoints: null | number | string;
+            /** Format: int64 */
+            valueMinor: null | number | string;
+            /** Format: int64 */
+            minMarkupMinor: null | number | string;
+            /** Format: int64 */
+            maxMarkupMinor: null | number | string;
+            /** Format: int32 */
+            priority: number | string;
+            appliesToSubAgents: boolean;
+            /** Format: date-time */
+            effectiveFrom: string;
+            /** Format: date-time */
+            effectiveTo: null | string;
+            /** Format: uuid */
+            supersededById: null | string;
+            status: string;
+        };
+        PricePreviewRequest: {
+            productType: string;
+            /** Format: uuid */
+            productId: null | string;
+            supplierCode: null | string;
+            currency: null | string;
+            /** Format: int64 */
+            netAmountMinor: number | string;
+        };
+        PricePreviewResponse: {
+            currency: string;
+            /** Format: int64 */
+            netAmountMinor: number | string;
+            /** Format: int64 */
+            markupAmountMinor: number | string;
+            /** Format: int32 */
+            vatRateBasisPoints: number | string;
+            /** Format: int64 */
+            taxAmountMinor: number | string;
+            /** Format: int32 */
+            platformFeeBasisPoints: number | string;
+            /** Format: int64 */
+            platformFeeMinor: number | string;
+            /** Format: int64 */
+            agentMarginMinor: number | string;
+            /** Format: int64 */
+            grossAmountMinor: number | string;
+            winningRule: null | components["schemas"]["PricePreviewRuleResponse"];
+        };
+        PricePreviewRuleResponse: {
+            /** Format: uuid */
+            id: string;
+            scope: string;
+            productType: null | string;
+            /** Format: uuid */
+            productId: null | string;
+            supplierCode: null | string;
+            calculationType: string;
+            /** Format: int32 */
+            percentBasisPoints: null | number | string;
+            /** Format: int64 */
+            valueMinor: null | number | string;
+            /** Format: int64 */
+            minMarkupMinor: null | number | string;
+            /** Format: int64 */
+            maxMarkupMinor: null | number | string;
+            /** Format: int32 */
+            priority: number | string;
+            inherited: boolean;
+            summary: string;
+        };
+        PriceQuoteWithMarginResponse: {
+            /** Format: uuid */
+            id: string;
+            productType: string;
+            currency: string;
+            /** Format: int64 */
+            grossAmountMinor: number | string;
+            /** Format: int64 */
+            netAmountMinor: number | string;
+            /** Format: int64 */
+            markupAmountMinor: number | string;
+            /** Format: int64 */
+            taxAmountMinor: number | string;
+            /** Format: int64 */
+            platformFeeMinor: number | string;
+            /** Format: double */
+            fxRate: number | string;
+            /** Format: uuid */
+            markupRuleId: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        PricingSettingsResponse: {
+            currency: string;
+            /** Format: int32 */
+            vatRateBasisPoints: number | string;
+            /** Format: int32 */
+            platformFeeBasisPoints: number | string;
+            /** Format: int32 */
+            quoteValidityMinutes: number | string;
+            hasPrincipal: boolean;
+            hasSubAgents: boolean;
+        };
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -609,13 +769,6 @@ export interface components {
         };
         RejectKybRequest: {
             reason: string;
-        };
-        RequestAssetUploadRequest: {
-            purpose: string;
-            fileName: null | string;
-            /** Format: int64 */
-            sizeBytes: number | string;
-            contentType: null | string;
         };
         ResendVerificationRequest: {
             email: string;
@@ -1265,7 +1418,7 @@ export interface operations {
             };
         };
     };
-    GetAssetUploadLimits: {
+    ListMarkupRules: {
         parameters: {
             query?: never;
             header?: never;
@@ -1280,12 +1433,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssetUploadLimitsResponse"];
+                    "application/json": components["schemas"]["MarkupRuleResponse"][];
                 };
             };
         };
     };
-    RequestAssetUpload: {
+    CreateMarkupRule: {
         parameters: {
             query?: never;
             header?: never;
@@ -1294,7 +1447,53 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RequestAssetUploadRequest"];
+                "application/json": components["schemas"]["MarkupRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkupRuleResponse"];
+                };
+            };
+        };
+    };
+    ListInheritedMarkupRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InheritedMarkupRuleResponse"][];
+                };
+            };
+        };
+    };
+    ReplaceMarkupRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ruleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkupRuleRequest"];
             };
         };
         responses: {
@@ -1304,75 +1503,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssetUploadResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["MarkupRuleResponse"];
                 };
             };
         };
     };
-    CompleteAssetUpload: {
+    RetireMarkupRule: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                assetId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Accepted */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssetResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    GetAsset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                assetId: string;
+                ruleId: string;
             };
             cookie?: never;
         };
@@ -1384,16 +1525,73 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssetResponse"];
+                    "application/json": components["schemas"]["MarkupRuleResponse"];
                 };
             };
-            /** @description Not Found */
-            404: {
+        };
+    };
+    PreviewPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PricePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["PricePreviewResponse"];
+                };
+            };
+        };
+    };
+    GetPricingSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricingSettingsResponse"];
+                };
+            };
+        };
+    };
+    GetPriceQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceQuoteWithMarginResponse"];
                 };
             };
         };

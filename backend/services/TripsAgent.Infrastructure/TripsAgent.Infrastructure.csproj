@@ -12,6 +12,9 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="MailKit" />
+    <!-- The markup rule cache. Only Infrastructure talks to Redis; Application sees IMarkupRuleCache. -->
+    <PackageReference Include="StackExchange.Redis" />
+
 
     <!-- The asset pipeline's image processing. MIT-licensed; see SkiaImageProcessor for why not
          ImageSharp. The Linux native build has to be named explicitly — the managed package only

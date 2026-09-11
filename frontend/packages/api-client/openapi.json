@@ -702,19 +702,50 @@
         }
       }
     },
-    "/api/v1/assets/limits": {
+    "/api/v1/pricing/markup-rules": {
       "get": {
         "tags": [
-          "Assets"
+          "Pricing"
         ],
-        "operationId": "GetAssetUploadLimits",
+        "operationId": "ListMarkupRules",
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AssetUploadLimitsResponse"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MarkupRuleResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Pricing"
+        ],
+        "operationId": "CreateMarkupRule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkupRuleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkupRuleResponse"
                 }
               }
             }
@@ -722,17 +753,51 @@
         }
       }
     },
-    "/api/v1/assets/uploads": {
-      "post": {
+    "/api/v1/pricing/markup-rules/inherited": {
+      "get": {
         "tags": [
-          "Assets"
+          "Pricing"
         ],
-        "operationId": "RequestAssetUpload",
+        "operationId": "ListInheritedMarkupRules",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InheritedMarkupRuleResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pricing/markup-rules/{ruleId}": {
+      "put": {
+        "tags": [
+          "Pricing"
+        ],
+        "operationId": "ReplaceMarkupRule",
+        "parameters": [
+          {
+            "name": "ruleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RequestAssetUploadRequest"
+                "$ref": "#/components/schemas/MarkupRuleRequest"
               }
             }
           },
@@ -744,17 +809,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AssetUploadResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "$ref": "#/components/schemas/MarkupRuleResponse"
                 }
               }
             }
@@ -762,76 +817,15 @@
         }
       }
     },
-    "/api/v1/assets/{assetId}/complete": {
+    "/api/v1/pricing/markup-rules/{ruleId}/retire": {
       "post": {
         "tags": [
-          "Assets"
+          "Pricing"
         ],
-        "operationId": "CompleteAssetUpload",
+        "operationId": "RetireMarkupRule",
         "parameters": [
           {
-            "name": "assetId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "Accepted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssetResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/assets/{assetId}": {
-      "get": {
-        "tags": [
-          "Assets"
-        ],
-        "operationId": "GetAsset",
-        "parameters": [
-          {
-            "name": "assetId",
+            "name": "ruleId",
             "in": "path",
             "required": true,
             "schema": {
@@ -846,17 +840,88 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AssetResponse"
+                  "$ref": "#/components/schemas/MarkupRuleResponse"
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/pricing/preview": {
+      "post": {
+        "tags": [
+          "Pricing"
+        ],
+        "operationId": "PreviewPrice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PricePreviewRequest"
+              }
+            }
           },
-          "404": {
-            "description": "Not Found",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
             "content": {
-              "application/problem+json": {
+              "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
+                  "$ref": "#/components/schemas/PricePreviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pricing/settings": {
+      "get": {
+        "tags": [
+          "Pricing"
+        ],
+        "operationId": "GetPricingSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingSettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pricing/quotes/{quoteId}": {
+      "get": {
+        "tags": [
+          "Pricing"
+        ],
+        "operationId": "GetPriceQuote",
+        "parameters": [
+          {
+            "name": "quoteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceQuoteWithMarginResponse"
                 }
               }
             }
@@ -867,222 +932,6 @@
   },
   "components": {
     "schemas": {
-      "AssetLinkResponse": {
-        "required": [
-          "kind",
-          "url",
-          "contentType",
-          "width",
-          "height",
-          "expiresAt"
-        ],
-        "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string"
-          },
-          "contentType": {
-            "type": "string"
-          },
-          "width": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "height": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "AssetPurposeLimitsResponse": {
-        "required": [
-          "purpose",
-          "maxSizeBytes",
-          "allowedContentTypes",
-          "allowedExtensions"
-        ],
-        "type": "object",
-        "properties": {
-          "purpose": {
-            "type": "string"
-          },
-          "maxSizeBytes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int64"
-          },
-          "allowedContentTypes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "allowedExtensions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "AssetResponse": {
-        "required": [
-          "id",
-          "purpose",
-          "fileName",
-          "status",
-          "scanStatus",
-          "contentType",
-          "sizeBytes",
-          "width",
-          "height",
-          "failureReason",
-          "createdAt",
-          "links"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "purpose": {
-            "type": "string"
-          },
-          "fileName": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "scanStatus": {
-            "type": "string"
-          },
-          "contentType": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "sizeBytes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int64"
-          },
-          "width": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "height": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "failureReason": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "links": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AssetLinkResponse"
-            }
-          }
-        }
-      },
-      "AssetUploadLimitsResponse": {
-        "required": [
-          "purposes"
-        ],
-        "type": "object",
-        "properties": {
-          "purposes": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AssetPurposeLimitsResponse"
-            }
-          }
-        }
-      },
-      "AssetUploadResponse": {
-        "required": [
-          "assetId",
-          "uploadUrl",
-          "method",
-          "headers",
-          "maxSizeBytes",
-          "expiresAt"
-        ],
-        "type": "object",
-        "properties": {
-          "assetId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "uploadUrl": {
-            "type": "string"
-          },
-          "method": {
-            "type": "string"
-          },
-          "headers": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "maxSizeBytes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int64"
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
       "CurrentUserResponse": {
         "required": [
           "userId",
@@ -1187,6 +1036,118 @@
                 "type": "string"
               }
             }
+          }
+        }
+      },
+      "InheritedMarkupRuleResponse": {
+        "required": [
+          "id",
+          "scope",
+          "productType",
+          "productId",
+          "supplierCode",
+          "currency",
+          "calculationType",
+          "percentBasisPoints",
+          "valueMinor",
+          "minMarkupMinor",
+          "maxMarkupMinor",
+          "priority",
+          "effectiveFrom",
+          "effectiveTo",
+          "summary"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "productType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "productId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "supplierCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "calculationType": {
+            "type": "string"
+          },
+          "percentBasisPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "valueMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "minMarkupMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "maxMarkupMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "priority": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "effectiveTo": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "summary": {
+            "type": "string"
           }
         }
       },
@@ -1505,6 +1466,613 @@
           }
         }
       },
+      "MarkupRuleRequest": {
+        "required": [
+          "scope",
+          "productType",
+          "productId",
+          "supplierCode",
+          "currency",
+          "calculationType",
+          "percentBasisPoints",
+          "valueMinor",
+          "minMarkupMinor",
+          "maxMarkupMinor",
+          "priority",
+          "appliesToSubAgents",
+          "effectiveFrom",
+          "effectiveTo"
+        ],
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string"
+          },
+          "productType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "productId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "supplierCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "calculationType": {
+            "type": "string"
+          },
+          "percentBasisPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "valueMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "minMarkupMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "maxMarkupMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "priority": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "appliesToSubAgents": {
+            "type": "boolean"
+          },
+          "effectiveFrom": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "effectiveTo": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "MarkupRuleResponse": {
+        "required": [
+          "id",
+          "scope",
+          "productType",
+          "productId",
+          "supplierCode",
+          "currency",
+          "calculationType",
+          "percentBasisPoints",
+          "valueMinor",
+          "minMarkupMinor",
+          "maxMarkupMinor",
+          "priority",
+          "appliesToSubAgents",
+          "effectiveFrom",
+          "effectiveTo",
+          "supersededById",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "productType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "productId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "supplierCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "calculationType": {
+            "type": "string"
+          },
+          "percentBasisPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "valueMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "minMarkupMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "maxMarkupMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "priority": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "appliesToSubAgents": {
+            "type": "boolean"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "effectiveTo": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "supersededById": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "PricePreviewRequest": {
+        "required": [
+          "productType",
+          "productId",
+          "supplierCode",
+          "currency",
+          "netAmountMinor"
+        ],
+        "type": "object",
+        "properties": {
+          "productType": {
+            "type": "string"
+          },
+          "productId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "supplierCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "netAmountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "PricePreviewResponse": {
+        "required": [
+          "currency",
+          "netAmountMinor",
+          "markupAmountMinor",
+          "vatRateBasisPoints",
+          "taxAmountMinor",
+          "platformFeeBasisPoints",
+          "platformFeeMinor",
+          "agentMarginMinor",
+          "grossAmountMinor",
+          "winningRule"
+        ],
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "netAmountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "markupAmountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "vatRateBasisPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "taxAmountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "platformFeeBasisPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "platformFeeMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "agentMarginMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "grossAmountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "winningRule": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PricePreviewRuleResponse"
+              }
+            ]
+          }
+        }
+      },
+      "PricePreviewRuleResponse": {
+        "required": [
+          "id",
+          "scope",
+          "productType",
+          "productId",
+          "supplierCode",
+          "calculationType",
+          "percentBasisPoints",
+          "valueMinor",
+          "minMarkupMinor",
+          "maxMarkupMinor",
+          "priority",
+          "inherited",
+          "summary"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "productType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "productId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "supplierCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "calculationType": {
+            "type": "string"
+          },
+          "percentBasisPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "valueMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "minMarkupMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "maxMarkupMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "priority": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "inherited": {
+            "type": "boolean"
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      },
+      "PriceQuoteWithMarginResponse": {
+        "required": [
+          "id",
+          "productType",
+          "currency",
+          "grossAmountMinor",
+          "netAmountMinor",
+          "markupAmountMinor",
+          "taxAmountMinor",
+          "platformFeeMinor",
+          "fxRate",
+          "markupRuleId",
+          "createdAt",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productType": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "grossAmountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "netAmountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "markupAmountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "taxAmountMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "platformFeeMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "fxRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "markupRuleId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PricingSettingsResponse": {
+        "required": [
+          "currency",
+          "vatRateBasisPoints",
+          "platformFeeBasisPoints",
+          "quoteValidityMinutes",
+          "hasPrincipal",
+          "hasSubAgents"
+        ],
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "vatRateBasisPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "platformFeeBasisPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quoteValidityMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "hasPrincipal": {
+            "type": "boolean"
+          },
+          "hasSubAgents": {
+            "type": "boolean"
+          }
+        }
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -1611,40 +2179,6 @@
         "properties": {
           "reason": {
             "type": "string"
-          }
-        }
-      },
-      "RequestAssetUploadRequest": {
-        "required": [
-          "purpose",
-          "fileName",
-          "sizeBytes",
-          "contentType"
-        ],
-        "type": "object",
-        "properties": {
-          "purpose": {
-            "type": "string"
-          },
-          "fileName": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "sizeBytes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int64"
-          },
-          "contentType": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -1858,7 +2392,7 @@
       "name": "Wallet"
     },
     {
-      "name": "Assets"
+      "name": "Pricing"
     }
   ]
 }

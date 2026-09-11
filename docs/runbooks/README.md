@@ -24,6 +24,12 @@ Keep each one to a page:
 5. **If that doesn't work** — who to escalate to
 6. **Prevention** — the issue link for the permanent fix, if there is one
 
+## Written
+
+- [`audit-log.md`](audit-log.md) — the platform audit log: partitions, retention, append-only
+- [`vulnerable-dependency.md`](vulnerable-dependency.md) — `audit-api` or `audit-web` is red: a
+  package has a High or Critical advisory, including when no fix exists yet
+
 ## Planned runbooks
 
 Written as each system goes live.

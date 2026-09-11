@@ -1,0 +1,231 @@
+{
+  "actions": [],
+  "advisories": {
+    "1102341": {
+      "id": 1102341,
+      "github_advisory_id": "GHSA-67mh-4wv8-2f99",
+      "severity": "moderate",
+      "module_name": "esbuild",
+      "title": "esbuild enables any website to send any requests to the development server and read the response",
+      "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+      "vulnerable_versions": "<=0.24.2",
+      "patched_versions": ">=0.25.0",
+      "findings": [
+        {
+          "version": "0.21.5",
+          "paths": [
+            "apps/admin-console > vitest@2.1.9 > @vitest/mocker@2.1.9 > vite@5.4.21 > esbuild@0.21.5",
+            "apps/admin-console > vitest@2.1.9 > vite@5.4.21 > esbuild@0.21.5",
+            "apps/admin-console > vitest@2.1.9 > vite-node@2.1.9 > vite@5.4.21 > esbuild@0.21.5"
+          ]
+        }
+      ]
+    },
+    "1116229": {
+      "id": 1116229,
+      "github_advisory_id": "GHSA-4w7w-66w2-5vf9",
+      "severity": "moderate",
+      "module_name": "vite",
+      "title": "Vite Vulnerable to Path Traversal in Optimized Deps `.map` Handling",
+      "url": "https://github.com/advisories/GHSA-4w7w-66w2-5vf9",
+      "vulnerable_versions": "<=6.4.1",
+      "patched_versions": ">=6.4.2",
+      "findings": [
+        {
+          "version": "5.4.21",
+          "paths": [
+            "apps/admin-console > vitest@2.1.9 > @vitest/mocker@2.1.9 > vite@5.4.21",
+            "apps/admin-console > vitest@2.1.9 > vite@5.4.21",
+            "apps/admin-console > vitest@2.1.9 > vite-node@2.1.9 > vite@5.4.21"
+          ]
+        }
+      ]
+    },
+    "1117015": {
+      "id": 1117015,
+      "github_advisory_id": "GHSA-qx2v-qp2m-jg93",
+      "severity": "moderate",
+      "module_name": "postcss",
+      "title": "PostCSS has XSS via Unescaped </style> in its CSS Stringify Output",
+      "url": "https://github.com/advisories/GHSA-qx2v-qp2m-jg93",
+      "vulnerable_versions": "<8.5.10",
+      "patched_versions": ">=8.5.10",
+      "findings": [
+        {
+          "version": "8.4.31",
+          "paths": [
+            "apps/storefront > next@15.5.25 > postcss@8.4.31"
+          ]
+        }
+      ]
+    },
+    "1120784": {
+      "id": 1120784,
+      "github_advisory_id": "GHSA-v6wh-96g9-6wx3",
+      "severity": "moderate",
+      "module_name": "vite",
+      "title": "launch-editor: NTLMv2 hash disclosure via UNC path handling on Windows",
+      "url": "https://github.com/advisories/GHSA-v6wh-96g9-6wx3",
+      "vulnerable_versions": "<=6.4.2",
+      "patched_versions": ">=6.4.3",
+      "findings": [
+        {
+          "version": "5.4.21",
+          "paths": [
+            "apps/admin-console > vitest@2.1.9 > @vitest/mocker@2.1.9 > vite@5.4.21",
+            "apps/admin-console > vitest@2.1.9 > vite@5.4.21",
+            "apps/admin-console > vitest@2.1.9 > vite-node@2.1.9 > vite@5.4.21"
+          ]
+        }
+      ]
+    },
+    "1123525": {
+      "id": 1123525,
+      "github_advisory_id": "GHSA-fx2h-pf6j-xcff",
+      "severity": "high",
+      "module_name": "vite",
+      "title": "vite: `server.fs.deny` bypass on Windows alternate paths",
+      "url": "https://github.com/advisories/GHSA-fx2h-pf6j-xcff",
+      "vulnerable_versions": "<=6.4.2",
+      "patched_versions": ">=6.4.3",
+      "findings": [
+        {
+          "version": "5.4.21",
+          "paths": [
+            "apps/admin-console > vitest@2.1.9 > @vitest/mocker@2.1.9 > vite@5.4.21",
+            "apps/admin-console > vitest@2.1.9 > vite@5.4.21",
+            "apps/admin-console > vitest@2.1.9 > vite-node@2.1.9 > vite@5.4.21"
+          ]
+        }
+      ]
+    },
+    "1124252": {
+      "id": 1124252,
+      "github_advisory_id": "GHSA-6g55-p6wh-862q",
+      "severity": "high",
+      "module_name": "postcss",
+      "title": "PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments",
+      "url": "https://github.com/advisories/GHSA-6g55-p6wh-862q",
+      "vulnerable_versions": "<=8.5.11",
+      "patched_versions": ">=8.5.12",
+      "findings": [
+        {
+          "version": "8.4.31",
+          "paths": [
+            "apps/storefront > next@15.5.25 > postcss@8.4.31"
+          ]
+        }
+      ]
+    },
+    "1130709": {
+      "id": 1130709,
+      "github_advisory_id": "GHSA-fxqj-rqcc-2cmp",
+      "severity": "moderate",
+      "module_name": "postcss",
+      "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q \u2014 attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+      "url": "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp",
+      "vulnerable_versions": "<=8.5.22",
+      "patched_versions": ">=8.5.23",
+      "findings": [
+        {
+          "version": "8.4.31",
+          "paths": [
+            "apps/storefront > next@15.5.25 > postcss@8.4.31"
+          ]
+        }
+      ]
+    },
+    "1139510": {
+      "id": 1139510,
+      "github_advisory_id": "GHSA-r28c-9q8g-f849",
+      "severity": "high",
+      "module_name": "postcss",
+      "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+      "url": "https://github.com/advisories/GHSA-r28c-9q8g-f849",
+      "vulnerable_versions": "<=8.5.17",
+      "patched_versions": ">=8.5.18",
+      "findings": [
+        {
+          "version": "8.4.31",
+          "paths": [
+            "apps/storefront > next@15.5.25 > postcss@8.4.31"
+          ]
+        }
+      ]
+    },
+    "1139528": {
+      "id": 1139528,
+      "github_advisory_id": "GHSA-5xrq-8626-4rwp",
+      "severity": "critical",
+      "module_name": "vitest",
+      "title": "When Vitest UI server is listening, arbitrary file can be read and executed",
+      "url": "https://github.com/advisories/GHSA-5xrq-8626-4rwp",
+      "vulnerable_versions": "<3.2.6",
+      "patched_versions": ">=3.2.6",
+      "findings": [
+        {
+          "version": "2.1.9",
+          "paths": [
+            "apps/admin-console > vitest@2.1.9",
+            "apps/agent-console > vitest@2.1.9",
+            "apps/storefront > vitest@2.1.9"
+          ]
+        }
+      ]
+    },
+    "1193683": {
+      "id": 1193683,
+      "github_advisory_id": "GHSA-82fw-gwwq-j7x9",
+      "severity": "moderate",
+      "module_name": "vitest",
+      "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+      "url": "https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+      "vulnerable_versions": ">=2.1.0 <4.1.11",
+      "patched_versions": ">=4.1.11",
+      "findings": [
+        {
+          "version": "2.1.9",
+          "paths": [
+            "apps/admin-console > vitest@2.1.9",
+            "apps/agent-console > vitest@2.1.9",
+            "apps/storefront > vitest@2.1.9"
+          ]
+        }
+      ]
+    },
+    "1193684": {
+      "id": 1193684,
+      "github_advisory_id": "GHSA-82fw-gwwq-j7x9",
+      "severity": "moderate",
+      "module_name": "@vitest/mocker",
+      "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+      "url": "https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+      "vulnerable_versions": ">=2.1.0 <4.1.11",
+      "patched_versions": ">=4.1.11",
+      "findings": [
+        {
+          "version": "2.1.9",
+          "paths": [
+            "apps/admin-console > vitest@2.1.9 > @vitest/mocker@2.1.9",
+            "apps/agent-console > vitest@2.1.9 > @vitest/mocker@2.1.9",
+            "apps/storefront > vitest@2.1.9 > @vitest/mocker@2.1.9"
+          ]
+        }
+      ]
+    }
+  },
+  "muted": [],
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 7,
+      "high": 3,
+      "critical": 1
+    },
+    "dependencies": 578,
+    "devDependencies": 0,
+    "optionalDependencies": 0,
+    "totalDependencies": 578
+  }
+}

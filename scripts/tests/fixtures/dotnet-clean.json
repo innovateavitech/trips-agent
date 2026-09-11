@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "parameters": "--vulnerable --include-transitive",
+  "sources": [
+    "https://api.nuget.org/v3/index.json"
+  ],
+  "projects": [
+    {
+      "path": "/repo/backend/analyzers/TripsAgent.Analyzers/TripsAgent.Analyzers.csproj"
+    },
+    {
+      "path": "/repo/backend/services/TripsAgent.Api/TripsAgent.Api.csproj"
+    },
+    {
+      "path": "/repo/backend/services/TripsAgent.Application/TripsAgent.Application.csproj"
+    },
+    {
+      "path": "/repo/backend/services/TripsAgent.Contracts/TripsAgent.Contracts.csproj"
+    },
+    {
+      "path": "/repo/backend/services/TripsAgent.Documents/TripsAgent.Documents.csproj"
+    },
+    {
+      "path": "/repo/backend/services/TripsAgent.Domain/TripsAgent.Domain.csproj"
+    },
+    {
+      "path": "/repo/backend/services/TripsAgent.Infrastructure/TripsAgent.Infrastructure.csproj"
+    },
+    {
+      "path": "/repo/backend/services/TripsAgent.Integrations.Paystack/TripsAgent.Integrations.Paystack.csproj"
+    },
+    {
+      "path": "/repo/backend/services/TripsAgent.Integrations.TripsAfrica/TripsAgent.Integrations.TripsAfrica.csproj"
+    },
+    {
+      "path": "/repo/backend/services/TripsAgent.Worker/TripsAgent.Worker.csproj"
+    },
+    {
+      "path": "/repo/backend/tests/TripsAgent.AnalyzerTests/TripsAgent.AnalyzerTests.csproj"
+    },
+    {
+      "path": "/repo/backend/tests/TripsAgent.ArchitectureTests/TripsAgent.ArchitectureTests.csproj"
+    },
+    {
+      "path": "/repo/backend/tests/TripsAgent.IntegrationTests/TripsAgent.IntegrationTests.csproj"
+    },
+    {
+      "path": "/repo/backend/tests/TripsAgent.UnitTests/TripsAgent.UnitTests.csproj"
+    }
+  ]
+}

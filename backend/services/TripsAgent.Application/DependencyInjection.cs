@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Documents;
 using TripsAgent.Application.Assets;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
 using TripsAgent.Application.Payments;
+using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Tenancy.Kyb;
 
 namespace TripsAgent.Application;
@@ -43,6 +45,15 @@ public static class DependencyInjection
         services.AddScoped<IPaymentWebhookProcessor>(sp => sp.GetRequiredService<PaymentWebhookHandler>());
 
         services.AddScoped<ILedgerIntegrityAudit, LedgerIntegrityAudit>();
+
+        services.AddScoped<DocumentIssuer>();
+        services.AddScoped<ConfigureDocumentNumberingHandler>();
+
+        services.AddScoped<PricingService>();
+        services.AddScoped<MarkupRuleService>();
+
+        // Zero until subscription tiers (#64) supply each agency's transaction fee.
+        services.AddSingleton<IPlatformFeePolicy, NoPlatformFeePolicy>();
 
         // The request-side half of an upload. The pipeline itself — ProcessAssetHandler — is
         // registered by AddAssetProcessing in the Worker only, because it needs a virus scanner

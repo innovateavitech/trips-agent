@@ -76,6 +76,14 @@ public sealed class ResolutionTests : IAsyncLifetime
         decision.ChangedByUserId.Should().Be(harness.OwnerUserId);
         decision.Reason.Should().Contain("already gone back", "the supplier reversal had returned it");
 
+        var lineId = line.Id.ToString();
+        var audited = await db.AuditLogs.AsNoTracking()
+            .Where(entry => entry.EntityType == nameof(OrderLine) && entry.EntityId == lineId)
+            .ToListAsync();
+        audited.Should().Contain(
+            entry => entry.ActorUserId == harness.OwnerUserId && entry.AfterState!.Contains("ResolvedRefunded"),
+            "the decision is on the audit log too, with the agent who made it");
+
         (await db.Refunds.CountAsync()).Should().Be(1, "the reversal's refund, and no second one");
         (await harness.OutboxAsync<BookingResolved>()).Should().ContainSingle();
 

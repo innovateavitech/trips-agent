@@ -19,6 +19,7 @@ using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Security;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Orders;
@@ -26,6 +27,7 @@ using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
+using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Concurrency;
 using TripsAgent.Infrastructure.Documents;
 using TripsAgent.Infrastructure.Messaging;
@@ -150,16 +152,30 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         return new BookingPipelineHarness(postgres, database, agencyId, supplierId, walletId, clock, stub, services, alerts, ownerUserId);
     }
 
-    /// <summary>A unit of work as a message for the agency gets it: its own scope, the agency as tenant.</summary>
-    public AsyncServiceScope ScopeForAgency()
+    /// <summary>
+    /// A unit of work for the agency: its own scope, the agency as tenant. With no user it is a message's
+    /// work, audited as the system as the consumers record it; with one it is that agent's request, as
+    /// the authentication middleware records it.
+    /// </summary>
+    public AsyncServiceScope ScopeForAgency(Guid? actingUserId = null)
     {
         var scope = _services.CreateAsyncScope();
         scope.ServiceProvider.GetRequiredService<TenantContext>().SetTenant(AgencyId);
+
+        var audit = scope.ServiceProvider.GetRequiredService<AuditContext>();
+        audit.ActorType = actingUserId is null ? AuditActorType.System : AuditActorType.User;
+        audit.ActorUserId = actingUserId;
+        audit.AgencyId = AgencyId;
         return scope;
     }
 
-    /// <summary>A unit of work as a Hangfire job gets it: no tenant. The job opens the platform scope itself.</summary>
-    public AsyncServiceScope ScopeForJob() => _services.CreateAsyncScope();
+    /// <summary>A unit of work as a Hangfire job gets it: no tenant, the system as actor. The job opens the platform scope itself.</summary>
+    public AsyncServiceScope ScopeForJob()
+    {
+        var scope = _services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<AuditContext>().ActorType = AuditActorType.System;
+        return scope;
+    }
 
     /// <summary>A context acting as the agency, under the policed application role, for reading results.</summary>
     public AppDbContext AsAgency()
@@ -366,7 +382,7 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         InAgencyScopeAsync(provider => provider.GetRequiredService<PaymentReversalService>().ReverseAsync(request));
 
     public Task<bool> ResolveAsync(string reference, ResolutionChoice choice) =>
-        InAgencyScopeAsync(async provider =>
+        RunAsync(ScopeForAgency(OwnerUserId), async provider =>
         {
             await provider.GetRequiredService<ResolutionService>().ResolveAsync(reference, choice, OwnerUserId);
             return true;
@@ -437,12 +453,17 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         services.AddScoped<ITenantContext>(provider => provider.GetRequiredService<TenantContext>());
         services.AddScoped<IPlatformScope, PlatformScope>();
 
+        // Auditing, as AddInfrastructure registers it: every audited change goes to audit_logs, under
+        // row-level security, attributed to whoever the scope says is acting.
+        services.AddScoped<AuditContext>();
+
         // One context per scope, as the policed application role — how production connects.
         services.AddScoped(provider => postgres.Connect(
             database,
             provider.GetRequiredService<TenantContext>(),
             provider.GetRequiredService<IPlatformScope>(),
-            clock));
+            clock,
+            auditContext: provider.GetRequiredService<AuditContext>()));
         services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<ITransactionRunner, EfTransactionRunner>();
         services.AddScoped<IOutbox, EfOutbox>();

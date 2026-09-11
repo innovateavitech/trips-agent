@@ -1,5 +1,6 @@
 import {
   Bus,
+  Compass,
   LayoutDashboard,
   LifeBuoy,
   Plane,
@@ -49,6 +50,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Buses', to: '/search/buses', icon: Bus }, // #52
       { label: 'Bookings', to: '/bookings', icon: Ticket }, // #54
       { label: 'Resolution queue', to: '/resolution', icon: LifeBuoy }, // #54
+      { label: 'Catalog', to: '/catalog', icon: Compass }, // #162
     ],
   },
   {

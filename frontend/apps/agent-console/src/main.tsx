@@ -9,6 +9,7 @@ import { createAppRouter } from './app/router';
 import { AUTH_MODE } from './app/settings';
 import { createHttpAuthApi } from './auth/http-auth-api';
 import { mockAuthApi } from './auth/mock/mock-auth-api';
+import { mockCatalogApi } from './features/catalog';
 import { mockDashboardApi } from './features/dashboard';
 import { mockSearchApi } from './features/search';
 import { mockWalletApi } from './features/wallet';
@@ -22,12 +23,14 @@ import './index.css';
  *   wallet     mock until the statement endpoints exist (#26 shipped top-ups)
  *   dashboard  mock until the orders endpoints exist (#41, #42)
  *   search     mock until the supplier search endpoints exist (#33, #34)
+ *   catalog    mock until the product API exists (#161)
  */
 const adapters: AppAdapters = {
   auth: AUTH_MODE === 'mock' ? mockAuthApi : createHttpAuthApi({ api, publicApi }),
   wallet: mockWalletApi,
   dashboard: mockDashboardApi,
   search: mockSearchApi,
+  catalog: mockCatalogApi,
 };
 
 const queryClient = createQueryClient();

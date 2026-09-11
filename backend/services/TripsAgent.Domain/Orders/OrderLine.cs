@@ -176,6 +176,7 @@ public sealed class OrderLine : Entity, IAuditableEntity, ITenantScoped
         PricedProductType.Tour => OrderLineItemType.Tour,
         PricedProductType.Visa => OrderLineItemType.Visa,
         PricedProductType.GroupDeparture => OrderLineItemType.GroupDeparture,
+        PricedProductType.Package => OrderLineItemType.Package,
         _ => throw new ArgumentOutOfRangeException(nameof(productType), productType, "Unknown priced product type."),
     };
 }

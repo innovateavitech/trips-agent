@@ -113,7 +113,7 @@ public static class PricingEndpoints
 
                 if (!TryParseEnum<PricedProductType>(request.ProductType, out var productType))
                 {
-                    return PreviewProblem("productType must be one of Flight, Bus, Tour, Visa or GroupDeparture.");
+                    return PreviewProblem("productType must be one of Flight, Bus, Tour, Package, Visa or GroupDeparture.");
                 }
 
                 if (request.NetAmountMinor is < 0 or > MaxPreviewNetMinor)
@@ -337,7 +337,7 @@ public static class PricingEndpoints
         {
             if (!TryParseEnum<PricedProductType>(request.ProductType, out var parsed))
             {
-                problem = BadRequest("productType must be one of Flight, Bus, Tour, Visa or GroupDeparture.");
+                problem = BadRequest("productType must be one of Flight, Bus, Tour, Package, Visa or GroupDeparture.");
                 return false;
             }
 

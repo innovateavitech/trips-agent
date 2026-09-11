@@ -6,6 +6,7 @@ using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Auditing;
+using TripsAgent.Domain.Catalog;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
@@ -237,6 +238,18 @@ public class AppDbContext : DbContext, IAppDbContext
 
     /// <summary>The WebP renditions of image assets.</summary>
     public DbSet<AssetVariant> AssetVariants => Set<AssetVariant>();
+
+    /// <inheritdoc />
+    public DbSet<Product> Products => Set<Product>();
+
+    /// <inheritdoc />
+    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
+
+    /// <summary>A product's gallery rows. Written only through <see cref="Product"/>.</summary>
+    public DbSet<ProductMedia> ProductMedia => Set<ProductMedia>();
+
+    /// <summary>A product's itinerary days. Written only through <see cref="Product"/>.</summary>
+    public DbSet<TourItineraryDay> TourItineraryDays => Set<TourItineraryDay>();
 
     /// <summary>Every notification queued, and what happened to it. Tenant-scoped.</summary>
     public DbSet<Notification> Notifications => Set<Notification>();

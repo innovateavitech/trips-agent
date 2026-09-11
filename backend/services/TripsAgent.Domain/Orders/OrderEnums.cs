@@ -39,6 +39,9 @@ public enum OrderLineItemType
     Tour = 3,
     Visa = 4,
     GroupDeparture = 5,
+
+    /// <summary>A catalog package. Numbered to match <c>PricedProductType.Package</c>.</summary>
+    Package = 6,
 }
 
 /// <summary>

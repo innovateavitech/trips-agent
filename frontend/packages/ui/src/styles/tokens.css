@@ -77,6 +77,19 @@
   --input: 226 16% 90%;
   --ring: 226 83% 56%;
 
+  /* -- Sidebar -------------------------------------------------------------
+     The agent console's navigation rail: a deep ink of the brand hue, so the
+     workspace beside it reads as the page and the rail as furniture. The
+     active item is marked with --sidebar-primary, a lifted brand blue that
+     keeps 6:1+ against the ink. Muted text clears 7:1. */
+  --sidebar: 226 38% 14%;
+  --sidebar-foreground: 226 25% 94%;
+  --sidebar-muted-foreground: 226 18% 72%;
+  --sidebar-accent: 226 30% 21%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-border: 226 26% 23%;
+  --sidebar-primary: 226 90% 72%;
+
   /* -- Shape --------------------------------------------------------------- */
   --radius: 0.5rem;
 }
@@ -124,6 +137,14 @@
   --border: 226 18% 20%;
   --input: 226 18% 20%;
   --ring: 226 83% 63%;
+
+  --sidebar: 226 28% 6%;
+  --sidebar-foreground: 226 12% 94%;
+  --sidebar-muted-foreground: 226 10% 64%;
+  --sidebar-accent: 226 20% 13%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-border: 226 18% 14%;
+  --sidebar-primary: 226 83% 70%;
 }
 
 /* Base element styles live in tailwind.preset.ts (addBase), not here — this file

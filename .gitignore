@@ -92,3 +92,6 @@ temp/
 # still report them, because a conflict copy can hold an edit that exists nowhere else.
 * [0-9].*
 * [0-9][0-9].*
+# ...and copied directories ("components 2/"), which iCloud leaves too.
+* [0-9]/
+* [0-9][0-9]/

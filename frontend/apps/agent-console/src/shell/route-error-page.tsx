@@ -9,6 +9,9 @@ export function NotFoundPage() {
       size="page"
       icon={<Compass aria-hidden="true" className="h-5 w-5" />}
       title="We could not find that page"
+      // The only thing on the page, so it is the page's heading. Without this
+      // the 404 has no heading at all.
+      headingLevel={1}
       action={
         <Link to="/" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
           Go to the dashboard

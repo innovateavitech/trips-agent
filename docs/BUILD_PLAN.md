@@ -437,6 +437,30 @@ Leads from the storefront's trip-request widget, a pipeline from New to Won, quo
 - **Needs:** F2 (emails) and F4 (the widget lives on the storefront).
 - **Issues:** #62
 
+**CRM contract.** The console is built to it, and the backend builds to it. Reading needs `customer.view`; changing anything needs `customer.edit`:
+
+```
+GET  /api/v1/crm/leads                          → LeadSummary[]
+GET  /api/v1/crm/leads/{id}                     → Lead: with its quotes, tasks, messages and stage history
+POST /api/v1/crm/leads                          → Lead (201): a lead the agent keys in; the widget's comes from the storefront (F4)
+POST /api/v1/crm/leads/{id}/stage               → Lead: {stage, reason?}; Lost needs a reason
+POST /api/v1/crm/leads/{id}/quotes              → Quote (201)
+GET  /api/v1/crm/quotes/{id}                    → Quote
+PUT  /api/v1/crm/quotes/{id}                    → Quote; 409 unless it is still a draft
+POST /api/v1/crm/quotes/{id}/send               → Quote: sets publicUrl on the agency's own domain; a New lead becomes Quoted
+GET  /api/v1/crm/customers                      → CustomerSummary[]
+GET  /api/v1/crm/customers/{id}                 → Customer: with their leads, quotes, bookings, tasks and messages
+GET  /api/v1/crm/tasks?open=true                → Task[]
+POST /api/v1/crm/tasks                          → Task (201): {title, dueAt, related {type, id}}
+POST /api/v1/crm/tasks/{id}/complete            → Task
+POST /api/v1/crm/communications                 → Communication (201): {channel, direction, summary, related {type, id}}
+```
+
+- **Enums:** LeadStage New · Quoted · Negotiating · Won · Lost. LeadSource TripRequestWidget · ContactForm · Manual. QuoteStatus Draft · Sent · Viewed · Accepted · Declined · Expired. Channel Email · Sms · Whatsapp · Call · Note. Direction Inbound · Outbound. RelatedType Lead · Customer · Quote.
+- **LeadSummary:** `id`, `customer {id, name, email?, phone?}`, `source`, `destination`, `travelFrom?`, `travelTo?`, `adults`, `children`, `budgetMaxMinor?`, `currency`, `stage`, `ownerName?`, `createdAt`, `nextTaskDueAt?`, `quoteCount`. **Lead** adds `message`, `budgetMinMinor?`, `lostReason?`, `history[] {stage, at, byName, reason?}`, `quotes[]`, `tasks[]`, `communications[]`.
+- **Quote:** `id`, `quoteNumber`, `leadId`, `customer`, `title`, `status`, `validUntil` (date), `currency`, `items[] {description, quantity, unitPriceMinor, productId?}`, `itinerary[] {dayNumber, title, description}`, `notes`, `totalMinor`, `publicUrl?`, `sentAt?`, `viewedAt?`, `respondedAt?`. Accepting happens on the public link, which is the storefront's (F4, F5).
+- **Customer:** `id`, `name`, `email?`, `phone?`, `lifetimeValueMinor`, `totalBookings`, `lastActivityAt`, `openLeadCount`, plus on the full record `leads[]`, `quotes[]`, `bookings[] {reference, title, travelDate?, status, amountMinor}`, `tasks[]`, `communications[]`. Customers are never keyed in first: any inquiry, quote or booking creates or updates one (FRD §2.8 RS-1).
+
 #### #62 · Leads, quotes and pipeline
 
 FRD §2.8 and §2.10.

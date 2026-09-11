@@ -1,3 +1,4 @@
+import type { Schemas } from '@trips/api-client';
 import type { BookingStatus, BookingSummary, ProductKind } from '../dashboard/types';
 
 /**
@@ -79,6 +80,14 @@ export interface BookingDetail extends BookingListItem {
  * fare, or give the money back. Substituting is a new search, not a call here.
  */
 export type ResolutionAction = 'retry' | 'substitute' | 'refund';
+
+/**
+ * An invoice or voucher issued for a booking (#46), exactly as
+ * `GET /api/v1/documents?orderReference=…` returns it. Taken from the generated
+ * client rather than written out here, so the stand-in in `mock/` and the real
+ * endpoint cannot disagree about its shape.
+ */
+export type BookingDocument = Schemas['BookingDocumentResponse'];
 
 /** Which date the date filter reads: when the trip leaves, or when it was booked. */
 export type BookingDateField = 'departure' | 'booked';

@@ -4,6 +4,7 @@ import type { BookingsApi } from '../bookings-api';
 import { newestFirst } from '../bookings-rules';
 import type { BookingDetail } from '../types';
 import { allBookings, findBooking, scheduleSettlement, updateBooking } from './booking-store';
+import { documentsFor, reissueDocument } from './document-store';
 
 /**
  * ============================================================================
@@ -25,6 +26,16 @@ const delay = (ms = LATENCY_MS) => new Promise((resolve) => setTimeout(resolve, 
 const copy = (booking: BookingDetail): BookingDetail => structuredClone(booking);
 
 export const mockBookingsApi: BookingsApi = {
+  async listDocuments(reference) {
+    await delay();
+    return documentsFor(reference);
+  },
+
+  async reissueDocument(documentId) {
+    await delay(600);
+    return reissueDocument(documentId);
+  },
+
   async listBookings() {
     await delay();
     return newestFirst(allBookings().map(copy));

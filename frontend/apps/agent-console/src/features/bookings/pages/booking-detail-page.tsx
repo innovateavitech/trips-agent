@@ -1,9 +1,8 @@
-import { FileText, Ticket } from 'lucide-react';
+import { Ticket } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import {
   Alert,
   Badge,
-  Button,
   Card,
   CardHeader,
   CardTitle,
@@ -17,7 +16,8 @@ import { ApiError, describeError } from '../../../api/errors';
 import { PageHeader } from '../../../shell/page-header';
 import { STATUS_DISPLAY, describeTimeLeft, formatDeparture } from '../../dashboard/booking-display';
 import { formatClock, formatDay } from '../../search/search-rules';
-import { useBooking } from '../bookings-api';
+import { useBooking, useBookingDocuments, useReissueDocument } from '../bookings-api';
+import { DocumentsCard } from '../components/documents-card';
 import type { BookingDetail } from '../types';
 
 const TRAVELLER_TYPE: Record<BookingDetail['travellers'][number]['type'], string> = {
@@ -224,26 +224,32 @@ function BookingView({ booking }: { booking: BookingDetail }) {
             </p>
           </Card>
 
-          <Card className="flex flex-col gap-3 p-5">
-            <p className="text-sm font-medium text-foreground">Documents</p>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" disabled>
-                <FileText aria-hidden="true" className="h-4 w-4" />
-                Voucher
-              </Button>
-              <Button variant="outline" size="sm" disabled>
-                <FileText aria-hidden="true" className="h-4 w-4" />
-                Invoice
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {booking.status === 'ticketed'
-                ? 'Vouchers and invoices in your own branding arrive with the documents service.'
-                : 'Available once the booking is ticketed.'}
-            </p>
-          </Card>
+          <BookingDocuments booking={booking} />
         </div>
       </div>
     </div>
+  );
+}
+
+/** The booking's invoices and vouchers, with download and reissue (#46). */
+function BookingDocuments({ booking }: { booking: BookingDetail }) {
+  const documents = useBookingDocuments(booking.reference);
+  const reissue = useReissueDocument(booking.reference);
+
+  const problem = documents.isError
+    ? describeError(documents.error).title
+    : reissue.isError
+      ? describeError(reissue.error).title
+      : null;
+
+  return (
+    <DocumentsCard
+      documents={documents.data}
+      loading={documents.isPending}
+      problem={problem}
+      ticketed={booking.status === 'ticketed'}
+      reissuingId={reissue.isPending ? (reissue.variables ?? null) : null}
+      onReissue={(document) => reissue.mutate(document.id)}
+    />
   );
 }

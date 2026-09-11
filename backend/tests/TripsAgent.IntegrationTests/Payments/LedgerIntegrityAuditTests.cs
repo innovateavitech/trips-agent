@@ -431,10 +431,10 @@ public class LedgerIntegrityAuditTests
             db.Wallets.Add(Wallet.OpenFor(agency.Id, "NGN"));
 
             var wallet = LedgerAccount.ForAgency(agency.Id, LedgerAccountType.AgencyWallet, "NGN", "Wallet");
-            var clearing = LedgerAccount.ForPlatform(LedgerAccountType.GatewayClearing, "NGN", "Gateway clearing");
-
-            db.LedgerAccounts.AddRange(wallet, clearing);
+            db.LedgerAccounts.Add(wallet);
             await db.SaveChangesAsync();
+
+            var clearing = await PlatformAccountAsync(db, LedgerAccountType.GatewayClearing);
 
             agencyId = agency.Id;
             walletAccountId = wallet.Id;
@@ -454,6 +454,15 @@ public class LedgerIntegrityAuditTests
         return new World(db, tenancy, clock, agencyId, walletAccountId, clearingAccountId, audit, alerts);
     }
 
+
+    /// <summary>
+    /// A platform account as the HardenMoneyPath migration seeded it. There is exactly one of each
+    /// type and currency now, and the unique index refuses a second — so a fixture takes the
+    /// seeded one rather than making its own.
+    /// </summary>
+    private static Task<LedgerAccount> PlatformAccountAsync(AppDbContext db, LedgerAccountType accountType) =>
+        db.LedgerAccounts.SingleAsync(
+            a => a.AgencyId == null && a.AccountType == accountType && a.Currency == "NGN");
     /// <summary>Collects alerts so a test can assert on what would have woken someone up.</summary>
     private sealed class CapturingAlerter : IPlatformAlerter
     {

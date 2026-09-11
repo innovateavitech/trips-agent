@@ -105,6 +105,10 @@ public static class DependencyInjection
         // than on IAppDbContext, which deliberately exposes no way to run arbitrary SQL.
         services.AddScoped<ILedgerIntegrityQueries, Payments.LedgerIntegrityQueries>();
 
+        // Lets Application tell "a unique index picked another writer" apart from every other
+        // failed save, without Application referencing Npgsql.
+        services.AddSingleton<IUniqueViolationDetector, PostgresUniqueViolationDetector>();
+
         // Files on disk, for local development. MinIO and a cloud adapter arrive with the upload
         // pipeline (#18) behind this same port; nothing above it knows the difference.
         services.AddSingleton<IBlobStorage>(_ => new LocalFileBlobStorage(new LocalBlobStorageOptions

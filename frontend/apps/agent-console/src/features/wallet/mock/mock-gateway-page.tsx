@@ -39,7 +39,7 @@ export function MockGatewayPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col gap-4 p-4 sm:p-6">
+    <div className="flex w-full max-w-md flex-col gap-4">
       <Alert tone="warning" title="This is not a real payment page">
         It stands in for Paystack until the top-up endpoints exist (issue #26). Pick an outcome to
         see how the wallet handles it.
@@ -60,6 +60,6 @@ export function MockGatewayPage() {
           </Button>
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

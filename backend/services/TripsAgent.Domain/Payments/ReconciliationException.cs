@@ -17,6 +17,12 @@ public enum ReconciliationCheck
 
     /// <summary>A hold still held after its deadline.</summary>
     ExpiredHoldOutstanding = 4,
+
+    /// <summary>
+    /// A payment the gateway confirmed that never reached the wallet: posting failed, or it is
+    /// held for review. Somebody was charged and has not been credited.
+    /// </summary>
+    PaymentNotPosted = 5,
 }
 
 /// <summary>How much attention a discrepancy needs.</summary>
@@ -26,9 +32,9 @@ public enum ReconciliationSeverity
     /// The books are wrong. Wake someone up.
     /// </summary>
     /// <remarks>
-    /// Reserved for the three checks that mean money is misstated. These should never fire: the
-    /// balance trigger refuses an unbalanced commit and the entries table is append-only, so a
-    /// P1 here means something bypassed both.
+    /// Reserved for the checks that mean money is misstated: the books disagree with themselves,
+    /// or a payer was charged and not credited. None of these should ever fire, so a P1 here means
+    /// something bypassed the controls meant to prevent it.
     /// </remarks>
     P1 = 1,
 
@@ -57,7 +63,8 @@ public static class ReconciliationCheckExtensions
     /// How loudly a check should complain.
     /// </summary>
     /// <remarks>
-    /// The first three mean a figure is wrong, which is as bad as it gets here. An expired hold
+    /// All but one mean a figure is wrong, which is as bad as it gets here. A payment that was
+    /// charged and never credited counts: the agency's balance is short by money it paid. An expired hold
     /// is different in kind: the money is still accounted for, a release job is simply behind.
     /// Paging someone at 03:00 for that would teach them that a P1 from this job is usually
     /// nothing — which is the one thing that must never be true of it.
@@ -68,6 +75,7 @@ public static class ReconciliationCheckExtensions
         ReconciliationCheck.WalletBalanceDrift => ReconciliationSeverity.P1,
         ReconciliationCheck.OrphanedLedgerEntry => ReconciliationSeverity.P1,
         ReconciliationCheck.ExpiredHoldOutstanding => ReconciliationSeverity.P2,
+        ReconciliationCheck.PaymentNotPosted => ReconciliationSeverity.P1,
         _ => throw new ArgumentOutOfRangeException(nameof(check), check, "Unknown reconciliation check."),
     };
 }

@@ -7,3 +7,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  /* Browser surfaces carry the design too: selected text takes the brand tint, not the OS blue. */
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+}

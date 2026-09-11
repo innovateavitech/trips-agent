@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
@@ -86,7 +87,15 @@ public sealed class PaystackGateway : IPaymentGateway
 
         using var response = await _http.PostAsJsonAsync("/transaction/initialize", request, Json, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            // Paystack says WHY in the body, and EnsureSuccessStatusCode throws that away. The
+            // difference is between "the payment provider is not responding" and the actual
+            // answer — '"email" must be a valid email' — which is the one a person can act on.
+            throw new PaymentGatewayException(
+                $"Paystack refused to initialise {reference}: {(int)response.StatusCode} "
+                + $"{await MessageFrom(response, cancellationToken)}");
+        }
 
         var body = await response.Content.ReadFromJsonAsync<PaystackResponse<InitializeData>>(Json, cancellationToken)
             ?? throw new InvalidOperationException("Paystack returned an empty initialize response.");
@@ -101,32 +110,131 @@ public sealed class PaystackGateway : IPaymentGateway
 
     public async Task<GatewayVerification> VerifyAsync(string reference, CancellationToken cancellationToken = default)
     {
-        using var response = await _http.GetAsync(
-            new Uri($"/transaction/verify/{Uri.EscapeDataString(reference)}", UriKind.Relative), cancellationToken);
-
-        response.EnsureSuccessStatusCode();
-
-        var body = await response.Content.ReadFromJsonAsync<PaystackResponse<VerifyData>>(Json, cancellationToken)
-            ?? throw new InvalidOperationException("Paystack returned an empty verify response.");
+        var body = await SendVerifyAsync(reference, cancellationToken);
 
         if (!body.Status || body.Data is null)
         {
+            // Paystack declined to give a verdict. That says nothing about whether the payer was
+            // charged, so it is not a failure of the payment.
             return new GatewayVerification(
-                false, body.Message ?? "unknown", Money.Zero, Money.Zero, string.Empty, null, body.Message);
+                GatewayPaymentOutcome.Pending, body.Message ?? "unknown", Money.Zero, Money.Zero, string.Empty, null, body.Message);
         }
 
         var data = body.Data;
-        var succeeded = string.Equals(data.Status, "success", StringComparison.OrdinalIgnoreCase);
+        var outcome = Classify(data.Status);
+
+        if (outcome != GatewayPaymentOutcome.Succeeded)
+        {
+            return new GatewayVerification(
+                outcome,
+                data.Status ?? "unknown",
+                Money.Zero,
+                Money.Zero,
+                data.Currency ?? string.Empty,
+                data.Reference,
+                data.GatewayResponse);
+        }
+
+        // A success has to say how much was charged, as a whole number of minor units. Anything
+        // else is a response we cannot credit from — and guessing would be worse than stopping.
+        if (WholeMinorUnits(data.Amount) is not { } amount || amount < 0)
+        {
+            throw new PaymentGatewayException(
+                $"Paystack reported {reference} successful without a usable amount ({Describe(data.Amount)}). "
+                + "Nothing was credited.");
+        }
 
         return new GatewayVerification(
-            succeeded,
-            data.Status ?? "unknown",
-            new Money(data.Amount),
-            new Money(data.Fees),
+            GatewayPaymentOutcome.Succeeded,
+            data.Status ?? "success",
+            new Money(amount),
+
+            // Only recorded for reconciling settlements, never credited, so an absent or odd fee
+            // is recorded as zero rather than blocking the payment.
+            WholeMinorUnits(data.Fees) is { } fee and >= 0 ? new Money(fee) : Money.Zero,
             data.Currency ?? string.Empty,
             data.Reference,
-            succeeded ? null : data.GatewayResponse);
+            null);
     }
+
+    /// <summary>
+    /// Calls verify and reads the body, turning every way that can fail into one of our two
+    /// gateway exceptions.
+    /// </summary>
+    private async Task<PaystackResponse<VerifyData>> SendVerifyAsync(string reference, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var response = await _http.GetAsync(
+                new Uri($"/transaction/verify/{Uri.EscapeDataString(reference)}", UriKind.Relative), cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var status = (int)response.StatusCode;
+
+                // A 5xx, a timeout or rate limiting: ask again later. Any other refusal is an
+                // answer, just not one we can use.
+                if (status >= 500 || response.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests)
+                {
+                    throw new PaymentGatewayUnavailableException(
+                        $"Paystack answered HTTP {status} when asked to verify {reference}.");
+                }
+
+                throw new PaymentGatewayException($"Paystack refused to verify {reference}: HTTP {status}.");
+            }
+
+            return await response.Content.ReadFromJsonAsync<PaystackResponse<VerifyData>>(Json, cancellationToken)
+                ?? throw new PaymentGatewayException($"Paystack returned an empty verify response for {reference}.");
+        }
+        catch (JsonException ex)
+        {
+            throw new PaymentGatewayException($"Paystack's verify response for {reference} could not be read.", ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new PaymentGatewayUnavailableException($"Paystack could not be reached to verify {reference}.", ex);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // HttpClient reports its own timeout as a cancellation. Only the caller's token
+            // cancelling means "stop"; this means "Paystack was too slow".
+            throw new PaymentGatewayUnavailableException($"Paystack timed out verifying {reference}.", ex);
+        }
+        catch (Polly.ExecutionRejectedException ex)
+        {
+            // The resilience pipeline's circuit breaker is open, or its own timeout fired.
+            throw new PaymentGatewayUnavailableException($"Paystack calls are paused; {reference} was not verified.", ex);
+        }
+    }
+
+    /// <summary>
+    /// What a Paystack status means for the payment.
+    /// </summary>
+    /// <remarks>
+    /// Only <c>failed</c> and <c>reversed</c> are final failures. Everything else — abandoned,
+    /// ongoing, pending, processing, queued, and any status Paystack adds later — leaves the
+    /// payment pending, because marking a payment failed that then settles tells the agent to pay
+    /// twice.
+    /// </remarks>
+    private static GatewayPaymentOutcome Classify(string? status)
+    {
+        if (string.Equals(status, "success", StringComparison.OrdinalIgnoreCase))
+        {
+            return GatewayPaymentOutcome.Succeeded;
+        }
+
+        return string.Equals(status, "failed", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(status, "reversed", StringComparison.OrdinalIgnoreCase)
+            ? GatewayPaymentOutcome.Failed
+            : GatewayPaymentOutcome.Pending;
+    }
+
+    /// <summary>The value as a whole number of minor units, or null if it is absent, null or fractional.</summary>
+    private static long? WholeMinorUnits(JsonElement value) =>
+        value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var minor) ? minor : null;
+
+    private static string Describe(JsonElement value) =>
+        value.ValueKind == JsonValueKind.Undefined ? "missing" : value.GetRawText();
 
     /// <summary>
     /// Verifies the <c>x-paystack-signature</c> header: HMAC-SHA512 of the raw body, keyed by the
@@ -156,6 +264,23 @@ public sealed class PaystackGateway : IPaymentGateway
             Encoding.UTF8.GetBytes(signature.Trim().ToLower(CultureInfo.InvariantCulture)));
     }
 
+    /// <summary>
+    /// Paystack's own explanation, for the log. Never the body verbatim: a failed response can
+    /// echo the request, and the request carries a customer's email address.
+    /// </summary>
+    private static async Task<string> MessageFrom(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var problem = await response.Content.ReadFromJsonAsync<PaystackResponse<object>>(Json, cancellationToken);
+            return problem?.Message is { Length: > 0 } message ? message : "(no message)";
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            return "(unreadable response)";
+        }
+    }
+
     private sealed record PaystackResponse<T>(bool Status, string? Message, T? Data);
 
     private sealed record InitializeData(
@@ -167,15 +292,22 @@ public sealed class PaystackGateway : IPaymentGateway
     /// The fields we read off a verified transaction.
     /// </summary>
     /// <remarks>
-    /// <c>amount</c> is what was actually paid; Paystack also returns <c>requested_amount</c>,
-    /// and its own documentation shows a sample where the two differ. Only <c>amount</c> is
-    /// mapped, so there is nothing here for a caller to credit by mistake.
+    /// <para>
+    /// <c>amount</c> and <c>fees</c> are read as raw JSON rather than as <c>long</c>. Paystack
+    /// documents <c>fees</c> as nullable — it is null until a charge settles — and a typed
+    /// <c>long</c> throws on null, which turned an ordinary abandoned payment into a crash.
+    /// </para>
+    /// <para>
+    /// <c>amount</c> is what was charged. When the payer bears the fee it includes the fee, so it
+    /// is compared against, never credited in place of, what we asked for. See
+    /// <c>PaymentTransaction.MarkSucceeded</c>.
+    /// </para>
     /// </remarks>
     private sealed record VerifyData(
         [property: JsonPropertyName("status")] string? Status,
         [property: JsonPropertyName("reference")] string? Reference,
-        [property: JsonPropertyName("amount")] long Amount,
-        [property: JsonPropertyName("fees")] long Fees,
+        [property: JsonPropertyName("amount")] JsonElement Amount,
+        [property: JsonPropertyName("fees")] JsonElement Fees,
         [property: JsonPropertyName("currency")] string? Currency,
         [property: JsonPropertyName("gateway_response")] string? GatewayResponse);
 }

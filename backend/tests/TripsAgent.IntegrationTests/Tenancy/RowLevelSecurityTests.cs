@@ -370,17 +370,27 @@ public class RowLevelSecurityTests
             b.MarkVerified(DateTimeOffset.UtcNow);
 
             var walletAccountA = LedgerAccount.ForAgency(a.Id, LedgerAccountType.AgencyWallet, "NGN", "Wallet A");
-            var clearing = LedgerAccount.ForPlatform(LedgerAccountType.GatewayClearing, "NGN", "Gateway clearing");
 
             setup.Agencies.AddRange(a, b);
             setup.Wallets.AddRange(Wallet.OpenFor(a.Id, "NGN"), Wallet.OpenFor(b.Id, "NGN"));
-            setup.LedgerAccounts.AddRange(walletAccountA, clearing);
+            setup.LedgerAccounts.Add(walletAccountA);
             await setup.SaveChangesAsync();
+
+            var clearing = await PlatformAccountAsync(setup, LedgerAccountType.GatewayClearing);
 
             return new World(_postgres, name, a.Id, b.Id, walletAccountA.Id, clearing.Id);
         }
     }
 
+
+    /// <summary>
+    /// A platform account as the HardenMoneyPath migration seeded it. There is exactly one of each
+    /// type and currency now, and the unique index refuses a second — so a fixture takes the
+    /// seeded one rather than making its own.
+    /// </summary>
+    private static Task<LedgerAccount> PlatformAccountAsync(AppDbContext db, LedgerAccountType accountType) =>
+        db.LedgerAccounts.SingleAsync(
+            a => a.AgencyId == null && a.AccountType == accountType && a.Currency == "NGN");
     private sealed class World : IAsyncDisposable
     {
         private readonly PostgresFixture _postgres;

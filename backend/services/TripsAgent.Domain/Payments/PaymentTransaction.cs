@@ -26,6 +26,16 @@ public enum PaymentStatus
 
     /// <summary>Started and never completed. Distinct from failed: nobody was charged.</summary>
     Abandoned = 4,
+
+    /// <summary>
+    /// The gateway confirmed a payment, but not one we can credit: less than we asked for, or in
+    /// another currency. Nothing is credited automatically; a person decides.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="Failed"/> because the payer <i>was</i> charged. Telling them it
+    /// failed would invite them to pay again.
+    /// </remarks>
+    UnderReview = 5,
 }
 
 /// <summary>
@@ -113,9 +123,17 @@ public sealed class PaymentTransaction : Entity, IAuditableEntity, ITenantScoped
     /// Set once this payment has produced ledger entries, and checked before producing more.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// This is what makes crediting idempotent. A webhook and a browser redirect routinely both
     /// arrive for the same payment, and the gateway retries webhooks — without this, one top-up
     /// credits the wallet several times.
+    /// </para>
+    /// <para>
+    /// Checking it in memory is not enough on its own: two callers can both read it as null
+    /// before either writes. So it is also an EF Core concurrency token. The update that posts a
+    /// payment only matches the row while the column is still null in the database, so the second
+    /// of two racing posts matches nothing and its whole save is rolled back.
+    /// </para>
     /// </remarks>
     public Guid? LedgerTransactionGroupId { get; private set; }
 
@@ -136,22 +154,43 @@ public sealed class PaymentTransaction : Entity, IAuditableEntity, ITenantScoped
     public void RecordGatewayReference(string gatewayReference) => GatewayReference = gatewayReference;
 
     /// <summary>
-    /// Records a server-side confirmation.
+    /// Records a server-side confirmation, and decides whether it can be credited.
     /// </summary>
-    /// <param name="verifiedAmount">
-    /// What the gateway says was paid — which is not assumed to equal what we asked for. A payer
-    /// can be charged a different amount, and crediting the requested figure rather than the paid
-    /// one is how a wallet gains money nobody paid.
-    /// </param>
-    public void MarkSucceeded(Money verifiedAmount, Money fee, string? gatewayReference, DateTimeOffset at)
+    /// <param name="paidAmount">What the gateway says was actually charged.</param>
+    /// <param name="fee">The gateway's cut, for settlement reconciliation.</param>
+    /// <param name="paidCurrency">The currency the gateway says it was charged in.</param>
+    /// <param name="gatewayReference">The gateway's own reference, if it sent one.</param>
+    /// <param name="at">When the gateway confirmed it.</param>
+    /// <remarks>
+    /// <para>
+    /// The wallet is credited <see cref="AmountMinor"/> — what we asked for — never the paid
+    /// amount. When the payer bears the gateway's fee, the paid amount includes that fee, and
+    /// crediting it would hand the agency money the platform never receives.
+    /// </para>
+    /// <para>
+    /// That is only safe when the payment covers the request in the same currency. Anything else
+    /// goes to <see cref="PaymentStatus.UnderReview"/> for a person to decide. Crediting the
+    /// request when less arrived would credit money nobody paid; converting a currency here would
+    /// be a pricing decision made by accident.
+    /// </para>
+    /// </remarks>
+    public void MarkSucceeded(
+        Money paidAmount,
+        Money fee,
+        string paidCurrency,
+        string? gatewayReference,
+        DateTimeOffset at)
     {
-        if (Status == PaymentStatus.Succeeded)
+        if (LedgerTransactionGroupId is not null || Status == PaymentStatus.UnderReview)
         {
-            return;   // a second confirmation for the same payment is normal and must be harmless
+            // Already credited, or already waiting for a person. A second confirmation for the
+            // same payment is normal and must be harmless.
+            return;
         }
 
-        Status = PaymentStatus.Succeeded;
-        VerifiedAmountMinor = verifiedAmount;
+        // A payment confirmed earlier but never posted is decided again from this answer, so a
+        // row recorded before these checks existed cannot be credited without passing them.
+        VerifiedAmountMinor = paidAmount;
         FeeMinor = fee;
         VerifiedAt = at;
 
@@ -159,19 +198,38 @@ public sealed class PaymentTransaction : Entity, IAuditableEntity, ITenantScoped
         {
             GatewayReference = gatewayReference;
         }
+
+        var currency = (paidCurrency ?? string.Empty).Trim().ToUpperInvariant();
+
+        if (!string.Equals(currency, Currency, StringComparison.Ordinal))
+        {
+            Status = PaymentStatus.UnderReview;
+            FailureReason = $"Paid in '{currency}', but the top-up was requested in {Currency}.";
+            return;
+        }
+
+        if (paidAmount < AmountMinor)
+        {
+            Status = PaymentStatus.UnderReview;
+            FailureReason = $"Paid {paidAmount} {currency}, less than the {AmountMinor} requested.";
+            return;
+        }
+
+        Status = PaymentStatus.Succeeded;
+        FailureReason = null;
     }
 
     public void MarkFailed(string? reason, DateTimeOffset at)
     {
-        if (Status == PaymentStatus.Succeeded)
+        if (Status is PaymentStatus.Succeeded or PaymentStatus.UnderReview)
         {
-            // A failure notice arriving after a confirmed success is the gateway being noisy, not
-            // a reason to unwind money that is already in the ledger.
+            // A failure notice arriving after the gateway confirmed a charge is the gateway being
+            // noisy, not a reason to forget that the payer was charged.
             return;
         }
 
         Status = PaymentStatus.Failed;
-        FailureReason = reason;
+        FailureReason = reason is { Length: > 500 } ? reason[..500] : reason;
         VerifiedAt = at;
     }
 
@@ -204,12 +262,39 @@ public sealed class PaymentTransaction : Entity, IAuditableEntity, ITenantScoped
 /// A webhook delivery from a gateway, recorded so it is processed exactly once.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Gateways retry. The same event arriving five times must produce one ledger transaction, and
 /// the durable guarantee is a unique index on the gateway's event id — not a check-then-act in
 /// application code, which two concurrent deliveries would both pass.
+/// </para>
+/// <para>
+/// Processing is claimed the same way. A worker moves the row from <c>Pending</c> to
+/// <c>Processing</c> with one conditional UPDATE, and only the worker whose update matched a row
+/// goes on. The claim expires after <see cref="ProcessingLease"/>, so a worker that died
+/// mid-flight does not strand the event.
+/// </para>
 /// </remarks>
 public sealed class PaymentWebhookEvent : Entity, IAuditableEntity
 {
+    /// <summary>Failures that were our fault or the payload's, before the event is dead-lettered.</summary>
+    public const int MaxAttempts = 5;
+
+    /// <summary>
+    /// Times the gateway could not answer, before the event is dead-lettered anyway.
+    /// </summary>
+    /// <remarks>
+    /// Counted apart from <see cref="MaxAttempts"/>, so a ten-minute gateway outage does not use
+    /// up an event's attempts. With the back-off capped at an hour this is roughly two days.
+    /// Past that, a person should look.
+    /// </remarks>
+    public const int MaxTransientFailures = 48;
+
+    /// <summary>How long a claim lasts before another worker may take the event over.</summary>
+    public static readonly TimeSpan ProcessingLease = TimeSpan.FromMinutes(10);
+
+    /// <summary>The longest wait between retries.</summary>
+    public static readonly TimeSpan MaxRetryDelay = TimeSpan.FromHours(1);
+
     private PaymentWebhookEvent()
     {
         Gateway = string.Empty;
@@ -248,9 +333,19 @@ public sealed class PaymentWebhookEvent : Entity, IAuditableEntity
 
     public WebhookProcessingStatus ProcessingStatus { get; private set; }
 
+    /// <summary>Failures that count towards <see cref="MaxAttempts"/>.</summary>
     public int Attempts { get; private set; }
 
+    /// <summary>Times the gateway could not be reached. See <see cref="MaxTransientFailures"/>.</summary>
+    public int TransientFailures { get; private set; }
+
     public string? LastError { get; private set; }
+
+    /// <summary>Not before this. Null means as soon as possible.</summary>
+    public DateTimeOffset? NextAttemptAt { get; private set; }
+
+    /// <summary>While <c>Processing</c>: when the current claim lapses.</summary>
+    public DateTimeOffset? ClaimExpiresAt { get; private set; }
 
     public DateTimeOffset? ProcessedAt { get; private set; }
 
@@ -258,10 +353,27 @@ public sealed class PaymentWebhookEvent : Entity, IAuditableEntity
 
     public DateTimeOffset UpdatedAt { get; set; }
 
+    /// <summary>True once retries are exhausted and a person has to look.</summary>
+    public bool IsDeadLettered => ProcessingStatus == WebhookProcessingStatus.DeadLettered;
+
+    /// <summary>
+    /// How long to wait after the <paramref name="failures"/>th failure: 1, 2, 4, 8 minutes and so
+    /// on, capped at <see cref="MaxRetryDelay"/>.
+    /// </summary>
+    public static TimeSpan RetryDelay(int failures)
+    {
+        var exponent = Math.Clamp(failures - 1, 0, 10);
+        var delay = TimeSpan.FromMinutes(1 << exponent);
+
+        return delay < MaxRetryDelay ? delay : MaxRetryDelay;
+    }
+
     public void MarkProcessed(DateTimeOffset at)
     {
         ProcessingStatus = WebhookProcessingStatus.Processed;
         ProcessedAt = at;
+        NextAttemptAt = null;
+        ClaimExpiresAt = null;
     }
 
     /// <summary>An event type we do not act on. Recorded, not an error.</summary>
@@ -269,19 +381,44 @@ public sealed class PaymentWebhookEvent : Entity, IAuditableEntity
     {
         ProcessingStatus = WebhookProcessingStatus.Ignored;
         ProcessedAt = at;
+        NextAttemptAt = null;
+        ClaimExpiresAt = null;
     }
 
-    public void MarkFailed(string error)
+    /// <summary>
+    /// Records a failure that retrying may not fix, and uses up an attempt.
+    /// </summary>
+    /// <remarks>Dead-letters the event once <see cref="MaxAttempts"/> is reached.</remarks>
+    public void MarkFailed(string error, DateTimeOffset now)
     {
         Attempts++;
-        LastError = error;
-        ProcessingStatus = Attempts >= MaxAttempts
-            ? WebhookProcessingStatus.DeadLettered
-            : WebhookProcessingStatus.Pending;
+        ScheduleRetry(error, now, exhausted: Attempts >= MaxAttempts);
     }
 
-    /// <summary>Tries before the event is dead-lettered for a person to look at.</summary>
-    public const int MaxAttempts = 5;
+    /// <summary>
+    /// Records that the gateway could not give an answer, without using up an attempt.
+    /// </summary>
+    public void RetryLater(string reason, DateTimeOffset now)
+    {
+        TransientFailures++;
+        ScheduleRetry(reason, now, exhausted: TransientFailures >= MaxTransientFailures);
+    }
+
+    private void ScheduleRetry(string error, DateTimeOffset now, bool exhausted)
+    {
+        LastError = error is { Length: > 1000 } ? error[..1000] : error;
+        ClaimExpiresAt = null;
+
+        if (exhausted)
+        {
+            ProcessingStatus = WebhookProcessingStatus.DeadLettered;
+            NextAttemptAt = null;
+            return;
+        }
+
+        ProcessingStatus = WebhookProcessingStatus.Pending;
+        NextAttemptAt = now + RetryDelay(Attempts + TransientFailures);
+    }
 }
 
 public enum WebhookProcessingStatus
@@ -297,4 +434,7 @@ public enum WebhookProcessingStatus
 
     /// <summary>Retried to exhaustion. Needs a person.</summary>
     DeadLettered = 5,
+
+    /// <summary>Claimed by a worker, which is verifying it now. See <c>ClaimExpiresAt</c>.</summary>
+    Processing = 6,
 }

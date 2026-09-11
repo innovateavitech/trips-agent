@@ -7,3 +7,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* The parts of the page nobody draws still carry the design. */
+@layer base {
+  ::selection {
+    background-color: hsl(var(--primary) / 0.2);
+  }
+  html {
+    scrollbar-gutter: stable;
+  }
+}

@@ -9,6 +9,7 @@ using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
+using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
 using TripsAgent.Infrastructure.Messaging;
@@ -159,6 +160,39 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <summary>Discrepancies the nightly integrity audit found. Not tenant-scoped; see IAppDbContext.</summary>
     public DbSet<ReconciliationException> ReconciliationExceptions => Set<ReconciliationException>();
 
+    /// <summary>The aggregators we buy flights and bus seats from. Platform reference data, not tenant-scoped.</summary>
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+
+    /// <summary>Merchant credentials, encrypted. A null agency is the platform's own account.</summary>
+    public DbSet<SupplierCredential> SupplierCredentials => Set<SupplierCredential>();
+
+    public DbSet<SearchRequest> SearchRequests => Set<SearchRequest>();
+
+    public DbSet<SearchSession> SearchSessions => Set<SearchSession>();
+
+    public DbSet<SupplierOffer> SupplierOffers => Set<SupplierOffer>();
+
+    public DbSet<FlightSegment> FlightSegments => Set<FlightSegment>();
+
+    public DbSet<BusSegment> BusSegments => Set<BusSegment>();
+
+    public DbSet<SupplierFareRule> SupplierFareRules => Set<SupplierFareRule>();
+
+    /// <summary>Our record of each booking with a supplier. One per order line, enforced by the database.</summary>
+    public DbSet<SupplierBooking> SupplierBookings => Set<SupplierBooking>();
+
+    public DbSet<SupplierBookingConfirmation> SupplierBookingConfirmations => Set<SupplierBookingConfirmation>();
+
+    public DbSet<SupplierBookingPassenger> SupplierBookingPassengers => Set<SupplierBookingPassenger>();
+
+    public DbSet<PassengerDocument> PassengerDocuments => Set<PassengerDocument>();
+
+    /// <summary>Every HTTP call to a supplier, headers redacted. Monthly-partitioned.</summary>
+    public DbSet<SupplierApiCall> SupplierApiCalls => Set<SupplierApiCall>();
+
+    /// <summary>The evidence trail behind any payment reversal.</summary>
+    public DbSet<SupplierStatusPoll> SupplierStatusPolls => Set<SupplierStatusPoll>();
+
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.
     /// </summary>
@@ -307,6 +341,16 @@ public class AppDbContext : DbContext, IAppDbContext
         modelBuilder.Entity<PasswordResetToken>().HasQueryFilter(token =>
             AllowCrossTenantAccess
             || Users.Any(user => user.Id == token.UserId && user.AgencyId == CurrentAgencyId));
+
+        // Supplier credentials carry a nullable agency for the same reason roles do: null is the
+        // platform's own merchant account (open question 1). Every agency can read that one — its
+        // calls are made with it — but never another agency's. The secrets are ciphertext either way.
+        modelBuilder.Entity<SupplierCredential>().HasQueryFilter(credential =>
+            AllowCrossTenantAccess || credential.AgencyId == CurrentAgencyId || credential.AgencyId == null);
+
+        // A supplier call made for no agency — a platform smoke test — is platform business only.
+        modelBuilder.Entity<SupplierApiCall>().HasQueryFilter(call =>
+            AllowCrossTenantAccess || call.AgencyId == CurrentAgencyId);
 
         // Permissions are a platform-wide catalogue with no owner, and login attempts are
         // deliberately unfiltered: the ones worth investigating are against addresses that match

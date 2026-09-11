@@ -8,14 +8,18 @@ using TripsAgent.Application.Identity;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Payments;
 using TripsAgent.Application.Persistence;
+using TripsAgent.Application.Security;
 using TripsAgent.Application.Storage;
+using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Identity;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Notifications;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Security;
 using TripsAgent.Infrastructure.Storage;
+using TripsAgent.Infrastructure.Suppliers;
 using TripsAgent.Infrastructure.Tenancy;
 
 namespace TripsAgent.Infrastructure;
@@ -77,6 +81,8 @@ public static class DependencyInjection
         services.TryAddSingletonTimeProvider();
 
         services.AddAuditing(configuration);
+
+        services.AddSupplierPersistence(configuration);
 
         // Tenancy is scoped: one resolved agency per request, and nothing shared between them.
         // TenantContext is registered as itself as well as behind the interface, because
@@ -300,6 +306,71 @@ public static class DependencyInjection
         services.AddScoped<IAuditLogMaintenance>(sp => new AuditLogPartitionMaintenance(
             sp.GetRequiredKeyedService<AppDbContext>(AdminDbContextFactory.ServiceKey),
             sp.GetRequiredService<IOptions<AuditLogOptions>>()));
+    }
+
+    /// <summary>The configuration key holding the base64 AES-256 key that encrypts stored secrets.</summary>
+    public const string SecretEncryptionKeySetting = "Security:SecretEncryptionKey";
+
+    /// <summary>
+    /// Supplier credentials, their encryption, and the call log's partition maintenance. The
+    /// adapters themselves are registered by their own integration projects.
+    /// </summary>
+    private static void AddSupplierPersistence(this IServiceCollection services, IConfiguration configuration)
+    {
+        // Resolved lazily, like the token hashing key, so `migrate` and `seed` run without one — only
+        // code that actually reads or writes a credential needs it, and it fails clearly if missing.
+        services.AddSingleton<ISecretProtector>(_ => new AesGcmSecretProtector(ReadSecretEncryptionKey(configuration)));
+
+        // Open question 1 as a setting: which merchant account an agency's calls use.
+        services.AddSingleton(
+            configuration.GetSection(SupplierCredentialOptions.SectionName).Get<SupplierCredentialOptions>()
+            ?? new SupplierCredentialOptions());
+        services.AddScoped<ISupplierCredentialStore, SupplierCredentialStore>();
+
+        var section = configuration.GetSection(SupplierApiCallOptions.SectionName);
+
+        services.AddOptions<SupplierApiCallOptions>()
+            .Configure(options => section.Bind(options))
+            .Validate(
+                options => options.RetentionMonths >= 1 && options.PartitionsCreatedAhead >= 1,
+                "SupplierApiCalls:RetentionMonths and SupplierApiCalls:PartitionsCreatedAhead must both be at least 1. "
+                + "A retention of zero would drop the month still being written to.");
+
+        // Creates and drops partitions — DDL — so it runs on the schema owner's connection (ADR-0006).
+        services.AddScoped<ISupplierApiCallMaintenance>(sp => new SupplierApiCallPartitionMaintenance(
+            sp.GetRequiredKeyedService<AppDbContext>(AdminDbContextFactory.ServiceKey),
+            sp.GetRequiredService<IOptions<SupplierApiCallOptions>>()));
+    }
+
+    private static byte[] ReadSecretEncryptionKey(IConfiguration configuration)
+    {
+        var encoded = configuration[SecretEncryptionKeySetting];
+
+        if (string.IsNullOrWhiteSpace(encoded))
+        {
+            throw new InvalidOperationException(
+                $"""
+                 No secret encryption key configured at {SecretEncryptionKeySetting}.
+
+                 It encrypts supplier merchant keys at rest, and it must be exactly
+                 {AesGcmSecretProtector.KeyBytes} random bytes, base64-encoded. Generate one with:
+
+                     openssl rand -base64 32
+
+                 then set it as the environment variable Security__SecretEncryptionKey. Never commit
+                 a production key. Losing it makes every stored credential unreadable, so keep it in
+                 the secret store alongside the database backups' keys.
+                 """);
+        }
+
+        try
+        {
+            return Convert.FromBase64String(encoded);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidOperationException($"{SecretEncryptionKeySetting} is not valid base64.", ex);
+        }
     }
 
     private static void TryAddSingletonTimeProvider(this IServiceCollection services)

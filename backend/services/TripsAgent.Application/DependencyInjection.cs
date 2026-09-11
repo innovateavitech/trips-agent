@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
 using TripsAgent.Application.Payments;
+using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy.Kyb;
 
 namespace TripsAgent.Application;
@@ -42,6 +43,10 @@ public static class DependencyInjection
         services.AddScoped<IPaymentWebhookProcessor>(sp => sp.GetRequiredService<PaymentWebhookHandler>());
 
         services.AddScoped<ILedgerIntegrityAudit, LedgerIntegrityAudit>();
+
+        // Picks the adapter for a supplier and product from whatever adapters the host registered.
+        // Adding an aggregator is a new ISupplierAdapter registration, never a change here.
+        services.AddScoped<ISupplierAdapterRegistry, SupplierAdapterRegistry>();
 
         return services;
     }

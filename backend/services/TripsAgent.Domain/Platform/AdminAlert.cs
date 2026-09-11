@@ -15,6 +15,9 @@ public enum AdminAlertType
 
     /// <summary>A booking's ticket time limit is about to pass, or has.</summary>
     TicketTimeLimitBreach = 5,
+
+    /// <summary>The nightly audit found the books disagreeing with themselves.</summary>
+    LedgerIntegrity = 6,
 }
 
 /// <summary>How quickly somebody needs to look.</summary>
@@ -65,6 +68,38 @@ public sealed class AdminAlert : Entity, IAuditableEntity
             EntityId = submissionId,
             Message = $"{agencyName} has submitted KYB documents and is waiting for review.",
         };
+
+    /// <summary>
+    /// Raises an alert from the platform itself rather than about one agency's paperwork.
+    /// </summary>
+    /// <param name="type">What it is about.</param>
+    /// <param name="severity">How quickly someone needs to look.</param>
+    /// <param name="message">One sentence for the queue. Longer detail belongs in the source record.</param>
+    /// <param name="source">Which job raised it, so the logs can be found.</param>
+    /// <param name="agencyId">The agency it concerns, if any.</param>
+    public static AdminAlert ForPlatform(
+        AdminAlertType type,
+        AdminAlertSeverity severity,
+        string message,
+        string source,
+        Guid? agencyId = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
+
+        return new AdminAlert
+        {
+            Type = type,
+            Severity = severity,
+            Status = AdminAlertStatus.Open,
+            AgencyId = agencyId,
+
+            // No EntityId: the alert is about a condition the job found, not about one record.
+            // The detail lives in the source table the job writes to.
+            EntityType = source,
+            Message = message.Length <= 1000 ? message : message[..1000],
+        };
+    }
 
     public AdminAlertType Type { get; private set; }
 

@@ -41,6 +41,8 @@ public static class DependencyInjection
         // is the implementation — one class, so the receive and process halves cannot drift.
         services.AddScoped<IPaymentWebhookProcessor>(sp => sp.GetRequiredService<PaymentWebhookHandler>());
 
+        services.AddScoped<ILedgerIntegrityAudit, LedgerIntegrityAudit>();
+
         return services;
     }
 }

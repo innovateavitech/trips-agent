@@ -68,4 +68,8 @@ AuditLogMaintenanceSchedule.Register(recurringJobs);
 // event directly, so this normally finds nothing — which is the point of having it.
 PaymentWebhookDrainSchedule.Register(recurringJobs);
 
+// The nightly proof that the books balance. Everything it looks for should be impossible, which
+// is precisely why it is checked — an unverified control and a broken one look identical.
+LedgerIntegrityAuditSchedule.Register(recurringJobs);
+
 await host.RunAsync();

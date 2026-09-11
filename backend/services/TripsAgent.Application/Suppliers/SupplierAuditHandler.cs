@@ -23,6 +23,18 @@ namespace TripsAgent.Application.Suppliers;
 /// underneath this one.
 /// </para>
 /// <para>
+/// <b>A transport failure is unknown unless it proves otherwise.</b> A connection reset after the
+/// request was fully sent — a supplier crash, a load balancer's idle timeout, a deploy — reaches us as
+/// the same <see cref="HttpRequestException"/> type as "connection refused", and so does a body cut off
+/// after a 200 status line. The supplier may have acted on either. So only a failure whose
+/// <see cref="HttpRequestError"/> proves the request never left (the name did not resolve, the
+/// connection or the TLS handshake or proxy tunnel was never made) is recorded as
+/// <see cref="SupplierCallOutcome.TransportError"/> and rethrown as it is. Everything else is recorded
+/// as <see cref="SupplierCallOutcome.OutcomeUnknown"/> and surfaced as
+/// <see cref="SupplierCallOutcomeUnknownException"/>, the base of <see cref="SupplierCallTimeoutException"/>,
+/// so an adapter that catches the base handles every unknown outcome the same way: by polling.
+/// </para>
+/// <para>
 /// <b>The timeout lives here, not on <see cref="HttpClient.Timeout"/>.</b> HttpClient's timeout
 /// cancels the same token as a caller giving up, so from inside the pipeline the two look identical.
 /// Owning the timer is what lets a timeout be recorded as one. The registration sets the client's
@@ -145,15 +157,39 @@ public sealed class SupplierAuditHandler : DelegatingHandler
         }
         catch (Exception ex)
         {
-            // A dropped connection, a DNS failure, a TLS error. HttpRequestError says which, and is
-            // the closest thing a transport failure has to an error code.
+            // HttpRequestError is the closest thing a transport failure has to an error code, and the
+            // only evidence of whether the request left. Kept in the error message either way.
             var code = ex is HttpRequestException { HttpRequestError: var kind } ? $"{kind}: " : string.Empty;
+            var detail = $"{code}{ex.GetType().Name}: {ex.Message}";
 
-            Record(SupplierCallOutcome.TransportError, error: $"{code}{ex.GetType().Name}: {ex.Message}");
+            if (response is null && ProvesTheRequestNeverLeft(ex))
+            {
+                Record(SupplierCallOutcome.TransportError, error: detail);
+                throw;
+            }
+
+            // Anything else may have happened after the supplier had the whole request: a reset
+            // mid-call, a reply that was not HTTP, a body cut off after the status line.
+            Record(SupplierCallOutcome.OutcomeUnknown, error: $"{detail} The request may have reached the supplier. Outcome unknown (ADR-0003).");
             response?.Dispose();
-            throw;
+            throw new SupplierCallOutcomeUnknownException(call.Operation, ex);
         }
     }
+
+    /// <summary>
+    /// True only for the failures that happen before a request is written: resolving the name,
+    /// opening the connection, the TLS handshake, the proxy tunnel. Deliberately a short allow list —
+    /// a failure not on it is treated as unknown, which costs a status poll, while the opposite
+    /// mistake costs a second real ticket.
+    /// </summary>
+    private static bool ProvesTheRequestNeverLeft(Exception exception) =>
+        exception is HttpRequestException
+        {
+            HttpRequestError: HttpRequestError.NameResolutionError
+                or HttpRequestError.ConnectionError
+                or HttpRequestError.SecureConnectionError
+                or HttpRequestError.ProxyTunnelError,
+        };
 
     /// <summary>
     /// Every header the supplier will see. <see cref="HttpClient"/> has already merged its default

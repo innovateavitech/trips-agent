@@ -140,10 +140,14 @@ public class SupplierAuditHandlerTests
         stub.Attempts.Should().Be(1);
     }
 
-    [Fact]
-    public async Task A_transport_failure_is_recorded_with_its_error_and_rethrown_after_one_attempt()
+    [Theory]
+    [InlineData(HttpRequestError.ConnectionError)]
+    [InlineData(HttpRequestError.NameResolutionError)]
+    [InlineData(HttpRequestError.SecureConnectionError)]
+    [InlineData(HttpRequestError.ProxyTunnelError)]
+    public async Task A_failure_that_proves_the_request_never_left_is_a_transport_error_rethrown_as_it_is(HttpRequestError error)
     {
-        var refused = new HttpRequestException(HttpRequestError.ConnectionError, "Connection refused");
+        var refused = new HttpRequestException(error, "Connection refused");
         var stub = new StubSupplierHandler((_, _) => throw refused);
         using var client = ClientOver(stub);
 
@@ -154,8 +158,60 @@ public class SupplierAuditHandlerTests
 
         var capture = _recorder.Captures.Should().ContainSingle().Subject;
         capture.Outcome.Should().Be(SupplierCallOutcome.TransportError);
-        capture.ErrorMessage.Should().Contain("ConnectionError").And.Contain("Connection refused");
+        capture.ErrorMessage.Should().Contain(error.ToString()).And.Contain("Connection refused");
     }
+
+    [Theory]
+    [InlineData(HttpRequestError.ResponseEnded)]     // the server read the whole POST, then closed
+    [InlineData(HttpRequestError.Unknown)]           // the server read the whole POST, then reset
+    [InlineData(HttpRequestError.InvalidResponse)]   // something answered, but not in HTTP
+    [InlineData(HttpRequestError.HttpProtocolError)]
+    public async Task A_connection_lost_after_the_request_was_sent_is_an_unknown_outcome_not_a_transport_error(HttpRequestError error)
+    {
+        // Measured against .NET 10's SocketsHttpHandler: a supplier that reads the whole issue call and
+        // then drops the connection — a crash, a load balancer's idle timeout, a deploy — surfaces as
+        // one of these, and the supplier has the request. Retrying it would issue a second ticket.
+        var dropped = new HttpRequestException(error, "An error occurred while sending the request.");
+        var stub = new StubSupplierHandler((_, _) => throw dropped);
+        using var client = ClientOver(stub);
+
+        var send = () => client.SendAsync(IssueRequest("{}"));
+
+        var thrown = (await send.Should().ThrowAsync<SupplierCallOutcomeUnknownException>()).Which;
+        thrown.InnerException.Should().BeSameAs(dropped, "the transport's evidence travels with it");
+        thrown.Operation.Should().Be(SupplierOperation.Issue);
+        thrown.Message.Should().Contain("never by sending the call again");
+        stub.Attempts.Should().Be(1);
+
+        var capture = _recorder.Captures.Should().ContainSingle().Subject;
+        capture.Outcome.Should().Be(SupplierCallOutcome.OutcomeUnknown);
+        capture.ErrorMessage.Should().Contain(error.ToString()).And.Contain("Outcome unknown");
+    }
+
+    [Fact]
+    public async Task A_body_cut_off_after_a_success_status_is_an_unknown_outcome_with_its_status_kept()
+    {
+        var stub = new StubSupplierHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new CutOffContent(),
+        }));
+        using var client = ClientOver(stub);
+
+        var send = () => client.SendAsync(IssueRequest("{}"));
+
+        await send.Should().ThrowAsync<SupplierCallOutcomeUnknownException>();
+        stub.Attempts.Should().Be(1);
+
+        var capture = _recorder.Captures.Should().ContainSingle().Subject;
+        capture.Outcome.Should().Be(SupplierCallOutcome.OutcomeUnknown);
+        capture.ResponseStatusCode.Should().Be(200, "the status line arrived; the ticket number in the body did not");
+    }
+
+    [Fact]
+    public void A_timeout_is_one_kind_of_unknown_outcome_so_one_catch_handles_both() =>
+        new SupplierCallTimeoutException(SupplierOperation.Issue, TimeSpan.FromSeconds(1), new TimeoutException())
+            .Should().BeAssignableTo<SupplierCallOutcomeUnknownException>()
+            .Which.Operation.Should().Be(SupplierOperation.Issue);
 
     [Fact]
     public async Task A_request_not_tagged_for_auditing_is_refused_before_it_is_sent()
@@ -182,6 +238,22 @@ public class SupplierAuditHandlerTests
         using var response = await client.SendAsync(request);
 
         _recorder.Captures.Should().ContainSingle().Which.CorrelationId.Should().Be(activity.Id);
+    }
+
+    /// <summary>A response body that ends before its declared length, as a dropped connection leaves it.</summary>
+    private sealed class CutOffContent : HttpContent
+    {
+        protected override async Task SerializeToStreamAsync(Stream stream, System.Net.TransportContext? context)
+        {
+            await stream.WriteAsync(Encoding.UTF8.GetBytes("""{"Tick"""));
+            throw new HttpIOException(HttpRequestError.ResponseEnded, "The response ended prematurely.");
+        }
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 100;
+            return true;
+        }
     }
 
     private HttpClient ClientOver(HttpMessageHandler network, TimeSpan? timeout = null) =>

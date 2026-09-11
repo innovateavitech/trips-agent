@@ -88,6 +88,92 @@ public class SupplierPayloadRedactionTests
         redacted.GetProperty("Passport").GetString().Should().Be(SupplierPayloadRedaction.RedactedValue);
     }
 
+    // A DOCS record as the airline system writes it: type, issuer, number, nationality, date of birth,
+    // sex, expiry, surname, given name. The number sits in the third slot, under no name at all.
+    private const string DocsRecord = $"P/NGA/{PassportNumber}/NGA/12JUL80/M/20NOV28/OKAFOR/ADAEZE";
+
+    [Theory]
+    [InlineData($$"""{"Passengers":[{"FirstName":"Adaeze","Docs":"{{DocsRecord}}"}]}""")]
+    [InlineData($$"""{"Ssrs":[{"Code":"DOCS","FreeText":"HK1/{{DocsRecord}}"}]}""")]
+    [InlineData($$"""{"Ssrs":[{"Code":"DOCS","Text":"{{PassportNumber}}"}]}""")]
+    [InlineData($$"""{"Passengers":[{"IdType":"Passport","IdNumber":"{{PassportNumber}}","IdentificationNumber":"{{PassportNumber}}"}]}""")]
+    [InlineData($$"""{"Documents":[{"DocumentType":"Passport","DocumentId":"{{PassportNumber}}","DocID":"{{PassportNumber}}"}]}""")]
+    [InlineData($$$"""{"TravelDocument":{"Type":"PASSPORT","Id":"{{{PassportNumber}}}"}}""")]
+    [InlineData($$"""{"Remarks":["Pax 1: {{DocsRecord}}"]}""")]
+    public void A_passport_number_in_any_common_booking_shape_is_redacted(string body)
+    {
+        var redacted = SupplierPayloadRedaction.RedactRequestBody(body, [])!;
+
+        redacted.Should().NotContain(PassportNumber);
+        redacted.Should().NotStartWith("[withheld", "the body is JSON, so it is redacted rather than withheld");
+    }
+
+    [Fact]
+    public void Redacting_a_document_keeps_what_kind_of_document_it_was()
+    {
+        var body = $$"""{"Documents":[{"DocumentType":"Passport","DocumentId":"{{PassportNumber}}"}],"Ssrs":[{"Code":"DOCS","FreeText":"{{DocsRecord}}"}]}""";
+
+        var redacted = JsonDocument.Parse(SupplierPayloadRedaction.RedactRequestBody(body, [])!).RootElement;
+
+        redacted.GetProperty("Documents")[0].GetProperty("DocumentType").GetString().Should().Be("Passport");
+        redacted.GetProperty("Ssrs")[0].GetProperty("Code").GetString().Should().Be("DOCS");
+        redacted.GetProperty("Ssrs")[0].GetProperty("FreeText").GetString().Should().Be(SupplierPayloadRedaction.RedactedValue);
+    }
+
+    [Fact]
+    public void A_DOCS_record_echoed_in_an_error_page_is_removed()
+    {
+        var page = $"<html><body>Rejected SSR DOCS HK1/{DocsRecord} for PNR ABC123</body></html>";
+
+        var stored = SupplierPayloadRedaction.RedactResponseBody(page, [])!;
+
+        stored.Should().NotContain(PassportNumber).And.Contain("PNR ABC123").And.Contain("</body></html>");
+    }
+
+    // ------------------------------------------------------------------ duplicate property names
+
+    [Fact]
+    public void A_response_with_a_duplicate_property_is_kept_exactly_rather_than_losing_the_call()
+    {
+        // A supplier serializer quirk. JSON allows it; the whole call record must not be lost over it.
+        const string body = """{"Pnr":"ABC123","Pnr":"ABC123","StatusCode":1}""";
+
+        SupplierPayloadRedaction.RedactResponseBody(body, []).Should().Be(body);
+    }
+
+    [Fact]
+    public void A_duplicate_property_does_not_stop_the_rest_of_the_body_being_redacted()
+    {
+        var body = $$"""{"Pnr":"ABC123","Pnr":"ABC123","Passengers":[{"DocNumber":"{{PassportNumber}}"}]}""";
+
+        var request = SupplierPayloadRedaction.RedactRequestBody(body, [])!;
+        var response = SupplierPayloadRedaction.RedactResponseBody(body, [])!;
+
+        request.Should().NotContain(PassportNumber).And.Contain("ABC123");
+        response.Should().NotContain(PassportNumber).And.Contain("ABC123");
+    }
+
+    [Fact]
+    public void A_call_whose_response_repeats_a_property_is_still_recorded()
+    {
+        var record = () => SupplierApiCall.Record(
+            supplierId: Guid.CreateVersion7(),
+            agencyId: Guid.CreateVersion7(),
+            supplierBookingId: null,
+            operation: SupplierOperation.Issue,
+            httpMethod: "POST",
+            endpoint: "/api/v2/ticketing/issue",
+            requestHeaders: BusHeaders,
+            requestBody: """{"Pnr":"ABC123"}""",
+            responseStatusCode: 200,
+            responseBody: """{"Pnr":"ABC123","Pnr":"ABC123"}""",
+            latencyMs: 812,
+            outcome: SupplierCallOutcome.Succeeded,
+            occurredAt: Now);
+
+        record.Should().NotThrow().Which.ResponseBody.Should().Be("""{"Pnr":"ABC123","Pnr":"ABC123"}""");
+    }
+
     [Theory]
     [InlineData("DocNumber", true)]
     [InlineData("doc_number", true)]
@@ -101,6 +187,10 @@ public class SupplierPayloadRedactionTests
     [InlineData("CVV", true)]
     [InlineData("Hash", true)]
     [InlineData("pin", true)]
+    [InlineData("IdNumber", true)]
+    [InlineData("identification_number", true)]
+    [InlineData("DocumentId", true)]
+    [InlineData("DocID", true)]
     [InlineData("FareKey", false)]
     [InlineData("OfferKey", false)]
     [InlineData("StoppingPoints", false)]

@@ -13,12 +13,13 @@ namespace TripsAgent.Application.Suppliers;
 /// call issues a second real ticket.
 /// </para>
 /// <para>
-/// A <see cref="TimeoutException"/> rather than the <see cref="TaskCanceledException"/> a plain
-/// <see cref="HttpClient"/> throws, so an adapter can tell "the supplier went quiet" apart from
-/// "our caller gave up" without inspecting inner exceptions.
+/// Derives from <see cref="SupplierCallOutcomeUnknownException"/>, so one catch handles every unknown
+/// outcome. Its own type — rather than the <see cref="TaskCanceledException"/> a plain
+/// <see cref="HttpClient"/> throws — lets an adapter tell "the supplier went quiet" apart from "our
+/// caller gave up" without inspecting inner exceptions.
 /// </para>
 /// </remarks>
-public sealed class SupplierCallTimeoutException : TimeoutException
+public sealed class SupplierCallTimeoutException : SupplierCallOutcomeUnknownException
 {
     public SupplierCallTimeoutException()
     {
@@ -36,14 +37,11 @@ public sealed class SupplierCallTimeoutException : TimeoutException
 
     public SupplierCallTimeoutException(SupplierOperation operation, TimeSpan timeout, Exception innerException)
         : base(
+            operation,
             $"The supplier did not answer the {operation} call within {timeout.TotalSeconds:0.#} seconds. "
             + "The outcome is unknown: resolve it by polling the booking's status, never by sending "
             + "the call again (ADR-0003).",
             innerException)
     {
-        Operation = operation;
     }
-
-    /// <summary>Which call timed out.</summary>
-    public SupplierOperation? Operation { get; }
 }

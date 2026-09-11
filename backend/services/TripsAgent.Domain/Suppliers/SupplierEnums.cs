@@ -113,6 +113,13 @@ public enum SupplierOperation
 }
 
 /// <summary>How an audited supplier call ended, from the transport's point of view.</summary>
+/// <remarks>
+/// <b>Which outcomes may be sent again.</b> Only <see cref="TransportError"/> proves the supplier never
+/// saw the request. <see cref="Timeout"/>, <see cref="Cancelled"/> and <see cref="OutcomeUnknown"/> all
+/// mean the request may have reached the supplier and been acted on: for the ticket-issue call, a ticket
+/// may exist, so the answer is to poll the booking's status, never to send the call again (ADR-0003).
+/// <see cref="Succeeded"/> and <see cref="HttpError"/> are answers, and the caller decides what they mean.
+/// </remarks>
 public enum SupplierCallOutcome
 {
     /// <summary>A response arrived with a success status code.</summary>
@@ -121,17 +128,32 @@ public enum SupplierCallOutcome
     /// <summary>A response arrived with an error status code.</summary>
     HttpError = 2,
 
-    /// <summary>No response in time. For the issue call this is an unknown outcome, not a failure.</summary>
+    /// <summary>
+    /// No response in time. The supplier may still have acted on the request: for the issue call this
+    /// is an unknown outcome, not a failure. Never safe to send again.
+    /// </summary>
     Timeout = 3,
 
-    /// <summary>The connection failed before a response could arrive.</summary>
+    /// <summary>
+    /// The request provably never reached the supplier: the name did not resolve, the connection was
+    /// refused, or the TLS handshake or proxy tunnel failed before anything was sent. The only
+    /// failure that is safe to send again.
+    /// </summary>
     TransportError = 4,
 
     /// <summary>
     /// The caller stopped waiting before a response arrived — a request aborted, a host shutting
-    /// down. Like <see cref="Timeout"/>, the supplier may still have acted on it.
+    /// down. Like <see cref="Timeout"/>, the supplier may still have acted on it. Never safe to send again.
     /// </summary>
     Cancelled = 5,
+
+    /// <summary>
+    /// The call failed after the request may have been sent, and no complete answer came back: the
+    /// connection was reset or closed mid-call, the reply was not valid HTTP, or the body was cut off
+    /// after the status line. Like <see cref="Timeout"/>, the supplier may have acted on it. Never
+    /// safe to send again.
+    /// </summary>
+    OutcomeUnknown = 6,
 }
 
 /// <summary>What one status poll learned.</summary>

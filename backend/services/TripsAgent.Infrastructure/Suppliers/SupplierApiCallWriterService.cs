@@ -29,15 +29,32 @@ namespace TripsAgent.Infrastructure.Suppliers;
 /// everything but its bodies, and counted. Nothing leaves this class unaccounted for.
 /// </para>
 /// <para>
-/// <b>Shutdown drains.</b> When the host stops, the buffer is closed and what is left is written,
-/// for up to <see cref="SupplierApiCallOptions.ShutdownDrainTimeout"/>. It never throws out of
-/// <see cref="ExecuteAsync"/>: the Worker stops the whole host when a background service fails.
+/// <b>Shutdown drains, on one clock.</b> When the host stops, the batch in hand is finished, the
+/// buffer is closed and what is left is written — all within
+/// <see cref="SupplierApiCallOptions.ShutdownDrainTimeout"/> of <see cref="StopAsync"/> being called.
+/// Past that, every save is cancelled, so each call still held is reported rather than written. It
+/// never throws out of <see cref="ExecuteAsync"/>: the Worker stops the whole host when a background
+/// service fails.
 /// </para>
 /// <para>
-/// The drain runs from <see cref="StopAsync"/> as well as from the end of <see cref="ExecuteAsync"/>,
-/// once, whichever gets there first. <see cref="BackgroundService"/> starts <c>ExecuteAsync</c> on the
-/// thread pool, and a host stopped moments after starting can cancel it before it ever runs — which
-/// would otherwise leave whatever was buffered unwritten and unreported.
+/// <b><see cref="StopAsync"/> does not return while a call is still in memory.</b> The host hands it
+/// a token that may already have expired — in the Api the web server stops first, from the same
+/// shutdown budget, and a slow supplier request can spend all of it — and
+/// <see cref="BackgroundService.StopAsync"/> stops waiting for <see cref="ExecuteAsync"/> when that
+/// token does. Returning then would let the host dispose the container, and then the process exit,
+/// with calls unwritten and unreported. So this waits for <see cref="ExecuteAsync"/> itself; the
+/// drain clock is what bounds the wait.
+/// </para>
+/// <para>
+/// The drain runs once, as one shared task, awaited by both <see cref="ExecuteAsync"/> and
+/// <see cref="StopAsync"/>. <see cref="BackgroundService"/> starts <c>ExecuteAsync</c> on the thread
+/// pool, and a host stopped moments after starting can cancel it before it ever runs — which would
+/// otherwise leave whatever was buffered unwritten and unreported.
+/// </para>
+/// <para>
+/// The drain clock starts <i>after</i> the host's other services have used their share, so a deployment
+/// platform's grace period must cover the host's <c>ShutdownTimeout</c> plus
+/// <see cref="SupplierApiCallOptions.ShutdownDrainTimeout"/>, or it kills the process first.
 /// </para>
 /// </remarks>
 public sealed partial class SupplierApiCallWriterService(
@@ -51,13 +68,38 @@ public sealed partial class SupplierApiCallWriterService(
 
     private const string StoppedReason = "the process stopped before it could be written";
 
-    private int _drainStarted;
+    /// <summary>Cancelled <see cref="SupplierApiCallOptions.ShutdownDrainTimeout"/> after stopping begins.</summary>
+    private readonly CancellationTokenSource _shutdownDeadline = new();
+
+    private readonly Lock _drainLock = new();
+    private Task? _drain;
+    private int _stopping;
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        // Waits for ExecuteAsync, which normally drains; this catches the case where it never ran.
+        if (Interlocked.Exchange(ref _stopping, 1) == 0)
+        {
+            _shutdownDeadline.CancelAfter(options.Value.ShutdownDrainTimeout);
+        }
+
+        // Signals ExecuteAsync, and waits for it only while the host's token allows.
         await base.StopAsync(cancellationToken);
-        await DrainAsync();
+
+        // So wait for it regardless. It finishes soon after the deadline: every save it makes is
+        // cancelled then, and each call it still holds is reported.
+        if (ExecuteTask is { } execute)
+        {
+            await execute.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        }
+
+        // Normally already done by ExecuteAsync; this runs it if ExecuteAsync never started.
+        await DrainOnceAsync();
+    }
+
+    public override void Dispose()
+    {
+        _shutdownDeadline.Dispose();
+        base.Dispose();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -72,8 +114,10 @@ public sealed partial class SupplierApiCallWriterService(
                 Fill(batch, batchSize);
 
                 // Not stoppingToken: a batch already taken from the buffer is finished rather than
-                // abandoned half-written. The database's own command timeout still bounds it.
-                await WriteAsync(batch, CancellationToken.None);
+                // abandoned half-written — but only until the shutdown deadline. Retries against a
+                // database that has stopped answering could otherwise outlast the process, and the
+                // batch would vanish with it instead of being reported.
+                await WriteAsync(batch, _shutdownDeadline.Token);
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -81,29 +125,31 @@ public sealed partial class SupplierApiCallWriterService(
             // The host is stopping. Fall through to the drain.
         }
 
-        await DrainAsync();
+        await DrainOnceAsync();
+    }
+
+    /// <summary>Starts the drain the first time, and returns that same task every time after.</summary>
+    private Task DrainOnceAsync()
+    {
+        lock (_drainLock)
+        {
+            return _drain ??= Task.Run(DrainAsync);
+        }
     }
 
     private async Task DrainAsync()
     {
-        if (Interlocked.Exchange(ref _drainStarted, 1) == 1)
-        {
-            return;
-        }
-
         buffer.Close();
 
         var batchSize = options.Value.BatchSize;
         var batch = new List<SupplierCallCapture>(batchSize);
-
-        using var deadline = new CancellationTokenSource(options.Value.ShutdownDrainTimeout);
 
         // Once the deadline passes, WriteAsync reports each remaining row instead of writing it, so
         // this loop still empties the buffer — every call left gets its log line.
         while (buffer.Reader.TryPeek(out _))
         {
             Fill(batch, batchSize);
-            await WriteAsync(batch, deadline.Token);
+            await WriteAsync(batch, _shutdownDeadline.Token);
         }
     }
 

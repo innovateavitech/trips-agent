@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TripsAgent.Domain.Identity;
+using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
@@ -57,6 +58,16 @@ public interface IAppDbContext
     /// the queue across all of them.
     /// </summary>
     public DbSet<AdminAlert> AdminAlerts { get; }
+
+    public DbSet<LedgerAccount> LedgerAccounts { get; }
+
+    public DbSet<LedgerEntry> LedgerEntries { get; }
+
+    public DbSet<Wallet> Wallets { get; }
+
+    public DbSet<WalletHold> WalletHolds { get; }
+
+    public DbSet<WalletTransaction> WalletTransactions { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

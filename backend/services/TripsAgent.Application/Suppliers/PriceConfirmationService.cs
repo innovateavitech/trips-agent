@@ -52,28 +52,46 @@ public sealed class PriceConfirmationService
 
         if (booking.Status == SupplierBookingStatus.PriceRejected)
         {
-            // Which elements, by position and confirmation code — never the hashes or anything keyed
-            // by the merchant secret. The supplier_api_calls row holds exactly what arrived.
-            var failed = confirmation.Lines
-                .Select((line, index) => (line, index))
-                .Where(pair => !SupplierBookingConfirmation.HashesMatch(pair.line.HashExpected, pair.line.HashReceived))
-                .Select(pair => $"element {pair.index + 1} ({pair.line.ConfirmationCode})")
-                .ToList();
-
-            await _alerter.RaiseAsync(
-                new PlatformAlert(
-                    AlertSeverity.P1,
-                    "A supplier price confirmation failed its integrity check",
-                    $"Booking {booking.Id} with {supplierCode}: {string.Join(", ", failed)} of {confirmation.Lines.Count} "
-                    + "did not match the hash we computed with the merchant key, so the price that arrived is not the "
-                    + "price the supplier signed. The booking is blocked from issuing and nothing was charged for it. "
-                    + "Read the supplier_api_calls rows for this booking to see exactly what arrived, and treat it as a "
-                    + "possible tamper until shown otherwise.",
-                    Source: nameof(PriceConfirmationService),
-                    AgencyId: booking.AgencyId),
-                cancellationToken);
+            await RaiseIntegrityAlertAsync(booking.AgencyId, booking.Id, supplierCode, confirmation.Lines, cancellationToken);
         }
 
         return confirmation;
+    }
+
+    /// <summary>
+    /// Raises the P1 for a confirmation whose hashes did not all verify. Also used by the checkout, which
+    /// checks a confirmation before any booking exists for it.
+    /// </summary>
+    public Task RaiseIntegrityAlertAsync(
+        Guid agencyId,
+        Guid? supplierBookingId,
+        string supplierCode,
+        IReadOnlyList<PriceConfirmationLine> lines,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+
+        // Which elements, by position and confirmation code — never the hashes or anything keyed by the
+        // merchant secret. The supplier_api_calls row holds exactly what arrived.
+        var failed = lines
+            .Select((line, index) => (line, index))
+            .Where(pair => !SupplierBookingConfirmation.HashesMatch(pair.line.HashExpected, pair.line.HashReceived))
+            .Select(pair => $"element {pair.index + 1} ({pair.line.ConfirmationCode})")
+            .ToList();
+
+        var subject = supplierBookingId is { } id ? $"Booking {id}" : "A price confirmation";
+
+        return _alerter.RaiseAsync(
+            new PlatformAlert(
+                AlertSeverity.P1,
+                "A supplier price confirmation failed its integrity check",
+                $"{subject} with {supplierCode}: {string.Join(", ", failed)} of {lines.Count} "
+                + "did not match the hash we computed with the merchant key, so the price that arrived is not the "
+                + "price the supplier signed. The booking is blocked from issuing and nothing was charged for it. "
+                + "Read the supplier_api_calls rows for this booking to see exactly what arrived, and treat it as a "
+                + "possible tamper until shown otherwise.",
+                Source: nameof(PriceConfirmationService),
+                AgencyId: agencyId),
+            cancellationToken);
     }
 }

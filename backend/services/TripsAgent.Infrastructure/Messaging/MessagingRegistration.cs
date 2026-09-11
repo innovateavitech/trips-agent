@@ -42,6 +42,16 @@ public static class MessagingRegistration
 
         // Both of its message types: an order's documents, and one reissued document (#46).
         (MessageQueue.DocumentsRender, typeof(DocumentRenderConsumer)),
+
+        // Issuing a ticket (#36). The endpoint's retry and RabbitMQ's redelivery are both safe here —
+        // a second pass finds the booking already issuing and sends nothing. What is never retried is
+        // the supplier call itself (ADR-0003).
+        (MessageQueue.BookingSaga, typeof(Suppliers.IssueSupplierTicketConsumer)),
+
+        // The checkout's next steps (#42, #43): a ticket captures the payment; a reversal gives it back.
+        // Both are safe to redeliver — each does its work once per order line.
+        (MessageQueue.BookingSaga, typeof(Checkout.BookingTicketedConsumer)),
+        (MessageQueue.PaymentsReversal, typeof(Checkout.PaymentReversalRequiredConsumer)),
     ];
 
     /// <summary>Registers a publish-only bus. Use this in the API.</summary>
@@ -120,6 +130,9 @@ public static class MessagingRegistration
                     ?? new MessageRetryOptions();
 
         retry.Validate();
+
+        // A consumer that escalates on its last attempt needs to know which attempt is the last.
+        services.AddSingleton(retry);
 
         services.AddMassTransit(bus =>
         {

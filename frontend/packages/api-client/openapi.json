@@ -1049,6 +1049,347 @@
         }
       }
     },
+    "/api/v1/bookings/price-confirmations": {
+      "post": {
+        "tags": [
+          "Bookings"
+        ],
+        "operationId": "ConfirmBookingPrice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPriceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceConfirmationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings": {
+      "post": {
+        "tags": [
+          "Bookings"
+        ],
+        "operationId": "PlaceBooking",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceBookingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacedBookingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Bookings"
+        ],
+        "operationId": "ListBookings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookingListItemResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{reference}": {
+      "get": {
+        "tags": [
+          "Bookings"
+        ],
+        "operationId": "GetBooking",
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{reference}/progress": {
+      "get": {
+        "tags": [
+          "Bookings"
+        ],
+        "operationId": "GetBookingProgress",
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingProgressResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bookings/{reference}/resolution": {
+      "post": {
+        "tags": [
+          "Bookings"
+        ],
+        "operationId": "ResolveBooking",
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveBookingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/assets/limits": {
       "get": {
         "tags": [
@@ -1200,109 +1541,6 @@
           },
           "404": {
             "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/documents": {
-      "get": {
-        "tags": [
-          "Documents"
-        ],
-        "operationId": "ListBookingDocuments",
-        "parameters": [
-          {
-            "name": "orderReference",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/BookingDocumentResponse"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/documents/{documentId}/reissue": {
-      "post": {
-        "tags": [
-          "Documents"
-        ],
-        "operationId": "ReissueBookingDocument",
-        "parameters": [
-          {
-            "name": "documentId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "Accepted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BookingDocumentResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1533,61 +1771,38 @@
           }
         }
       },
-      "BookingDocumentEmailResponse": {
+      "BookingDetailResponse": {
         "required": [
-          "recipient",
+          "reference",
+          "leadTraveller",
+          "travellerCount",
+          "product",
+          "origin",
+          "destination",
+          "carrier",
+          "departsAt",
           "status",
-          "sentAt"
+          "sellMinor",
+          "currency",
+          "ticketTimeLimit",
+          "pnr",
+          "bookedAt",
+          "paidFrom",
+          "travellers",
+          "segments",
+          "price",
+          "timeline",
+          "failure"
         ],
         "type": "object",
         "properties": {
-          "recipient": {
+          "reference": {
             "type": "string"
           },
-          "status": {
+          "leadTraveller": {
             "type": "string"
           },
-          "sentAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          }
-        }
-      },
-      "BookingDocumentResponse": {
-        "required": [
-          "id",
-          "documentType",
-          "documentNumber",
-          "issueNumber",
-          "status",
-          "productType",
-          "issuedAt",
-          "supersedesDocumentNumber",
-          "supersededByDocumentId",
-          "supersededByDocumentNumber",
-          "fileName",
-          "sizeBytes",
-          "checksum",
-          "downloadUrl",
-          "downloadExpiresAt",
-          "email"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "documentType": {
-            "type": "string"
-          },
-          "documentNumber": {
-            "type": "string"
-          },
-          "issueNumber": {
+          "travellerCount": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -1595,80 +1810,410 @@
             ],
             "format": "int32"
           },
-          "status": {
+          "product": {
             "type": "string"
           },
-          "productType": {
-            "type": [
-              "null",
-              "string"
-            ]
+          "origin": {
+            "type": "string"
           },
-          "issuedAt": {
+          "destination": {
+            "type": "string"
+          },
+          "carrier": {
+            "type": "string"
+          },
+          "departsAt": {
             "type": "string",
             "format": "date-time"
           },
-          "supersedesDocumentNumber": {
-            "type": [
-              "null",
-              "string"
-            ]
+          "status": {
+            "type": "string"
           },
-          "supersededByDocumentId": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "uuid"
-          },
-          "supersededByDocumentNumber": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "fileName": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "sizeBytes": {
+          "sellMinor": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
-              "null",
               "integer",
               "string"
             ],
             "format": "int64"
           },
-          "checksum": {
-            "type": [
-              "null",
-              "string"
-            ]
+          "currency": {
+            "type": "string"
           },
-          "downloadUrl": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "downloadExpiresAt": {
+          "ticketTimeLimit": {
             "type": [
               "null",
               "string"
             ],
             "format": "date-time"
           },
-          "email": {
+          "pnr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bookedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paidFrom": {
+            "type": "string"
+          },
+          "travellers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingTravellerResponse"
+            }
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingSegmentResponse"
+            }
+          },
+          "price": {
+            "$ref": "#/components/schemas/BookingPriceResponse"
+          },
+          "timeline": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingTimelineEntryResponse"
+            }
+          },
+          "failure": {
             "oneOf": [
               {
                 "type": "null"
               },
               {
-                "$ref": "#/components/schemas/BookingDocumentEmailResponse"
+                "$ref": "#/components/schemas/BookingFailureResponse"
               }
+            ]
+          }
+        }
+      },
+      "BookingFailureResponse": {
+        "required": [
+          "reason",
+          "atRiskMinor",
+          "paidFrom"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "atRiskMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "paidFrom": {
+            "type": "string"
+          }
+        }
+      },
+      "BookingListItemResponse": {
+        "required": [
+          "reference",
+          "leadTraveller",
+          "travellerCount",
+          "product",
+          "origin",
+          "destination",
+          "carrier",
+          "departsAt",
+          "status",
+          "sellMinor",
+          "currency",
+          "ticketTimeLimit",
+          "pnr",
+          "bookedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string"
+          },
+          "leadTraveller": {
+            "type": "string"
+          },
+          "travellerCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "product": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "carrier": {
+            "type": "string"
+          },
+          "departsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "sellMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "ticketTimeLimit": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "pnr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bookedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BookingMarginResponse": {
+        "required": [
+          "netMinor",
+          "markupMinor"
+        ],
+        "type": "object",
+        "properties": {
+          "netMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "markupMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "BookingPriceResponse": {
+        "required": [
+          "sellMinor",
+          "margin"
+        ],
+        "type": "object",
+        "properties": {
+          "sellMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "margin": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BookingMarginResponse"
+              }
+            ]
+          }
+        }
+      },
+      "BookingProgressResponse": {
+        "required": [
+          "status",
+          "pnr"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "pnr": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "BookingSegmentResponse": {
+        "required": [
+          "carrier",
+          "origin",
+          "destination",
+          "departsAt",
+          "arrivesAt"
+        ],
+        "type": "object",
+        "properties": {
+          "carrier": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "departsAt": {
+            "type": "string"
+          },
+          "arrivesAt": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "BookingTimelineEntryResponse": {
+        "required": [
+          "at",
+          "status",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "BookingTravellerRequest": {
+        "required": [
+          "type",
+          "title",
+          "firstName",
+          "lastName",
+          "dateOfBirth",
+          "gender",
+          "email",
+          "phone",
+          "passportNumber",
+          "passportExpiry",
+          "nationality"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "gender": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "passportNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "passportExpiry": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "nationality": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "BookingTravellerResponse": {
+        "required": [
+          "type",
+          "name",
+          "ticketNumber"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ticketNumber": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }
@@ -1773,6 +2318,25 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          }
+        }
+      },
+      "ConfirmPriceRequest": {
+        "required": [
+          "offerId",
+          "travellers"
+        ],
+        "type": "object",
+        "properties": {
+          "offerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "travellers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingTravellerRequest"
             }
           }
         }
@@ -2755,6 +3319,83 @@
           }
         }
       },
+      "PlaceBookingRequest": {
+        "required": [
+          "reference",
+          "payment",
+          "acceptedSellMinor",
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string"
+          },
+          "payment": {
+            "type": "string"
+          },
+          "acceptedSellMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          }
+        }
+      },
+      "PlacedBookingResponse": {
+        "required": [
+          "reference"
+        ],
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string"
+          }
+        }
+      },
+      "PriceConfirmationResponse": {
+        "required": [
+          "reference",
+          "sellMinor",
+          "searchedSellMinor",
+          "currency",
+          "ticketTimeLimit"
+        ],
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string"
+          },
+          "sellMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "searchedSellMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "ticketTimeLimit": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "PricePreviewRequest": {
         "required": [
           "productType",
@@ -3297,6 +3938,17 @@
           }
         }
       },
+      "ResolveBookingRequest": {
+        "required": [
+          "action"
+        ],
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          }
+        }
+      },
       "SearchLegRequest": {
         "required": [
           "origin",
@@ -3579,10 +4231,10 @@
       "name": "Search"
     },
     {
-      "name": "Assets"
+      "name": "Bookings"
     },
     {
-      "name": "Documents"
+      "name": "Assets"
     }
   ]
 }

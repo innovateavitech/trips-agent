@@ -8,7 +8,8 @@ import { documentsFor, reissueDocument } from './document-store';
 
 /**
  * ============================================================================
- *  TEMPORARY. Delete this folder when the orders API lands (#42, #44).
+ *  The demo stand-in. main.tsx uses it only with VITE_AUTH_MODE=mock; the real
+ *  orders API (#42, #44) is createHttpBookingsApi.
  * ============================================================================
  *
  * The bookings screens' stand-in, over the shared in-memory store. A retried

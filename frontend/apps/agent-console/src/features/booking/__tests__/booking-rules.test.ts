@@ -208,9 +208,10 @@ describe('money', () => {
     ticketTimeLimit: '2026-10-01T10:00:00Z',
   });
 
-  it('notices when the supplier moved the price', () => {
+  it('asks again only when the supplier raised the price (decision Q9)', () => {
     expect(priceChanged(confirmation(10_000_000))).toBe(false);
     expect(priceChanged(confirmation(10_350_000))).toBe(true);
+    expect(priceChanged(confirmation(9_650_000))).toBe(false);
   });
 
   it('puts a supplier’s price rise on the net rate, leaving the markup alone', () => {

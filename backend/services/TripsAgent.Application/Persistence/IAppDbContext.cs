@@ -75,5 +75,16 @@ public interface IAppDbContext
     /// <summary>Gateway deliveries, recorded so each is processed exactly once.</summary>
     public DbSet<PaymentWebhookEvent> PaymentWebhookEvents { get; }
 
+    /// <summary>
+    /// Discrepancies the nightly integrity audit found.
+    /// </summary>
+    /// <remarks>
+    /// Not tenant-scoped, and unusually so for a payments table. An unbalanced transaction group
+    /// spans accounts that may belong to different agencies and to the platform, so there is no
+    /// one agency it belongs to; and it is read by platform admins investigating the platform's
+    /// own books, which an agency must never see. Permission controls access, not a filter.
+    /// </remarks>
+    public DbSet<ReconciliationException> ReconciliationExceptions { get; }
+
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -156,6 +156,9 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <summary>Gateway deliveries, recorded so each is processed exactly once.</summary>
     public DbSet<PaymentWebhookEvent> PaymentWebhookEvents => Set<PaymentWebhookEvent>();
 
+    /// <summary>Discrepancies the nightly integrity audit found. Not tenant-scoped; see IAppDbContext.</summary>
+    public DbSet<ReconciliationException> ReconciliationExceptions => Set<ReconciliationException>();
+
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.
     /// </summary>

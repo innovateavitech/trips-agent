@@ -253,3 +253,50 @@ public sealed class PaymentWebhookEventConfiguration : IEntityTypeConfiguration<
             .HasDatabaseName("ix_payment_webhook_events_pending");
     }
 }
+
+public sealed class ReconciliationExceptionConfiguration : IEntityTypeConfiguration<ReconciliationException>
+{
+    public void Configure(EntityTypeBuilder<ReconciliationException> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("reconciliation_exceptions", PaymentsSchema.Name);
+        builder.HasKey(exception => exception.Id);
+        builder.Property(exception => exception.Id).ValueGeneratedNever();
+
+        // check_name, not check. CHECK is a reserved SQL keyword — EF quotes it so it would work,
+        // but this is a table people will query by hand while diagnosing something at speed, and
+        // a column that needs quoting is a papercut waiting for exactly that moment.
+        builder.Property(exception => exception.Check)
+            .HasColumnName("check_name")
+            .HasConversion<string>().HasMaxLength(40).IsRequired();
+
+        builder.Property(exception => exception.Severity)
+            .HasConversion<string>().HasMaxLength(10).IsRequired();
+
+        builder.Property(exception => exception.Status)
+            .HasConversion<string>().HasMaxLength(20).IsRequired();
+
+        builder.Property(exception => exception.Subject).HasMaxLength(100).IsRequired();
+        builder.Property(exception => exception.Detail).HasMaxLength(2000).IsRequired();
+        builder.Property(exception => exception.ResolutionNote).HasMaxLength(2000);
+
+        // A projection, not a column. Storing it would let it disagree with the two figures it
+        // is derived from, which in a reconciliation table would be its own small joke.
+        builder.Ignore(exception => exception.DifferenceMinor);
+
+        // No FK to agencies: AgencyId is a hint about what the discrepancy concerns, and the
+        // record has to outlive the agency it mentions.
+        builder.Property(exception => exception.AgencyId);
+
+        // One row per problem, not one per night. The audit looks the subject up before writing,
+        // and this index makes that lookup cheap and the uniqueness real.
+        builder.HasIndex(exception => new { exception.Check, exception.Subject })
+            .IsUnique()
+            .HasDatabaseName("ix_reconciliation_exceptions_check_name_subject");
+
+        // What the back office reads: what is still open, worst first, oldest first.
+        builder.HasIndex(exception => new { exception.Status, exception.Severity, exception.DetectedAt })
+            .HasDatabaseName("ix_reconciliation_exceptions_status_severity_detected_at");
+    }
+}

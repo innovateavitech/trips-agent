@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Auditing;
 using TripsAgent.Application.Identity;
 using TripsAgent.Application.Notifications;
+using TripsAgent.Application.Payments;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Storage;
 using TripsAgent.Application.Tenancy;
@@ -75,6 +76,15 @@ public static class DependencyInjection
 
         services.AddSingleton<IEmailSender>(_ => new SmtpEmailSender(ReadSmtpOptions(configuration)));
 
+        // Alerting: logs, the back-office queue and email. Scoped because it writes an
+        // admin_alerts row through the request's DbContext.
+        services.AddSingleton(ReadAlertOptions(configuration));
+        services.AddScoped<IPlatformAlerter, Notifications.PlatformAlerter>();
+
+        // The raw aggregate queries behind the nightly integrity audit. They live here rather
+        // than on IAppDbContext, which deliberately exposes no way to run arbitrary SQL.
+        services.AddScoped<ILedgerIntegrityQueries, Payments.LedgerIntegrityQueries>();
+
         // Files on disk, for local development. MinIO and a cloud adapter arrive with the upload
         // pipeline (#18) behind this same port; nothing above it knows the difference.
         services.AddSingleton<IBlobStorage>(_ => new LocalFileBlobStorage(new LocalBlobStorageOptions
@@ -132,6 +142,24 @@ public static class DependencyInjection
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
         return services;
+    }
+
+    /// <summary>
+    /// Reads the alerting settings.
+    /// </summary>
+    /// <remarks>
+    /// No recipient is a legitimate configuration — locally there is nowhere to send a P1 — so
+    /// this never throws. PlatformAlerter logs a warning if a P1 is raised with nobody to email.
+    /// </remarks>
+    public static Notifications.PlatformAlertOptions ReadAlertOptions(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        return new Notifications.PlatformAlertOptions
+        {
+            P1Recipient = configuration[
+                $"{Notifications.PlatformAlertOptions.SectionName}:P1Recipient"],
+        };
     }
 
     /// <summary>The configuration key holding the base64 HMAC key for generated secrets.</summary>

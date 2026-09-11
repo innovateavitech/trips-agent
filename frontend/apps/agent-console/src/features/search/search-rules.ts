@@ -56,7 +56,9 @@ export function canViewMargin(roles: readonly string[]): boolean {
 }
 
 function redactPrice<T extends { price: OfferPrice }>(offer: T): T {
-  return offer.price.margin === null ? offer : { ...offer, price: { ...offer.price, margin: null } };
+  return offer.price.margin === null
+    ? offer
+    : { ...offer, price: { ...offer.price, margin: null } };
 }
 
 /**
@@ -134,7 +136,8 @@ export function validateFlightCriteria(criteria: FlightSearchCriteria, today: st
       if (!leg.destination) {
         problems[legField(index, 'destination')] = 'Choose where you are flying to.';
       } else if (leg.origin === leg.destination) {
-        problems[legField(index, 'destination')] = 'Pick a destination other than the departure airport.';
+        problems[legField(index, 'destination')] =
+          'Pick a destination other than the departure airport.';
       }
     }
 
@@ -178,7 +181,8 @@ export function validateBusCriteria(
 
   if (!from) problems['from'] = 'Choose where the bus leaves from.';
   if (!to) problems['to'] = 'Choose where the bus is going.';
-  else if (from && from.city === to.city) problems['to'] = `Choose a terminal outside ${from.city}.`;
+  else if (from && from.city === to.city)
+    problems['to'] = `Choose a terminal outside ${from.city}.`;
 
   if (!criteria.date) problems['date'] = 'Choose a date.';
   else if (criteria.date < today) problems['date'] = 'That date has already passed.';
@@ -272,12 +276,16 @@ export function totalDuration(offer: FlightOffer): number {
   return offer.journeys.reduce((sum, journey) => sum + journey.durationMinutes, 0);
 }
 
-export function applyFlightFilters(offers: readonly FlightOffer[], filters: FlightFilters): FlightOffer[] {
+export function applyFlightFilters(
+  offers: readonly FlightOffer[],
+  filters: FlightFilters,
+): FlightOffer[] {
   return offers.filter((offer) => {
     const stops = maxStops(offer);
     if (filters.stops === 'nonstop' && stops > 0) return false;
     if (filters.stops === 'one_stop' && stops > 1) return false;
-    if (filters.maxPriceMinor !== null && offer.price.sellMinor > filters.maxPriceMinor) return false;
+    if (filters.maxPriceMinor !== null && offer.price.sellMinor > filters.maxPriceMinor)
+      return false;
     if (filters.carriers.length > 0 && !filters.carriers.includes(primaryCarrier(offer).code)) {
       return false;
     }
@@ -357,7 +365,9 @@ export function sortBuses(offers: readonly BusOffer[], sort: BusSort): BusOffer[
   });
 }
 
-export function operatorCounts(offers: readonly BusOffer[]): Array<{ name: string; count: number }> {
+export function operatorCounts(
+  offers: readonly BusOffer[],
+): Array<{ name: string; count: number }> {
   const counts = new Map<string, number>();
   for (const offer of offers) counts.set(offer.operator, (counts.get(offer.operator) ?? 0) + 1);
   return [...counts.entries()]

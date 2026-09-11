@@ -23,7 +23,13 @@ const TODAY = '2026-09-11';
 
 function offer(
   id: string,
-  { sell = 10_000_000, stops = 0, carrier = 'P4', departs = '2026-09-14T07:30', duration = 70 } = {},
+  {
+    sell = 10_000_000,
+    stops = 0,
+    carrier = 'P4',
+    departs = '2026-09-14T07:30',
+    duration = 70,
+  } = {},
 ): FlightOffer {
   return {
     id,
@@ -55,7 +61,11 @@ function offer(
       checkedBaggage: '15 kg',
       cabinBaggage: '7 kg',
     },
-    price: { currency: 'NGN', sellMinor: sell, margin: { netMinor: sell - 800_000, markupMinor: 800_000 } },
+    price: {
+      currency: 'NGN',
+      sellMinor: sell,
+      margin: { netMinor: sell - 800_000, markupMinor: 800_000 },
+    },
   };
 }
 
@@ -115,7 +125,11 @@ describe('who may see the margin', () => {
       availableSeats: 4,
       amenities: [],
       terms: { cancellation: '', luggage: '' },
-      price: { currency: 'NGN', sellMinor: 3_000_000, margin: { netMinor: 2_700_000, markupMinor: 300_000 } },
+      price: {
+        currency: 'NGN',
+        sellMinor: 3_000_000,
+        margin: { netMinor: 2_700_000, markupMinor: 300_000 },
+      },
     };
 
     const redacted = redactBusResult(
@@ -167,13 +181,19 @@ describe('checking a flight search before it is sent', () => {
   });
 
   it('refuses more infants than adults, because each one sits on an adult', () => {
-    const problems = validateFlightCriteria(flights({ passengers: { adults: 1, children: 0, infants: 2 } }), TODAY);
+    const problems = validateFlightCriteria(
+      flights({ passengers: { adults: 1, children: 0, infants: 2 } }),
+      TODAY,
+    );
 
     expect(problems['passengers']).toMatch(/infant/);
   });
 
   it('refuses more than nine seated passengers in one booking', () => {
-    const problems = validateFlightCriteria(flights({ passengers: { adults: 6, children: 4, infants: 0 } }), TODAY);
+    const problems = validateFlightCriteria(
+      flights({ passengers: { adults: 6, children: 4, infants: 0 } }),
+      TODAY,
+    );
 
     expect(problems['passengers']).toMatch(/up to 9/);
   });
@@ -197,7 +217,11 @@ describe('checking a bus search before it is sent', () => {
   });
 
   it('refuses two terminals in the same city', () => {
-    const problems = validateBusCriteria(bus({ arrivalTerminalId: 'trm_lag_ajah' }), TODAY, BUS_TERMINALS);
+    const problems = validateBusCriteria(
+      bus({ arrivalTerminalId: 'trm_lag_ajah' }),
+      TODAY,
+      BUS_TERMINALS,
+    );
 
     expect(problems['to']).toMatch(/outside Lagos/);
   });
@@ -211,9 +235,27 @@ describe('checking a bus search before it is sent', () => {
 
 describe('filtering and sorting fares', () => {
   const fares = [
-    offer('cheap-connecting', { sell: 8_000_000, stops: 1, carrier: 'ET', departs: '2026-09-14T21:00', duration: 400 }),
-    offer('dear-direct', { sell: 15_000_000, stops: 0, carrier: 'P4', departs: '2026-09-14T07:00', duration: 70 }),
-    offer('middle-direct', { sell: 11_000_000, stops: 0, carrier: 'QI', departs: '2026-09-14T13:30', duration: 65 }),
+    offer('cheap-connecting', {
+      sell: 8_000_000,
+      stops: 1,
+      carrier: 'ET',
+      departs: '2026-09-14T21:00',
+      duration: 400,
+    }),
+    offer('dear-direct', {
+      sell: 15_000_000,
+      stops: 0,
+      carrier: 'P4',
+      departs: '2026-09-14T07:00',
+      duration: 70,
+    }),
+    offer('middle-direct', {
+      sell: 11_000_000,
+      stops: 0,
+      carrier: 'QI',
+      departs: '2026-09-14T13:30',
+      duration: 65,
+    }),
   ];
 
   it('keeps only direct flights when asked', () => {
@@ -264,7 +306,10 @@ describe('finding an airport', () => {
   });
 
   it('offers every airport in a city', () => {
-    expect(matchAirports('london', AIRPORTS).map((airport) => airport.code)).toEqual(['LHR', 'LGW']);
+    expect(matchAirports('london', AIRPORTS).map((airport) => airport.code)).toEqual([
+      'LHR',
+      'LGW',
+    ]);
   });
 
   it('suggests the busiest airports before anything is typed', () => {

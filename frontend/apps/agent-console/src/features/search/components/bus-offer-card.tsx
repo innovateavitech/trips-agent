@@ -17,7 +17,13 @@ export interface BusOfferCardProps {
  * Hiace with three seats left cannot take a family of four — and the agent
  * should find that out here, not at the till.
  */
-export function BusOfferCard({ offer, passengers, priceCaption, expired, onSelect }: BusOfferCardProps) {
+export function BusOfferCard({
+  offer,
+  passengers,
+  priceCaption,
+  expired,
+  onSelect,
+}: BusOfferCardProps) {
   const soldOut = offer.availableSeats === 0;
   const tooFew = !soldOut && offer.availableSeats < passengers;
   const unavailable = soldOut || tooFew;
@@ -51,7 +57,11 @@ export function BusOfferCard({ offer, passengers, priceCaption, expired, onSelec
 
         <div className="flex items-end justify-between gap-4 border-t border-border pt-4 md:w-48 md:flex-col md:items-end md:border-l md:border-t-0 md:pl-5 md:pt-0">
           <PriceBlock price={offer.price} caption={priceCaption} />
-          <Button onClick={() => onSelect(offer)} disabled={expired || unavailable} className="md:w-full">
+          <Button
+            onClick={() => onSelect(offer)}
+            disabled={expired || unavailable}
+            className="md:w-full"
+          >
             {soldOut ? 'Sold out' : tooFew ? 'Not enough seats' : 'Select'}
           </Button>
         </div>

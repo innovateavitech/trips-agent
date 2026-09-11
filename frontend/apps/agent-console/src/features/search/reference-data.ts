@@ -87,7 +87,9 @@ export function findTerminal(id: string): BusTerminal | undefined {
 
 /** Both ends in Nigeria. Domestic fares, carriers and baggage all differ from international. */
 export function isDomestic(originCode: string, destinationCode: string): boolean {
-  return findAirport(originCode)?.country === 'NG' && findAirport(destinationCode)?.country === 'NG';
+  return (
+    findAirport(originCode)?.country === 'NG' && findAirport(destinationCode)?.country === 'NG'
+  );
 }
 
 /** Terminals grouped by city, in list order — for an `<optgroup>` per city. */

@@ -94,7 +94,13 @@ export function SearchFailure({
  * in the last two minutes; and once they have expired, an alert with the one
  * action that helps. Nothing expired can be selected — the cards see to that.
  */
-export function FareExpiry({ secondsLeft, onResearch }: { secondsLeft: number; onResearch: () => void }) {
+export function FareExpiry({
+  secondsLeft,
+  onResearch,
+}: {
+  secondsLeft: number;
+  onResearch: () => void;
+}) {
   if (secondsLeft === 0) {
     return (
       <Alert

@@ -137,7 +137,12 @@ export function BusSearchForm({
             />
           ) : (
             <div className="sm:pt-7">
-              <Button type="button" variant="outline" fullWidth onClick={() => setTripType('round_trip')}>
+              <Button
+                type="button"
+                variant="outline"
+                fullWidth
+                onClick={() => setTripType('round_trip')}
+              >
                 <Plus className="h-4 w-4" aria-hidden="true" />
                 Add a return
               </Button>
@@ -187,7 +192,12 @@ function TerminalSelect({
   error: string | undefined;
 }) {
   return (
-    <Select label={label} value={value} onChange={(event) => onChange(event.target.value)} error={error}>
+    <Select
+      label={label}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      error={error}
+    >
       <option value="">Choose a terminal</option>
       {GROUPS.map((group) => (
         <optgroup key={group.city} label={group.city}>

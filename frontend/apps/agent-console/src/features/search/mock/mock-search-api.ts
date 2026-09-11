@@ -180,7 +180,9 @@ function blockMinutes(random: Random, from: Airport, to: Airport): number {
   const a = from.country === 'NG' ? 0 : (MINUTES_FROM_NIGERIA[from.country] ?? 300);
   const b = to.country === 'NG' ? 0 : (MINUTES_FROM_NIGERIA[to.country] ?? 300);
   const base =
-    from.country === 'NG' || to.country === 'NG' ? Math.max(a, b) : Math.max(90, Math.abs(a - b) + 150);
+    from.country === 'NG' || to.country === 'NG'
+      ? Math.max(a, b)
+      : Math.max(90, Math.abs(a - b) + 150);
   return roundTo(base + between(random, -20, 25), 5);
 }
 
@@ -223,20 +225,33 @@ function journey(random: Random, carrier: Carrier, leg: FlightLeg): FlightJourne
   const to = airport(leg.destination);
   const domestic = from.country === 'NG' && to.country === 'NG';
   const via =
-    carrier.hub && carrier.hub !== from.code && carrier.hub !== to.code ? airport(carrier.hub) : null;
+    carrier.hub && carrier.hub !== from.code && carrier.hub !== to.code
+      ? airport(carrier.hub)
+      : null;
   const hour = domestic ? between(random, 6, 20) : between(random, 8, 23);
   const start = `${leg.date}T${pad(hour)}:${pad(pick(random, DEPARTURE_MINUTES))}`;
 
   if (!via) {
     const minutes = blockMinutes(random, from, to);
-    return { segments: [segment(random, carrier, from, to, start, minutes)], durationMinutes: minutes, stops: 0 };
+    return {
+      segments: [segment(random, carrier, from, to, start, minutes)],
+      durationMinutes: minutes,
+      stops: 0,
+    };
   }
 
   const firstMinutes = blockMinutes(random, from, via);
   const first = segment(random, carrier, from, via, start, firstMinutes);
   const layover = roundTo(between(random, 75, 260), 5);
   const secondMinutes = blockMinutes(random, via, to);
-  const second = segment(random, carrier, via, to, addMinutes(first.arrivesAt, layover), secondMinutes);
+  const second = segment(
+    random,
+    carrier,
+    via,
+    to,
+    addMinutes(first.arrivesAt, layover),
+    secondMinutes,
+  );
 
   return {
     segments: [first, second],
@@ -440,8 +455,14 @@ function departures(
     // Long routes leave at dawn, so the bus is not on the road after dark.
     const hour = hours > 6 ? between(random, 5, 9) : between(random, 5, 16);
     const departsAt = `${date}T${pad(hour)}:${pad(pick(random, BUS_DEPARTURE_MINUTES))}`;
-    const minutes = roundTo(hours * 60 * (operator.seats <= 14 ? 0.92 : 1.05) + between(random, -20, 40), 5);
-    const perSeatNaira = Math.max(4_500, roundTo(hours * between(random, 2_100, 2_900) * operator.premium, 500));
+    const minutes = roundTo(
+      hours * 60 * (operator.seats <= 14 ? 0.92 : 1.05) + between(random, -20, 40),
+      5,
+    );
+    const perSeatNaira = Math.max(
+      4_500,
+      roundTo(hours * between(random, 2_100, 2_900) * operator.premium, 500),
+    );
 
     offers.push({
       id: `bus_${from.id}_${to.id}_${date}_${index}`,
@@ -475,7 +496,10 @@ export const mockSearchApi: SearchApi = {
     }
 
     const held = heldFrom(new Date());
-    if (first.origin === NOTHING_FLIES_ROUTE.origin && first.destination === NOTHING_FLIES_ROUTE.destination) {
+    if (
+      first.origin === NOTHING_FLIES_ROUTE.origin &&
+      first.destination === NOTHING_FLIES_ROUTE.destination
+    ) {
       return { ...held, offers: [] };
     }
 

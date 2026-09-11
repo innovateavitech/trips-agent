@@ -82,7 +82,10 @@ export function FlightOfferCard({ offer, priceCaption, expired, onSelect }: Flig
           Fare rules
           <ChevronDown
             aria-hidden="true"
-            className={cx('h-4 w-4 transition-transform motion-reduce:transition-none', termsOpen && 'rotate-180')}
+            className={cx(
+              'h-4 w-4 transition-transform motion-reduce:transition-none',
+              termsOpen && 'rotate-180',
+            )}
           />
         </Button>
       </div>

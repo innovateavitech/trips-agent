@@ -117,7 +117,12 @@ export function FlightSearchForm({
   return (
     <form onSubmit={submit} noValidate aria-label="Search flights" className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <SegmentedControl label="Trip type" options={TRIP_TYPES} value={tripType} onChange={changeTripType} />
+        <SegmentedControl
+          label="Trip type"
+          options={TRIP_TYPES}
+          value={tripType}
+          onChange={changeTripType}
+        />
         <div className="w-full sm:w-52">
           <Select
             label="Cabin"
@@ -201,7 +206,13 @@ export function FlightSearchForm({
             />
           </div>
           <div className="hidden justify-center lg:col-span-1 lg:flex lg:pt-7">
-            <Button type="button" variant="ghost" size="icon" aria-label="Swap from and to" onClick={swap}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Swap from and to"
+              onClick={swap}
+            >
               <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
@@ -238,7 +249,12 @@ export function FlightSearchForm({
               />
             ) : (
               <div className="sm:pt-7">
-                <Button type="button" variant="outline" fullWidth onClick={() => changeTripType('round_trip')}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  fullWidth
+                  onClick={() => changeTripType('round_trip')}
+                >
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   Add a return
                 </Button>

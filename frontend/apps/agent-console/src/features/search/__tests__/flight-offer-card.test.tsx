@@ -49,7 +49,12 @@ function offer(margin: OfferPrice['margin']): FlightOffer {
 function renderCard(margin: OfferPrice['margin'], { expired = false } = {}) {
   const onSelect = vi.fn();
   render(
-    <FlightOfferCard offer={offer(margin)} priceCaption="Total for 1 adult" expired={expired} onSelect={onSelect} />,
+    <FlightOfferCard
+      offer={offer(margin)}
+      priceCaption="Total for 1 adult"
+      expired={expired}
+      onSelect={onSelect}
+    />,
   );
   return { onSelect };
 }
@@ -87,7 +92,9 @@ describe('FlightOfferCard', () => {
     fireEvent.click(toggle);
 
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getByText(/Unused airport taxes can be claimed back/).closest('[hidden]')).toBeNull();
+    expect(
+      screen.getByText(/Unused airport taxes can be claimed back/).closest('[hidden]'),
+    ).toBeNull();
     expect(onSelect).not.toHaveBeenCalled();
   });
 

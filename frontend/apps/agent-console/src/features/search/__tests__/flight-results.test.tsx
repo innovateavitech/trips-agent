@@ -10,7 +10,9 @@ afterEach(cleanup);
 
 const PASSENGERS = { adults: 1, children: 0, infants: 0 };
 
-function view(overrides: Partial<SearchView<SearchResult<FlightOffer>>>): SearchView<SearchResult<FlightOffer>> {
+function view(
+  overrides: Partial<SearchView<SearchResult<FlightOffer>>>,
+): SearchView<SearchResult<FlightOffer>> {
   return {
     isPending: false,
     isError: false,
@@ -24,7 +26,14 @@ function view(overrides: Partial<SearchView<SearchResult<FlightOffer>>>): Search
 
 function renderResults(query: SearchView<SearchResult<FlightOffer>>) {
   const onResearch = vi.fn();
-  render(<FlightResults query={query} passengers={PASSENGERS} onResearch={onResearch} onSelect={vi.fn()} />);
+  render(
+    <FlightResults
+      query={query}
+      passengers={PASSENGERS}
+      onResearch={onResearch}
+      onSelect={vi.fn()}
+    />,
+  );
   return { onResearch };
 }
 
@@ -38,7 +47,11 @@ describe('FlightResults', () => {
   it('offers to try again when the search fails — never an empty list', () => {
     const refetch = vi.fn();
     renderResults(
-      view({ isError: true, error: new ApiError(504, 'The airline systems did not answer in time.'), refetch }),
+      view({
+        isError: true,
+        error: new ApiError(504, 'The airline systems did not answer in time.'),
+        refetch,
+      }),
     );
 
     const alert = screen.getByRole('alert');
@@ -54,7 +67,9 @@ describe('FlightResults', () => {
 
   it('says plainly when nothing flies, which is a different answer from a failure', () => {
     const { onResearch } = renderResults(
-      view({ data: { offers: [], searchedAt: '2026-09-11T10:00:00Z', expiresAt: '2026-09-11T10:10:00Z' } }),
+      view({
+        data: { offers: [], searchedAt: '2026-09-11T10:00:00Z', expiresAt: '2026-09-11T10:10:00Z' },
+      }),
     );
 
     expect(screen.getByText('No flights on that route and date')).toBeTruthy();

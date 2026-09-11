@@ -40,11 +40,20 @@ export function BusSearchPage() {
       />
 
       <Card className="p-5">
-        <BusSearchForm initial={initial} onSearch={search} searching={request !== null && query.isFetching} />
+        <BusSearchForm
+          initial={initial}
+          onSearch={search}
+          searching={request !== null && query.isFetching}
+        />
       </Card>
 
       {request === null ? (
-        <EmptyState size="page" headingLevel={2} icon={<Bus className="h-5 w-5" />} title="Where is your customer going by road?">
+        <EmptyState
+          size="page"
+          headingLevel={2}
+          icon={<Bus className="h-5 w-5" />}
+          title="Where is your customer going by road?"
+        >
           Search GIG Mobility, ABC Transport, Chisco and more at once, with the seats each bus has
           left.
         </EmptyState>

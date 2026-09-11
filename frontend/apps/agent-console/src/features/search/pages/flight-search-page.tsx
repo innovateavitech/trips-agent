@@ -45,11 +45,20 @@ export function FlightSearchPage() {
       />
 
       <Card className="p-5">
-        <FlightSearchForm initial={initial} onSearch={search} searching={request !== null && query.isFetching} />
+        <FlightSearchForm
+          initial={initial}
+          onSearch={search}
+          searching={request !== null && query.isFetching}
+        />
       </Card>
 
       {request === null ? (
-        <EmptyState size="page" headingLevel={2} icon={<Plane className="h-5 w-5" />} title="Where is your customer flying?">
+        <EmptyState
+          size="page"
+          headingLevel={2}
+          icon={<Plane className="h-5 w-5" />}
+          title="Where is your customer flying?"
+        >
           Search Air Peace, Ibom Air, Arik and the international carriers at once. Fares are live,
           and held for ten minutes once you have them.
         </EmptyState>
@@ -59,7 +68,9 @@ export function FlightSearchPage() {
           passengers={request.criteria.passengers}
           onResearch={() => search(request.criteria)}
           // The booking flow (#53) takes it from here.
-          onSelect={(offer) => navigate('/book/flight', { state: { product: 'flight', offerId: offer.id } })}
+          onSelect={(offer) =>
+            navigate('/book/flight', { state: { product: 'flight', offerId: offer.id } })
+          }
         />
       )}
     </div>

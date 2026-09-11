@@ -118,9 +118,16 @@ export function AirportField({ label, value, onChange, error }: AirportFieldProp
         {open ? (
           <div className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-lg">
             {matches.length === 0 ? (
-              <p className="px-3 py-3 text-sm text-muted-foreground">No airport matches “{query}”.</p>
+              <p className="px-3 py-3 text-sm text-muted-foreground">
+                No airport matches “{query}”.
+              </p>
             ) : (
-              <ul id={listId} role="listbox" aria-label={label} className="max-h-72 overflow-auto p-1">
+              <ul
+                id={listId}
+                role="listbox"
+                aria-label={label}
+                className="max-h-72 overflow-auto p-1"
+              >
                 {matches.map((airport, index) => (
                   <li
                     key={airport.code}
@@ -144,7 +151,9 @@ export function AirportField({ label, value, onChange, error }: AirportFieldProp
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{airport.city}</span>
-                      <span className="block truncate text-xs text-muted-foreground">{airport.name}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {airport.name}
+                      </span>
                     </span>
                     <span className="text-xs text-muted-foreground">{airport.country}</span>
                   </li>

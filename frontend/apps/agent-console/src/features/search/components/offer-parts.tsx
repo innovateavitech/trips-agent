@@ -23,11 +23,15 @@ export function PriceBlock({ price, caption }: { price: OfferPrice; caption: str
         <dl className="mt-1 flex flex-col items-end gap-0.5 text-xs">
           <div className="flex gap-1 text-muted-foreground">
             <dt>Net</dt>
-            <dd className="tabular-nums">{formatMoneyShort(price.margin.netMinor, price.currency)}</dd>
+            <dd className="tabular-nums">
+              {formatMoneyShort(price.margin.netMinor, price.currency)}
+            </dd>
           </div>
           <div className="flex gap-1 font-medium text-success-subtle-foreground">
             <dt>Your margin</dt>
-            <dd className="tabular-nums">{formatMoneyShort(price.margin.markupMinor, price.currency)}</dd>
+            <dd className="tabular-nums">
+              {formatMoneyShort(price.margin.markupMinor, price.currency)}
+            </dd>
           </div>
         </dl>
       ) : null}

@@ -67,10 +67,12 @@ function BusResultList({
   const expired = secondsLeft === 0;
   const party = describeBusPassengers(passengers);
 
-  const offers = direction === 'return' && result.returnOffers ? result.returnOffers : result.offers;
+  const offers =
+    direction === 'return' && result.returnOffers ? result.returnOffers : result.offers;
   const operators = operatorCounts(offers);
   const visible = useMemo(
-    () => sortBuses(operator ? offers.filter((offer) => offer.operator === operator) : offers, sort),
+    () =>
+      sortBuses(operator ? offers.filter((offer) => offer.operator === operator) : offers, sort),
     [offers, operator, sort],
   );
 
@@ -116,7 +118,12 @@ function BusResultList({
               ))}
             </Select>
           </div>
-          <SegmentedControl label="Sort departures" options={SORTS} value={sort} onChange={setSort} />
+          <SegmentedControl
+            label="Sort departures"
+            options={SORTS}
+            value={sort}
+            onChange={setSort}
+          />
         </div>
       </div>
 

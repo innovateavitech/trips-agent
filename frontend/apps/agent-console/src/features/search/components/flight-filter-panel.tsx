@@ -78,7 +78,9 @@ export function FlightFilterPanel({
             label={carrier.name}
             count={carrier.count}
             checked={filters.carriers.includes(carrier.code)}
-            onChange={() => onChange({ ...filters, carriers: toggle(filters.carriers, carrier.code) })}
+            onChange={() =>
+              onChange({ ...filters, carriers: toggle(filters.carriers, carrier.code) })
+            }
           />
         ))}
       </Group>
@@ -90,7 +92,9 @@ export function FlightFilterPanel({
             type="checkbox"
             label={TIME_OF_DAY_LABELS[time]}
             checked={filters.departureTimes.includes(time)}
-            onChange={() => onChange({ ...filters, departureTimes: toggle(filters.departureTimes, time) })}
+            onChange={() =>
+              onChange({ ...filters, departureTimes: toggle(filters.departureTimes, time) })
+            }
           />
         ))}
       </Group>

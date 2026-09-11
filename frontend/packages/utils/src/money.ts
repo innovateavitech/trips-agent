@@ -23,7 +23,11 @@ export function formatMoney(amountMinor: MinorUnits, currency: string, locale = 
  * in lists, where "₦128,450.00" on every row is noise. Amounts with kobo keep
  * both digits. `formatMoneyShort(12845000, 'NGN')` → "₦128,450".
  */
-export function formatMoneyShort(amountMinor: MinorUnits, currency: string, locale = 'en-NG'): string {
+export function formatMoneyShort(
+  amountMinor: MinorUnits,
+  currency: string,
+  locale = 'en-NG',
+): string {
   const digits = amountMinor % 100 === 0 ? 0 : 2;
   return new Intl.NumberFormat(locale, {
     style: 'currency',

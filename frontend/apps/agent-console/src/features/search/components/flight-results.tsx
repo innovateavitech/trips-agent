@@ -62,8 +62,8 @@ export function FlightResults({ query, passengers, onResearch, onSelect }: Fligh
           </Button>
         }
       >
-        The airlines have nothing to sell for this search. A day either side often has seats, and
-        so does a nearby airport.
+        The airlines have nothing to sell for this search. A day either side often has seats, and so
+        does a nearby airport.
       </EmptyState>
     );
   }

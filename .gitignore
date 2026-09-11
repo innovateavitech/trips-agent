@@ -85,3 +85,10 @@ temp/
 .claude/settings.local.json
 .claude/skills/*/scripts/
 .impeccable/cache/
+
+# Sync-conflict copies — "Foo 2.cs" left beside "Foo.cs" by iCloud Desktop sync or Dropbox.
+# .NET compiles every *.cs it finds, so committing one breaks every build that pulls it. Ignored
+# so they cannot be staged by accident; the build (Directory.Build.props) and the /verify skill
+# still report them, because a conflict copy can hold an edit that exists nowhere else.
+* [0-9].*
+* [0-9][0-9].*

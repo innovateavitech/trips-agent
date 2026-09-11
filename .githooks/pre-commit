@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# pre-commit — catches the three mistakes that are expensive to undo:
+# pre-commit — catches the mistakes that are expensive to undo:
 #   1. committing directly on a protected branch
 #   2. committing a secret
 #   3. committing a large binary
+#   4. committing a sync-conflict copy ("Foo 2.cs"), which breaks every build that pulls it
 #
 # Bypass (use sparingly, and know why):  git commit --no-verify
 
@@ -89,6 +90,22 @@ AKIA[0-9A-Z]{16}
       printf '%s\n' "   Sure? ${DIM}git commit --no-verify${NC}" >&2
       FAILED=1
     fi
+  done <<< "$staged"
+
+  # ----------------------------------------------------- 4. sync duplicates
+  # "Foo 2.cs" beside "Foo.cs" is a sync-conflict copy (iCloud Desktop, Dropbox). .gitignore keeps
+  # them out of `git add -A`, so reaching here means one was force-added.
+  while IFS= read -r f; do
+    case "$(basename "$f")" in
+      *" "[0-9].*|*" "[0-9][0-9].*)
+        printf '%s\n' "" >&2
+        printf '%s\n' "${RED}${BOLD}✖  Refusing to commit ${f}${NC}" >&2
+        printf '%s\n' "   It looks like a sync-conflict copy left by iCloud or Dropbox. .NET compiles" >&2
+        printf '%s\n' "   every *.cs, so it would redefine a type and break every build that pulls it." >&2
+        printf '%s\n' "   Compare it with the original, and delete it if they match." >&2
+        FAILED=1
+        ;;
+    esac
   done <<< "$staged"
 fi
 

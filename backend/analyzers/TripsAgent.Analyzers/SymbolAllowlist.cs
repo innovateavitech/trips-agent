@@ -5,14 +5,15 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace TripsAgent.Analyzers;
 
 /// <summary>
-/// The explicit list of types and members allowed to hold a money-named <c>decimal</c>,
-/// <c>double</c> or <c>float</c> — read from <c>backend/MoneyTypeAllowlist.txt</c>.
+/// An explicit list of types and members exempt from one analyser's rule, read from a text file
+/// handed to the compiler: <c>backend/MoneyTypeAllowlist.txt</c> for <c>TRIPS001</c>,
+/// <c>backend/IgnoreQueryFiltersAllowlist.txt</c> for <c>TRIPS002</c>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// There are a few legitimate cases — a display-formatting helper that turns kobo into
-/// "1,500.00", percentage maths, a deliberately-wrong entity in a test. They go in one file so
-/// every exception is visible in one place and every new one shows up in a pull request.
+/// Every rule enforced by the compiler has a few legitimate exceptions. They go in one file per
+/// rule so each exception is visible in one place, and every new one shows up in a pull request
+/// where someone has to agree with it.
 /// </para>
 /// <para>
 /// One entry per line, <c>#</c> starts a comment. An entry is either a type
@@ -20,14 +21,11 @@ namespace TripsAgent.Analyzers;
 /// allows everything inside it, or a single member (<c>TripsAgent.Domain.Common.Money.Percentage</c>),
 /// which allows that member and its parameters and locals. All overloads of a method share one
 /// name. Namespaces are deliberately <b>not</b> accepted: allowing a whole namespace is far too
-/// broad an exception to a rule about money.
+/// broad an exception to either rule.
 /// </para>
 /// </remarks>
-internal sealed class MoneyTypeAllowlist
+internal sealed class SymbolAllowlist
 {
-    /// <summary>The file name the analyser looks for among the project's additional files.</summary>
-    public const string FileName = "MoneyTypeAllowlist.txt";
-
     // Namespace.Outer.Inner — no "global::", no generic arguments.
     private static readonly SymbolDisplayFormat TypeNameFormat = new(
         globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Omitted,
@@ -35,19 +33,25 @@ internal sealed class MoneyTypeAllowlist
 
     private readonly HashSet<string> _entries;
 
-    private MoneyTypeAllowlist(HashSet<string> entries)
+    private SymbolAllowlist(HashSet<string> entries)
     {
         _entries = entries;
     }
 
-    /// <summary>Reads every allowlist file handed to the compiler. Having none is fine.</summary>
-    public static MoneyTypeAllowlist Load(ImmutableArray<AdditionalText> files, CancellationToken cancellationToken)
+    /// <summary>
+    /// Reads every additional file named <paramref name="fileName"/>. Having none is fine — it
+    /// means no exceptions, which is the strictest reading.
+    /// </summary>
+    public static SymbolAllowlist Load(
+        ImmutableArray<AdditionalText> files,
+        string fileName,
+        CancellationToken cancellationToken)
     {
         var entries = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var file in files)
         {
-            if (!string.Equals(Path.GetFileName(file.Path), FileName, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(Path.GetFileName(file.Path), fileName, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -76,7 +80,7 @@ internal sealed class MoneyTypeAllowlist
             }
         }
 
-        return new MoneyTypeAllowlist(entries);
+        return new SymbolAllowlist(entries);
     }
 
     /// <summary>
@@ -95,7 +99,11 @@ internal sealed class MoneyTypeAllowlist
         return false;
     }
 
-    private static string FullNameOf(ISymbol symbol) =>
+    /// <summary>
+    /// The name an allowlist entry uses for <paramref name="symbol"/> — what a diagnostic tells a
+    /// developer to add, so it is exactly the string the file expects.
+    /// </summary>
+    public static string FullNameOf(ISymbol symbol) =>
         symbol is INamedTypeSymbol type
             ? type.ToDisplayString(TypeNameFormat)
             : $"{FullNameOf(symbol.ContainingSymbol)}.{symbol.Name}";

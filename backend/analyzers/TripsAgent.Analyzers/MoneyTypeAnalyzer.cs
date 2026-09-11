@@ -25,7 +25,7 @@ namespace TripsAgent.Analyzers;
 /// nearly always names it like one.
 /// </para>
 /// <para>
-/// The escape hatch is <c>backend/MoneyTypeAllowlist.txt</c> — see <see cref="MoneyTypeAllowlist"/>.
+/// The escape hatch is <c>backend/MoneyTypeAllowlist.txt</c> — see <see cref="SymbolAllowlist"/>.
 /// Generated code (EF Core migrations, for instance) is skipped.
 /// </para>
 /// </remarks>
@@ -34,6 +34,9 @@ public sealed class MoneyTypeAnalyzer : DiagnosticAnalyzer
 {
     /// <summary>The diagnostic ID shown in the build output.</summary>
     public const string DiagnosticId = "TRIPS001";
+
+    /// <summary>The allowlist file the analyser looks for among the project's additional files.</summary>
+    public const string AllowlistFileName = "MoneyTypeAllowlist.txt";
 
     /// <summary>
     /// Name endings that mean "this is an amount of money". <c>Minor</c> is here too: something
@@ -66,7 +69,7 @@ public sealed class MoneyTypeAnalyzer : DiagnosticAnalyzer
         // The allowlist is read once per project build, not once per symbol.
         context.RegisterCompilationStartAction(start =>
         {
-            var allowlist = MoneyTypeAllowlist.Load(start.Options.AdditionalFiles, start.CancellationToken);
+            var allowlist = SymbolAllowlist.Load(start.Options.AdditionalFiles, AllowlistFileName, start.CancellationToken);
 
             start.RegisterSymbolAction(
                 symbolContext => AnalyzeMember(symbolContext, allowlist),
@@ -105,7 +108,7 @@ public sealed class MoneyTypeAnalyzer : DiagnosticAnalyzer
         return false;
     }
 
-    private static void AnalyzeMember(SymbolAnalysisContext context, MoneyTypeAllowlist allowlist)
+    private static void AnalyzeMember(SymbolAnalysisContext context, SymbolAllowlist allowlist)
     {
         switch (context.Symbol)
         {
@@ -132,13 +135,13 @@ public sealed class MoneyTypeAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    private static void AnalyzeLocal(OperationAnalysisContext context, MoneyTypeAllowlist allowlist)
+    private static void AnalyzeLocal(OperationAnalysisContext context, SymbolAllowlist allowlist)
     {
         var local = ((IVariableDeclaratorOperation)context.Operation).Symbol;
         Check(local, local.Type, allowlist, context.ReportDiagnostic);
     }
 
-    private static void Check(ISymbol symbol, ITypeSymbol type, MoneyTypeAllowlist allowlist, Action<Diagnostic> report)
+    private static void Check(ISymbol symbol, ITypeSymbol type, SymbolAllowlist allowlist, Action<Diagnostic> report)
     {
         // Cheapest test first: almost nothing is named like money, so most symbols stop here.
         if (symbol.IsImplicitlyDeclared

@@ -1,0 +1,75 @@
+# Dependabot opens pull requests that keep dependencies current (issue #108).
+#
+# Three ecosystems, and the third matters as much as the first two: a GitHub Action runs inside
+# CI with the repository's token, so a compromised or abandoned action is a supply-chain path
+# straight into the pipeline that builds what we deploy.
+#
+# These are *version* updates, on a schedule. *Security* updates — a pull request opened the
+# moment an advisory affects us — are a repository setting, not this file; see
+# docs/BRANCH_PROTECTION.md Step 3.
+#
+# Pull request titles
+# -------------------
+# CI checks every pull request title against .githooks/commit-msg, which wants
+# `type(scope): subject` under 72 characters. The prefix below makes the type and scope right.
+# Updates are grouped so the title reads "chore(deps): bump the nuget-minor group in /backend with
+# 4 updates" rather than one long package name each. A title that is still too long (a single
+# major update of a long-named package) fails commitlint: edit the title, nothing else.
+#
+# Review a Dependabot pull request like any other. Major versions are grouped apart from minor and
+# patch so a breaking upgrade never holds back the safe ones.
+
+version: 2
+
+updates:
+  - package-ecosystem: nuget
+    directory: /backend # Central Package Management: every version is in Directory.Packages.props
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Africa/Lagos
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+    labels: [dependencies]
+    groups:
+      nuget-minor:
+        update-types: [minor, patch]
+      nuget-major:
+        update-types: [major]
+
+  # "npm" is Dependabot's name for the JavaScript ecosystem; it reads pnpm-lock.yaml and updates it
+  # with pnpm.
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Africa/Lagos
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+    labels: [dependencies]
+    groups:
+      npm-minor:
+        update-types: [minor, patch]
+      npm-major:
+        update-types: [major]
+
+  # "/" means .github/workflows/. Every `uses:` line in every workflow is covered.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Africa/Lagos
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+    labels: [dependencies]
+    groups:
+      actions:
+        patterns: ['*']

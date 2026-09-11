@@ -37,6 +37,11 @@ export interface TravellerDetails {
 
 /** What the supplier confirmed once the travellers were known. */
 export interface PriceConfirmation {
+  /**
+   * The server's booking this confirmation created, which paying for it names. Absent only from the
+   * demo stand-in, which keeps its own books.
+   */
+  reference?: string;
   /** What the customer pays now. */
   sellMinor: number;
   /** What the search showed. Differs only when the supplier moved the price. */

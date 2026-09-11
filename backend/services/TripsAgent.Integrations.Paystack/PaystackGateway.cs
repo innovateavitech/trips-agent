@@ -87,7 +87,15 @@ public sealed class PaystackGateway : IPaymentGateway
 
         using var response = await _http.PostAsJsonAsync("/transaction/initialize", request, Json, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            // Paystack says WHY in the body, and EnsureSuccessStatusCode throws that away. The
+            // difference is between "the payment provider is not responding" and the actual
+            // answer — '"email" must be a valid email' — which is the one a person can act on.
+            throw new PaymentGatewayException(
+                $"Paystack refused to initialise {reference}: {(int)response.StatusCode} "
+                + $"{await MessageFrom(response, cancellationToken)}");
+        }
 
         var body = await response.Content.ReadFromJsonAsync<PaystackResponse<InitializeData>>(Json, cancellationToken)
             ?? throw new InvalidOperationException("Paystack returned an empty initialize response.");
@@ -254,6 +262,23 @@ public sealed class PaystackGateway : IPaymentGateway
         return CryptographicOperations.FixedTimeEquals(
             Encoding.UTF8.GetBytes(computed),
             Encoding.UTF8.GetBytes(signature.Trim().ToLower(CultureInfo.InvariantCulture)));
+    }
+
+    /// <summary>
+    /// Paystack's own explanation, for the log. Never the body verbatim: a failed response can
+    /// echo the request, and the request carries a customer's email address.
+    /// </summary>
+    private static async Task<string> MessageFrom(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var problem = await response.Content.ReadFromJsonAsync<PaystackResponse<object>>(Json, cancellationToken);
+            return problem?.Message is { Length: > 0 } message ? message : "(no message)";
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            return "(unreadable response)";
+        }
     }
 
     private sealed record PaystackResponse<T>(bool Status, string? Message, T? Data);

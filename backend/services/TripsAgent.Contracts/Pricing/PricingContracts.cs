@@ -39,6 +39,11 @@ public sealed record MarkupRuleRequest(
 
 /// <summary>A markup rule as stored. Only ever shown to users holding <c>margin.view</c>.</summary>
 /// <param name="SupersededById">The rule that replaced this one when it was edited, if it was.</param>
+/// <param name="Status">
+/// <c>Scheduled</c>, <c>InForce</c> or <c>Ended</c>, by the server's clock at the moment of the
+/// response. Read this rather than comparing the timestamps with the browser's clock, which can
+/// disagree with the server's by enough to show a rule just replaced as still in force.
+/// </param>
 public sealed record MarkupRuleResponse(
     Guid Id,
     string Scope,
@@ -55,7 +60,34 @@ public sealed record MarkupRuleResponse(
     bool AppliesToSubAgents,
     DateTimeOffset EffectiveFrom,
     DateTimeOffset? EffectiveTo,
-    Guid? SupersededById);
+    Guid? SupersededById,
+    string Status);
+
+/// <summary>
+/// One of the principal agency's rules that a sub-agent inherits. Read-only to the sub-agent.
+/// </summary>
+/// <remarks>
+/// Only rules the principal marked as applying to sub-agents, and only those in force now: the
+/// rules that can actually price one of the sub-agent's sales. Those kept from sub-agents are never
+/// sent — they are the principal's own margin, not the sub-agent's.
+/// </remarks>
+/// <param name="Summary">The rule in one line: "10% of the net rate, at least NGN 2000.00".</param>
+public sealed record InheritedMarkupRuleResponse(
+    Guid Id,
+    string Scope,
+    string? ProductType,
+    Guid? ProductId,
+    string? SupplierCode,
+    string Currency,
+    string CalculationType,
+    int? PercentBasisPoints,
+    long? ValueMinor,
+    long? MinMarkupMinor,
+    long? MaxMarkupMinor,
+    int Priority,
+    DateTimeOffset EffectiveFrom,
+    DateTimeOffset? EffectiveTo,
+    string Summary);
 
 /// <summary>
 /// A price quote, for someone who may <b>not</b> see margin: only what the traveller pays, and
@@ -157,8 +189,15 @@ public sealed record PricePreviewResponse(
     PricePreviewRuleResponse? WinningRule);
 
 /// <summary>The calling agency's pricing context: what it sells in, and the rates on every price.</summary>
+/// <param name="HasPrincipal">
+/// True for a sub-agent. Its principal's rules apply wherever none of its own rules matches — and
+/// any matching rule of its own, even a default, beats every inherited one.
+/// </param>
+/// <param name="HasSubAgents">True for a principal with sub-agents, who inherit its rules unless told not to.</param>
 public sealed record PricingSettingsResponse(
     string Currency,
     int VatRateBasisPoints,
     int PlatformFeeBasisPoints,
-    int QuoteValidityMinutes);
+    int QuoteValidityMinutes,
+    bool HasPrincipal,
+    bool HasSubAgents);

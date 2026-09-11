@@ -5,18 +5,18 @@ import {
   describeRule,
   endedRules,
   formatPercent,
+  inheritedRuleLabel,
   MAX_PERCENT_BASIS_POINTS,
   parseAmount,
   parsePercent,
   parseProductId,
+  pricingCopy,
   productRulesInForce,
   ruleInForce,
   toWholeNumber,
   type MarkupRule,
   type RuleDraft,
 } from '../pricing-rules';
-
-const NOW = new Date('2026-09-11T12:00:00Z');
 
 const rule = (over: Partial<MarkupRule> = {}): MarkupRule => ({
   id: '0197a000-0000-7000-8000-000000000001',
@@ -35,6 +35,7 @@ const rule = (over: Partial<MarkupRule> = {}): MarkupRule => ({
   effectiveFrom: '2026-09-01T00:00:00Z',
   effectiveTo: null,
   supersededById: null,
+  status: 'InForce',
   ...over,
 });
 
@@ -137,11 +138,35 @@ describe('product ids', () => {
 
 describe('which rule sits in a slot', () => {
   it('ignores rules that have ended or not started', () => {
-    const ended = rule({ id: 'a', effectiveTo: '2026-09-10T00:00:00Z' });
-    const future = rule({ id: 'b', effectiveFrom: '2026-10-01T00:00:00Z' });
+    const ended = rule({ id: 'a', effectiveTo: '2026-09-10T00:00:00Z', status: 'Ended' });
+    const future = rule({ id: 'b', effectiveFrom: '2026-10-01T00:00:00Z', status: 'Scheduled' });
     const current = rule({ id: 'c' });
 
-    expect(ruleInForce([ended, future, current], { scope: 'Global' }, NOW)?.id).toBe('c');
+    expect(ruleInForce([ended, future, current], { scope: 'Global' })?.id).toBe('c');
+  });
+
+  // The reviewer's case. The server replaced 10% with 15% at T and the list
+  // came back while this browser's clock read T − 1.8s. By the timestamps the
+  // old rule is still in force and the new one has not started; by the
+  // server, which stamped them, it is the other way round.
+  it("trusts the server's status over this browser's clock", () => {
+    const serverNow = new Date(Date.now() + 60_000).toISOString();
+    const replaced = rule({
+      id: 'old',
+      percentBasisPoints: 1000,
+      effectiveTo: serverNow,
+      supersededById: 'new',
+      status: 'Ended',
+    });
+    const replacement = rule({
+      id: 'new',
+      percentBasisPoints: 1500,
+      effectiveFrom: serverNow,
+      status: 'InForce',
+    });
+
+    expect(ruleInForce([replaced, replacement], { scope: 'Global' })?.id).toBe('new');
+    expect(endedRules([replaced, replacement]).map((r) => r.id)).toEqual(['old']);
   });
 
   it('prefers the higher priority, then the later start', () => {
@@ -149,16 +174,14 @@ describe('which rule sits in a slot', () => {
     const newer = rule({ id: 'b', priority: 5, effectiveFrom: '2026-09-01T00:00:00Z' });
     const lower = rule({ id: 'c', priority: 0, effectiveFrom: '2026-09-10T00:00:00Z' });
 
-    expect(ruleInForce([older, lower, newer], { scope: 'Global' }, NOW)?.id).toBe('b');
+    expect(ruleInForce([older, lower, newer], { scope: 'Global' })?.id).toBe('b');
   });
 
   it('keeps product types apart', () => {
     const tours = rule({ id: 't', scope: 'ProductType', productType: 'Tour' });
 
-    expect(
-      ruleInForce([tours], { scope: 'ProductType', productType: 'Flight' }, NOW),
-    ).toBeUndefined();
-    expect(ruleInForce([tours], { scope: 'ProductType', productType: 'Tour' }, NOW)?.id).toBe('t');
+    expect(ruleInForce([tours], { scope: 'ProductType', productType: 'Flight' })).toBeUndefined();
+    expect(ruleInForce([tours], { scope: 'ProductType', productType: 'Tour' })?.id).toBe('t');
   });
 
   it('lists one product rule per product', () => {
@@ -166,14 +189,68 @@ describe('which rule sits in a slot', () => {
     const first = rule({ id: 'a', scope: 'Product', productType: 'Tour', productId });
     const second = rule({ id: 'b', scope: 'Product', productType: 'Tour', productId, priority: 1 });
 
-    expect(productRulesInForce([first, second], NOW).map((r) => r.id)).toEqual(['b']);
+    expect(productRulesInForce([first, second]).map((r) => r.id)).toEqual(['b']);
   });
 
   it('keeps ended rules for the history, most recently ended first', () => {
-    const early = rule({ id: 'a', effectiveTo: '2026-09-02T00:00:00Z' });
-    const late = rule({ id: 'b', effectiveTo: '2026-09-09T00:00:00Z' });
+    const early = rule({ id: 'a', effectiveTo: '2026-09-02T00:00:00Z', status: 'Ended' });
+    const late = rule({ id: 'b', effectiveTo: '2026-09-09T00:00:00Z', status: 'Ended' });
 
-    expect(endedRules([early, rule({ id: 'c' }), late], NOW).map((r) => r.id)).toEqual(['b', 'a']);
+    expect(endedRules([early, rule({ id: 'c' }), late]).map((r) => r.id)).toEqual(['b', 'a']);
+  });
+
+  it('does not call a rule with a future end ended', () => {
+    const endsLater = rule({ id: 'a', effectiveTo: '2027-01-01T00:00:00Z', status: 'InForce' });
+
+    expect(endedRules([endsLater])).toEqual([]);
+    expect(ruleInForce([endsLater], { scope: 'Global' })?.id).toBe('a');
+  });
+});
+
+describe('what the screen says about precedence', () => {
+  it('tells a principal the most specific rule wins', () => {
+    const copy = pricingCopy({ hasPrincipal: false, hasOwnDefault: false });
+
+    expect(copy.precedence).toContain('most specific rule always wins');
+    expect(copy.noDefault).toContain('Travellers pay the net price');
+  });
+
+  // A sub-agent's own default beats even its principal's rule for flights, so
+  // "the most specific rule wins" and "travellers pay the net price" are both
+  // false for it, and led a sub-agent to switch its principal's rules off.
+  it("tells a sub-agent its own rules outrank all of its principal's", () => {
+    const copy = pricingCopy({ hasPrincipal: true, hasOwnDefault: false });
+
+    expect(copy.precedence).not.toContain('always wins');
+    expect(copy.precedence).toContain("principal agency's rules apply only");
+    expect(copy.defaultDescription).toContain("none of your principal agency's rules apply");
+    expect(copy.noDefault).toContain("principal agency's rules apply");
+    expect(copy.noTypeRule).toContain('principal');
+  });
+
+  it("sends a sub-agent's empty product-type row to its own default once it has one", () => {
+    expect(pricingCopy({ hasPrincipal: true, hasOwnDefault: true }).noTypeRule).toBe(
+      'Uses your default.',
+    );
+  });
+
+  it('names inherited rules so they can be told apart', () => {
+    expect(
+      inheritedRuleLabel({
+        scope: 'ProductType',
+        productType: 'Flight',
+        productId: null,
+        supplierCode: null,
+      }),
+    ).toBe('Flights rule');
+    expect(
+      inheritedRuleLabel({
+        scope: 'Supplier',
+        productType: null,
+        productId: null,
+        supplierCode: 'trips_africa',
+      }),
+    ).toBe('Supplier rule · trips_africa');
   });
 });
 

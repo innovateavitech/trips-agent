@@ -26,6 +26,8 @@ export interface RuleFormProps {
   replacing?: MarkupRule;
   /** Fields that choose the slot, e.g. which product. Rendered first. */
   children?: ReactNode;
+  /** True for a principal with sub-agents, who should know the rule reaches them too. */
+  hasSubAgents?: boolean;
   onDone: () => void;
 }
 
@@ -36,6 +38,7 @@ export function RuleForm({
   slotProblem,
   replacing,
   children,
+  hasSubAgents = false,
   onDone,
 }: RuleFormProps) {
   const [draft, setDraft] = useState(() => draftFromRule(replacing));
@@ -122,6 +125,14 @@ export function RuleForm({
           />
         </div>
       )}
+
+      {hasSubAgents ? (
+        <p className="text-xs text-muted-foreground">
+          {replacing && !replacing.appliesToSubAgents
+            ? 'Kept from your sub-agents, like the rule it replaces.'
+            : 'Your sub-agents inherit this rule wherever they have no rule of their own.'}
+        </p>
+      ) : null}
 
       {replacing ? (
         <p className="text-xs text-muted-foreground">

@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react';
-import { Alert, Button, Card, ErrorState, Input, LoadingState, Select } from '@trips/ui';
+import { Alert, Badge, Button, Card, ErrorState, Input, LoadingState, Select } from '@trips/ui';
 import { ApiError, describeError } from '../../../api/errors';
 import { PageHeader } from '../../../shell/page-header';
+import { InheritedRules } from '../components/inherited-rules';
 import { PriceExplainer } from '../components/price-explainer';
 import { RuleForm } from '../components/rule-form';
 import { RuleHistory } from '../components/rule-history';
@@ -10,16 +11,24 @@ import {
   endedRules,
   isInForce,
   parseProductId,
+  pricingCopy,
   PRODUCT_TYPES,
   productRulesInForce,
   productTypeLabel,
   ruleInForce,
   scopeLabel,
+  type InheritedRule,
   type MarkupRule,
   type ProductType,
   type RuleSlot,
 } from '../pricing-rules';
-import { useMarkupRules, usePricingSettings, useRetireRule } from '../pricing-queries';
+import {
+  useInheritedRules,
+  useMarkupRules,
+  usePricingSettings,
+  useRetireRule,
+  type PricingSettings,
+} from '../pricing-queries';
 
 /**
  * ============================================================================
@@ -29,17 +38,21 @@ import { useMarkupRules, usePricingSettings, useRetireRule } from '../pricing-qu
  * Three layers, most specific first: a rule for one product, a rule for a
  * product type, and a default for everything. The explainer at the top shows
  * which one wins for any sample price, because that is the question agents ask.
+ *
+ * A sub-agent also sees its principal's rules, read-only, and is told the one
+ * thing that differs for it: its own rules — any of them — come first.
  */
 export function PricingPage() {
   const settings = usePricingSettings();
   const rules = useMarkupRules();
+  const inherited = useInheritedRules();
 
-  if (settings.isPending || rules.isPending) {
+  if (settings.isPending || rules.isPending || inherited.isPending) {
     return <LoadingState size="page" label="Loading your pricing rules" />;
   }
 
-  if (settings.isError || rules.isError) {
-    const error = settings.error ?? rules.error;
+  if (settings.isError || rules.isError || inherited.isError) {
+    const error = settings.error ?? rules.error ?? inherited.error;
     const problem = describeError(error);
     const forbidden = error instanceof ApiError && error.status === 403;
 
@@ -59,24 +72,37 @@ export function PricingPage() {
             : () => {
                 void settings.refetch();
                 void rules.refetch();
+                void inherited.refetch();
               }
         }
-        retrying={settings.isFetching || rules.isFetching}
+        retrying={settings.isFetching || rules.isFetching || inherited.isFetching}
       />
     );
   }
 
-  return <PricingRules currency={settings.data.currency} rules={rules.data} />;
+  return <PricingRules settings={settings.data} rules={rules.data} inherited={inherited.data} />;
 }
 
-function PricingRules({ currency, rules }: { currency: string; rules: MarkupRule[] }) {
+function PricingRules({
+  settings,
+  rules,
+  inherited,
+}: {
+  settings: PricingSettings;
+  rules: MarkupRule[];
+  inherited: InheritedRule[];
+}) {
+  const { currency, hasPrincipal, hasSubAgents } = settings;
+
   // Which row's form is open: 'global', 'type:Flight', 'product:<id>' or 'new-product'.
   const [editing, setEditing] = useState<string | null>(null);
-  const now = new Date();
 
-  const global = ruleInForce(rules, { scope: 'Global' }, now);
-  const productRules = productRulesInForce(rules, now);
-  const supplierRules = rules.filter((rule) => rule.scope === 'Supplier' && isInForce(rule, now));
+  // Whether a rule is in force is the server's call (each rule carries its
+  // status), never this browser's clock — see `isInForce`.
+  const global = ruleInForce(rules, { scope: 'Global' });
+  const productRules = productRulesInForce(rules);
+  const supplierRules = rules.filter((rule) => rule.scope === 'Supplier' && isInForce(rule));
+  const copy = pricingCopy({ hasPrincipal, hasOwnDefault: global !== undefined });
 
   return (
     <div className="flex flex-col gap-6">
@@ -91,17 +117,15 @@ function PricingRules({ currency, rules }: { currency: string; rules: MarkupRule
         stays listed under Earlier rules.
       </Alert>
 
-      <PriceExplainer currency={currency} />
+      <PriceExplainer currency={currency} precedence={copy.precedence} />
 
-      <RuleSection
-        title="Default markup"
-        description="Applies to everything you sell, unless a more specific rule below says otherwise."
-      >
+      <RuleSection title="Default markup" description={copy.defaultDescription}>
         <RuleRow
           label="Everything"
           rule={global}
-          emptyText="No default. Travellers pay the net price unless another rule applies."
+          emptyText={copy.noDefault}
           currency={currency}
+          hasSubAgents={hasSubAgents}
           slot={{ scope: 'Global' }}
           isEditing={editing === 'global'}
           onEdit={() => setEditing('global')}
@@ -121,9 +145,10 @@ function PricingRules({ currency, rules }: { currency: string; rules: MarkupRule
             <RuleRow
               key={type.value}
               label={type.label}
-              rule={ruleInForce(rules, slot, now)}
-              emptyText="Uses your default."
+              rule={ruleInForce(rules, slot)}
+              emptyText={copy.noTypeRule}
               currency={currency}
+              hasSubAgents={hasSubAgents}
               slot={slot}
               isEditing={editing === key}
               onEdit={() => setEditing(key)}
@@ -147,6 +172,7 @@ function PricingRules({ currency, rules }: { currency: string; rules: MarkupRule
               rule={rule}
               emptyText=""
               currency={currency}
+              hasSubAgents={hasSubAgents}
               slot={{
                 scope: 'Product',
                 productType: rule.productType as ProductType,
@@ -161,7 +187,11 @@ function PricingRules({ currency, rules }: { currency: string; rules: MarkupRule
 
         {editing === 'new-product' ? (
           <div className="p-5">
-            <NewProductRuleForm currency={currency} onDone={() => setEditing(null)} />
+            <NewProductRuleForm
+              currency={currency}
+              hasSubAgents={hasSubAgents}
+              onDone={() => setEditing(null)}
+            />
           </div>
         ) : (
           <div className="flex flex-wrap items-center justify-between gap-3 p-5">
@@ -189,6 +219,7 @@ function PricingRules({ currency, rules }: { currency: string; rules: MarkupRule
               rule={rule}
               emptyText=""
               currency={currency}
+              hasSubAgents={hasSubAgents}
               slot={null}
               isEditing={false}
               onEdit={() => undefined}
@@ -198,7 +229,9 @@ function PricingRules({ currency, rules }: { currency: string; rules: MarkupRule
         </RuleSection>
       ) : null}
 
-      <RuleHistory rules={endedRules(rules, now)} currency={currency} />
+      {hasPrincipal ? <InheritedRules rules={inherited} currency={currency} /> : null}
+
+      <RuleHistory rules={endedRules(rules)} currency={currency} />
     </div>
   );
 }
@@ -228,6 +261,8 @@ interface RuleRowProps {
   rule: MarkupRule | undefined;
   emptyText: string;
   currency: string;
+  /** A principal with sub-agents sees, on each rule, whether they inherit it. */
+  hasSubAgents: boolean;
   /** Null for rules this screen shows but does not edit (supplier rules). */
   slot: RuleSlot | null;
   isEditing: boolean;
@@ -240,6 +275,7 @@ function RuleRow({
   rule,
   emptyText,
   currency,
+  hasSubAgents,
   slot,
   isEditing,
   onEdit,
@@ -251,7 +287,13 @@ function RuleRow({
     return (
       <div className="flex flex-col gap-3 p-5">
         <p className="text-sm font-medium text-foreground">{label}</p>
-        <RuleForm currency={currency} slot={slot} replacing={rule} onDone={onDone} />
+        <RuleForm
+          currency={currency}
+          slot={slot}
+          replacing={rule}
+          hasSubAgents={hasSubAgents}
+          onDone={onDone}
+        />
       </div>
     );
   }
@@ -260,7 +302,14 @@ function RuleRow({
     <div className="flex flex-col gap-3 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="truncate text-sm font-medium text-foreground">{label}</span>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="truncate text-sm font-medium text-foreground">{label}</span>
+            {rule && hasSubAgents ? (
+              <Badge tone={rule.appliesToSubAgents ? 'info' : 'neutral'}>
+                {rule.appliesToSubAgents ? 'Sub-agents inherit this' : 'Kept from sub-agents'}
+              </Badge>
+            ) : null}
+          </div>
           <span className="text-sm text-muted-foreground">
             {rule ? describeRule(rule, currency) : emptyText}
           </span>
@@ -299,7 +348,15 @@ function RuleRow({
  * live in (tours, visas, group departures) has no picker yet, so the ID is
  * copied from the product's own page.
  */
-function NewProductRuleForm({ currency, onDone }: { currency: string; onDone: () => void }) {
+function NewProductRuleForm({
+  currency,
+  hasSubAgents,
+  onDone,
+}: {
+  currency: string;
+  hasSubAgents: boolean;
+  onDone: () => void;
+}) {
   const [productType, setProductType] = useState<ProductType>('Tour');
   const [productIdText, setProductIdText] = useState('');
   const productId = parseProductId(productIdText);
@@ -309,6 +366,7 @@ function NewProductRuleForm({ currency, onDone }: { currency: string; onDone: ()
       currency={currency}
       slot={productId.ok ? { scope: 'Product', productType, productId: productId.value } : null}
       slotProblem={productId.ok ? undefined : productId.error}
+      hasSubAgents={hasSubAgents}
       onDone={onDone}
     >
       <div className="grid gap-4 sm:grid-cols-3">

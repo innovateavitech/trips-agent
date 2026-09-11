@@ -191,6 +191,49 @@ public sealed class PricingServiceTests : IClassFixture<RedisFixture>
     }
 
     [Fact]
+    public async Task A_sub_agent_is_shown_only_the_principal_rules_that_can_price_its_sales()
+    {
+        var world = await WorldAsync();
+        var flights = await world.SeedRuleAsync(world.PrincipalId, ForFlights(percent: 1_500));
+        var global = await world.SeedRuleAsync(world.PrincipalId, Global(percent: 1_000));
+        await world.SeedRuleAsync(world.PrincipalId, Global(percent: 2_000) with { AppliesToSubAgents = false, Priority = 5 });
+        await world.SeedRuleAsync(world.PrincipalId, Global(percent: 3_000) with { EffectiveTo = world.Clock.GetUtcNow().AddDays(-1) });
+
+        await using var subAgent = world.SessionFor(world.SubAgentId);
+        var inherited = await subAgent.Pricing.InheritedRulesAsync();
+
+        // Kept from sub-agents: the principal's own margin, never shown. Ended: prices nothing.
+        // The rest in the engine's order, the narrowest first.
+        inherited.Select(rule => rule.Id).Should().Equal(flights.Id, global.Id);
+    }
+
+    [Fact]
+    public async Task A_principal_inherits_no_rules()
+    {
+        var world = await WorldAsync();
+        await world.SeedRuleAsync(world.SubAgentId, Global(percent: 1_000));
+
+        await using var principal = world.SessionFor(world.PrincipalId);
+
+        (await principal.Pricing.InheritedRulesAsync()).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Settings_say_whether_the_agency_has_a_principal_or_sub_agents()
+    {
+        var world = await WorldAsync();
+
+        await using var principal = world.SessionFor(world.PrincipalId);
+        await using var subAgent = world.SessionFor(world.SubAgentId);
+
+        var principalSettings = await principal.Pricing.SettingsAsync();
+        var subAgentSettings = await subAgent.Pricing.SettingsAsync();
+
+        (principalSettings.HasPrincipal, principalSettings.HasSubAgents).Should().Be((false, true));
+        (subAgentSettings.HasPrincipal, subAgentSettings.HasSubAgents).Should().Be((true, false));
+    }
+
+    [Fact]
     public async Task A_principal_is_not_priced_by_its_sub_agents_rules()
     {
         var world = await WorldAsync();

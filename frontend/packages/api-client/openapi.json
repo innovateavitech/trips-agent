@@ -753,6 +753,29 @@
         }
       }
     },
+    "/api/v1/pricing/markup-rules/inherited": {
+      "get": {
+        "tags": [
+          "Pricing"
+        ],
+        "operationId": "ListInheritedMarkupRules",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InheritedMarkupRuleResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/pricing/markup-rules/{ruleId}": {
       "put": {
         "tags": [
@@ -1013,6 +1036,118 @@
                 "type": "string"
               }
             }
+          }
+        }
+      },
+      "InheritedMarkupRuleResponse": {
+        "required": [
+          "id",
+          "scope",
+          "productType",
+          "productId",
+          "supplierCode",
+          "currency",
+          "calculationType",
+          "percentBasisPoints",
+          "valueMinor",
+          "minMarkupMinor",
+          "maxMarkupMinor",
+          "priority",
+          "effectiveFrom",
+          "effectiveTo",
+          "summary"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "productType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "productId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "supplierCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "calculationType": {
+            "type": "string"
+          },
+          "percentBasisPoints": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "valueMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "minMarkupMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "maxMarkupMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "priority": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "effectiveTo": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "summary": {
+            "type": "string"
           }
         }
       },
@@ -1458,7 +1593,8 @@
           "appliesToSubAgents",
           "effectiveFrom",
           "effectiveTo",
-          "supersededById"
+          "supersededById",
+          "status"
         ],
         "type": "object",
         "properties": {
@@ -1558,6 +1694,9 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "status": {
+            "type": "string"
           }
         }
       },
@@ -1893,7 +2032,9 @@
           "currency",
           "vatRateBasisPoints",
           "platformFeeBasisPoints",
-          "quoteValidityMinutes"
+          "quoteValidityMinutes",
+          "hasPrincipal",
+          "hasSubAgents"
         ],
         "type": "object",
         "properties": {
@@ -1923,6 +2064,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "hasPrincipal": {
+            "type": "boolean"
+          },
+          "hasSubAgents": {
+            "type": "boolean"
           }
         }
       },

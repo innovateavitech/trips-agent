@@ -44,8 +44,12 @@ public sealed class PriceQuoteOptions
 
 /// <summary>What the pricing screen needs to know before the agency has priced anything.</summary>
 /// <param name="Currency">The agency's base currency — the only one it sells in for MVP.</param>
+/// <param name="HasPrincipal">True for a sub-agent, which inherits its principal's rules.</param>
+/// <param name="HasSubAgents">True for a principal whose sub-agents inherit its rules.</param>
 public sealed record PricingSettings(
     string Currency,
     int VatRateBasisPoints,
     int PlatformFeeBasisPoints,
-    TimeSpan QuoteValidity);
+    TimeSpan QuoteValidity,
+    bool HasPrincipal,
+    bool HasSubAgents);

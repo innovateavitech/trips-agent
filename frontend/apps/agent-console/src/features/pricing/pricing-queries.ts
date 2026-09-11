@@ -3,6 +3,7 @@ import { api } from '../../api/client';
 import { unwrap } from '../../api/errors';
 import {
   toWholeNumber,
+  type InheritedRule,
   type MarkupRule,
   type MarkupRuleRequest,
   type ProductType,
@@ -17,6 +18,7 @@ export const pricingKeys = {
   all: ['pricing'] as const,
   settings: () => [...pricingKeys.all, 'settings'] as const,
   rules: () => [...pricingKeys.all, 'rules'] as const,
+  inherited: () => [...pricingKeys.all, 'inherited'] as const,
   preview: (input: PreviewInput) => [...pricingKeys.all, 'preview', input] as const,
 };
 
@@ -25,6 +27,10 @@ export interface PricingSettings {
   vatRateBasisPoints: number;
   platformFeeBasisPoints: number;
   quoteValidityMinutes: number;
+  /** A sub-agent: its principal's rules apply wherever none of its own does. */
+  hasPrincipal: boolean;
+  /** A principal whose sub-agents inherit its rules. */
+  hasSubAgents: boolean;
 }
 
 export function usePricingSettings() {
@@ -37,6 +43,8 @@ export function usePricingSettings() {
         vatRateBasisPoints: toWholeNumber(raw.vatRateBasisPoints),
         platformFeeBasisPoints: toWholeNumber(raw.platformFeeBasisPoints),
         quoteValidityMinutes: toWholeNumber(raw.quoteValidityMinutes),
+        hasPrincipal: raw.hasPrincipal,
+        hasSubAgents: raw.hasSubAgents,
       };
     },
     // An agency's currency and VAT rate do not change during a session.
@@ -48,6 +56,19 @@ export function useMarkupRules() {
   return useQuery({
     queryKey: pricingKeys.rules(),
     queryFn: () => unwrap(api.GET('/api/v1/pricing/markup-rules')),
+  });
+}
+
+/**
+ * The principal's rules this agency inherits — shown read-only, so a sub-agent
+ * can see every rule that prices its sales, not only its own. Always empty for
+ * a principal, so it is fetched unconditionally rather than behind a flag.
+ */
+export function useInheritedRules() {
+  return useQuery({
+    queryKey: pricingKeys.inherited(),
+    queryFn: (): Promise<InheritedRule[]> =>
+      unwrap(api.GET('/api/v1/pricing/markup-rules/inherited')),
   });
 }
 
@@ -149,6 +170,8 @@ export function usePricePreview(input: PreviewInput | null) {
               effectiveFrom: '',
               effectiveTo: null,
               supersededById: null,
+              // The rule that just priced the sample is, by definition, in force.
+              status: 'InForce',
             }
           : null,
       };

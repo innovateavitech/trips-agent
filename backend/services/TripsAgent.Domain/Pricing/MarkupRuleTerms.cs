@@ -24,6 +24,21 @@ public sealed partial record MarkupRuleTerms
     /// </summary>
     public const int MaxPercentBasisPoints = 100_000;
 
+    /// <summary>
+    /// ₦100 billion, in kobo: the most a fixed markup, a minimum or a maximum may be. Far above any
+    /// real markup, and it exists for the same reason as <see cref="MaxPercentBasisPoints"/> — to
+    /// refuse a slip before it is saved. Without it, a fixed markup of <see cref="long.MaxValue"/>
+    /// was a valid rule that made the checked <c>net + markup</c> overflow on every price the
+    /// agency, and every sub-agent inheriting from it, tried to work out.
+    /// </summary>
+    /// <remarks>
+    /// The preview's largest sample net rate is the same figure. The biggest price that can then
+    /// be worked out — net, plus a markup of at most 1000% or this, plus VAT of at most 100% on the
+    /// markup — is about 2.1 × 10^14 kobo, some forty thousand times inside a <see cref="long"/>.
+    /// The database's CHECK constraints repeat this number; change both together.
+    /// </remarks>
+    public const long MaxAmountMinor = 10_000_000_000_000;
+
     /// <summary>Basis points in 100%.</summary>
     public const int BasisPointsPerWhole = BasisPoints.PerWhole;
 
@@ -226,6 +241,8 @@ public sealed partial record MarkupRuleTerms
             case MarkupCalculationType.Fixed:
                 Forbid(ValueMinor is null, "A fixed rule needs an amount.");
                 Forbid(ValueMinor is { IsNegative: true }, "A markup cannot be negative.");
+                Forbid(ValueMinor is { } value && value.AmountMinor > MaxAmountMinor,
+                    "A fixed markup can be at most 100 billion in your currency. Check the amount for extra zeros.");
                 Forbid(PercentBasisPoints is not null, "A fixed rule cannot also have a percentage.");
 
                 // A floor or ceiling on a number that never moves would do nothing, and an agent
@@ -237,6 +254,10 @@ public sealed partial record MarkupRuleTerms
 
         Forbid(MinMarkupMinor is { IsNegative: true } || MaxMarkupMinor is { IsNegative: true },
             "A minimum or maximum markup cannot be negative.");
+
+        Forbid((MinMarkupMinor is { } floor && floor.AmountMinor > MaxAmountMinor)
+               || (MaxMarkupMinor is { } ceiling && ceiling.AmountMinor > MaxAmountMinor),
+            "A minimum or maximum markup can be at most 100 billion in your currency. Check the amount for extra zeros.");
 
         Forbid(MinMarkupMinor is { } min && MaxMarkupMinor is { } max && min.AmountMinor > max.AmountMinor,
             "The minimum markup cannot be more than the maximum.");

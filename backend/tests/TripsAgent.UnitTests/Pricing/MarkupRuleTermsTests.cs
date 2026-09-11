@@ -95,6 +95,10 @@ public class MarkupRuleTermsTests
         { "percentage and a fixed amount", Percentage(100) with { ValueMinor = new Money(1) } },
         { "minimum above maximum", Percentage(100) with { MinMarkupMinor = new Money(500), MaxMarkupMinor = new Money(499) } },
         { "negative minimum", Percentage(100) with { MinMarkupMinor = new Money(-1) } },
+        { "fixed amount near the top of a long", Fixed(long.MaxValue) },
+        { "fixed amount a kobo over the ceiling", Fixed(MarkupRuleTerms.MaxAmountMinor + 1) },
+        { "minimum near the top of a long", Percentage(100) with { MinMarkupMinor = new Money(long.MaxValue) } },
+        { "maximum a kobo over the ceiling", Percentage(100) with { MaxMarkupMinor = new Money(MarkupRuleTerms.MaxAmountMinor + 1) } },
         { "global naming a product type", Percentage(100) with { ProductType = PricedProductType.Bus } },
         { "supplier with no supplier", Percentage(100) with { Scope = MarkupScope.Supplier } },
         { "supplier naming a product type", Percentage(100) with { Scope = MarkupScope.Supplier, SupplierCode = "trips_africa", ProductType = PricedProductType.Bus } },
@@ -137,6 +141,20 @@ public class MarkupRuleTermsTests
         var act = () => (Percentage(1_000) with { MinMarkupMinor = new Money(100), MaxMarkupMinor = new Money(100) }).Validated();
 
         act.Should().NotThrow("a floor equal to the ceiling is a fixed markup in disguise, but not a contradiction");
+    }
+
+    [Fact]
+    public void Amounts_at_the_ceiling_are_valid()
+    {
+        var fixedAtCeiling = () => Fixed(MarkupRuleTerms.MaxAmountMinor).Validated();
+        var capsAtCeiling = () => (Percentage(1_000) with
+        {
+            MinMarkupMinor = new Money(MarkupRuleTerms.MaxAmountMinor),
+            MaxMarkupMinor = new Money(MarkupRuleTerms.MaxAmountMinor),
+        }).Validated();
+
+        fixedAtCeiling.Should().NotThrow("the ceiling itself is allowed; only above it is a slip");
+        capsAtCeiling.Should().NotThrow();
     }
 
     // ------------------------------------------------------------------ helpers

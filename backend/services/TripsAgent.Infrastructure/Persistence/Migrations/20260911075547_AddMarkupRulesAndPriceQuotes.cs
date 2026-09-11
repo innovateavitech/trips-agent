@@ -169,6 +169,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     -- only when it is true, and "NULL BETWEEN 0 AND 100000" is NULL rather than false —
                     -- so without them a percentage rule with no percentage, or a fixed rule with no
                     -- amount, satisfied this constraint and was stored.
+                    --
+                    -- 10000000000000 is MarkupRuleTerms.MaxAmountMinor, ₦100 billion in kobo. Without
+                    -- a ceiling, a fixed markup near the top of a bigint was a valid row that made
+                    -- every price the agency (and its inheriting sub-agents) worked out overflow.
                     ADD CONSTRAINT ck_markup_rules_calculation_shape
                         CHECK (
                             (calculation_type = 'Percentage'
@@ -177,15 +181,17 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                                 AND value_minor IS NULL)
                          OR (calculation_type = 'Fixed'
                                 AND value_minor IS NOT NULL
-                                AND value_minor >= 0
+                                AND value_minor BETWEEN 0 AND 10000000000000
                                 AND percent_basis_points IS NULL
                                 AND min_markup_minor IS NULL
                                 AND max_markup_minor IS NULL)
                         ),
 
+                    -- Each cap is optional, so each is "IS NULL OR within range" — the NULL is allowed
+                    -- on purpose here, and spelled out so it is not allowed by accident.
                     ADD CONSTRAINT ck_markup_rules_caps
-                        CHECK ((min_markup_minor IS NULL OR min_markup_minor >= 0)
-                           AND (max_markup_minor IS NULL OR max_markup_minor >= 0)
+                        CHECK ((min_markup_minor IS NULL OR min_markup_minor BETWEEN 0 AND 10000000000000)
+                           AND (max_markup_minor IS NULL OR max_markup_minor BETWEEN 0 AND 10000000000000)
                            AND (min_markup_minor IS NULL OR max_markup_minor IS NULL
                                 OR min_markup_minor <= max_markup_minor)),
 

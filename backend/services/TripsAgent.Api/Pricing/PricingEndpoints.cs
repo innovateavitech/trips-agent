@@ -16,9 +16,10 @@ public static class PricingEndpoints
 {
     /// <summary>
     /// ₦100 billion. Far above any real fare; it keeps a mistyped sample from reaching the checked
-    /// arithmetic and coming back as a 500 instead of a sentence.
+    /// arithmetic and coming back as a 500 instead of a sentence. The same ceiling as a rule's
+    /// amounts, so the largest sample priced by the largest rule still fits in a <see cref="long"/>.
     /// </summary>
-    private const long MaxPreviewNetMinor = 10_000_000_000_000;
+    private const long MaxPreviewNetMinor = MarkupRuleTerms.MaxAmountMinor;
 
     public static IEndpointRouteBuilder MapPricingEndpoints(this IEndpointRouteBuilder app)
     {
@@ -30,11 +31,24 @@ public static class PricingEndpoints
 
         // A markup rule is margin: knowing the rule and the price tells you the net rate. So even
         // listing them needs margin.view, and changing them needs margin.edit.
-        group.MapGet("/markup-rules", async (MarkupRuleService rules, CancellationToken cancellationToken) =>
-                Results.Ok((await rules.ListAsync(cancellationToken)).Select(ToResponse).ToList()))
+        group.MapGet("/markup-rules", async (MarkupRuleService rules, TimeProvider clock, CancellationToken cancellationToken) =>
+            {
+                var list = await rules.ListAsync(cancellationToken);
+                var now = clock.GetUtcNow();
+
+                return Results.Ok(list.Select(rule => ToResponse(rule, now)).ToList());
+            })
             .RequireAuthorization(PermissionPolicies.For(PermissionCodes.MarginView))
             .WithName("ListMarkupRules")
             .Produces<List<MarkupRuleResponse>>();
+
+        // A sub-agent's view of the principal rules it inherits. The same margin.view as its own
+        // rules: they price its sales, and the preview already names them when they win.
+        group.MapGet("/markup-rules/inherited", async (PricingService pricing, CancellationToken cancellationToken) =>
+                Results.Ok((await pricing.InheritedRulesAsync(cancellationToken)).Select(ToInheritedResponse).ToList()))
+            .RequireAuthorization(PermissionPolicies.For(PermissionCodes.MarginView))
+            .WithName("ListInheritedMarkupRules")
+            .Produces<List<InheritedMarkupRuleResponse>>();
 
         group.MapPost("/markup-rules", async (
                 MarkupRuleRequest request,
@@ -49,7 +63,7 @@ public static class PricingEndpoints
                     return problem;
                 }
 
-                return ToResult(await rules.CreateAsync(terms, cancellationToken), created: true);
+                return ToResult(await rules.CreateAsync(terms, cancellationToken), clock.GetUtcNow(), created: true);
             })
             .RequireAuthorization(PermissionPolicies.For(PermissionCodes.MarginEdit))
             .WithName("CreateMarkupRule")
@@ -71,7 +85,7 @@ public static class PricingEndpoints
                     return problem;
                 }
 
-                return ToResult(await rules.ReplaceAsync(ruleId, terms, cancellationToken), created: false);
+                return ToResult(await rules.ReplaceAsync(ruleId, terms, cancellationToken), clock.GetUtcNow(), created: false);
             })
             .RequireAuthorization(PermissionPolicies.For(PermissionCodes.MarginEdit))
             .WithName("ReplaceMarkupRule")
@@ -80,8 +94,9 @@ public static class PricingEndpoints
         group.MapPost("/markup-rules/{ruleId:guid}/retire", async (
                 Guid ruleId,
                 MarkupRuleService rules,
+                TimeProvider clock,
                 CancellationToken cancellationToken) =>
-                ToResult(await rules.RetireAsync(ruleId, cancellationToken), created: false))
+                ToResult(await rules.RetireAsync(ruleId, cancellationToken), clock.GetUtcNow(), created: false))
             .RequireAuthorization(PermissionPolicies.For(PermissionCodes.MarginEdit))
             .WithName("RetireMarkupRule")
             .Produces<MarkupRuleResponse>();
@@ -136,7 +151,9 @@ public static class PricingEndpoints
                     settings.Currency,
                     settings.VatRateBasisPoints,
                     settings.PlatformFeeBasisPoints,
-                    (int)settings.QuoteValidity.TotalMinutes));
+                    (int)settings.QuoteValidity.TotalMinutes,
+                    settings.HasPrincipal,
+                    settings.HasSubAgents));
             })
             .RequireAuthorization(PermissionPolicies.For(PermissionCodes.MarginView))
             .WithName("GetPricingSettings")
@@ -229,7 +246,26 @@ public static class PricingEndpoints
                     rule.Terms.Describe())
                 : null);
 
-    private static MarkupRuleResponse ToResponse(MarkupRule rule) =>
+    private static InheritedMarkupRuleResponse ToInheritedResponse(MarkupRuleDefinition rule) =>
+        new(
+            rule.Id,
+            rule.Terms.Scope.ToString(),
+            rule.Terms.ProductType?.ToString(),
+            rule.Terms.ProductId,
+            rule.Terms.SupplierCode,
+            rule.Terms.Currency,
+            rule.Terms.CalculationType.ToString(),
+            rule.Terms.PercentBasisPoints,
+            rule.Terms.ValueMinor?.AmountMinor,
+            rule.Terms.MinMarkupMinor?.AmountMinor,
+            rule.Terms.MaxMarkupMinor?.AmountMinor,
+            rule.Terms.Priority,
+            rule.Terms.EffectiveFrom,
+            rule.Terms.EffectiveTo,
+            rule.Terms.Describe());
+
+    /// <summary>A rule for the console, with its status worked out by the server's clock at <paramref name="now"/>.</summary>
+    private static MarkupRuleResponse ToResponse(MarkupRule rule, DateTimeOffset now) =>
         new(
             rule.Id,
             rule.Scope.ToString(),
@@ -246,14 +282,15 @@ public static class PricingEndpoints
             rule.AppliesToSubAgents,
             rule.EffectiveFrom,
             rule.EffectiveTo,
-            rule.SupersededById);
+            rule.SupersededById,
+            rule.StatusAt(now).ToString());
 
-    private static IResult ToResult(MarkupRuleChangeOutcome outcome, bool created) => outcome switch
+    private static IResult ToResult(MarkupRuleChangeOutcome outcome, DateTimeOffset now, bool created) => outcome switch
     {
         MarkupRuleChangeOutcome.Saved saved when created =>
-            Results.Created($"/api/v1/pricing/markup-rules/{saved.Rule.Id}", ToResponse(saved.Rule)),
+            Results.Created($"/api/v1/pricing/markup-rules/{saved.Rule.Id}", ToResponse(saved.Rule, now)),
 
-        MarkupRuleChangeOutcome.Saved saved => Results.Ok(ToResponse(saved.Rule)),
+        MarkupRuleChangeOutcome.Saved saved => Results.Ok(ToResponse(saved.Rule, now)),
 
         MarkupRuleChangeOutcome.Invalid invalid => Results.Problem(
             statusCode: StatusCodes.Status400BadRequest,

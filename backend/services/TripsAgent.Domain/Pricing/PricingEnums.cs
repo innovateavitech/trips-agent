@@ -37,6 +37,25 @@ public enum MarkupScope
     Product = 4,
 }
 
+/// <summary>Where a rule's window stands at a given instant.</summary>
+/// <remarks>
+/// Worked out by the server, with the server's clock, and sent with every rule. The console must
+/// not work it out from the timestamps: the server stamps a replacement's start and a retired
+/// rule's end with its own "now", and a browser whose clock runs a second or two behind would
+/// read a rule it has just replaced as still in force.
+/// </remarks>
+public enum MarkupRuleStatus
+{
+    /// <summary>Starts later.</summary>
+    Scheduled = 1,
+
+    /// <summary>Applies now.</summary>
+    InForce = 2,
+
+    /// <summary>Retired, replaced, or past its end. Kept so past prices can be explained.</summary>
+    Ended = 3,
+}
+
 /// <summary>How a rule turns a net rate into a markup.</summary>
 public enum MarkupCalculationType
 {

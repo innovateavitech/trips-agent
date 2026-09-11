@@ -99,12 +99,61 @@ public sealed class PricingService
         var agency = await _db.Agencies
             .AsNoTracking()
             .Where(candidate => candidate.Id == agencyId)
-            .Select(candidate => new { candidate.BaseCurrency, candidate.VatRateBasisPoints })
+            .Select(candidate => new { candidate.BaseCurrency, candidate.VatRateBasisPoints, candidate.ParentAgencyId })
             .SingleAsync(cancellationToken);
+
+        // Through the ordinary filter: a principal already sees its own sub-agents' rows.
+        var hasSubAgents = await _db.Agencies
+            .AsNoTracking()
+            .AnyAsync(candidate => candidate.ParentAgencyId == agencyId, cancellationToken);
 
         var feeBasisPoints = await _platformFees.FeeBasisPointsAsync(agencyId, cancellationToken);
 
-        return new PricingSettings(agency.BaseCurrency, agency.VatRateBasisPoints, feeBasisPoints, _quoteOptions.Validity);
+        return new PricingSettings(
+            agency.BaseCurrency,
+            agency.VatRateBasisPoints,
+            feeBasisPoints,
+            _quoteOptions.Validity,
+            HasPrincipal: agency.ParentAgencyId is not null,
+            HasSubAgents: hasSubAgents);
+    }
+
+    /// <summary>
+    /// The principal's rules that can price the calling sub-agent's sales right now — so the
+    /// pricing screen can show them rather than leave them to surprise the agent in the preview.
+    /// Empty for a principal.
+    /// </summary>
+    /// <remarks>
+    /// The same cached sets <see cref="PriceAsync"/> reads, filtered the way the engine filters:
+    /// marked as applying to sub-agents, and in force now. Most important first, in the engine's
+    /// own order. Whether one of them actually wins still depends on the sub-agent's own rules —
+    /// any matching rule of its own beats all of these.
+    /// </remarks>
+    public async Task<IReadOnlyList<MarkupRuleDefinition>> InheritedRulesAsync(CancellationToken cancellationToken = default)
+    {
+        var agencyId = RequireAgency();
+        var now = _clock.GetUtcNow();
+
+        var own = await _cache.GetOrLoadAsync(
+            agencyId, token => LoadOwnAsync(agencyId, token), cancellationToken);
+
+        if (own.ParentAgencyId is not { } parentId || parentId == agencyId)
+        {
+            return [];
+        }
+
+        var inherited = await _cache.GetOrLoadAsync(
+            parentId, token => LoadParentAsync(parentId, token), cancellationToken);
+
+        return inherited.Rules
+            .Where(rule => rule.AgencyId == parentId
+                           && rule.Terms.AppliesToSubAgents
+                           && rule.Terms.IsEffectiveAt(now))
+            .OrderByDescending(rule => MarkupEngine.Precedence(rule.Terms.Scope))
+            .ThenByDescending(rule => rule.Terms.Priority)
+            .ThenByDescending(rule => rule.Terms.EffectiveFrom)
+            .ThenByDescending(rule => rule.Id)
+            .ToList();
     }
 
     private async Task<PriceBreakdown> PriceAtAsync(

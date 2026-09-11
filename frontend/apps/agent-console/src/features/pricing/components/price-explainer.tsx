@@ -35,7 +35,14 @@ import { useDebouncedValue } from '../use-debounced-value';
  * answer comes from the server's real pricing (the same code that prices a
  * search), never from arithmetic in the browser that could drift from it.
  */
-export function PriceExplainer({ currency }: { currency: string }) {
+export function PriceExplainer({
+  currency,
+  precedence,
+}: {
+  currency: string;
+  /** How rules outrank each other — different for a sub-agent. See `pricingCopy`. */
+  precedence: string;
+}) {
   const [productType, setProductType] = useState<ProductType>('Flight');
   const [netText, setNetText] = useState('100000');
   const [productIdText, setProductIdText] = useState('');
@@ -63,9 +70,8 @@ export function PriceExplainer({ currency }: { currency: string }) {
       <CardHeader>
         <CardTitle>Which rule wins?</CardTitle>
         <CardDescription>
-          Type a net price and see what a traveller would pay, and which of your rules decides it.
-          The most specific rule always wins: a single product, then a product type, then your
-          default.
+          Type a net price and see what a traveller would pay, and which of your rules decides it.{' '}
+          {precedence}
         </CardDescription>
       </CardHeader>
 

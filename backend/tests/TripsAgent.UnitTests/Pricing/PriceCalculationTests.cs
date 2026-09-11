@@ -211,7 +211,43 @@ public class PriceCalculationTests
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
+    // ------------------------------------------------------------------ the largest price
+
+    public static TheoryData<string, MarkupRuleTerms> LargestRules => new()
+    {
+        { "the largest fixed markup", LargestTerms(MarkupCalculationType.Fixed) with { ValueMinor = new Money(MarkupRuleTerms.MaxAmountMinor) } },
+        { "the largest percentage", LargestTerms(MarkupCalculationType.Percentage) with { PercentBasisPoints = MarkupRuleTerms.MaxPercentBasisPoints } },
+        { "the largest minimum", LargestTerms(MarkupCalculationType.Percentage) with { PercentBasisPoints = 0, MinMarkupMinor = new Money(MarkupRuleTerms.MaxAmountMinor) } },
+    };
+
+    [Theory]
+    [MemberData(nameof(LargestRules))]
+    public void The_largest_net_with_the_largest_allowed_rule_and_rates_still_prices(string because, MarkupRuleTerms terms)
+    {
+        ArgumentNullException.ThrowIfNull(terms);
+
+        // Every rule that can be saved has to price every net rate the preview accepts, at the
+        // highest VAT and fee the rates allow. An overflow here would be a 500 on every price.
+        var rule = new MarkupRuleDefinition(Guid.CreateVersion7(), Agency, terms.Validated());
+        var net = new Money(MarkupRuleTerms.MaxAmountMinor);
+        var highest = new PricingRates(PricingRates.MaxRateBasisPoints, PricingRates.MaxRateBasisPoints);
+
+        var act = () => MarkupEngine.Price(Flight, net, Now, Agency, null, [rule], highest);
+
+        var price = act.Should().NotThrow(because).Subject;
+        price.GrossAmountMinor.Should().Be(net + price.MarkupAmountMinor + price.TaxAmountMinor);
+        price.GrossAmountMinor.IsNegative.Should().BeFalse("a wrapped long would be a negative price");
+    }
+
     // ------------------------------------------------------------------ helpers
+
+    private static MarkupRuleTerms LargestTerms(MarkupCalculationType calculation) => new()
+    {
+        Scope = MarkupScope.Global,
+        Currency = "NGN",
+        CalculationType = calculation,
+        EffectiveFrom = Now.AddDays(-1),
+    };
 
     private static PriceBreakdown Price(Money net, PricingRates rates, params MarkupRuleDefinition[] rules) =>
         MarkupEngine.Price(Flight, net, Now, Agency, null, rules, rates);

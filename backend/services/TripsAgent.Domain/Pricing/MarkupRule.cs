@@ -113,6 +113,21 @@ public sealed class MarkupRule : Entity, IAuditableEntity, ITenantScoped, IAudit
     /// <summary>True once the rule's window has closed.</summary>
     public bool HasEnded(DateTimeOffset at) => EffectiveTo is { } end && end <= at;
 
+    /// <summary>Where the rule stands at <paramref name="at"/>. InForce exactly when the engine would use it.</summary>
+    /// <remarks>
+    /// A rule retired before it started has an empty window (its end is its start). It never
+    /// applied and never will, so it is <see cref="MarkupRuleStatus.Ended"/>, not scheduled.
+    /// </remarks>
+    public MarkupRuleStatus StatusAt(DateTimeOffset at)
+    {
+        if (EffectiveTo is { } end && (end <= at || end <= EffectiveFrom))
+        {
+            return MarkupRuleStatus.Ended;
+        }
+
+        return EffectiveFrom > at ? MarkupRuleStatus.Scheduled : MarkupRuleStatus.InForce;
+    }
+
     /// <summary>
     /// Stops the rule applying from <paramref name="at"/>. Retiring an ended rule changes nothing.
     /// </summary>

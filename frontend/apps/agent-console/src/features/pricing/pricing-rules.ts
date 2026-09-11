@@ -15,6 +15,8 @@ import { formatMoney } from '@trips/utils';
 
 export type MarkupRule = Schemas['MarkupRuleResponse'];
 export type MarkupRuleRequest = Schemas['MarkupRuleRequest'];
+/** One of the principal's rules a sub-agent inherits. Read-only here. */
+export type InheritedRule = Schemas['InheritedMarkupRuleResponse'];
 
 export type ProductType = 'Flight' | 'Bus' | 'Tour' | 'Visa' | 'GroupDeparture';
 export type CalculationType = 'Percentage' | 'Fixed';
@@ -132,15 +134,19 @@ export type RuleSlot =
   | { scope: 'ProductType'; productType: ProductType }
   | { scope: 'Product'; productType: ProductType; productId: string };
 
-/** In force at `now`: started, and not yet ended. */
-export function isInForce(rule: MarkupRule, now: Date): boolean {
-  const from = new Date(rule.effectiveFrom).getTime();
-  const to = rule.effectiveTo === null ? null : new Date(rule.effectiveTo).getTime();
-  return from <= now.getTime() && (to === null || now.getTime() < to);
+/**
+ * In force, by the server's word. Never worked out here from the timestamps:
+ * the server stamps a replacement's start and a retired rule's end with its own
+ * clock, and a browser clock a second or two behind would read the rule just
+ * replaced as still in force and its replacement as not started — until reload.
+ */
+export function isInForce(rule: Pick<MarkupRule, 'status'>): boolean {
+  return rule.status === 'InForce';
 }
 
-export function hasEnded(rule: MarkupRule, now: Date): boolean {
-  return rule.effectiveTo !== null && new Date(rule.effectiveTo).getTime() <= now.getTime();
+/** Retired, replaced or past its end — by the server's word, like {@link isInForce}. */
+export function hasEnded(rule: Pick<MarkupRule, 'status'>): boolean {
+  return rule.status === 'Ended';
 }
 
 function occupies(rule: MarkupRule, slot: RuleSlot): boolean {
@@ -162,19 +168,15 @@ function byImportance(a: MarkupRule, b: MarkupRule): number {
 }
 
 /** The rule in force in `slot`, or undefined when the slot is empty. */
-export function ruleInForce(
-  rules: readonly MarkupRule[],
-  slot: RuleSlot,
-  now: Date,
-): MarkupRule | undefined {
-  return rules.filter((rule) => occupies(rule, slot) && isInForce(rule, now)).sort(byImportance)[0];
+export function ruleInForce(rules: readonly MarkupRule[], slot: RuleSlot): MarkupRule | undefined {
+  return rules.filter((rule) => occupies(rule, slot) && isInForce(rule)).sort(byImportance)[0];
 }
 
 /** One rule per product that has one in force, newest product rule first. */
-export function productRulesInForce(rules: readonly MarkupRule[], now: Date): MarkupRule[] {
+export function productRulesInForce(rules: readonly MarkupRule[]): MarkupRule[] {
   const winners = new Map<string, MarkupRule>();
 
-  for (const rule of [...rules].filter((r) => r.scope === 'Product' && isInForce(r, now))) {
+  for (const rule of [...rules].filter((r) => r.scope === 'Product' && isInForce(r))) {
     const key = `${rule.productType}:${rule.productId?.toLowerCase()}`;
     const current = winners.get(key);
     if (current === undefined || byImportance(rule, current) < 0) winners.set(key, rule);
@@ -186,9 +188,9 @@ export function productRulesInForce(rules: readonly MarkupRule[], now: Date): Ma
 }
 
 /** Rules that have stopped applying — kept, so every past price can still be explained. */
-export function endedRules(rules: readonly MarkupRule[], now: Date): MarkupRule[] {
+export function endedRules(rules: readonly MarkupRule[]): MarkupRule[] {
   return rules
-    .filter((rule) => hasEnded(rule, now))
+    .filter((rule) => hasEnded(rule))
     .sort(
       (a, b) => new Date(b.effectiveTo ?? 0).getTime() - new Date(a.effectiveTo ?? 0).getTime(),
     );
@@ -216,6 +218,16 @@ export function scopeLabel(rule: Pick<MarkupRule, 'scope' | 'productType'>): str
   }
 }
 
+/** "Flights rule", "Tours · <id>", "Supplier rule · trips_africa" — a read-only row's name. */
+export function inheritedRuleLabel(
+  rule: Pick<InheritedRule, 'scope' | 'productType' | 'productId' | 'supplierCode'>,
+): string {
+  if (rule.scope === 'Product')
+    return `${productTypeLabel(rule.productType)} · ${rule.productId ?? ''}`;
+  if (rule.scope === 'Supplier') return `Supplier rule · ${rule.supplierCode ?? ''}`;
+  return scopeLabel(rule);
+}
+
 type RuleTerms = Pick<
   MarkupRule,
   'calculationType' | 'percentBasisPoints' | 'valueMinor' | 'minMarkupMinor' | 'maxMarkupMinor'
@@ -233,6 +245,57 @@ export function describeRule(rule: RuleTerms, currency: string): string {
   if (floor !== null) text += `, at least ${formatMoney(floor, currency)}`;
   if (ceiling !== null) text += `, at most ${formatMoney(ceiling, currency)}`;
   return text;
+}
+
+// ----------------------------------------------------------------- who wins, in words
+
+/**
+ * The sentences on this screen that depend on whether the agency is a
+ * sub-agent. They differ because the precedence does: a sub-agent's own rules
+ * are all consulted before any of its principal's, so its own *default* beats
+ * even the principal's rule for one product. Telling a sub-agent "the most
+ * specific rule wins" invites exactly the mistake that rule causes.
+ */
+export interface PricingCopy {
+  /** Under "Which rule wins?". */
+  precedence: string;
+  /** Under "Default markup". */
+  defaultDescription: string;
+  /** The default row when the agency has none. */
+  noDefault: string;
+  /** A product-type row with no rule of its own. */
+  noTypeRule: string;
+}
+
+export function pricingCopy({
+  hasPrincipal,
+  hasOwnDefault,
+}: {
+  hasPrincipal: boolean;
+  hasOwnDefault: boolean;
+}): PricingCopy {
+  if (!hasPrincipal) {
+    return {
+      precedence:
+        'The most specific rule always wins: a single product, then a product type, then your default.',
+      defaultDescription:
+        'Applies to everything you sell, unless a more specific rule below says otherwise.',
+      noDefault: 'No default. Travellers pay the net price unless another rule applies.',
+      noTypeRule: 'Uses your default.',
+    };
+  }
+
+  return {
+    precedence:
+      "Your own rules come first, the most specific winning: a single product, then a product type, then your default. Your principal agency's rules apply only to sales none of yours covers.",
+    defaultDescription:
+      "Applies to everything you sell, unless a more specific rule of yours says otherwise. While you have one, none of your principal agency's rules apply — not even their rules for a product type or a single product.",
+    noDefault:
+      "No default of your own. Your principal agency's rules apply where they cover a sale; otherwise travellers pay the net price.",
+    noTypeRule: hasOwnDefault
+      ? 'Uses your default.'
+      : "Uses your principal agency's rules, if any cover it.",
+  };
 }
 
 // ----------------------------------------------------------------- the form

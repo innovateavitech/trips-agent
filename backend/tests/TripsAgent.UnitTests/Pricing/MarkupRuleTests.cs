@@ -98,6 +98,39 @@ public class MarkupRuleTests
     }
 
     [Fact]
+    public void A_rules_status_follows_its_window()
+    {
+        var rule = MarkupRule.Create(Agency, Terms(1_000) with { EffectiveFrom = Start.AddDays(1), EffectiveTo = Start.AddDays(5) });
+
+        rule.StatusAt(Start).Should().Be(MarkupRuleStatus.Scheduled);
+        rule.StatusAt(Start.AddDays(1)).Should().Be(MarkupRuleStatus.InForce, "the start is inclusive");
+        rule.StatusAt(Start.AddDays(5)).Should().Be(MarkupRuleStatus.Ended, "the end is exclusive");
+    }
+
+    [Fact]
+    public void A_replaced_rule_is_ended_and_its_replacement_in_force_at_the_instant_of_the_change()
+    {
+        // The exact instant the console used to get wrong from a browser clock a second behind.
+        var original = MarkupRule.Create(Agency, Terms(1_000));
+        var at = Start.AddDays(10);
+
+        var replacement = original.ReplaceWith(Terms(1_500), at);
+
+        original.StatusAt(at).Should().Be(MarkupRuleStatus.Ended);
+        replacement.StatusAt(at).Should().Be(MarkupRuleStatus.InForce);
+    }
+
+    [Fact]
+    public void A_rule_retired_before_it_started_is_ended_not_scheduled()
+    {
+        var future = MarkupRule.Create(Agency, Terms(1_000) with { EffectiveFrom = Start.AddDays(30) });
+
+        future.Retire(Start);
+
+        future.StatusAt(Start).Should().Be(MarkupRuleStatus.Ended, "an empty window never applies");
+    }
+
+    [Fact]
     public void A_quote_records_the_rule_that_priced_it()
     {
         var subject = new PricingSubject(PricedProductType.Tour, "NGN", Guid.CreateVersion7());

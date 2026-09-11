@@ -375,6 +375,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pricing/markup-rules/inherited": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListInheritedMarkupRules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pricing/markup-rules/{ruleId}": {
         parameters: {
             query?: never;
@@ -484,6 +500,32 @@ export interface components {
             errors?: {
                 [key: string]: string[];
             };
+        };
+        InheritedMarkupRuleResponse: {
+            /** Format: uuid */
+            id: string;
+            scope: string;
+            productType: null | string;
+            /** Format: uuid */
+            productId: null | string;
+            supplierCode: null | string;
+            currency: string;
+            calculationType: string;
+            /** Format: int32 */
+            percentBasisPoints: null | number | string;
+            /** Format: int64 */
+            valueMinor: null | number | string;
+            /** Format: int64 */
+            minMarkupMinor: null | number | string;
+            /** Format: int64 */
+            maxMarkupMinor: null | number | string;
+            /** Format: int32 */
+            priority: number | string;
+            /** Format: date-time */
+            effectiveFrom: string;
+            /** Format: date-time */
+            effectiveTo: null | string;
+            summary: string;
         };
         KybDocumentResponse: {
             /** Format: uuid */
@@ -614,6 +656,7 @@ export interface components {
             effectiveTo: null | string;
             /** Format: uuid */
             supersededById: null | string;
+            status: string;
         };
         PricePreviewRequest: {
             productType: string;
@@ -698,6 +741,8 @@ export interface components {
             platformFeeBasisPoints: number | string;
             /** Format: int32 */
             quoteValidityMinutes: number | string;
+            hasPrincipal: boolean;
+            hasSubAgents: boolean;
         };
         ProblemDetails: {
             type?: null | string;
@@ -1413,6 +1458,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarkupRuleResponse"];
+                };
+            };
+        };
+    };
+    ListInheritedMarkupRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InheritedMarkupRuleResponse"][];
                 };
             };
         };

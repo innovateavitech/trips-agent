@@ -275,7 +275,20 @@ public sealed class PricingEndpointTests : IClassFixture<RedisFixture>, IAsyncLi
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var settings = await response.Content.ReadFromJsonAsync<PricingSettingsResponse>();
 
-        settings.Should().Be(new PricingSettingsResponse("NGN", 750, 0, 30));
+        // The fixture's principal has one sub-agent, and no principal of its own.
+        settings.Should().Be(new PricingSettingsResponse("NGN", 750, 0, 30, HasPrincipal: false, HasSubAgents: true));
+    }
+
+    [Fact]
+    public async Task A_sub_agents_settings_say_it_has_a_principal()
+    {
+        using var response = await GetAsync("/api/v1/pricing/settings", _subAgentId, PermissionCodes.MarginView);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var settings = await response.Content.ReadFromJsonAsync<PricingSettingsResponse>();
+
+        settings!.HasPrincipal.Should().BeTrue();
+        settings.HasSubAgents.Should().BeFalse();
     }
 
     [Fact]
@@ -309,6 +322,73 @@ public sealed class PricingEndpointTests : IClassFixture<RedisFixture>, IAsyncLi
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var rules = await response.Content.ReadFromJsonAsync<List<MarkupRuleResponse>>();
         rules.Should().ContainSingle().Which.Id.Should().Be(_ruleId);
+        rules![0].Status.Should().Be("InForce");
+    }
+
+    [Fact]
+    public async Task Every_rule_carries_its_status_by_the_servers_clock()
+    {
+        // The console used to decide "in force" by comparing these timestamps with the browser's
+        // clock, and a browser a second behind showed the rule it had just replaced as current.
+        // The server stamps the windows, so the server says where each one stands.
+        var replacement = new MarkupRuleRequest(
+            "Global", null, null, null, "NGN", "Percentage", 1_500, null, null, null, 0, true, null, null);
+
+        using (var replaced = await SendAsync(HttpMethod.Put, $"/api/v1/pricing/markup-rules/{_ruleId}", replacement, PermissionCodes.MarginEdit))
+        {
+            replaced.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await replaced.Content.ReadFromJsonAsync<MarkupRuleResponse>())!.Status.Should().Be("InForce");
+        }
+
+        var flights = new MarkupRuleRequest(
+            "ProductType", "Flight", null, null, "NGN", "Fixed", null, 50_000, null, null, 0, true, null, null);
+        using var created = await SendAsync(HttpMethod.Post, "/api/v1/pricing/markup-rules", flights, PermissionCodes.MarginEdit);
+        var flightsRule = await created.Content.ReadFromJsonAsync<MarkupRuleResponse>();
+
+        using (var retired = await SendAsync(
+                   HttpMethod.Post, $"/api/v1/pricing/markup-rules/{flightsRule!.Id}/retire", new { }, PermissionCodes.MarginEdit))
+        {
+            retired.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await retired.Content.ReadFromJsonAsync<MarkupRuleResponse>())!.Status.Should().Be("Ended");
+        }
+
+        using var listed = await GetAsync("/api/v1/pricing/markup-rules", PermissionCodes.MarginView);
+        var rules = await listed.Content.ReadFromJsonAsync<List<MarkupRuleResponse>>();
+
+        rules!.Single(rule => rule.Id == _ruleId).Status.Should().Be("Ended", "it was replaced");
+        rules!.Single(rule => rule.Id == flightsRule.Id).Status.Should().Be("Ended", "it was removed");
+        rules!.Single(rule => rule.PercentBasisPoints == 1_500).Status.Should().Be("InForce");
+    }
+
+    [Fact]
+    public async Task A_sub_agent_is_shown_the_principal_rules_it_inherits()
+    {
+        using var response = await GetAsync("/api/v1/pricing/markup-rules/inherited", _subAgentId, PermissionCodes.MarginView);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var inherited = await response.Content.ReadFromJsonAsync<List<InheritedMarkupRuleResponse>>();
+
+        var rule = inherited.Should().ContainSingle().Subject;
+        rule.Id.Should().Be(_ruleId);
+        rule.Scope.Should().Be("Global");
+        rule.Summary.Should().Be("10% of the net rate");
+    }
+
+    [Fact]
+    public async Task A_principal_inherits_nothing()
+    {
+        using var response = await GetAsync("/api/v1/pricing/markup-rules/inherited", PermissionCodes.MarginView);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<List<InheritedMarkupRuleResponse>>()).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Inherited_rules_are_refused_without_margin_view()
+    {
+        using var response = await GetAsync("/api/v1/pricing/markup-rules/inherited", _subAgentId, PermissionCodes.BookingSearch);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -340,6 +420,27 @@ public sealed class PricingEndpointTests : IClassFixture<RedisFixture>, IAsyncLi
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync()).Should().Contain("percentage rules");
+    }
+
+    [Theory]
+    [InlineData("Fixed", null, 9_223_372_036_854_775_807L, null)]
+    [InlineData("Percentage", 1_000, null, 9_223_372_036_854_775_807L)]
+    public async Task A_markup_too_large_to_price_with_is_refused_before_it_is_saved(
+        string calculation, int? percent, long? value, long? minimum)
+    {
+        // Saved, either would have made every price this agency and its sub-agents asked for
+        // overflow — a 500 on every search, from one typo.
+        var request = new MarkupRuleRequest(
+            "Global", null, null, null, "NGN", calculation, percent, value, minimum, null, 0, true, null, null);
+
+        using var response = await SendAsync(HttpMethod.Post, "/api/v1/pricing/markup-rules", request, PermissionCodes.MarginEdit);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("at most 100 billion");
+
+        using var preview = await SendAsync(
+            HttpMethod.Post, "/api/v1/pricing/preview", new PricePreviewRequest("Flight", null, null, null, Net), PermissionCodes.MarginView);
+        preview.StatusCode.Should().Be(HttpStatusCode.OK, "pricing still works");
     }
 
     [Fact]

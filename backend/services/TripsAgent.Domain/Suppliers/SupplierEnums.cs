@@ -126,6 +126,12 @@ public enum SupplierCallOutcome
 
     /// <summary>The connection failed before a response could arrive.</summary>
     TransportError = 4,
+
+    /// <summary>
+    /// The caller stopped waiting before a response arrived — a request aborted, a host shutting
+    /// down. Like <see cref="Timeout"/>, the supplier may still have acted on it.
+    /// </summary>
+    Cancelled = 5,
 }
 
 /// <summary>What one status poll learned.</summary>

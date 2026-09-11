@@ -334,7 +334,19 @@ public static class DependencyInjection
             .Validate(
                 options => options.RetentionMonths >= 1 && options.PartitionsCreatedAhead >= 1,
                 "SupplierApiCalls:RetentionMonths and SupplierApiCalls:PartitionsCreatedAhead must both be at least 1. "
-                + "A retention of zero would drop the month still being written to.");
+                + "A retention of zero would drop the month still being written to.")
+            .Validate(
+                options => options.QueueCapacity >= 1 && options.BatchSize >= 1 && options.ShutdownDrainTimeout >= TimeSpan.Zero,
+                "SupplierApiCalls:QueueCapacity and SupplierApiCalls:BatchSize must both be at least 1, and "
+                + "SupplierApiCalls:ShutdownDrainTimeout must not be negative.");
+
+        // The call log's write path (issue #39). The audit handler on every supplier client hands its
+        // capture to the buffer and returns; the writer service inserts off the request path, in both
+        // the Api and the Worker. Registered here, with the table, so a host that can call a supplier
+        // can always record the call.
+        services.AddSingleton<SupplierApiCallBuffer>();
+        services.AddSingleton<ISupplierCallRecorder>(sp => sp.GetRequiredService<SupplierApiCallBuffer>());
+        services.AddHostedService<SupplierApiCallWriterService>();
 
         // Creates and drops partitions — DDL — so it runs on the schema owner's connection (ADR-0006).
         services.AddScoped<ISupplierApiCallMaintenance>(sp => new SupplierApiCallPartitionMaintenance(

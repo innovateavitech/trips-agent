@@ -28,6 +28,19 @@ public sealed class SupplierApiCallOptions
     /// runway before a missing partition makes every supplier call fail to record.
     /// </summary>
     public int PartitionsCreatedAhead { get; set; } = 3;
+
+    /// <summary>
+    /// Calls held in memory waiting to be written. Past this, a new call is logged at Error and
+    /// counted rather than queued — see <see cref="SupplierApiCallBuffer"/>. Only reached when the
+    /// database has stopped keeping up; each held call carries both its bodies, so this bounds memory.
+    /// </summary>
+    public int QueueCapacity { get; set; } = 5_000;
+
+    /// <summary>Rows written per insert. Larger batches mean fewer round trips while a backlog clears.</summary>
+    public int BatchSize { get; set; } = 100;
+
+    /// <summary>How long a stopping host spends writing what is still queued. Inside the host's own shutdown timeout.</summary>
+    public TimeSpan ShutdownDrainTimeout { get; set; } = TimeSpan.FromSeconds(10);
 }
 
 /// <summary>

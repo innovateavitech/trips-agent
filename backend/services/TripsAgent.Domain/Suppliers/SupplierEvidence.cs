@@ -14,10 +14,12 @@ namespace TripsAgent.Domain.Suppliers;
 /// migration and <c>SupplierApiCallPartitionMaintenance</c>.
 /// </para>
 /// <para>
-/// <b>Credentials cannot reach it.</b> Headers are redacted here, in the factory, rather than
-/// trusted to each caller: a bus call carries the merchant key in a <c>MerchantKey</c> header and
-/// a hash of it in <c>Authorization</c>, and a table that keeps every request for months is the
-/// last place either should land. See <see cref="IsSensitiveHeader"/>.
+/// <b>Credentials and passport numbers cannot reach it.</b> Everything is redacted here, in the
+/// factory, rather than trusted to each caller: a bus call carries the merchant key in a
+/// <c>MerchantKey</c> header and a hash of it in <c>Authorization</c>, a booking body carries every
+/// passenger's passport number, and a table that keeps every request for months is the last place
+/// any of them should land. Headers by name (<see cref="IsSensitiveHeader"/>); bodies and the query
+/// string through <see cref="SupplierPayloadRedaction"/>.
 /// </para>
 /// <para>
 /// <see cref="AgencyId"/> is nullable — a platform smoke test belongs to no agency — so this is
@@ -39,6 +41,13 @@ public sealed class SupplierApiCall : Entity
         "authorization", "key", "token", "secret", "password", "signature", "cookie", "hash",
     ];
 
+    /// <summary>The column widths, so an overlong value is shortened here rather than failing its insert.</summary>
+    public const int EndpointMaxLength = 500;
+
+    public const int ErrorMessageMaxLength = 2000;
+
+    public const int CorrelationIdMaxLength = 100;
+
     private SupplierApiCall()
     {
         HttpMethod = string.Empty;
@@ -46,7 +55,22 @@ public sealed class SupplierApiCall : Entity
         RequestHeaders = "{}";
     }
 
-    /// <summary>Records a call. Sensitive header values are replaced before they are stored.</summary>
+    private SupplierApiCall(Guid id)
+        : base(id)
+    {
+        HttpMethod = string.Empty;
+        Endpoint = string.Empty;
+        RequestHeaders = "{}";
+    }
+
+    /// <summary>
+    /// Records a call. Sensitive headers, body fields and query parameters are replaced before
+    /// anything is stored.
+    /// </summary>
+    /// <param name="id">
+    /// Chosen by the caller when it has to be known before the row is written — the audit handler
+    /// hands it to the adapter so a status poll can point at the call behind it. New when omitted.
+    /// </param>
     public static SupplierApiCall Record(
         Guid supplierId,
         Guid? agencyId,
@@ -62,31 +86,42 @@ public sealed class SupplierApiCall : Entity
         SupplierCallOutcome outcome,
         DateTimeOffset occurredAt,
         string? errorMessage = null,
-        string? correlationId = null)
+        string? correlationId = null,
+        Guid? id = null)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(supplierId, Guid.Empty);
         ArgumentException.ThrowIfNullOrWhiteSpace(httpMethod);
         ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
         ArgumentNullException.ThrowIfNull(requestHeaders);
         ArgumentOutOfRangeException.ThrowIfNegative(latencyMs);
+        if (id == Guid.Empty)
+        {
+            throw new ArgumentOutOfRangeException(nameof(id), "An empty id would collide with every other empty id.");
+        }
 
-        return new SupplierApiCall
+        var knownSecrets = SupplierPayloadRedaction.KnownSecretsFrom(requestHeaders);
+
+        return new SupplierApiCall(id ?? Guid.CreateVersion7())
         {
             SupplierId = supplierId,
             AgencyId = agencyId,
             SupplierBookingId = supplierBookingId,
             Operation = operation,
             HttpMethod = httpMethod.ToUpperInvariant(),
-            Endpoint = endpoint,
+            Endpoint = Truncate(SupplierPayloadRedaction.RedactEndpoint(endpoint), EndpointMaxLength)!,
             RequestHeaders = JsonSerializer.Serialize(RedactHeaders(requestHeaders)),
-            RequestBody = requestBody,
+            RequestBody = SupplierPayloadRedaction.RedactRequestBody(requestBody, knownSecrets),
             ResponseStatusCode = responseStatusCode,
-            ResponseBody = responseBody,
+            ResponseBody = SupplierPayloadRedaction.RedactResponseBody(responseBody, knownSecrets),
             LatencyMs = latencyMs,
             Outcome = outcome,
             OccurredAt = occurredAt,
-            ErrorMessage = errorMessage,
-            CorrelationId = correlationId,
+
+            // An exception message can quote a request, so it gets the known-secret pass as well.
+            ErrorMessage = Truncate(
+                SupplierPayloadRedaction.RedactResponseBody(errorMessage, knownSecrets),
+                ErrorMessageMaxLength),
+            CorrelationId = Truncate(correlationId, CorrelationIdMaxLength),
         };
     }
 
@@ -114,7 +149,10 @@ public sealed class SupplierApiCall : Entity
     /// <summary>Null when no response arrived — a timeout or a dropped connection.</summary>
     public int? ResponseStatusCode { get; private set; }
 
-    /// <summary>Text, not JSON: a supplier in trouble returns HTML error pages.</summary>
+    /// <summary>
+    /// Text, not JSON: a supplier in trouble returns HTML error pages. Redacted, like
+    /// <see cref="RequestBody"/>; see <see cref="SupplierPayloadRedaction"/>.
+    /// </summary>
     public string? ResponseBody { get; private set; }
 
     public int LatencyMs { get; private set; }
@@ -131,6 +169,9 @@ public sealed class SupplierApiCall : Entity
         && Array.Exists(
             SensitiveHeaderFragments,
             fragment => headerName.Contains(fragment, StringComparison.OrdinalIgnoreCase));
+
+    private static string? Truncate(string? value, int maxLength) =>
+        value is null || value.Length <= maxLength ? value : value[..maxLength];
 
     private static SortedDictionary<string, string> RedactHeaders(IReadOnlyDictionary<string, string> headers)
     {

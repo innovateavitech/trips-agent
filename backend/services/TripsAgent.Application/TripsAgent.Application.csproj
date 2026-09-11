@@ -11,6 +11,10 @@
          abstractions are allowed, and hiding them behind a hand-rolled repository per table
          would be ceremony a small team pays for on every feature. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
+
+    <!-- IHttpClientFactory: AddSupplierHttpClient lives here so an integration project, which
+         references only Application, gets the audit handler by construction. -->
+    <PackageReference Include="Microsoft.Extensions.Http" />
   </ItemGroup>
 
   <PropertyGroup>

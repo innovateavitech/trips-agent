@@ -74,7 +74,7 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_notifications", x => x.id);
-                    table.CheckConstraint("ck_notifications_status", "status IN ('queued', 'sent', 'delivered', 'failed', 'bounced')");
+                    table.CheckConstraint("ck_notifications_status", "status IN ('queued', 'sending', 'sent', 'delivered', 'failed', 'bounced')");
                     table.ForeignKey(
                         name: "fk_notifications_agencies_agency_id",
                         column: x => x.agency_id,

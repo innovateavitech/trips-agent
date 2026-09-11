@@ -1,0 +1,20 @@
+# IgnoreQueryFilters allowlist — the only exceptions to analyser TRIPS002 (CLAUDE.md rule 3).
+#
+# TRIPS002 fails the build when production code calls EF Core's IgnoreQueryFilters(). That call
+# switches off the tenant filter for one query, which then reads every agency's rows at once —
+# the mistake that leaks one travel agency's customers and prices to another.
+#
+# The sanctioned way across tenants is IPlatformScope.Enter(reason). It is logged with the reason
+# and the acting user, and the database's row-level security honours it. Reach for that first.
+#
+# Something belongs here only if it genuinely cannot go through IPlatformScope, and a second
+# person has agreed in review. "The filter was in my way" is not a reason.
+#
+# Test assemblies (names ending in "Tests") are exempt and never need an entry.
+#
+# Format: one entry per line, and every entry gets a comment saying WHY.
+#   A type allows everything inside it:   TripsAgent.Some.Namespace.TypeName
+#   A member allows just that member:     TripsAgent.Some.Namespace.TypeName.MemberName
+#   Nested types are joined with dots. Whole namespaces are not accepted, on purpose.
+#
+# Empty. Every cross-tenant read in the codebase goes through IPlatformScope.

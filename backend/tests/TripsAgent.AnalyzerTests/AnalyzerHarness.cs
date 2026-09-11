@@ -29,13 +29,18 @@ internal static class AnalyzerHarness
     /// <param name="analyzer">The analyser under test.</param>
     /// <param name="source">The code to compile. It must be valid C#.</param>
     /// <param name="additionalFiles">Files handed to the analyser as the build would, keyed by path.</param>
+    /// <param name="assemblyName">
+    /// What the compiled snippet is called. Matters to analysers that treat test assemblies
+    /// differently, as TRIPS002 does.
+    /// </param>
     public static async Task<ImmutableArray<Diagnostic>> RunAsync(
         DiagnosticAnalyzer analyzer,
         string source,
-        IReadOnlyDictionary<string, string>? additionalFiles = null)
+        IReadOnlyDictionary<string, string>? additionalFiles = null,
+        string assemblyName = "Probe")
     {
         var compilation = CSharpCompilation.Create(
-            "Probe",
+            assemblyName,
             [CSharpSyntaxTree.ParseText(source)],
             References,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));

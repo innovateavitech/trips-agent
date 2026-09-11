@@ -106,9 +106,13 @@ public sealed class SmtpEmailSender : IEmailSender
         }
         catch (SmtpCommandException ex) when (IsPermanentRecipientFailure(ex))
         {
-            // A 5xx on the recipient — no such mailbox, domain does not exist. Retrying cannot help
-            // and damages our reputation with the relay; the dispatcher suppresses the address.
-            throw new EmailRejectedException($"The relay refused {ex.Mailbox?.Address ?? message.To}: {ex.Message}", ex);
+            // A 5xx on the recipient. Retrying cannot help and damages our reputation with the
+            // relay, so it is never retried. Whether the address is dead is a separate question —
+            // see MeansTheAddressIsBad — and only then does the dispatcher suppress it.
+            throw new EmailRejectedException(
+                $"The relay refused {ex.Mailbox?.Address ?? message.To}: {(int)ex.StatusCode} {ex.Message}",
+                addressIsUndeliverable: MeansTheAddressIsBad(ex.Message),
+                ex);
         }
 
         await client.DisconnectAsync(quit: true, cancellationToken);
@@ -116,8 +120,38 @@ public sealed class SmtpEmailSender : IEmailSender
         return new EmailReceipt(mime.MessageId);
     }
 
+    /// <summary>
+    /// The enhanced status codes (RFC 3463) that mean the recipient's address cannot receive mail —
+    /// as opposed to a refusal about us, such as <c>5.7.1 Relaying denied</c>.
+    /// </summary>
+    /// <remarks>
+    /// A list of what is known to be the address's fault, rather than a rule like "any 5.1.x",
+    /// because a wrong suppression is platform-wide and silent. 5.1.7 and 5.1.8 are 5.1.x but are
+    /// about the <i>sender's</i> address, and would suppress a perfectly good recipient.
+    /// </remarks>
+    private static readonly string[] BadAddressCodes =
+    [
+        "5.1.1", // bad destination mailbox: no such user
+        "5.1.2", // bad destination system: the domain does not exist or does not take mail
+        "5.1.3", // bad destination mailbox address syntax
+        "5.1.6", // mailbox has moved, no forwarding address
+        "5.1.10", // the domain publishes a null MX: it accepts no mail at all (RFC 7505)
+        "5.2.1", // mailbox disabled, not accepting messages
+    ];
+
     private static bool IsPermanentRecipientFailure(SmtpCommandException ex) =>
         ex.ErrorCode == SmtpErrorCode.RecipientNotAccepted && (int)ex.StatusCode >= 500;
+
+    /// <summary>
+    /// True when the relay's reply starts with an enhanced status code from <see cref="BadAddressCodes"/>.
+    /// A reply with no enhanced code at all is treated as not proven — the address is left alone.
+    /// </summary>
+    /// <param name="response">The reply text after the three-digit code, e.g. <c>5.1.1 &lt;ada@x&gt;: User unknown</c>.</param>
+    private static bool MeansTheAddressIsBad(string response)
+    {
+        var code = response.TrimStart().Split([' ', '\t', '\r', '\n'], 2)[0];
+        return BadAddressCodes.Contains(code, StringComparer.Ordinal);
+    }
 
     private static string DomainOf(string address)
     {

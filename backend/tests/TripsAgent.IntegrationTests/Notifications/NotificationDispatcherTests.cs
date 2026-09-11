@@ -1,7 +1,10 @@
+using System.Data.Common;
 using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
+using Npgsql;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Notifications;
@@ -137,12 +140,46 @@ public class NotificationDispatcherTests
     }
 
     [Fact]
+    public async Task A_database_that_fails_after_the_relay_accepted_does_not_send_it_again()
+    {
+        // The reviewer's case: PostgreSQL still answers reads but refuses writes with an error
+        // Npgsql calls transient (53100 disk_full), starting the moment the relay has the email.
+        // EF's retrying strategy replays the failed save, and the broker redelivers the message.
+        // Neither may turn one KYB decision into twenty identical emails.
+        var world = await WorldAsync();
+        var id = await world.QueueAsync(world.KybApproved("kyb.approved:db-down-after-send"));
+
+        var outage = new NotificationWritesRefused();
+        var sender = new CapturingSender(world.Sent, afterSend: () => outage.Armed = true);
+
+        // The first delivery sends, then cannot record it and throws, so the broker will retry.
+        await FluentActions.Awaiting(() => world.DispatchAsync(id, sender, outage))
+            .Should().ThrowAsync<Exception>();
+
+        outage.Refused.Should().BeGreaterThan(1, "the retrying strategy really did replay the failed save");
+
+        // The broker's four retries find the attempt already claimed and leave it alone.
+        for (var retry = 1; retry < NotificationDispatcher.MaxAttempts; retry++)
+        {
+            (await world.DispatchAsync(id, sender, outage)).Should().Be(NotificationDispatchOutcome.Skipped);
+        }
+
+        world.Sent.Should().ContainSingle("the relay accepted it once, and nothing may resend an unknown outcome");
+
+        // Left for a person, with the attempt counted: 'sending' is "handed over, result unknown".
+        var stored = await world.ReadAsync(id);
+        stored.Status.Should().Be(NotificationStatus.Sending);
+        stored.Attempts.Should().Be(1);
+    }
+
+    [Fact]
     public async Task A_permanent_rejection_bounces_suppresses_the_address_and_is_not_retried()
     {
         var world = await WorldAsync();
         var id = await world.QueueAsync(world.KybApproved("kyb.approved:bounce"));
 
-        var outcome = await world.DispatchAsync(id, new FailingSender(new EmailRejectedException("550 no such user")));
+        var outcome = await world.DispatchAsync(
+            id, new FailingSender(new EmailRejectedException("550 5.1.1 no such user", addressIsUndeliverable: true)));
 
         outcome.Should().Be(NotificationDispatchOutcome.Bounced);
         (await world.ReadAsync(id)).Status.Should().Be(NotificationStatus.Bounced);
@@ -155,6 +192,35 @@ public class NotificationDispatcherTests
 
         (await world.DispatchAsync(next)).Should().Be(NotificationDispatchOutcome.Bounced);
         world.Sent.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task A_refusal_about_our_own_setup_fails_the_notification_but_does_not_suppress_the_address()
+    {
+        // What every recipient gets while the relay credentials are wrong: a permanent refusal that
+        // says nothing about the mailbox. Suppressing on it would silence a working inbox for every
+        // agency until someone edited the table by hand.
+        var world = await WorldAsync();
+        var id = await world.QueueAsync(world.KybApproved("kyb.approved:relay-denied"));
+        var relayDenied = new EmailRejectedException("The relay refused it: 550 5.7.1 Relaying denied", addressIsUndeliverable: false);
+
+        (await world.DispatchAsync(id, new FailingSender(relayDenied))).Should().Be(NotificationDispatchOutcome.GaveUp);
+
+        var stored = await world.ReadAsync(id);
+        stored.Status.Should().Be(NotificationStatus.Failed, "retrying into a permanent refusal only hurts our reputation");
+        stored.Attempts.Should().Be(1);
+        stored.LastError.Should().Contain("5.7.1");
+
+        await using (var db = world.Platform(out _))
+        {
+            (await db.SuppressedEmailAddresses.CountAsync()).Should().Be(0);
+        }
+
+        // Once the relay is fixed, the same address gets its mail.
+        var next = await world.QueueAsync(world.KybApproved("kyb.approved:after-relay-fixed"));
+
+        (await world.DispatchAsync(next)).Should().Be(NotificationDispatchOutcome.Sent);
+        world.Sent.Should().ContainSingle().Which.To.Should().Be(world.OwnerEmail);
     }
 
     [Fact]
@@ -321,6 +387,22 @@ public class NotificationDispatcherTests
             return await dispatcher.DispatchAsync(id);
         }
 
+        /// <summary>
+        /// One consumer delivery on a context configured as production configures it — EF's
+        /// retry-on-transient-failure on — with <paramref name="interceptor"/> between it and the database.
+        /// </summary>
+        public async Task<NotificationDispatchOutcome> DispatchAsync(Guid id, IEmailSender sender, IInterceptor interceptor)
+        {
+            var tenancy = TestTenancy.None();
+            await using var db = postgres.Connect(
+                database, tenancy.Tenant, tenancy.Scope, retryOnFailure: true, interceptors: [interceptor]);
+
+            var dispatcher = new NotificationDispatcher(
+                db, sender, tenancy.Scope, TimeProvider.System, NullLogger<NotificationDispatcher>.Instance);
+
+            return await dispatcher.DispatchAsync(id);
+        }
+
         public async Task<Notification> ReadAsync(Guid id)
         {
             await using var db = Platform(out var scope);
@@ -344,12 +426,55 @@ public class NotificationDispatcherTests
         }
     }
 
-    private sealed class CapturingSender(List<EmailMessage> sent) : IEmailSender
+    private sealed class CapturingSender(List<EmailMessage> sent, Action? afterSend = null) : IEmailSender
     {
         public Task<EmailReceipt> SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
         {
             sent.Add(message);
+            afterSend?.Invoke();
             return Task.FromResult(new EmailReceipt($"<{Guid.NewGuid():N}@test>"));
+        }
+    }
+
+    /// <summary>
+    /// Once armed, refuses every write to a notification row with disk_full — an error Npgsql
+    /// reports as transient, so EF's retrying strategy replays whatever it was running.
+    /// </summary>
+    private sealed class NotificationWritesRefused : DbCommandInterceptor
+    {
+        public bool Armed { get; set; }
+
+        public int Refused { get; private set; }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            RefuseIfArmed(command);
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
+
+        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            RefuseIfArmed(command);
+            return base.NonQueryExecutingAsync(command, eventData, result, cancellationToken);
+        }
+
+        private void RefuseIfArmed(DbCommand command)
+        {
+            // "UPDATE notifications.notifications SET", so the claim's SELECT ... FOR UPDATE still runs.
+            if (Armed && command.CommandText.Contains("UPDATE notifications.notifications SET", StringComparison.OrdinalIgnoreCase))
+            {
+                Refused++;
+                throw new PostgresException(
+                    "could not extend file: No space left on device", "ERROR", "ERROR", PostgresErrorCodes.DiskFull);
+            }
         }
     }
 

@@ -12,6 +12,14 @@ public static class NotificationStatus
     /// <summary>Waiting to be sent, possibly after a failed attempt.</summary>
     public const string Queued = "queued";
 
+    /// <summary>
+    /// Claimed and handed to the provider, and the result not recorded yet. Normally that lasts as
+    /// long as one SMTP conversation. A row that stays here means the outcome is <b>unknown</b> — the
+    /// Worker died mid-send, or the database refused the write that would have recorded it — and it
+    /// is never resent automatically, because the relay may well have accepted it. A person decides.
+    /// </summary>
+    public const string Sending = "sending";
+
     /// <summary>Handed to the provider, which accepted it. As far as M1 can tell, it is delivered.</summary>
     public const string Sent = "sent";
 
@@ -29,7 +37,7 @@ public static class NotificationStatus
     public const string Bounced = "bounced";
 
     /// <summary>Every value, for the column's check constraint.</summary>
-    public static IReadOnlyList<string> All { get; } = [Queued, Sent, Delivered, Failed, Bounced];
+    public static IReadOnlyList<string> All { get; } = [Queued, Sending, Sent, Delivered, Failed, Bounced];
 }
 
 /// <summary>Who the notification is for, which is not the same as who it is about.</summary>
@@ -163,7 +171,10 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
     /// <summary>One of <see cref="NotificationStatus"/>.</summary>
     public string Status { get; private set; }
 
-    /// <summary>Send attempts so far, successful or not.</summary>
+    /// <summary>
+    /// Send attempts so far, successful or not. Counted when the attempt starts — see
+    /// <see cref="MarkSending"/> — so an attempt whose result was never recorded still counts.
+    /// </summary>
     public int Attempts { get; private set; }
 
     /// <summary>Which template version it was rendered from. Null until it renders.</summary>
@@ -188,13 +199,36 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
 
     public DateTimeOffset UpdatedAt { get; set; }
 
-    /// <summary>True once nothing more will happen to it: sent, delivered, bounced or given up on.</summary>
-    public bool IsFinished => Status != NotificationStatus.Queued;
+    /// <summary>
+    /// True once nothing more will happen to it: sent, delivered, bounced or given up on. A row that
+    /// is <see cref="NotificationStatus.Sending"/> is not finished — its outcome is not known yet.
+    /// </summary>
+    public bool IsFinished => Status is NotificationStatus.Sent
+        or NotificationStatus.Delivered
+        or NotificationStatus.Failed
+        or NotificationStatus.Bounced;
+
+    /// <summary>
+    /// Claims it for one send attempt, and counts the attempt. Saved <b>before</b> the provider is
+    /// called, so nothing can claim it again while the result is unknown.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">It is not <see cref="NotificationStatus.Queued"/>.</exception>
+    public void MarkSending()
+    {
+        if (Status != NotificationStatus.Queued)
+        {
+            throw new InvalidOperationException(
+                $"Only a queued notification can be claimed for sending; this one is '{Status}'.");
+        }
+
+        Attempts++;
+        Status = NotificationStatus.Sending;
+    }
 
     /// <summary>The provider accepted it. It will not be sent again.</summary>
     public void MarkSent(int templateVersion, string? providerMessageId, DateTimeOffset sentAt)
     {
-        Attempts++;
+        CountAttemptUnlessClaimed();
         Status = NotificationStatus.Sent;
         TemplateVersion = templateVersion;
         ProviderMessageId = providerMessageId;
@@ -228,7 +262,7 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
     {
         ArgumentNullException.ThrowIfNull(reason);
 
-        Attempts++;
+        CountAttemptUnlessClaimed();
         Status = NotificationStatus.Bounced;
         LastError = Trim(reason);
         SentAt ??= at;
@@ -237,19 +271,27 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
     /// <summary>A send attempt failed.</summary>
     /// <param name="error">What went wrong. Trimmed to <see cref="MaxErrorLength"/>.</param>
     /// <param name="giveUp">
-    /// True to stop here and mark it failed; false to leave it queued for the next attempt. When
-    /// that attempt happens is the message broker's retry policy, not this row's business.
+    /// True to stop here and mark it failed; false to put it back in the queue for the next
+    /// attempt. When that attempt happens is the message broker's retry policy, not this row's business.
     /// </param>
     public void RecordFailure(string error, bool giveUp)
     {
         ArgumentNullException.ThrowIfNull(error);
 
-        Attempts++;
+        CountAttemptUnlessClaimed();
         LastError = Trim(error);
+        Status = giveUp ? NotificationStatus.Failed : NotificationStatus.Queued;
+    }
 
-        if (giveUp)
+    /// <summary>
+    /// Each attempt is counted once. A claimed attempt was counted by <see cref="MarkSending"/>; one
+    /// that ended before it got that far — nothing to render, a suppressed address — is counted here.
+    /// </summary>
+    private void CountAttemptUnlessClaimed()
+    {
+        if (Status != NotificationStatus.Sending)
         {
-            Status = NotificationStatus.Failed;
+            Attempts++;
         }
     }
 

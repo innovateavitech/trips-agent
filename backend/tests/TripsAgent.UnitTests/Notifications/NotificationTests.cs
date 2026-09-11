@@ -55,6 +55,53 @@ public class NotificationTests
     }
 
     [Fact]
+    public void Claiming_counts_the_attempt_before_the_provider_is_called()
+    {
+        var notification = New();
+
+        notification.MarkSending();
+
+        notification.Status.Should().Be(NotificationStatus.Sending);
+        notification.Attempts.Should().Be(1, "an attempt whose result is never recorded must still count");
+        notification.IsFinished.Should().BeFalse("its outcome is not known yet");
+    }
+
+    [Fact]
+    public void A_claimed_attempt_is_counted_once_however_it_ends()
+    {
+        var sent = New();
+        sent.MarkSending();
+        sent.MarkSent(1, "<abc@mail>", Now);
+
+        var retried = New();
+        retried.MarkSending();
+        retried.RecordFailure("relay unreachable", giveUp: false);
+
+        var bounced = New();
+        bounced.MarkSending();
+        bounced.MarkBounced("550 5.1.1 no such user", Now);
+
+        sent.Attempts.Should().Be(1);
+        retried.Attempts.Should().Be(1);
+        bounced.Attempts.Should().Be(1);
+
+        retried.Status.Should().Be(NotificationStatus.Queued, "a failed send goes back in the queue for the broker's retry");
+    }
+
+    [Fact]
+    public void Only_a_queued_notification_can_be_claimed()
+    {
+        var notification = New();
+        notification.MarkSending();
+
+        // A second claim is exactly the resend of an unknown outcome the status exists to prevent.
+        var act = notification.MarkSending;
+
+        act.Should().Throw<InvalidOperationException>();
+        notification.Attempts.Should().Be(1);
+    }
+
+    [Fact]
     public void An_error_longer_than_the_column_is_trimmed()
     {
         var notification = New();

@@ -524,19 +524,19 @@ public sealed partial class VerifyTopUpHandler
     /// </remarks>
     private async Task SendReceiptAsync(PaymentTransaction payment, CancellationToken cancellationToken)
     {
-        var recipient = await _db.Users
-            .Where(user => user.AgencyId == payment.AgencyId)
-            .OrderBy(user => user.CreatedAt)
-            .Select(user => new { user.Id, user.Email, user.FirstName })
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (recipient is null)
-        {
-            return;
-        }
-
         try
         {
+            var recipient = await _db.Users
+                .Where(user => user.AgencyId == payment.AgencyId)
+                .OrderBy(user => user.CreatedAt)
+                .Select(user => new { user.Id, user.Email, user.FirstName })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (recipient is null)
+            {
+                return;
+            }
+
             await _notifications.QueueEmailAsync(
                 new EmailNotificationRequest(
                     payment.AgencyId,
@@ -556,11 +556,15 @@ public sealed partial class VerifyTopUpHandler
 
             await _db.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateException ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // The money is in the wallet. A receipt that did not queue is a support question, not
-            // a reason to fail a callback the gateway will then retry. Discard it so no later save
-            // on this context tries again with the same rejected row.
+            // The money is in the wallet, and nothing after the posting commits may fail the credit.
+            // Deliberately every exception, not just DbUpdateException: a database blip that outlasts
+            // EF's retries arrives as RetryLimitExceededException, and a failed read as an
+            // NpgsqlException. Either escaping would fail a callback the gateway then retries, or
+            // show an agent who has been charged and credited an error that invites them to pay
+            // again. A missing receipt is a support question. Discard what was staged so no later
+            // save on this context tries it again.
             _db.ChangeTracker.Clear();
             LogReceiptFailed(_logger, ex, payment.Reference);
         }

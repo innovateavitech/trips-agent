@@ -33,17 +33,29 @@ public sealed record EmailMessage(
 public sealed record EmailReceipt(string? ProviderMessageId);
 
 /// <summary>
-/// The provider refused to deliver a message and there is no point trying again.
+/// The provider refused this message and there is no point sending it again.
 /// </summary>
 /// <remarks>
-/// A mailbox that does not exist, a domain that does not resolve, an address that has blocked us.
+/// <para>
 /// The distinction from an ordinary failure is the whole point: an ordinary failure — the relay is
-/// down, the network blipped — is retried with backoff, while this one must not be. Retrying into
-/// a hard bounce is how a sender's reputation is destroyed, and it would cost every agency on the
-/// platform their deliverability.
+/// down, the network blipped — is retried with backoff, while this one must not be.
+/// </para>
+/// <para>
+/// <b>Refused is not the same as "the address is dead".</b> Many permanent refusals are about us,
+/// not the recipient: relaying denied because our credentials are wrong, our IP or domain on a
+/// blocklist. Only <see cref="AddressIsUndeliverable"/> says the mailbox itself is gone, and only
+/// that may suppress the address — suppression is platform-wide, so suppressing on a refusal that
+/// was really about our own configuration would silence every agency's mail to working inboxes.
+/// </para>
 /// </remarks>
 public sealed class EmailRejectedException : Exception
 {
+    public EmailRejectedException(string message, bool addressIsUndeliverable, Exception? innerException = null)
+        : base(message, innerException)
+    {
+        AddressIsUndeliverable = addressIsUndeliverable;
+    }
+
     public EmailRejectedException(string message)
         : base(message)
     {
@@ -58,6 +70,13 @@ public sealed class EmailRejectedException : Exception
         : base("The email provider rejected the message permanently.")
     {
     }
+
+    /// <summary>
+    /// True only when the provider said the address itself cannot receive mail — no such user, no
+    /// such domain, mailbox disabled. False, the default, for every other permanent refusal: the
+    /// message fails, and the address is left alone.
+    /// </summary>
+    public bool AddressIsUndeliverable { get; }
 }
 
 /// <summary>
@@ -73,8 +92,8 @@ public interface IEmailSender
 {
     /// <summary>Sends one message.</summary>
     /// <exception cref="EmailRejectedException">
-    /// The address is permanently undeliverable. Callers must not retry; see the exception's own
-    /// remarks.
+    /// The provider refused the message permanently. Callers must not retry; see the exception's
+    /// own remarks for when that also means the address is dead.
     /// </exception>
     public Task<EmailReceipt> SendAsync(EmailMessage message, CancellationToken cancellationToken = default);
 }

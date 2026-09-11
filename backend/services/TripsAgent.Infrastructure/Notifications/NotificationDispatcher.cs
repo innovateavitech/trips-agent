@@ -14,7 +14,10 @@ public enum NotificationDispatchOutcome
     /// <summary>The provider accepted it.</summary>
     Sent = 1,
 
-    /// <summary>Nothing to do: already finished, unknown, or another Worker holds it right now.</summary>
+    /// <summary>
+    /// Nothing to do: already finished, unknown, another Worker holds it right now, or an earlier
+    /// attempt's outcome is unknown and it is waiting for a person.
+    /// </summary>
     Skipped = 2,
 
     /// <summary>The address rejected it permanently, now or before. Not retried.</summary>
@@ -33,18 +36,35 @@ public enum NotificationDispatchOutcome
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Exactly one email per notification, as far as email allows.</b> The row is claimed with
-/// <c>FOR UPDATE SKIP LOCKED</c> and only while it is still <c>queued</c>, so a redelivered message,
-/// a second Worker or a second consumer instance finds nothing to do. The one gap left is the one
-/// SMTP itself leaves: if the process dies after the relay accepted the message but before the row
-/// commits as sent, the redelivery sends it again. SMTP has no idempotency key to prevent that, and
-/// a duplicate receipt is a far smaller harm than a lost booking confirmation.
+/// <b>Three steps, and the email is sent in none of the database ones.</b>
+/// </para>
+/// <list type="number">
+/// <item><b>Claim</b>, in one short transaction: lock the row with <c>FOR UPDATE SKIP LOCKED</c>
+/// while it is still <c>queued</c>, render it, and commit it as <c>sending</c> with the attempt
+/// counted. From here on nothing else — a redelivered message, a second Worker — can claim it.</item>
+/// <item><b>Send</b>, outside any transaction and outside EF's retry.</item>
+/// <item><b>Record</b> the result in a second save.</item>
+/// </list>
+/// <para>
+/// Why it matters: the production context retries on transient database errors by <i>replaying</i>
+/// the work it was given. If the send were inside that work, a database that accepted reads but
+/// refused writes would replay the send four times per delivery, and the broker would redeliver
+/// four more times — about twenty copies of one email. Now a replay can only repeat database work.
 /// </para>
 /// <para>
-/// <b>Retries belong to the broker.</b> A transient failure is recorded on the row and reported as
-/// <see cref="NotificationDispatchOutcome.RetryLater"/>; the consumer throws, and MassTransit's retry
-/// policy for <c>notifications.email</c> redelivers with backoff. The fifth failure marks the row
-/// failed and the broker moves the message to <c>notifications.email_error</c> — the dead letter.
+/// <b>The price is an unknown outcome instead of a duplicate.</b> If the Worker dies during the send,
+/// or the database refuses the record, the row stays <c>sending</c> and is never resent
+/// automatically — the relay may already have delivered it (the same rule as ADR-0003: an unknown
+/// outcome is not a failure). It is logged, and a person decides. The one exception is shutdown:
+/// a send cancelled by the Worker stopping goes back to <c>queued</c>, because a deploy should not
+/// strand mail. That can repeat one email the relay had accepted just as it was cancelled, and the
+/// attempt still counts, so it can never loop.
+/// </para>
+/// <para>
+/// <b>Retries belong to the broker.</b> A transient send failure puts the row back to <c>queued</c>
+/// and reports <see cref="NotificationDispatchOutcome.RetryLater"/>; the consumer throws, and
+/// MassTransit's retry policy for <c>notifications.email</c> redelivers with backoff. The fifth
+/// attempt marks the row failed and the broker moves the message to <c>notifications.email_error</c>.
 /// </para>
 /// <para>
 /// Runs inside <see cref="IPlatformScope"/>: the Worker has no tenant of its own, and each message
@@ -62,29 +82,49 @@ public sealed partial class NotificationDispatcher(
     public const int MaxAttempts = 5;
 
     /// <summary>Sends <paramref name="notificationId"/> if it is still waiting to be sent.</summary>
+    /// <exception cref="Exception">
+    /// The result could not be recorded. The row stays <c>sending</c>; the broker's retry will find
+    /// it claimed and leave it alone.
+    /// </exception>
     public async Task<NotificationDispatchOutcome> DispatchAsync(Guid notificationId, CancellationToken cancellationToken = default)
     {
         using var scope = platformScope.Enter("notification dispatch — the Worker sends every agency's notifications");
 
-        // AddInfrastructure turns on EF's retry-on-transient-failure, which refuses a hand-opened
-        // transaction unless the whole unit is handed to it to replay. A replay after the relay
-        // accepted the message would send it twice; see the remarks for why that is tolerated.
+        // Step 1. AddInfrastructure turns on EF's retry-on-transient-failure, which refuses a
+        // hand-opened transaction unless the whole unit is handed to it to replay. Safe here: the
+        // claim only reads and writes the database, so replaying it sends nothing.
         var strategy = dbContext.Database.CreateExecutionStrategy();
 
-        return await strategy.ExecuteAsync(
+        var claim = await strategy.ExecuteAsync(
             notificationId,
-            (_, id, token) => DispatchOnceAsync(id, token),
+            (_, id, token) => ClaimAsync(id, token),
             verifySucceeded: null,
             cancellationToken);
+
+        if (claim.Notification is null)
+        {
+            await ExplainSkipAsync(notificationId, claim.Outcome, cancellationToken);
+            return claim.Outcome;
+        }
+
+        if (claim.Message is null)
+        {
+            // Finished without sending — suppressed, or nothing that could be rendered. Already saved.
+            return claim.Outcome;
+        }
+
+        // Steps 2 and 3.
+        return await SendAndRecordAsync(claim.Notification, claim.Message, claim.TemplateVersion, cancellationToken);
     }
 
-    private async Task<NotificationDispatchOutcome> DispatchOnceAsync(Guid notificationId, CancellationToken cancellationToken)
+    private async Task<Claim> ClaimAsync(Guid notificationId, CancellationToken cancellationToken)
     {
+        // A replay starts clean, not with the last attempt's half-made changes.
         dbContext.ChangeTracker.Clear();
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-        // 'queued' as a literal, like the outbox: a finished notification is not claimable at all.
+        // 'queued' as a literal, like the outbox: a row that is sending or finished is not claimable.
         var notification = await dbContext.Notifications
             .FromSql($"""
                 SELECT *
@@ -97,30 +137,34 @@ public sealed partial class NotificationDispatcher(
 
         if (notification is null)
         {
-            return NotificationDispatchOutcome.Skipped;
+            return Claim.Nothing;
         }
 
-        var outcome = await AttemptAsync(notification, cancellationToken);
+        var claim = await PrepareAsync(notification, cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        return outcome;
+        return claim;
     }
 
-    private async Task<NotificationDispatchOutcome> AttemptAsync(Notification notification, CancellationToken cancellationToken)
+    /// <summary>
+    /// Everything that can be decided before the provider is called: whether it can be sent at all,
+    /// and what exactly to send. Either finishes the notification or claims it as sending.
+    /// </summary>
+    private async Task<Claim> PrepareAsync(Notification notification, CancellationToken cancellationToken)
     {
         if (notification.Channel != NotificationChannel.Email)
         {
             notification.RecordFailure($"No provider for the {notification.Channel} channel yet.", giveUp: true);
-            return NotificationDispatchOutcome.GaveUp;
+            return Claim.Finished(notification, NotificationDispatchOutcome.GaveUp);
         }
 
         if (await IsSuppressedAsync(notification.RecipientAddress, cancellationToken))
         {
             notification.MarkBounced("The address is on the suppression list after an earlier permanent bounce.", clock.GetUtcNow());
             LogSuppressed(logger, notification.Id);
-            return NotificationDispatchOutcome.Bounced;
+            return Claim.Finished(notification, NotificationDispatchOutcome.Bounced);
         }
 
         var template = await NotificationTemplateSeeder.FindActiveAsync(
@@ -129,7 +173,7 @@ public sealed partial class NotificationDispatcher(
         if (template is null)
         {
             // Not retried: five more attempts will not seed a template. Running `migrate` will.
-            return GiveUp(
+            return GiveUpBeforeSending(
                 notification,
                 $"No active template '{notification.TemplateKey}' for {notification.Channel}/{notification.Locale}. "
                 + "Templates are seeded by the migrate command — has it run since this build was deployed?");
@@ -154,47 +198,130 @@ public sealed partial class NotificationDispatcher(
         }
         catch (NotificationRenderException ex)
         {
-            return GiveUp(notification, ex.Message);
+            return GiveUpBeforeSending(notification, ex.Message);
         }
+
+        notification.MarkSending();
+        return new Claim(NotificationDispatchOutcome.Sent, notification, message, template.Version);
+    }
+
+    private async Task<NotificationDispatchOutcome> SendAndRecordAsync(
+        Notification notification,
+        EmailMessage message,
+        int templateVersion,
+        CancellationToken cancellationToken)
+    {
+        var suppress = false;
+        NotificationDispatchOutcome outcome;
 
         try
         {
             var receipt = await emailSender.SendAsync(message, cancellationToken);
-            notification.MarkSent(template.Version, receipt.ProviderMessageId, clock.GetUtcNow());
-            return NotificationDispatchOutcome.Sent;
+            notification.MarkSent(templateVersion, receipt.ProviderMessageId, clock.GetUtcNow());
+            outcome = NotificationDispatchOutcome.Sent;
+        }
+        catch (EmailRejectedException ex) when (ex.AddressIsUndeliverable)
+        {
+            notification.MarkBounced(ex.Message, clock.GetUtcNow());
+            suppress = true;
+            LogBounced(logger, ex, notification.Id);
+            outcome = NotificationDispatchOutcome.Bounced;
         }
         catch (EmailRejectedException ex)
         {
-            var now = clock.GetUtcNow();
-            notification.MarkBounced(ex.Message, now);
-            await SuppressAsync(notification, ex.Message, now, cancellationToken);
-            LogBounced(logger, ex, notification.Id);
-            return NotificationDispatchOutcome.Bounced;
+            // Refused for good, but not because the address is bad — relaying denied, our IP on a
+            // blocklist. Retrying will not help; suppressing would punish a working inbox for our
+            // own configuration. Failed, for a person to look at.
+            notification.RecordFailure(ex.Message, giveUp: true);
+            LogRefused(logger, ex, notification.Id, notification.TemplateKey);
+            outcome = NotificationDispatchOutcome.GaveUp;
         }
-        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        catch (Exception ex) when (cancellationToken.IsCancellationRequested)
         {
-            // Shutting down is not a failure: that exception escapes, the transaction rolls back and
-            // the row stays queued for the redelivery. Anything else counts against the notification.
+            // The Worker is stopping. Back in the queue for the redelivery rather than stranded as
+            // sending — see the remarks for the one duplicate this can cause. Then let it escape.
+            notification.RecordFailure($"Interrupted by shutdown while sending: {ex.GetType().Name}", giveUp: false);
+            await RecordAsync(notification, suppress: false);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // The attempt was counted when it was claimed.
             var error = $"{ex.GetType().Name}: {ex.Message}";
 
-            if (notification.Attempts + 1 >= MaxAttempts)
+            if (notification.Attempts >= MaxAttempts)
             {
                 notification.RecordFailure(error, giveUp: true);
                 LogGaveUp(logger, ex, notification.Id, notification.TemplateKey, MaxAttempts);
-                return NotificationDispatchOutcome.GaveUp;
+                outcome = NotificationDispatchOutcome.GaveUp;
+            }
+            else
+            {
+                notification.RecordFailure(error, giveUp: false);
+                LogWillRetry(logger, ex, notification.Id, notification.Attempts);
+                outcome = NotificationDispatchOutcome.RetryLater;
+            }
+        }
+
+        await RecordAsync(notification, suppress);
+        return outcome;
+    }
+
+    /// <summary>
+    /// Step 3. A plain save, which EF's strategy may replay on its own — safe, because it is only an
+    /// update to one row and perhaps one insert, and nothing is sent inside it.
+    /// </summary>
+    /// <remarks>
+    /// Not cancellable: whatever the provider did has happened, and a Worker that is stopping should
+    /// still write it down. The save is one short statement.
+    /// </remarks>
+    private async Task RecordAsync(Notification notification, bool suppress)
+    {
+        try
+        {
+            if (suppress && !await IsSuppressedAsync(notification.RecipientAddress, CancellationToken.None))
+            {
+                dbContext.SuppressedEmailAddresses.Add(SuppressedEmailAddress.Create(
+                    notification.RecipientAddress, notification.LastError ?? "Permanent bounce.", clock.GetUtcNow(), notification.Id));
             }
 
-            notification.RecordFailure(error, giveUp: false);
-            LogWillRetry(logger, ex, notification.Id, notification.Attempts);
-            return NotificationDispatchOutcome.RetryLater;
+            await dbContext.SaveChangesAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            // Thrown on, so the broker retries the message — and that retry finds the row still
+            // 'sending' and leaves it alone, which is the point.
+            LogOutcomeNotRecorded(logger, ex, notification.Id, notification.Status);
+            throw;
         }
     }
 
-    private NotificationDispatchOutcome GiveUp(Notification notification, string reason)
+    /// <summary>
+    /// Nothing was claimed. Usually that is a redelivery of something finished; say so when it is
+    /// the one case a person needs to know about.
+    /// </summary>
+    private async Task ExplainSkipAsync(Guid notificationId, NotificationDispatchOutcome outcome, CancellationToken cancellationToken)
+    {
+        if (outcome != NotificationDispatchOutcome.Skipped)
+        {
+            return;
+        }
+
+        var stuck = await dbContext.Notifications
+            .AsNoTracking()
+            .AnyAsync(n => n.Id == notificationId && n.Status == NotificationStatus.Sending, cancellationToken);
+
+        if (stuck)
+        {
+            LogOutcomeUnknown(logger, notificationId);
+        }
+    }
+
+    private Claim GiveUpBeforeSending(Notification notification, string reason)
     {
         notification.RecordFailure(reason, giveUp: true);
         LogCannotRender(logger, notification.Id, notification.TemplateKey, reason);
-        return NotificationDispatchOutcome.GaveUp;
+        return Claim.Finished(notification, NotificationDispatchOutcome.GaveUp);
     }
 
     /// <summary>
@@ -243,13 +370,21 @@ public sealed partial class NotificationDispatcher(
             s => s.Address == address && s.LiftedAt == null,
             cancellationToken);
 
-    private async Task SuppressAsync(Notification notification, string reason, DateTimeOffset at, CancellationToken cancellationToken)
+    /// <summary>What the claim step decided.</summary>
+    /// <param name="Outcome">The outcome, when the claim step finished it; <c>Sent</c> as a placeholder when claimed.</param>
+    /// <param name="Notification">The row, or null when there was nothing to claim.</param>
+    /// <param name="Message">What to send, or null when there is nothing to send.</param>
+    /// <param name="TemplateVersion">Which template version rendered <paramref name="Message"/>.</param>
+    private sealed record Claim(
+        NotificationDispatchOutcome Outcome,
+        Notification? Notification,
+        EmailMessage? Message,
+        int TemplateVersion)
     {
-        if (!await IsSuppressedAsync(notification.RecipientAddress, cancellationToken))
-        {
-            dbContext.SuppressedEmailAddresses.Add(
-                SuppressedEmailAddress.Create(notification.RecipientAddress, reason, at, notification.Id));
-        }
+        public static Claim Nothing { get; } = new(NotificationDispatchOutcome.Skipped, null, null, 0);
+
+        public static Claim Finished(Notification notification, NotificationDispatchOutcome outcome) =>
+            new(outcome, notification, null, 0);
     }
 
     [LoggerMessage(Level = LogLevel.Warning,
@@ -265,6 +400,12 @@ public sealed partial class NotificationDispatcher(
         Message = "Notification {NotificationId} ({TemplateKey}) cannot be sent and has been marked failed: {Reason}")]
     private static partial void LogCannotRender(ILogger logger, Guid notificationId, string templateKey, string reason);
 
+    [LoggerMessage(Level = LogLevel.Error,
+        Message = "Notification {NotificationId} ({TemplateKey}) was refused by the relay for a reason that is not the "
+                  + "address — check the relay credentials and our sending reputation. Marked failed; the address "
+                  + "is not suppressed.")]
+    private static partial void LogRefused(ILogger logger, Exception exception, Guid notificationId, string templateKey);
+
     [LoggerMessage(Level = LogLevel.Warning,
         Message = "Notification {NotificationId} bounced permanently; the address is now suppressed.")]
     private static partial void LogBounced(ILogger logger, Exception exception, Guid notificationId);
@@ -272,4 +413,15 @@ public sealed partial class NotificationDispatcher(
     [LoggerMessage(Level = LogLevel.Information,
         Message = "Notification {NotificationId} was not sent: its address is suppressed after an earlier bounce.")]
     private static partial void LogSuppressed(ILogger logger, Guid notificationId);
+
+    [LoggerMessage(Level = LogLevel.Critical,
+        Message = "Notification {NotificationId} reached '{Status}' but the result could not be saved. The row is left "
+                  + "'sending' and will NOT be sent again automatically: the relay may have delivered it. A person "
+                  + "needs to decide whether to resend.")]
+    private static partial void LogOutcomeNotRecorded(ILogger logger, Exception exception, Guid notificationId, string status);
+
+    [LoggerMessage(Level = LogLevel.Warning,
+        Message = "Notification {NotificationId} is 'sending' — another Worker is sending it right now, or an earlier "
+                  + "attempt's outcome is unknown. Not sent again automatically.")]
+    private static partial void LogOutcomeUnknown(ILogger logger, Guid notificationId);
 }

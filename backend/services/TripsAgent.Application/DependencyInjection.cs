@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
-using TripsAgent.Application.Documents;
 using TripsAgent.Application.Assets;
+using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
 using TripsAgent.Application.Payments;

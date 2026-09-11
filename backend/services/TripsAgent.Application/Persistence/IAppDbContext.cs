@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Assets;
+using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;

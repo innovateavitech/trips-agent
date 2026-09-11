@@ -6,6 +6,7 @@ import { authRoutes } from '../features/auth/routes';
 import { bookingRoutes } from '../features/booking/routes';
 import { bookingsRoutes } from '../features/bookings/routes';
 import { catalogRoutes } from '../features/catalog/routes';
+import { crmRoutes } from '../features/crm/routes';
 import { departuresRoutes } from '../features/departures/routes';
 import { DashboardPage } from '../features/dashboard';
 import { onboardingRoutes } from '../features/onboarding/routes';
@@ -62,6 +63,7 @@ export const appRoutes: RouteObject[] = [
               ...bookingsRoutes,
               ...catalogRoutes,
               ...departuresRoutes,
+              ...crmRoutes,
               ...walletRoutes,
               ...pricingRoutes,
               ...onboardingRoutes,

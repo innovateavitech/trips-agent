@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { AuthApi } from '../auth/auth-api';
 import { AuthProvider } from '../auth/auth-provider';
 import { CatalogApiProvider, type CatalogApi } from '../features/catalog';
+import { CrmApiProvider, type CrmApi } from '../features/crm';
 import { DashboardApiProvider, type DashboardApi } from '../features/dashboard';
 import { DeparturesApiProvider, type DeparturesApi } from '../features/departures';
 import { SearchApiProvider, type SearchApi } from '../features/search';
@@ -19,6 +20,7 @@ export interface AppAdapters {
   bookings: BookingsApi;
   catalog: CatalogApi;
   departures: DeparturesApi;
+  crm: CrmApi;
 }
 
 /**
@@ -45,7 +47,7 @@ export function AppProviders({
                 <BookingsApiProvider value={adapters.bookings}>
                   <CatalogApiProvider value={adapters.catalog}>
                     <DeparturesApiProvider value={adapters.departures}>
-                      {children}
+                      <CrmApiProvider value={adapters.crm}>{children}</CrmApiProvider>
                     </DeparturesApiProvider>
                   </CatalogApiProvider>
                 </BookingsApiProvider>

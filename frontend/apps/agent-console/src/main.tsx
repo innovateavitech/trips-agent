@@ -10,6 +10,7 @@ import { AUTH_MODE } from './app/settings';
 import { createHttpAuthApi } from './auth/http-auth-api';
 import { mockAuthApi } from './auth/mock/mock-auth-api';
 import { mockCatalogApi } from './features/catalog';
+import { mockCrmApi } from './features/crm';
 import { mockDashboardApi } from './features/dashboard';
 import { mockDeparturesApi } from './features/departures';
 import { mockSearchApi } from './features/search';
@@ -30,6 +31,7 @@ import './index.css';
  *   bookings     mock until the orders endpoints exist (#42, #44)
  *   catalog    mock until the product API exists (issue 161)
  *   departures mock until the departures API exists (build plan F6)
+ *   crm        mock until the CRM API exists (build plan F7)
  */
 const adapters: AppAdapters = {
   auth: AUTH_MODE === 'mock' ? mockAuthApi : createHttpAuthApi({ api, publicApi }),
@@ -40,6 +42,7 @@ const adapters: AppAdapters = {
   bookings: mockBookingsApi,
   catalog: mockCatalogApi,
   departures: mockDeparturesApi,
+  crm: mockCrmApi,
 };
 
 const queryClient = createQueryClient();

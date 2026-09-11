@@ -8,6 +8,18 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
     /// <inheritdoc />
     public partial class AddDocumentNumbering : Migration
     {
+        /// <summary>The tables this migration creates that one agency owns, each policed by agency_id.</summary>
+        internal static readonly string[] PolicedTables =
+        [
+            "documents.document_number_formats",
+            "documents.document_number_sequences",
+            "documents.generated_documents",
+        ];
+
+        // The same InitPlan-wrapped calls AddRowLevelSecurity uses; see the note there.
+        private const string PlatformScope = "(SELECT tenancy.platform_scope_active())";
+        private const string CurrentAgency = "(SELECT tenancy.current_agency_id())";
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -212,11 +224,48 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     FOR EACH ROW
                     EXECUTE FUNCTION documents.enforce_sequence_step();
                 """);
+
+            // ------------------------------------------------------------------ the application role
+            //
+            // AddRowLevelSecurity granted the runtime role its tables schema by schema, and its default
+            // privileges only cover the schemas that existed then. documents is new, so it is granted
+            // here — and narrower than the blanket grant: no DELETE on any of the three. A counter, a
+            // format or an issued document is never deleted. The triggers above refuse the rewrites
+            // that matter even to the owner; the missing grant is a wall in front of them.
+            migrationBuilder.Sql($"""
+                GRANT USAGE ON SCHEMA documents TO {AddRowLevelSecurity.ApplicationRole};
+                GRANT SELECT, INSERT, UPDATE ON documents.document_number_formats TO {AddRowLevelSecurity.ApplicationRole};
+                GRANT SELECT, INSERT, UPDATE ON documents.document_number_sequences TO {AddRowLevelSecurity.ApplicationRole};
+                GRANT SELECT, INSERT, UPDATE ON documents.generated_documents TO {AddRowLevelSecurity.ApplicationRole};
+                """);
+
+            // ------------------------------------------------------------------ row-level security
+            //
+            // All three are owned by one agency through agency_id, so they get the policy every such
+            // table has: the caller's own agency, or the platform scope. This migration was written
+            // before row-level security reached main, and carried neither the grants nor the policies.
+            foreach (var table in PolicedTables)
+            {
+                migrationBuilder.Sql($"""
+                    ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;
+                    -- FORCE: without it the table's owner is exempt, and a deployment that connects as
+                    -- the owner would be silently unpoliced.
+                    ALTER TABLE {table} FORCE ROW LEVEL SECURITY;
+                    CREATE POLICY tenant_isolation ON {table}
+                        USING ({PlatformScope} OR agency_id = {CurrentAgency})
+                        WITH CHECK ({PlatformScope} OR agency_id = {CurrentAgency});
+                    """);
+            }
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            foreach (var table in PolicedTables)
+            {
+                migrationBuilder.Sql($"DROP POLICY IF EXISTS tenant_isolation ON {table};");
+            }
+
             // The triggers go with their tables; their functions have to be dropped by name.
             migrationBuilder.DropTable(
                 name: "document_number_formats",

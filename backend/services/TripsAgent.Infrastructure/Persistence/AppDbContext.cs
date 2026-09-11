@@ -9,6 +9,7 @@ using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
+using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
 using TripsAgent.Infrastructure.Messaging;
@@ -158,6 +159,12 @@ public class AppDbContext : DbContext, IAppDbContext
 
     /// <summary>Discrepancies the nightly integrity audit found. Not tenant-scoped; see IAppDbContext.</summary>
     public DbSet<ReconciliationException> ReconciliationExceptions => Set<ReconciliationException>();
+
+    /// <inheritdoc />
+    public DbSet<MarkupRule> MarkupRules => Set<MarkupRule>();
+
+    /// <inheritdoc />
+    public DbSet<PriceQuote> PriceQuotes => Set<PriceQuote>();
 
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.

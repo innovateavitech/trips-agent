@@ -15,6 +15,7 @@ using TripsAgent.Infrastructure.Identity;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Notifications;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Pricing;
 using TripsAgent.Infrastructure.Storage;
 using TripsAgent.Infrastructure.Tenancy;
 
@@ -170,6 +171,10 @@ public static class DependencyInjection
             sp.GetRequiredService<AdminDbContextFactory>().Create(
                 sp.GetRequiredService<ITenantContext>(),
                 sp.GetRequiredService<IPlatformScope>()));
+
+        // Each agency's markup rules, cached in Redis — or read straight from the database when no
+        // Redis is configured. Either way pricing gives the same answer; only the speed differs.
+        services.AddPricingCache(configuration);
 
         return services;
     }

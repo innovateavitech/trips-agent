@@ -141,6 +141,26 @@ public static partial class RetentionCatalogue
         new("pricing.markup_rules", RetentionTreatment.Protected, SevenYears,
             "Explains the markup on every historic order line."),
 
+        // ---------------------------------------------------------------- the agency's own catalog
+        new("catalog.products", RetentionTreatment.Kept, "While the agency exists. Archived, never deleted",
+            "What the agency sells. Order lines name the product and freeze their own title and price, so this is not a financial record."),
+        new("catalog.product_media", RetentionTreatment.Kept, "With their product",
+            "Which uploads a product shows. Detaching one never deletes the asset."),
+        new("catalog.product_categories", RetentionTreatment.Kept, "While in use",
+            "Configuration: the agency's own categories and themes."),
+        new("catalog.product_category_map", RetentionTreatment.Kept, "With their product",
+            "Which categories and themes a product carries."),
+        new("catalog.tour_itinerary_days", RetentionTreatment.Kept, "With their product",
+            "The day-by-day itinerary. Replaced whenever the product is saved."),
+        new("catalog.product_inclusions", RetentionTreatment.Kept, "With their product",
+            "What the price includes and leaves out. Replaced whenever the product is saved."),
+        new("catalog.product_price_variants", RetentionTreatment.Kept, "With their product",
+            "Current prices only. A quote or order line froze its own copy of the price it used."),
+        new("catalog.visa_details", RetentionTreatment.Kept, "With their product",
+            "What a visa product says about the visa."),
+        new("catalog.visa_document_requirements", RetentionTreatment.Kept, "With their product",
+            "The applicant's checklist: a list of documents, not anyone's documents."),
+
         // ---------------------------------------------------------------- supplier bookings
         new("supplier.supplier_bookings", RetentionTreatment.Protected, SevenYears,
             "The booking with the airline or operator — the cost side of the order line."),

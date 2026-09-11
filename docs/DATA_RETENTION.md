@@ -79,6 +79,20 @@ The source of truth is `RetentionCatalogue.Tables` in
 | `pricing.price_quotes` | No | At least 7 years | Protected | The priced snapshot each order line was placed from |
 | `pricing.markup_rules` | No | At least 7 years | Protected | Explains the markup on every historic order line |
 
+### The agency's catalog
+
+| Table | Personal data | Kept for | Treatment | Why |
+|---|---|---|---|---|
+| `catalog.products` | No | While the agency exists; archived, never deleted | Kept | What the agency sells. Order lines freeze their own title and price, so this is not a financial record |
+| `catalog.product_media` | No | With their product | Kept | Which uploads a product shows; detaching one never deletes the asset |
+| `catalog.product_categories` | No | While in use | Kept | Configuration: the agency's own categories and themes |
+| `catalog.product_category_map` | No | With their product | Kept | Which categories and themes a product carries |
+| `catalog.tour_itinerary_days` | No | With their product | Kept | The itinerary; replaced whenever the product is saved |
+| `catalog.product_inclusions` | No | With their product | Kept | What the price includes and leaves out; replaced whenever the product is saved |
+| `catalog.product_price_variants` | No | With their product | Kept | Current prices only; a quote or order line froze its own copy |
+| `catalog.visa_details` | No | With their product | Kept | What a visa product says about the visa |
+| `catalog.visa_document_requirements` | No | With their product | Kept | The applicant's checklist: a list of documents, not anyone's documents |
+
 ### Supplier bookings
 
 | Table | Personal data | Kept for | Treatment | Why |

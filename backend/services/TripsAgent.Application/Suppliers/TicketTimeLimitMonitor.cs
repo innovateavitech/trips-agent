@@ -1,6 +1,8 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using TripsAgent.Application.Checkout;
+using TripsAgent.Application.Messaging;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
@@ -50,6 +52,7 @@ public sealed partial class TicketTimeLimitMonitor
     private readonly ISupplierBookingLocks _bookingLocks;
     private readonly IPlatformScope _platformScope;
     private readonly INotifier _notifier;
+    private readonly IOutbox _outbox;
     private readonly TimeProvider _clock;
     private readonly ILogger<TicketTimeLimitMonitor> _logger;
 
@@ -59,6 +62,7 @@ public sealed partial class TicketTimeLimitMonitor
         ISupplierBookingLocks bookingLocks,
         IPlatformScope platformScope,
         INotifier notifier,
+        IOutbox outbox,
         TimeProvider clock,
         ILogger<TicketTimeLimitMonitor> logger)
     {
@@ -67,6 +71,7 @@ public sealed partial class TicketTimeLimitMonitor
         _bookingLocks = bookingLocks;
         _platformScope = platformScope;
         _notifier = notifier;
+        _outbox = outbox;
         _clock = clock;
         _logger = logger;
     }
@@ -128,15 +133,28 @@ public sealed partial class TicketTimeLimitMonitor
 
                     if (line is not null)
                     {
-                        FlagForResolution(line, now);
-                        await ReleaseHoldsAsync(line, now, token);
-                        await NotifyAsync(
-                            booking,
-                            line,
-                            NotificationTemplateCatalog.BookingExpired,
-                            $"{NotificationTemplateCatalog.BookingExpired}:{booking.Id}",
-                            [],
-                            token);
+                        var order = await _db.Orders.Include(candidate => candidate.Lines)
+                            .SingleAsync(candidate => candidate.Id == line.OrderId, token);
+
+                        if (order.PaidAt is null)
+                        {
+                            // A price confirmed and never paid for: nothing is held and nobody's money is at
+                            // stake, so there is nothing to resolve. The order is simply closed.
+                            line.RecordFulfilment(FulfilmentStatus.Cancelled, now);
+                            order.ChangeStatus(OrderStatus.Cancelled, now, "The fare's ticket time limit passed before it was paid for.");
+                        }
+                        else
+                        {
+                            FailedLines.FlagForResolution(order, line, ExpiredLineReason, now, _outbox);
+                            await ReleaseHoldsAsync(line, now, token);
+                            await NotifyAsync(
+                                booking,
+                                line,
+                                NotificationTemplateCatalog.BookingExpired,
+                                $"{NotificationTemplateCatalog.BookingExpired}:{booking.Id}",
+                                [],
+                                token);
+                        }
                     }
 
                     await _db.SaveChangesAsync(token);
@@ -206,15 +224,6 @@ public sealed partial class TicketTimeLimitMonitor
             _db.ChangeTracker.Clear();
             LogConflict(_logger, ex);
             return false;
-        }
-    }
-
-    /// <summary>Sends the line to the agent's resolution queue (#44), unless it has already moved on.</summary>
-    private static void FlagForResolution(OrderLine line, DateTimeOffset now)
-    {
-        if (line.FulfilmentStatus is FulfilmentStatus.Pending or FulfilmentStatus.Reserved or FulfilmentStatus.Confirming)
-        {
-            line.RecordFulfilment(FulfilmentStatus.FailedNeedsResolution, now, ExpiredLineReason);
         }
     }
 

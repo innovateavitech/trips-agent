@@ -270,7 +270,7 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         {
             var wallet = await db.Wallets.SingleAsync(candidate => candidate.Id == WalletId);
             db.WalletHolds.Add(wallet.PlaceHold(new Money(netMinor), now, TimeSpan.FromDays(2), order.Id));
-            order.ChangeStatus(OrderStatus.Paid, now, "Paid from the agency wallet (held until ticketed).");
+            order.RecordPayment(OrderPaymentMethod.Wallet, $"pay:{line.Id:N}", now);
         }
 
         await db.SaveChangesAsync();

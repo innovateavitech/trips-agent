@@ -139,6 +139,7 @@ public static class SchedulingRegistration
         // Workers: each claims its bookings with SKIP LOCKED.
         services.AddScoped<Suppliers.SupplierBookingStatusPollJob>();
         services.AddScoped<Suppliers.TicketTimeLimitMonitorJob>();
+        services.AddScoped<Checkout.CheckoutSweepJob>();
         services.AddScoped<IAssetPipelineDispatcher, HangfireAssetPipelineDispatcher>();
 
         return services;

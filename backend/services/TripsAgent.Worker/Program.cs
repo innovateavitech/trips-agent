@@ -100,4 +100,8 @@ AssetSweepSchedule.Register(recurringJobs);
 SupplierBookingStatusPollSchedule.Register(recurringJobs);
 TicketTimeLimitMonitorSchedule.Register(recurringJobs);
 
+// The checkout's one unwatched wait: paid for, but the issue message never ran (#42). Sending it again
+// is safe — the issuer sends the supplier nothing for a booking that is already issuing.
+TripsAgent.Infrastructure.Checkout.CheckoutSweepSchedule.Register(recurringJobs);
+
 await host.RunAsync();

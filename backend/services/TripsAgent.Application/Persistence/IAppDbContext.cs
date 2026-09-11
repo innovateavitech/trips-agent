@@ -79,6 +79,12 @@ public interface IAppDbContext
     /// <summary>Every attempt to take money, successful or not.</summary>
     public DbSet<PaymentTransaction> PaymentTransactions { get; }
 
+    /// <summary>
+    /// Money given back for an order line — one per line, each with its reason and, for a supplier
+    /// reversal, the status poll behind it. Append-only.
+    /// </summary>
+    public DbSet<Refund> Refunds { get; }
+
     /// <summary>Gateway deliveries, recorded so each is processed exactly once.</summary>
     public DbSet<PaymentWebhookEvent> PaymentWebhookEvents { get; }
 

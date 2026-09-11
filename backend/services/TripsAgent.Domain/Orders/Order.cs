@@ -126,6 +126,18 @@ public sealed class Order : Entity, IAuditableEntity, ITenantScoped
 
     public DateTimeOffset? PlacedAt { get; private set; }
 
+    /// <summary>How the order was paid, once it has been.</summary>
+    public OrderPaymentMethod? PaidFrom { get; private set; }
+
+    /// <summary>When the payment was taken and the booking began. What the console calls "booked".</summary>
+    public DateTimeOffset? PaidAt { get; private set; }
+
+    /// <summary>
+    /// The key the buyer sent with the payment. Unique per agency: the same key again is the same
+    /// booking, never a second charge — the idempotency key at the API's edge.
+    /// </summary>
+    public string? PaymentIdempotencyKey { get; private set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
@@ -144,6 +156,13 @@ public sealed class Order : Entity, IAuditableEntity, ITenantScoped
     /// </summary>
     public void ChangeStatus(OrderStatus next, DateTimeOffset now, string? reason = null, Guid? changedByUserId = null)
     {
+        if (next == Status)
+        {
+            // Nothing changed, so nothing to record — and the trail's own CHECK refuses a row that
+            // moves an order to the status it already has.
+            return;
+        }
+
         if (Status is OrderStatus.Cancelled or OrderStatus.Refunded)
         {
             throw new InvalidOperationException($"Order {OrderNumber} is {Status} and cannot become {next}.");
@@ -155,6 +174,35 @@ public sealed class Order : Entity, IAuditableEntity, ITenantScoped
 
         Status = next;
         UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Records that the order has been paid, and moves it to <see cref="OrderStatus.Paid"/>. Once.
+    /// </summary>
+    /// <param name="method">Where the money came from.</param>
+    /// <param name="idempotencyKey">The buyer's key for this payment attempt.</param>
+    /// <param name="now">When.</param>
+    /// <param name="paidByUserId">The agent who pressed Pay, when there was one.</param>
+    public void RecordPayment(OrderPaymentMethod method, string idempotencyKey, DateTimeOffset now, Guid? paidByUserId = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(idempotencyKey);
+
+        if (PaidAt is not null || Status != OrderStatus.PendingPayment)
+        {
+            throw new InvalidOperationException($"Order {OrderNumber} is {Status}; it can be paid for once, while pending payment.");
+        }
+
+        PaidFrom = method;
+        PaidAt = now;
+        PaymentIdempotencyKey = idempotencyKey.Trim();
+
+        ChangeStatus(
+            OrderStatus.Paid,
+            now,
+            method == OrderPaymentMethod.Wallet
+                ? "Booked and paid from the agency wallet, held until the ticket is issued."
+                : "Booked and paid by card.",
+            paidByUserId);
     }
 
     private static Money Sum(IReadOnlyCollection<OrderLine> lines, Func<OrderLine, Money> pick)

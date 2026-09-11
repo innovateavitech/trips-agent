@@ -40,21 +40,18 @@ internal static partial class TripsAfricaMapping
     };
 
     /// <summary>Lagos time, all year: Nigeria keeps no daylight saving.</summary>
-    internal static readonly TimeSpan NigeriaOffset = TimeSpan.FromHours(1);
+    internal static readonly TimeSpan NigeriaOffset = Airports.NigeriaOffset;
 
     /// <summary>
     /// Nigerian airports, which decide the domestic endpoint and the time zone of a wall-clock time.
     /// </summary>
     /// <remarks>
     /// The supplier has two flight search endpoints and says nothing about which serves what beyond
-    /// their names, so a search is domestic when every airport in it is on this list. A new airport
-    /// is one line here; until it is added, its flights are searched internationally.
+    /// their names, so a search is domestic when every airport in it is on this list. The list itself
+    /// lives in <see cref="Airports"/>, where the bookings screens read it too; until an airport is
+    /// added there, its flights are searched internationally.
     /// </remarks>
-    internal static readonly FrozenSet<string> NigerianAirports = new[]
-    {
-        "ABB", "ABV", "AKR", "BCU", "BNI", "CBQ", "DKA", "ENU", "GMO", "IBA", "ILR", "JOS", "KAD",
-        "KAN", "LOS", "MDI", "MIU", "MXJ", "PHC", "QOW", "QRW", "QUO", "SKO", "YOL",
-    }.ToFrozenSet(StringComparer.Ordinal);
+    internal static readonly FrozenSet<string> NigerianAirports = Airports.Nigerian;
 
     // ------------------------------------------------------------------------------ flight search
 

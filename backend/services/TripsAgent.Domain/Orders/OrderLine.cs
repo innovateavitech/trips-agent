@@ -1,3 +1,4 @@
+using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Pricing;
 
@@ -18,8 +19,12 @@ namespace TripsAgent.Domain.Orders;
 /// booking row points back here through a unique <c>order_line_id</c>, so one line has at most one
 /// supplier booking.
 /// </para>
+/// <para>
+/// <b>Audit-logged</b>: every change — a failure, a resolution, who resolved it — is written to the
+/// audit trail with its actor, which is what the resolution queue (#44) promises.
+/// </para>
 /// </remarks>
-public sealed class OrderLine : Entity, IAuditableEntity, ITenantScoped
+public sealed class OrderLine : Entity, IAuditableEntity, ITenantScoped, IAuditLogged
 {
     private OrderLine()
     {
@@ -122,6 +127,12 @@ public sealed class OrderLine : Entity, IAuditableEntity, ITenantScoped
 
     public DateTimeOffset? ResolvedAt { get; private set; }
 
+    /// <summary>
+    /// When the line went to the resolution queue (#44). With <see cref="ResolvedAt"/>, how long a person
+    /// took to deal with it — which is how a slow one gets noticed and escalated.
+    /// </summary>
+    public DateTimeOffset? ResolutionOpenedAt { get; private set; }
+
     /// <summary>When the order was placed. Once set, the money columns are frozen by the database.</summary>
     public DateTimeOffset? PlacedAt { get; private set; }
 
@@ -153,6 +164,7 @@ public sealed class OrderLine : Entity, IAuditableEntity, ITenantScoped
             ArgumentException.ThrowIfNullOrWhiteSpace(failureReason);
             FailureReason = failureReason.Trim();
             ResolutionStatus ??= Orders.ResolutionStatus.Open;
+            ResolutionOpenedAt ??= now;
         }
 
         FulfilmentStatus = status;

@@ -79,6 +79,17 @@ public static class DependencyInjection
         services.AddScoped<SupplierBookingStatusPoller>();
         services.AddScoped<TicketTimeLimitMonitor>();
 
+        // The checkout (#42): confirm and pay, capture on the ticket, and sweep up lost issue messages.
+        // Reversals (#43) and the agent's resolution queue (#44) give money back through one path.
+        services.AddScoped<LedgerAccounts>();
+        services.AddScoped<Checkout.CheckoutService>();
+        services.AddScoped<Checkout.CheckoutCompletion>();
+        services.AddScoped<Checkout.CheckoutSweeper>();
+        services.AddScoped<Checkout.WalletRefunds>();
+        services.AddScoped<Checkout.PaymentReversalService>();
+        services.AddScoped<Checkout.ResolutionService>();
+        services.AddScoped<Checkout.BookingQueries>();
+
         // The request-side half of an upload. The pipeline itself — ProcessAssetHandler — is
         // registered by AddAssetProcessing in the Worker only, because it needs a virus scanner
         // and an image library that the API has no business loading.

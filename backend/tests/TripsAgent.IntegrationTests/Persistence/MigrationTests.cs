@@ -225,6 +225,9 @@ public class MigrationTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton(context);
+
+        // The migrator resolves the schema owner's context by key (ADR-0006); here it is the same one.
+        services.AddKeyedSingleton(AdminDbContextFactory.ServiceKey, context);
         services.AddSingleton<TripsAgent.Application.Tenancy.IPlatformScope>(TestTenancy.None().Scope);
         return services.BuildServiceProvider();
     }

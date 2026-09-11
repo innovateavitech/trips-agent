@@ -52,3 +52,4 @@ afternoon.
 | [0003](0003-never-retry-ticket-issuance.md) | Never retry the supplier's ticket-issue call | Accepted |
 | [0004](0004-masstransit-v8-and-hangfire.md) | Pin MassTransit to v8, and split cron from events | Proposed |
 | [0005](0005-own-the-transactional-outbox.md) | Own the outbox table and dispatcher; MassTransit carries the messages | Proposed |
+| [0006](0006-row-level-security-backstop.md) | Enforce tenant isolation in PostgreSQL too, with row-level security | Accepted |

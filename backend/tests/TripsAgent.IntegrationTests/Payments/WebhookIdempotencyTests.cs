@@ -375,8 +375,14 @@ public class WebhookIdempotencyTests
         var clock = new ManualClock(DateTimeOffset.UtcNow);
         var tenancy = TestTenancy.None();
 
-        var db = await _postgres.CreateEmptyDatabaseAsync(name, tenancy.Tenant, tenancy.Scope, clock);
-        await db.Database.MigrateAsync();
+        await using (var setup = await _postgres.CreateEmptyDatabaseAsync(name))
+        {
+            await setup.Database.MigrateAsync();
+        }
+
+        // As the application role, so the whole money path — receive, drain, verify, post — runs
+        // under row-level security (ADR-0006). A flow that only works as a superuser fails here.
+        var db = _postgres.Connect(name, tenancy.Tenant, tenancy.Scope, clock);
 
         var reference = $"TA-{Guid.CreateVersion7():N}"[..30];
 

@@ -58,7 +58,10 @@ public class AgencySettingsPersistenceTests
         context.AgencySettings.Add(AgencySettings.CreateDefault(agency));
         await context.SaveChangesAsync();
 
-        await using var connection = new NpgsqlConnection(context.Database.GetConnectionString());
+        // As the owner: this checks a column's type, and a raw connection has no tenant set, so
+        // row-level security would rightly show it nothing.
+        var database = new NpgsqlConnectionStringBuilder(context.Database.GetConnectionString()).Database!;
+        await using var connection = new NpgsqlConnection(_postgres.ConnectionStringFor(database, asApplicationRole: false));
         await connection.OpenAsync();
 
         // If this were a text column pretending to be JSON, jsonb_array_length would error.

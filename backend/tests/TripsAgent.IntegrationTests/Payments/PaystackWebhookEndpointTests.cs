@@ -56,16 +56,17 @@ public sealed class PaystackWebhookEndpointTests : IAsyncLifetime, IDisposable
             await ReferenceDataSeeder.EnsureAsync(setup, TestTenancy.None().Scope);
         }
 
-        var connectionString = new Npgsql.NpgsqlConnectionStringBuilder(_postgres.ConnectionString)
-        {
-            Database = database,
-        }.ConnectionString;
+        // The API runs as the role row-level security polices and migrates as the owner — the same
+        // split as production (ADR-0006). A flow that only works as a superuser fails here.
+        var connectionString = _postgres.ConnectionStringFor(database, asApplicationRole: true);
+        var adminConnectionString = _postgres.ConnectionStringFor(database, asApplicationRole: false);
 
         // Environment variables, because a configuration source added through the factory loses
         // to appsettings.Development.json.
         _overrides =
         [
             ("ConnectionStrings__Postgres", connectionString),
+            ("ConnectionStrings__PostgresAdmin", adminConnectionString),
             ("Paystack__SecretKey", SecretKey),
         ];
 

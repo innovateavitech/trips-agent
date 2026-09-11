@@ -66,6 +66,8 @@ Every business table has `agency_id` and EF Core filters it automatically.
 `.IgnoreQueryFilters()` reads **every agency's data at once**. Analyser `TRIPS002` fails the build
 if it appears in production code; the only exceptions live in `backend/IgnoreQueryFiltersAllowlist.txt`,
 and that file is empty. To read across agencies, use `IPlatformScope.Enter(reason)` — it is logged.
+Behind the filter, PostgreSQL row-level security enforces the same rule: the app connects as
+`tripsagent_app`, which the policies bind ([ADR-0006](docs/adr/0006-row-level-security-backstop.md)).
 If you think you need an exception, stop and ask the user — a mistake here leaks one travel agency's
 customers and prices to another.
 
@@ -243,7 +245,7 @@ Full glossary: [README.md §3](README.md#3-glossary--read-this-first)
 - [ ] Tests cover the new behaviour
 - [ ] No commented-out code, no `Console.WriteLine` / `console.log`
 - [ ] No secrets; new config added to `.env.example`
-- [ ] New tenant-scoped tables have `agency_id` + a filter
+- [ ] New tenant-scoped tables have `agency_id`, a filter, and a row-level security policy (ADR-0006)
 - [ ] Money in minor units
 - [ ] Nothing traveller-facing hard-codes the Trips brand
 - [ ] README or an ADR updated if a decision changed

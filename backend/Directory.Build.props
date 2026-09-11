@@ -43,6 +43,26 @@
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)MoneyTypeAllowlist.txt" />
+
+    <!-- TRIPS002 fails the build when production code calls IgnoreQueryFilters(), which reads
+         every agency's rows at once (CLAUDE.md rule 3). Same analyser project, same allowlist
+         shape; its exceptions live in IgnoreQueryFiltersAllowlist.txt, which is empty. -->
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)IgnoreQueryFiltersAllowlist.txt" />
   </ItemGroup>
+
+  <!-- Sync-conflict copies. iCloud Desktop sync and Dropbox leave "Foo 2.cs" beside "Foo.cs", and
+       every *.cs is compiled — so one copy produces a wall of CS0101 "already contains a definition"
+       errors that never mention the cause, while .gitignore keeps git status looking clean.
+
+       This stops the build first and names the files. It deliberately deletes nothing: a conflict
+       copy can hold an edit that exists nowhere else, so a person compares before removing it. -->
+  <Target Name="RejectSyncConflictCopies" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <_SyncConflictCopy Include="@(Compile)"
+                         Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Filename)', ' \d+$'))" />
+    </ItemGroup>
+    <Error Condition="'@(_SyncConflictCopy)' != ''"
+           Text="Sync-conflict copies found — files like 'Foo 2.cs' left beside 'Foo.cs' by iCloud or Dropbox, each redefining a type: @(_SyncConflictCopy->'%(Identity)', ', '). Compare each with its original (cmp 'Foo 2.cs' Foo.cs) and delete it if identical. If it differs, it may hold an edit that exists nowhere else — look before deleting." />
+  </Target>
 
 </Project>

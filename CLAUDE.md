@@ -63,9 +63,11 @@ the build pass.** Rename the member or use `long`.
 
 ### 3. Never bypass the tenant filter
 Every business table has `agency_id` and EF Core filters it automatically.
-`.IgnoreQueryFilters()` reads **every agency's data at once**. There are two or three legitimate
-uses in the whole codebase, all in platform-admin reporting, all audited. If it seems necessary,
-stop and ask the user — a mistake here leaks one travel agency's customers and prices to another.
+`.IgnoreQueryFilters()` reads **every agency's data at once**. Analyser `TRIPS002` fails the build
+if it appears in production code; the only exceptions live in `backend/IgnoreQueryFiltersAllowlist.txt`,
+and that file is empty. To read across agencies, use `IPlatformScope.Enter(reason)` — it is logged.
+If you think you need an exception, stop and ask the user — a mistake here leaks one travel agency's
+customers and prices to another.
 
 ### 4. Nothing traveller-facing may reference Trips
 Storefront pages, invoices, vouchers, emails: all use the **agent's** name, logo and colours from
@@ -225,6 +227,9 @@ Full glossary: [README.md §3](README.md#3-glossary--read-this-first)
   are agent-authored catalog products we host ourselves.
 - **Confirm-price returns an array** for domestic and round-trip. Every element's SHA-512 hash
   must be validated independently.
+- **Files named `Foo 2.cs` are sync-conflict copies** (iCloud Desktop sync, Dropbox). .NET compiles
+  every `*.cs`, so one breaks the build — and they are git-ignored, so `git status` looks clean. The
+  build stops and names them; compare each with its original before deleting it.
 - **The FRD contradicts itself in places.** 27 open questions are listed in
   [§7 of the plan](docs/ARCHITECTURE_AND_DELIVERY_PLAN.md). If a task touches one, flag it rather
   than guessing.
@@ -233,6 +238,7 @@ Full glossary: [README.md §3](README.md#3-glossary--read-this-first)
 
 ## Before you finish a change
 
+- [ ] Ran `/verify` — the same commands CI runs, from the right directories
 - [ ] Does one thing
 - [ ] Tests cover the new behaviour
 - [ ] No commented-out code, no `Console.WriteLine` / `console.log`

@@ -12,9 +12,22 @@ It takes about five minutes from a clean clone.
 
 - **Docker** running (PostgreSQL, Mailpit, RabbitMQ come from `docker-compose.yml`)
 - **.NET 10 SDK** and **pnpm**
-- A `.env` with Paystack **test** keys, if you want the live top-up:
-  `Paystack__SecretKey=sk_test_…`. Without it every other step still works; only the top-up
-  stops at "the payment provider is not responding".
+- Paystack **test** keys, if you want the live top-up — and note *where* they have to be:
+
+  ```bash
+  export Paystack__SecretKey=sk_test_…      # from .env, in the shell that runs the API
+  export Paystack__PublicKey=pk_test_…
+  ```
+
+  `.env` alone is **not** enough. Docker Compose reads that file; `dotnet run` does not, so the
+  API starts with no key and the top-up fails with *"the payment provider is not responding"*.
+  Export the two variables in the terminal you start the API from.
+
+  Do **not** `source .env` wholesale to achieve that. It carries a placeholder
+  `Jwt__SigningKey` which is not valid base64, and it overrides the working development value —
+  the API then throws on every authenticated request. Export the two Paystack lines only.
+
+  Without the keys every other step still works; only the top-up stops.
 
 Two machine-level things that will spoil a demo if you meet them cold:
 
@@ -127,6 +140,7 @@ built. Say so rather than letting anyone assume a ticket was issued.
 |---|---|
 | `/health` says **Degraded**, mentioning row-level security | Expected locally. The app connects as the docker superuser, which bypasses RLS. [ADR-0006](adr/0006-row-level-security-backstop.md) explains how to run as production does |
 | Wallet says **"no wallet yet"** | The database predates the wallet backfill. Re-run `-- migrate` |
-| Top-up returns **502** | Usually no Paystack key in `.env`. The API log now carries Paystack's own message — read it |
+| Top-up returns **502** | Almost always the Paystack key missing from the API's *environment* (see §1 — `.env` is not read by `dotnet run`). The API log carries Paystack's own words: `401 Format is Authorization Bearer [secret key]` means no key reached it |
+| Every authenticated call 500s with **`Jwt:SigningKey is not valid base64`** | The whole `.env` was sourced into the API's shell. Start a fresh terminal and export only the two Paystack variables |
 | The KYB queue is empty | Every submission has been decided. The queue only shows undecided ones today |
 | Sign-in works, then every request 401s | The API restarted with a new signing key. Sign in again |

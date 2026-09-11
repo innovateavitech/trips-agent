@@ -23,6 +23,7 @@ export {
   DropdownMenuTrigger,
 } from './components/dropdown-menu';
 export { Input, type InputProps } from './components/input';
+export { PasswordInput, type PasswordInputProps } from './components/password-input';
 export {
   SegmentedControl,
   segmentVariants,

@@ -10,13 +10,25 @@ export class ApiError extends Error {
   readonly status: number;
   readonly title: string;
   readonly detail: string | undefined;
+  /**
+   * Per-field messages from a `ValidationProblemDetails` body, keyed as the API
+   * keys them — PascalCase for most endpoints. Empty for every other error.
+   * Read it with {@link fieldError}, which handles the casing.
+   */
+  readonly fieldErrors: Readonly<Record<string, string[]>>;
 
-  constructor(status: number, title: string, detail?: string) {
+  constructor(
+    status: number,
+    title: string,
+    detail?: string,
+    fieldErrors: Record<string, string[]> = {},
+  ) {
     super(detail ? `${title} ${detail}` : title);
     this.name = 'ApiError';
     this.status = status;
     this.title = title;
     this.detail = detail;
+    this.fieldErrors = fieldErrors;
   }
 
   /** Builds one from whatever the API returned — ProblemDetails, or nothing useful. */
@@ -24,6 +36,7 @@ export class ApiError extends Error {
     const problem = (body && typeof body === 'object' ? body : {}) as {
       title?: unknown;
       detail?: unknown;
+      errors?: unknown;
     };
 
     const title =
@@ -32,8 +45,43 @@ export class ApiError extends Error {
         : `The request failed (${response.status}).`;
     const detail = typeof problem.detail === 'string' ? problem.detail : undefined;
 
-    return new ApiError(response.status, title, detail);
+    return new ApiError(response.status, title, detail, readFieldErrors(problem.errors));
   }
+}
+
+/**
+ * Pulls the `errors` bag out of a `ValidationProblemDetails` body, keeping only
+ * entries shaped the way ASP.NET writes them: a field name against an array of
+ * messages. Anything else is ignored rather than guessed at.
+ */
+function readFieldErrors(errors: unknown): Record<string, string[]> {
+  if (!errors || typeof errors !== 'object') return {};
+
+  const found: Record<string, string[]> = {};
+  for (const [field, messages] of Object.entries(errors as Record<string, unknown>)) {
+    if (Array.isArray(messages)) {
+      const strings = messages.filter((message): message is string => typeof message === 'string');
+      if (strings.length > 0) found[field] = strings;
+    }
+  }
+  return found;
+}
+
+/**
+ * The API's first message for a field, or `undefined`.
+ *
+ * Matched case-insensitively: the server keys most of these in PascalCase
+ * (`Email`, `BusinessName`) and one endpoint in camelCase (`newPassword`), while
+ * a form's own state is camelCase throughout. Callers should not have to care.
+ */
+export function fieldError(error: unknown, field: string): string | undefined {
+  if (!(error instanceof ApiError)) return undefined;
+
+  const wanted = field.toLowerCase();
+  for (const [key, messages] of Object.entries(error.fieldErrors)) {
+    if (key.toLowerCase() === wanted) return messages[0];
+  }
+  return undefined;
 }
 
 /**

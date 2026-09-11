@@ -58,4 +58,27 @@ describe('EmptyState', () => {
     expect(screen.getByText('No bookings yet')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Search flights' })).toBeTruthy();
   });
+
+  it('leaves the title as plain text by default, so a nested state adds no outline rung', () => {
+    render(<EmptyState title="No bookings yet" />);
+
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.getByText('No bookings yet').tagName).toBe('P');
+  });
+
+  it('makes the title a heading at the level asked for, when it IS the page', () => {
+    render(<EmptyState size="page" title="We could not find that page" headingLevel={1} />);
+
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading.textContent).toBe('We could not find that page');
+  });
+
+  it('keeps the title looking the same either way', () => {
+    const { unmount } = render(<EmptyState title="Nothing here" />);
+    const asText = screen.getByText('Nothing here').className;
+    unmount();
+
+    render(<EmptyState title="Nothing here" headingLevel={2} />);
+    expect(screen.getByRole('heading', { level: 2 }).className).toBe(asText);
+  });
 });

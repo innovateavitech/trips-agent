@@ -42,14 +42,14 @@ jobs:
     name: audit-api
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The gate proves itself before it is trusted: these tests fail if the script would pass a
       # High, an expired allowlist entry, or an audit that never actually ran.
       - name: Test the audit script
         run: python3 -m unittest discover -s scripts/tests -v
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -67,17 +67,17 @@ jobs:
     name: audit-web
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Test the audit script
         run: python3 -m unittest discover -s scripts/tests -v
 
       # pnpm audit reads pnpm-lock.yaml and asks the registry about it. Nothing needs installing.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: frontend/package.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
 

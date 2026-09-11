@@ -80,11 +80,27 @@ export interface BookingDetail extends BookingListItem {
  */
 export type ResolutionAction = 'retry' | 'substitute' | 'refund';
 
+/** Which date the date filter reads: when the trip leaves, or when it was booked. */
+export type BookingDateField = 'departure' | 'booked';
+
 export interface BookingFilters {
   status: BookingStatus | 'all';
   product: ProductKind | 'all';
   /** Free text: a PNR, our reference, a traveller's name, a place. */
   query: string;
+  /** Whether `from` and `to` are travel dates or booking dates. */
+  dateField: BookingDateField;
+  /** `YYYY-MM-DD`, a day in Lagos, inclusive — or `''` for no earliest day. */
+  from: string;
+  /** `YYYY-MM-DD`, a day in Lagos, inclusive — or `''` for no latest day. */
+  to: string;
 }
 
-export const NO_BOOKING_FILTERS: BookingFilters = { status: 'all', product: 'all', query: '' };
+export const NO_BOOKING_FILTERS: BookingFilters = {
+  status: 'all',
+  product: 'all',
+  query: '',
+  dateField: 'departure',
+  from: '',
+  to: '',
+};

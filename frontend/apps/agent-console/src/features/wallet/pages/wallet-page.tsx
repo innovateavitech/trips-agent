@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Card } from '@trips/ui';
+import { Card, EmptyState, ErrorState } from '@trips/ui';
 import type { StatementFilters } from '../types';
 import { isLowBalance } from '../top-up-rules';
 import { STATEMENT_PAGE_SIZE, useStatement, useWalletSummary } from '../wallet-queries';
@@ -9,7 +9,6 @@ import { LowBalanceAlert } from '../components/low-balance-alert';
 import { StatementFiltersBar } from '../components/statement-filters-bar';
 import { StatementPagination } from '../components/statement-pagination';
 import { StatementTable, StatementTableSkeleton } from '../components/statement-table';
-import { EmptyState, ErrorState } from '../components/states';
 import { TopUpPanel } from '../components/top-up-panel';
 import { UnfinishedTopUpAlert } from '../components/unfinished-top-up-alert';
 
@@ -34,7 +33,7 @@ export function WalletPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
+    <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Wallet</h1>
         <p className="text-sm text-muted-foreground">
@@ -132,6 +131,6 @@ export function WalletPage() {
           />
         ) : null}
       </section>
-    </main>
+    </div>
   );
 }

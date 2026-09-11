@@ -6,6 +6,10 @@ coverage
 pnpm-lock.yaml
 **/generated/**
 
+# Written by the backend OpenApiDocumentTests (pnpm generate:api), compared as JSON,
+# and rewritten wholesale on every regeneration.
+packages/api-client/openapi.json
+
 # Markdown is hand-authored here, not machine-formatted.
 #
 # README.md, CLAUDE.md, CONTRIBUTING.md and everything under docs/ are written

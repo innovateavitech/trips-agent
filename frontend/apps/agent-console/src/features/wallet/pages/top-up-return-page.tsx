@@ -52,7 +52,7 @@ export function TopUpReturnPage() {
   }, [status, refreshWallet]);
 
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-col gap-6 p-4 sm:p-6">
+    <div className="flex w-full max-w-xl flex-col gap-6">
       <Card>
         <CardHeader>
           <CardTitle>Top-up</CardTitle>
@@ -67,7 +67,7 @@ export function TopUpReturnPage() {
           </div>
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }
 

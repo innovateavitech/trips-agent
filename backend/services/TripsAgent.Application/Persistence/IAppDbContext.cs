@@ -43,6 +43,8 @@ public interface IAppDbContext
 
     public DbSet<RefreshToken> RefreshTokens { get; }
 
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; }
+
     /// <summary>The audit trail behind the lockout rule.</summary>
     public DbSet<LoginAttempt> LoginAttempts { get; }
 

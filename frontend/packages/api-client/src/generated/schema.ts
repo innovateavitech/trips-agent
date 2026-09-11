@@ -359,6 +359,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pricing/markup-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListMarkupRules"];
+        put?: never;
+        post: operations["CreateMarkupRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pricing/markup-rules/{ruleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["ReplaceMarkupRule"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pricing/markup-rules/{ruleId}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RetireMarkupRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pricing/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewPrice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pricing/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPricingSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pricing/quotes/{quoteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPriceQuote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -466,6 +562,142 @@ export interface components {
         LoginRequest: {
             email: string;
             password: string;
+        };
+        MarkupRuleRequest: {
+            scope: string;
+            productType: null | string;
+            /** Format: uuid */
+            productId: null | string;
+            supplierCode: null | string;
+            currency: string;
+            calculationType: string;
+            /** Format: int32 */
+            percentBasisPoints: null | number | string;
+            /** Format: int64 */
+            valueMinor: null | number | string;
+            /** Format: int64 */
+            minMarkupMinor: null | number | string;
+            /** Format: int64 */
+            maxMarkupMinor: null | number | string;
+            /** Format: int32 */
+            priority: number | string;
+            appliesToSubAgents: boolean;
+            /** Format: date-time */
+            effectiveFrom: null | string;
+            /** Format: date-time */
+            effectiveTo: null | string;
+        };
+        MarkupRuleResponse: {
+            /** Format: uuid */
+            id: string;
+            scope: string;
+            productType: null | string;
+            /** Format: uuid */
+            productId: null | string;
+            supplierCode: null | string;
+            currency: string;
+            calculationType: string;
+            /** Format: int32 */
+            percentBasisPoints: null | number | string;
+            /** Format: int64 */
+            valueMinor: null | number | string;
+            /** Format: int64 */
+            minMarkupMinor: null | number | string;
+            /** Format: int64 */
+            maxMarkupMinor: null | number | string;
+            /** Format: int32 */
+            priority: number | string;
+            appliesToSubAgents: boolean;
+            /** Format: date-time */
+            effectiveFrom: string;
+            /** Format: date-time */
+            effectiveTo: null | string;
+            /** Format: uuid */
+            supersededById: null | string;
+        };
+        PricePreviewRequest: {
+            productType: string;
+            /** Format: uuid */
+            productId: null | string;
+            supplierCode: null | string;
+            currency: null | string;
+            /** Format: int64 */
+            netAmountMinor: number | string;
+        };
+        PricePreviewResponse: {
+            currency: string;
+            /** Format: int64 */
+            netAmountMinor: number | string;
+            /** Format: int64 */
+            markupAmountMinor: number | string;
+            /** Format: int32 */
+            vatRateBasisPoints: number | string;
+            /** Format: int64 */
+            taxAmountMinor: number | string;
+            /** Format: int32 */
+            platformFeeBasisPoints: number | string;
+            /** Format: int64 */
+            platformFeeMinor: number | string;
+            /** Format: int64 */
+            agentMarginMinor: number | string;
+            /** Format: int64 */
+            grossAmountMinor: number | string;
+            winningRule: null | components["schemas"]["PricePreviewRuleResponse"];
+        };
+        PricePreviewRuleResponse: {
+            /** Format: uuid */
+            id: string;
+            scope: string;
+            productType: null | string;
+            /** Format: uuid */
+            productId: null | string;
+            supplierCode: null | string;
+            calculationType: string;
+            /** Format: int32 */
+            percentBasisPoints: null | number | string;
+            /** Format: int64 */
+            valueMinor: null | number | string;
+            /** Format: int64 */
+            minMarkupMinor: null | number | string;
+            /** Format: int64 */
+            maxMarkupMinor: null | number | string;
+            /** Format: int32 */
+            priority: number | string;
+            inherited: boolean;
+            summary: string;
+        };
+        PriceQuoteWithMarginResponse: {
+            /** Format: uuid */
+            id: string;
+            productType: string;
+            currency: string;
+            /** Format: int64 */
+            grossAmountMinor: number | string;
+            /** Format: int64 */
+            netAmountMinor: number | string;
+            /** Format: int64 */
+            markupAmountMinor: number | string;
+            /** Format: int64 */
+            taxAmountMinor: number | string;
+            /** Format: int64 */
+            platformFeeMinor: number | string;
+            /** Format: double */
+            fxRate: number | string;
+            /** Format: uuid */
+            markupRuleId: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        PricingSettingsResponse: {
+            currency: string;
+            /** Format: int32 */
+            vatRateBasisPoints: number | string;
+            /** Format: int32 */
+            platformFeeBasisPoints: number | string;
+            /** Format: int32 */
+            quoteValidityMinutes: number | string;
         };
         ProblemDetails: {
             type?: null | string;
@@ -1137,6 +1369,164 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VerifyTopUpResponse"];
+                };
+            };
+        };
+    };
+    ListMarkupRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkupRuleResponse"][];
+                };
+            };
+        };
+    };
+    CreateMarkupRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkupRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkupRuleResponse"];
+                };
+            };
+        };
+    };
+    ReplaceMarkupRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ruleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkupRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkupRuleResponse"];
+                };
+            };
+        };
+    };
+    RetireMarkupRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ruleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkupRuleResponse"];
+                };
+            };
+        };
+    };
+    PreviewPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PricePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricePreviewResponse"];
+                };
+            };
+        };
+    };
+    GetPricingSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricingSettingsResponse"];
+                };
+            };
+        };
+    };
+    GetPriceQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceQuoteWithMarginResponse"];
                 };
             };
         };

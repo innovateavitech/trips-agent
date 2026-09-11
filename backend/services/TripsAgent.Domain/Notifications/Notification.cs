@@ -27,6 +27,9 @@ public static class NotificationStatus
 
     /// <summary>The address rejected it permanently. Not retried — see <see cref="Notification.MarkBounced"/>.</summary>
     public const string Bounced = "bounced";
+
+    /// <summary>Every value, for the column's check constraint.</summary>
+    public static IReadOnlyList<string> All { get; } = [Queued, Sent, Delivered, Failed, Bounced];
 }
 
 /// <summary>Who the notification is for, which is not the same as who it is about.</summary>
@@ -44,10 +47,10 @@ public enum NotificationRecipientType
 /// </summary>
 /// <remarks>
 /// <para>
-/// Queued inside the transaction that caused it — a KYB decision, a wallet credit — and sent
-/// afterwards by <c>NotificationDispatcher</c> in the Worker. Same reasoning as the outbox
-/// (ADR-0005): the business change and the intention to notify commit together, so there is no
-/// moment where an agency is verified and nobody will ever be told.
+/// Queued inside the transaction that caused it — a KYB decision, a wallet credit — together with
+/// an outbox message that tells the Worker to send it (ADR-0005). The business change and the
+/// intention to notify commit together, so there is no moment where an agency is verified and
+/// nobody will ever be told. <c>NotificationDispatcher</c> does the sending.
 /// </para>
 /// <para>
 /// <b>Payload, not prose.</b> The row holds the template key and the variables, not a rendered
@@ -92,10 +95,6 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
     /// What makes this notification the same as another. A unique index on it is what stops a job
     /// that runs three times from sending three emails.
     /// </param>
-    /// <param name="queuedAt">Now, from the injected <see cref="TimeProvider"/>.</param>
-    /// <param name="scheduledFor">
-    /// The earliest it may be sent, for a reminder or a nudge. Defaults to <paramref name="queuedAt"/>.
-    /// </param>
     /// <param name="recipientUserId">The user account, when the recipient has one. Travellers do not.</param>
     public static Notification Queue(
         Guid agencyId,
@@ -107,8 +106,6 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
         string recipientName,
         string payload,
         string dedupeKey,
-        DateTimeOffset queuedAt,
-        DateTimeOffset? scheduledFor = null,
         Guid? recipientUserId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(templateKey);
@@ -121,8 +118,6 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
         {
             throw new ArgumentException("A notification belongs to an agency.", nameof(agencyId));
         }
-
-        var due = scheduledFor ?? queuedAt;
 
         return new Notification
         {
@@ -137,8 +132,6 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
             Payload = payload,
             DedupeKey = dedupeKey,
             Status = NotificationStatus.Queued,
-            ScheduledFor = due,
-            NextAttemptAt = due,
         };
     }
 
@@ -173,12 +166,6 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
     /// <summary>Send attempts so far, successful or not.</summary>
     public int Attempts { get; private set; }
 
-    /// <summary>The earliest this may be sent at all — a schedule, not a retry.</summary>
-    public DateTimeOffset ScheduledFor { get; private set; }
-
-    /// <summary>The earliest the dispatcher will try again. Moves out with each failure.</summary>
-    public DateTimeOffset NextAttemptAt { get; private set; }
-
     /// <summary>Which template version it was rendered from. Null until it renders.</summary>
     public int? TemplateVersion { get; private set; }
 
@@ -196,6 +183,13 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
 
     /// <summary>Why the most recent attempt failed, trimmed to <see cref="MaxErrorLength"/>.</summary>
     public string? LastError { get; private set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset UpdatedAt { get; set; }
+
+    /// <summary>True once nothing more will happen to it: sent, delivered, bounced or given up on.</summary>
+    public bool IsFinished => Status != NotificationStatus.Queued;
 
     /// <summary>The provider accepted it. It will not be sent again.</summary>
     public void MarkSent(int templateVersion, string? providerMessageId, DateTimeOffset sentAt)
@@ -242,19 +236,18 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
 
     /// <summary>A send attempt failed.</summary>
     /// <param name="error">What went wrong. Trimmed to <see cref="MaxErrorLength"/>.</param>
-    /// <param name="retryAt">When to try again, or null to give up and mark it failed.</param>
-    public void RecordFailure(string error, DateTimeOffset? retryAt)
+    /// <param name="giveUp">
+    /// True to stop here and mark it failed; false to leave it queued for the next attempt. When
+    /// that attempt happens is the message broker's retry policy, not this row's business.
+    /// </param>
+    public void RecordFailure(string error, bool giveUp)
     {
         ArgumentNullException.ThrowIfNull(error);
 
         Attempts++;
         LastError = Trim(error);
 
-        if (retryAt is { } next)
-        {
-            NextAttemptAt = next;
-        }
-        else
+        if (giveUp)
         {
             Status = NotificationStatus.Failed;
         }

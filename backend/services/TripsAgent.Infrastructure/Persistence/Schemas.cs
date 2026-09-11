@@ -11,4 +11,7 @@ public static class Schemas
     /// system settings later.
     /// </summary>
     public const string Platform = "platform";
+
+    /// <summary>Notifications, their templates and the suppression list (plan §2.12).</summary>
+    public const string Notifications = "notifications";
 }

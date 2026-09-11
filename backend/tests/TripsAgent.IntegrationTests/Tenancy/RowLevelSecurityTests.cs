@@ -315,7 +315,7 @@ public class RowLevelSecurityTests
               JOIN pg_namespace n ON n.oid = c.relnamespace
              WHERE c.relkind IN ('r', 'p')
                AND NOT c.relispartition
-               AND n.nspname IN ('tenancy', 'identity', 'payments', 'platform')
+               AND n.nspname IN ('tenancy', 'identity', 'payments', 'platform', 'notifications')
                AND EXISTS (SELECT 1 FROM information_schema.columns col
                             WHERE col.table_schema = n.nspname
                               AND col.table_name = c.relname

@@ -240,9 +240,26 @@ public static class NotificationTemplateCatalog
                   """),
     ];
 
-    /// <summary>Finds a template version by key and channel, or null when this build has none.</summary>
+    /// <summary>Finds the newest version of a template by key and channel, or null when this build has none.</summary>
     public static NotificationTemplateDefinition? Find(string key, NotificationChannel channel) =>
-        All.FirstOrDefault(definition => definition.Key == key && definition.Channel == channel);
+        All.Where(definition => definition.Key == key && definition.Channel == channel)
+            .MaxBy(definition => definition.Version);
+
+    /// <summary>The row the seeder stores for <paramref name="definition"/>, and what tests render from.</summary>
+    public static NotificationTemplate ToTemplate(this NotificationTemplateDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+
+        return NotificationTemplate.Create(
+            definition.Key,
+            definition.Channel,
+            definition.Locale,
+            definition.Version,
+            definition.Audience,
+            definition.Subject,
+            definition.Html,
+            definition.Text);
+    }
 
     /// <summary>
     /// Wraps agency-facing content in the house layout: no colours, no images, no web fonts.
@@ -302,31 +319,31 @@ public static class NotificationTemplateCatalog
             version,
             NotificationAudience.Traveller,
             subject,
-            $"""
+            $$$"""
              <!doctype html>
              <html lang="en">
                <body style="margin:0;padding:0">
-                 <div style="background:{{{{brandColor}}}};padding:20px;color:#FFFFFF;font-size:20px">
-                   {NotificationRenderer.LogoBlockOpen}<img src="{{{{brandLogoUrl}}}}" alt="{{{{brandName}}}}"
-                        height="40" style="display:block;border:0">{NotificationRenderer.LogoBlockClose}
-                   {NotificationRenderer.NameBlockOpen}{{{{brandName}}}}{NotificationRenderer.NameBlockClose}
+                 <div style="background:{{brandColor}};padding:20px;color:#FFFFFF;font-size:20px">
+                   {{{NotificationRenderer.LogoBlockOpen}}}<img src="{{brandLogoUrl}}" alt="{{brandName}}"
+                        height="40" style="display:block;border:0">{{{NotificationRenderer.LogoBlockClose}}}
+                   {{{NotificationRenderer.NameBlockOpen}}}{{brandName}}{{{NotificationRenderer.NameBlockClose}}}
                  </div>
                  <div style="padding:20px">
-             {Indent(html, "    ")}
+             {{{Indent(html, "    ")}}}
                  </div>
                  <div style="padding:20px;font-size:12px;color:#666666">
-                   <p>{{{{brandName}}}}</p>
-                   <p>{{{{brandContact}}}}</p>
+                   <p>{{brandName}}</p>
+                   <p>{{brandContact}}</p>
                  </div>
                </body>
              </html>
              """,
-            $"""
-             {text}
+            $$$"""
+             {{{text}}}
 
              --
-             {{{{brandName}}}}
-             {{{{brandContact}}}}
+             {{brandName}}
+             {{brandContact}}
              """,
             tokens);
 

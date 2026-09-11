@@ -95,6 +95,11 @@ public static class DependencyInjection
 
         services.AddSingleton<IEmailSender>(_ => new SmtpEmailSender(ReadSmtpOptions(configuration)));
 
+        // Sends queued notifications. Scoped, on the request's DbContext; only the Worker's
+        // NotificationQueuedConsumer calls it, but registering it everywhere keeps the two hosts'
+        // containers the same shape.
+        services.AddScoped<NotificationDispatcher>();
+
         // Alerting: logs, the back-office queue and email. Scoped because it writes an
         // admin_alerts row through the request's DbContext.
         services.AddSingleton(ReadAlertOptions(configuration));
@@ -268,6 +273,9 @@ public static class DependencyInjection
             Password = smtp["Password"],
             FromAddress = smtp["FromAddress"] ?? "no-reply@tripsagent.test",
             FromName = smtp["FromName"] ?? "Trips Agent",
+            WhiteLabelFromAddress = string.IsNullOrWhiteSpace(smtp["WhiteLabelFromAddress"])
+                ? null
+                : smtp["WhiteLabelFromAddress"],
         };
     }
 

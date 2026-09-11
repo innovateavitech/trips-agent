@@ -247,7 +247,7 @@ public sealed partial class VerifyTopUpHandler
     private readonly ITenantContext _tenant;
     private readonly IPlatformScope _platformScope;
     private readonly WalletTopUpService _topUps;
-    private readonly IEmailSender _email;
+    private readonly INotifier _notifications;
     private readonly IPlatformAlerter _alerter;
     private readonly IUniqueViolationDetector _uniqueViolations;
     private readonly TimeProvider _clock;
@@ -259,7 +259,7 @@ public sealed partial class VerifyTopUpHandler
         ITenantContext tenant,
         IPlatformScope platformScope,
         WalletTopUpService topUps,
-        IEmailSender email,
+        INotifier notifications,
         IPlatformAlerter alerter,
         IUniqueViolationDetector uniqueViolations,
         TimeProvider clock,
@@ -270,7 +270,7 @@ public sealed partial class VerifyTopUpHandler
         _tenant = tenant;
         _platformScope = platformScope;
         _topUps = topUps;
-        _email = email;
+        _notifications = notifications;
         _alerter = alerter;
         _uniqueViolations = uniqueViolations;
         _clock = clock;
@@ -507,14 +507,27 @@ public sealed partial class VerifyTopUpHandler
         }
     }
 
+    /// <summary>
+    /// Queues the receipt for the agency's owner. The Worker sends it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A second, small save straight after the posting, rather than part of it: the posting is the
+    /// money path and owns its own transaction, retry loop and conflict handling, and a receipt has
+    /// no business being able to fail it. The cost is a narrow window — the process dying between
+    /// the two saves — in which the money lands and the receipt is never queued.
+    /// </para>
+    /// <para>
+    /// Keyed on the payment, so a webhook and the agent's own check racing to credit the same
+    /// payment can never queue two receipts.
+    /// </para>
+    /// </remarks>
     private async Task SendReceiptAsync(PaymentTransaction payment, CancellationToken cancellationToken)
     {
-        var recipient = await (
-            from user in _db.Users
-            join agency in _db.Agencies on user.AgencyId equals agency.Id
-            where user.AgencyId == payment.AgencyId
-            orderby user.CreatedAt
-            select new { user.Email, user.FirstName, Name = agency.TradingName ?? agency.LegalName })
+        var recipient = await _db.Users
+            .Where(user => user.AgencyId == payment.AgencyId)
+            .OrderBy(user => user.CreatedAt)
+            .Select(user => new { user.Id, user.Email, user.FirstName })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (recipient is null)
@@ -524,22 +537,31 @@ public sealed partial class VerifyTopUpHandler
 
         try
         {
-            await _email.SendAsync(
-                TopUpReceiptEmail.Create(
+            await _notifications.QueueEmailAsync(
+                new EmailNotificationRequest(
+                    payment.AgencyId,
+                    NotificationTemplateCatalog.WalletTopUpReceipt,
                     recipient.Email,
                     recipient.FirstName,
-
-                    // What was credited, which is what was asked for — not the gateway's figure,
-                    // which includes the fee when the payer bears it.
-                    payment.AmountMinor,
-                    payment.Currency,
-                    payment.Reference),
+                    new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        // What was credited, which is what was asked for — not the gateway's figure,
+                        // which includes the fee when the payer bears it.
+                        ["amount"] = $"{payment.Currency} {payment.AmountMinor}",
+                        ["reference"] = payment.Reference,
+                    },
+                    DedupeKey: $"{NotificationTemplateCatalog.WalletTopUpReceipt}:{payment.Id}",
+                    RecipientUserId: recipient.Id),
                 cancellationToken);
+
+            await _db.SaveChangesAsync(cancellationToken);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (DbUpdateException ex)
         {
-            // The money is in the wallet. A receipt that did not send is a support question, not
-            // a reason to fail a callback the gateway will then retry.
+            // The money is in the wallet. A receipt that did not queue is a support question, not
+            // a reason to fail a callback the gateway will then retry. Discard it so no later save
+            // on this context tries again with the same rejected row.
+            _db.ChangeTracker.Clear();
             LogReceiptFailed(_logger, ex, payment.Reference);
         }
     }

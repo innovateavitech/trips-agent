@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
+using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Payments;
 using TripsAgent.Application.Tenancy.Kyb;
 
@@ -42,6 +43,9 @@ public static class DependencyInjection
         services.AddScoped<IPaymentWebhookProcessor>(sp => sp.GetRequiredService<PaymentWebhookHandler>());
 
         services.AddScoped<ILedgerIntegrityAudit, LedgerIntegrityAudit>();
+
+        // Stages notifications in the caller's unit of work; the Worker sends them.
+        services.AddScoped<INotifier, Notifier>();
 
         return services;
     }

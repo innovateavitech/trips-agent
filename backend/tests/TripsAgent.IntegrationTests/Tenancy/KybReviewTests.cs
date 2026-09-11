@@ -8,11 +8,14 @@ using TripsAgent.Application.Tenancy;
 using TripsAgent.Application.Tenancy.Kyb;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Identity;
+using TripsAgent.Domain.Notifications;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
 using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Identity;
+using TripsAgent.Infrastructure.Messaging;
+using TripsAgent.Infrastructure.Notifications;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Storage;
 using TripsAgent.Infrastructure.Tenancy;
@@ -103,6 +106,8 @@ public sealed class KybReviewTests : IDisposable
         agency.Status.Should().Be(AgencyStatus.Verified);
         agency.VerifiedAt.Should().NotBeNull();
 
+        await world.DeliverNotificationsAsync();
+
         var email = world.Sent.Should().ContainSingle().Which;
         email.To.Should().Be(submitted.OwnerEmail);
         email.Subject.Should().Contain("verified");
@@ -137,6 +142,8 @@ public sealed class KybReviewTests : IDisposable
         (await world.Db.Agencies.SingleAsync(a => a.Id == submitted.AgencyId))
             .Status.Should().Be(AgencyStatus.PendingVerification);
 
+        await world.DeliverNotificationsAsync();
+
         world.Sent.Should().BeEmpty();
     }
 
@@ -149,6 +156,8 @@ public sealed class KybReviewTests : IDisposable
         const string reason = "The certificate of incorporation is illegible — send a clearer scan.";
 
         await world.Review.RejectAsync(submitted.SubmissionId, world.ReviewerId, reason);
+
+        await world.DeliverNotificationsAsync();
 
         var email = world.Sent.Should().ContainSingle().Which;
         email.To.Should().Be(submitted.OwnerEmail);
@@ -173,6 +182,8 @@ public sealed class KybReviewTests : IDisposable
 
         // An admin typed this. It must arrive as text, not as a working link in an email that
         // looks like it came from us.
+        await world.DeliverNotificationsAsync();
+
         var email = world.Sent.Single();
         email.HtmlBody.Should().NotContain("<a href=\"https://evil.example\"");
         email.HtmlBody.Should().Contain("&lt;a href=");
@@ -395,7 +406,7 @@ public sealed class KybReviewTests : IDisposable
                 db,
                 tenancy.Scope,
                 audit,
-                new CapturingEmailSender(Sent),
+                new Notifier(db, new EfOutbox(db, clock)),
                 Links,
                 clock,
                 NullLogger<KybReviewHandler>.Instance);
@@ -414,6 +425,35 @@ public sealed class KybReviewTests : IDisposable
         public KybReviewHandler Review { get; }
 
         public List<EmailMessage> Sent { get; } = [];
+
+        /// <summary>
+        /// Does what the Worker does: sends every queued notification through the real dispatcher,
+        /// into <see cref="Sent"/>. A decision only queues its email; this is the moment it goes.
+        /// </summary>
+        public async Task DeliverNotificationsAsync()
+        {
+            var tenancy = TestTenancy.None();
+            await using var worker = _postgres.Connect(_database, tenancy.Tenant, tenancy.Scope, Clock);
+
+            await NotificationTemplateSeeder.EnsureAsync(worker, Clock);
+
+            List<Guid> queued;
+            using (tenancy.Scope.Enter("test — the Worker's view of the queue"))
+            {
+                queued = await worker.Notifications
+                    .Where(n => n.Status == NotificationStatus.Queued)
+                    .Select(n => n.Id)
+                    .ToListAsync();
+            }
+
+            var dispatcher = new NotificationDispatcher(
+                worker, new CapturingEmailSender(Sent), tenancy.Scope, Clock, NullLogger<NotificationDispatcher>.Instance);
+
+            foreach (var id in queued)
+            {
+                await dispatcher.DispatchAsync(id);
+            }
+        }
 
         public Guid ReviewerId { get; } = Guid.CreateVersion7();
 
@@ -485,10 +525,10 @@ public sealed class KybReviewTests : IDisposable
 
     private sealed class CapturingEmailSender(List<EmailMessage> sent) : IEmailSender
     {
-        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+        public Task<EmailReceipt> SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
         {
             sent.Add(message);
-            return Task.CompletedTask;
+            return Task.FromResult(new EmailReceipt($"<{Guid.NewGuid():N}@test>"));
         }
     }
 }

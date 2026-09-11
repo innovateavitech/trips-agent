@@ -49,7 +49,7 @@ public sealed partial class KybReviewHandler
     private readonly IAppDbContext _db;
     private readonly IPlatformScope _platformScope;
     private readonly IAuditContext _audit;
-    private readonly IEmailSender _email;
+    private readonly INotifier _notifications;
     private readonly KybDocumentLink _links;
     private readonly TimeProvider _clock;
     private readonly ILogger<KybReviewHandler> _logger;
@@ -58,7 +58,7 @@ public sealed partial class KybReviewHandler
         IAppDbContext db,
         IPlatformScope platformScope,
         IAuditContext audit,
-        IEmailSender email,
+        INotifier notifications,
         KybDocumentLink links,
         TimeProvider clock,
         ILogger<KybReviewHandler> logger)
@@ -66,7 +66,7 @@ public sealed partial class KybReviewHandler
         _db = db;
         _platformScope = platformScope;
         _audit = audit;
-        _email = email;
+        _notifications = notifications;
         _links = links;
         _clock = clock;
         _logger = logger;
@@ -172,13 +172,15 @@ public sealed partial class KybReviewHandler
 
         await ResolveAlertsFor(submissionId, now, cancellationToken);
 
+        await NotifyAsync(
+            agency,
+            NotificationTemplateCatalog.KybApproved,
+            submissionId,
+            new Dictionary<string, string>(StringComparer.Ordinal),
+            cancellationToken);
+
         _audit.SetReason("KYB approved");
         await _db.SaveChangesAsync(cancellationToken);
-
-        await NotifyAsync(
-            agency.Id,
-            business => KybDecisionEmail.Approved(business.Email, business.Name),
-            cancellationToken);
 
         return new KybDecisionOutcome.Decided();
     }
@@ -214,15 +216,17 @@ public sealed partial class KybReviewHandler
 
         await ResolveAlertsFor(submissionId, now, cancellationToken);
 
+        await NotifyAsync(
+            agency,
+            NotificationTemplateCatalog.KybRejected,
+            submissionId,
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["reason"] = reason },
+            cancellationToken);
+
         // The reason is recorded against the audit row as well as shown to the agency, so the
         // log answers "why was this refused?" without going back to the submission.
         _audit.SetReason(reason);
         await _db.SaveChangesAsync(cancellationToken);
-
-        await NotifyAsync(
-            agency.Id,
-            business => KybDecisionEmail.Rejected(business.Email, business.Name, reason),
-            cancellationToken);
 
         return new KybDecisionOutcome.Decided();
     }
@@ -276,47 +280,48 @@ public sealed partial class KybReviewHandler
     }
 
     /// <summary>
-    /// Emails the agency's owner about the decision.
+    /// Queues the email telling the agency's owner about the decision.
     /// </summary>
     /// <remarks>
-    /// After the decision is committed, and failures are logged rather than thrown: the decision
-    /// is made and an admin should not see an error — or worse, retry and double-decide — because
-    /// an SMTP server was briefly unavailable.
+    /// Staged in the same save as the decision, so the two commit together: there is no agency
+    /// verified without being told, and no email about a decision that rolled back. The Worker
+    /// sends it, and retries it, without the admin who decided ever waiting on a mail server.
+    /// Keyed on the submission, so a decision replayed for the same submission queues nothing new.
     /// </remarks>
     private async Task NotifyAsync(
-        Guid agencyId,
-        Func<(string Email, string Name), EmailMessage> compose,
+        Agency agency,
+        string templateKey,
+        Guid submissionId,
+        Dictionary<string, string> values,
         CancellationToken cancellationToken)
     {
-        var recipient = await (
-            from user in _db.Users
-            join agency in _db.Agencies on user.AgencyId equals agency.Id
-            where user.AgencyId == agencyId
-            orderby user.CreatedAt
-            select new { user.Email, Name = agency.TradingName ?? agency.LegalName })
+        var owner = await _db.Users
+            .Where(user => user.AgencyId == agency.Id)
+            .OrderBy(user => user.CreatedAt)
+            .Select(user => new { user.Id, user.Email, user.FirstName })
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (recipient is null)
+        if (owner is null)
         {
-            LogNoRecipient(_logger, agencyId);
+            LogNoRecipient(_logger, agency.Id);
             return;
         }
 
-        try
-        {
-            await _email.SendAsync(compose((recipient.Email, recipient.Name)), cancellationToken);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            LogNotifyFailed(_logger, ex, agencyId);
-        }
+        values["businessName"] = agency.TradingName ?? agency.LegalName;
+
+        await _notifications.QueueEmailAsync(
+            new EmailNotificationRequest(
+                agency.Id,
+                templateKey,
+                owner.Email,
+                owner.FirstName,
+                values,
+                DedupeKey: $"{templateKey}:{submissionId}",
+                RecipientUserId: owner.Id),
+            cancellationToken);
     }
 
     [LoggerMessage(Level = LogLevel.Warning,
         Message = "Agency {AgencyId} has no user to notify about its KYB decision.")]
     private static partial void LogNoRecipient(ILogger logger, Guid agencyId);
-
-    [LoggerMessage(Level = LogLevel.Error,
-        Message = "Could not email agency {AgencyId} about its KYB decision. The decision itself is saved.")]
-    private static partial void LogNotifyFailed(ILogger logger, Exception exception, Guid agencyId);
 }

@@ -330,10 +330,10 @@ public class PasswordResetTests
 
     private sealed class CapturingEmailSender(List<EmailMessage> sent) : IEmailSender
     {
-        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+        public Task<EmailReceipt> SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
         {
             sent.Add(message);
-            return Task.CompletedTask;
+            return Task.FromResult(new EmailReceipt($"<{Guid.NewGuid():N}@test>"));
         }
     }
 }

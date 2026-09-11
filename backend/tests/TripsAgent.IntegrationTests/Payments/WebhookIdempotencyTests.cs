@@ -12,6 +12,7 @@ using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Tenancy;
+using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Tenancy;
 using TripsAgent.Integrations.Paystack;
@@ -574,7 +575,9 @@ public class WebhookIdempotencyTests
                 tenancy.Tenant,
                 tenancy.Scope,
                 topUps,
-                new DiscardingEmailSender(),
+                // The real queue: a receipt is a row and an outbox message in this database, which is
+                // all a webhook test needs to know about email.
+                new Notifier(db, new EfOutbox(db, Clock)),
                 new RecordingAlerter(Alerts),
 
                 // The real detector, so a test proves the same code that decides in production
@@ -632,11 +635,5 @@ public class WebhookIdempotencyTests
             alerts.Add(alert);
             return Task.CompletedTask;
         }
-    }
-
-    private sealed class DiscardingEmailSender : IEmailSender
-    {
-        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
     }
 }

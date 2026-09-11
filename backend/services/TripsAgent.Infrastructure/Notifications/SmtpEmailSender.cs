@@ -26,6 +26,18 @@ public sealed class SmtpOptions
     public string FromAddress { get; init; } = "no-reply@tripsagent.test";
 
     public string FromName { get; init; } = "Trips Agent";
+
+    /// <summary>
+    /// The address traveller-facing mail is sent from, under the agency's display name. Null
+    /// falls back to <see cref="FromAddress"/>.
+    /// </summary>
+    /// <remarks>
+    /// Separate because <see cref="FromAddress"/> is ours, and a traveller who looks past the
+    /// display name at the address must not find our domain there (CLAUDE.md rule 4). It has to be
+    /// a domain we can sign mail for, so it cannot be the agency's own until custom sending domains
+    /// exist; a neutral one is the honest middle ground.
+    /// </remarks>
+    public string? WhiteLabelFromAddress { get; init; }
 }
 
 /// <summary>
@@ -47,14 +59,30 @@ public sealed class SmtpEmailSender : IEmailSender
         _options = options;
     }
 
-    public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+    public async Task<EmailReceipt> SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(message);
 
         using var mime = new MimeMessage();
-        mime.From.Add(new MailboxAddress(_options.FromName, _options.FromAddress));
+
+        // A message with its own display name is sent on somebody else's behalf — a travel agency
+        // writing to its traveller — so it goes from the neutral address rather than ours.
+        var fromAddress = message.FromName is null
+            ? _options.FromAddress
+            : _options.WhiteLabelFromAddress ?? _options.FromAddress;
+
+        mime.From.Add(new MailboxAddress(message.FromName ?? _options.FromName, fromAddress));
         mime.To.Add(MailboxAddress.Parse(message.To));
         mime.Subject = message.Subject;
+
+        if (!string.IsNullOrWhiteSpace(message.ReplyTo))
+        {
+            mime.ReplyTo.Add(MailboxAddress.Parse(message.ReplyTo));
+        }
+
+        // Ours rather than the relay's, so we know it before sending and can record it: a bounce
+        // report that arrives later names this id.
+        mime.MessageId = MimeKit.Utils.MimeUtils.GenerateMessageId(DomainOf(fromAddress));
 
         // Both parts, so a client that cannot or will not render HTML still gets a readable email.
         mime.Body = new BodyBuilder
@@ -72,7 +100,28 @@ public sealed class SmtpEmailSender : IEmailSender
             await client.AuthenticateAsync(_options.Username, _options.Password ?? string.Empty, cancellationToken);
         }
 
-        await client.SendAsync(mime, cancellationToken);
+        try
+        {
+            await client.SendAsync(mime, cancellationToken);
+        }
+        catch (SmtpCommandException ex) when (IsPermanentRecipientFailure(ex))
+        {
+            // A 5xx on the recipient — no such mailbox, domain does not exist. Retrying cannot help
+            // and damages our reputation with the relay; the dispatcher suppresses the address.
+            throw new EmailRejectedException($"The relay refused {ex.Mailbox?.Address ?? message.To}: {ex.Message}", ex);
+        }
+
         await client.DisconnectAsync(quit: true, cancellationToken);
+
+        return new EmailReceipt(mime.MessageId);
+    }
+
+    private static bool IsPermanentRecipientFailure(SmtpCommandException ex) =>
+        ex.ErrorCode == SmtpErrorCode.RecipientNotAccepted && (int)ex.StatusCode >= 500;
+
+    private static string DomainOf(string address)
+    {
+        var at = address.LastIndexOf('@');
+        return at >= 0 && at < address.Length - 1 ? address[(at + 1)..] : "localhost";
     }
 }

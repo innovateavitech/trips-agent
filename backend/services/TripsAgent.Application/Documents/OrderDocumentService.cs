@@ -291,13 +291,14 @@ public sealed partial class OrderDocumentService
 
         foreach (var document in pending)
         {
-            // Counted, and saved, before anything is drawn: a Worker that dies mid-render has still
-            // used an attempt, so a document that crashes the renderer cannot loop for ever.
-            document.BeginRender();
-            await _db.SaveChangesAsync(cancellationToken);
-
             try
             {
+                // Counted, and saved, before anything is drawn: a Worker that dies mid-render has
+                // still used an attempt, so a document that crashes the renderer cannot loop for ever.
+                // Inside the try, so a delivery that finds another has just rendered it steps aside.
+                document.BeginRender();
+                await _db.SaveChangesAsync(cancellationToken);
+
                 var model = BuildModel(document, order, sources);
                 EnsureNoPlatformBrand(model);
 
@@ -316,9 +317,10 @@ public sealed partial class OrderDocumentService
 
     private async Task StoreAsync(GeneratedDocument document, RenderedDocument rendered, CancellationToken cancellationToken)
     {
-        // One key per document, derived from its id. Nothing writes it again once the document is
-        // ready; before then a retry overwrites what a failed attempt left, which nobody was served.
-        var key = AssetRules.GeneratedDocumentKey(document.AgencyId, document.Id);
+        // A key of its own for every render. Two deliveries racing to render one document each write
+        // their own object; the loser's row is then refused by the database, whose trigger freezes a
+        // document's file once it has one. Nothing can overwrite the bytes that were issued.
+        var key = AssetRules.GeneratedDocumentKey(document.AgencyId, document.Id, Guid.CreateVersion7());
 
         StoredBlob stored;
         using (var content = new MemoryStream(rendered.Pdf, writable: false))

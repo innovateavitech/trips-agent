@@ -195,15 +195,16 @@ public static class AssetRules
         $"assets/{agencyId:N}/{assetId:N}/{kind.ToString().ToLowerInvariant()}.webp";
 
     /// <summary>
-    /// The storage key for an issued document's PDF.
+    /// The storage key for one render of an issued document's PDF.
     /// </summary>
     /// <remarks>
-    /// From the document's id, never its printed number: a number prefix may contain a slash, and a
-    /// key is no place for text an agency configured. One key per document, written once — nothing
-    /// renders a document again after its file is stored.
+    /// From ids, never the printed number: a number prefix may contain a slash, and a key is no place
+    /// for text an agency configured. A key per render rather than per document, so two renders
+    /// racing for one document can never write over each other — the file that was issued is the
+    /// only one its row can ever point at.
     /// </remarks>
-    public static string GeneratedDocumentKey(Guid agencyId, Guid documentId) =>
-        $"documents/{agencyId:N}/{documentId:N}.pdf";
+    public static string GeneratedDocumentKey(Guid agencyId, Guid documentId, Guid renderId) =>
+        $"documents/{agencyId:N}/{documentId:N}/{renderId:N}.pdf";
 
     /// <summary>The extension a stored copy is given, so a bucket listing is readable.</summary>
     public static string ExtensionFor(string contentType) =>

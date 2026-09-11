@@ -4,6 +4,7 @@ using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
 using TripsAgent.Application.Notifications;
+using TripsAgent.Application.Orders;
 using TripsAgent.Application.Payments;
 using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Suppliers;
@@ -49,6 +50,9 @@ public static class DependencyInjection
         services.AddScoped<ILedgerIntegrityAudit, LedgerIntegrityAudit>();
 
         services.AddScoped<DocumentIssuer>();
+
+        // Records what was sold, at the price the quote froze. The saga (#42) takes it from there.
+        services.AddScoped<PlaceOrderHandler>();
         services.AddScoped<ConfigureDocumentNumberingHandler>();
 
         services.AddScoped<PricingService>();

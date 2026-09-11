@@ -10,6 +10,7 @@ using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Notifications;
+using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Pricing;
@@ -179,6 +180,24 @@ public class AppDbContext : DbContext, IAppDbContext
 
     /// <inheritdoc />
     public DbSet<PriceQuote> PriceQuotes => Set<PriceQuote>();
+
+    /// <inheritdoc />
+    public DbSet<Order> Orders => Set<Order>();
+
+    /// <inheritdoc />
+    public DbSet<OrderLine> OrderLines => Set<OrderLine>();
+
+    /// <inheritdoc />
+    public DbSet<OrderTraveller> OrderTravellers => Set<OrderTraveller>();
+
+    /// <inheritdoc />
+    public DbSet<OrderStatusHistory> OrderStatusHistory => Set<OrderStatusHistory>();
+
+    /// <inheritdoc />
+    public DbSet<Cart> Carts => Set<Cart>();
+
+    /// <inheritdoc />
+    public DbSet<CartItem> CartItems => Set<CartItem>();
 
     /// <summary>The aggregators we buy flights and bus seats from. Platform reference data, not tenant-scoped.</summary>
     public DbSet<Supplier> Suppliers => Set<Supplier>();

@@ -21,4 +21,7 @@ public enum DocumentType
 
     /// <summary>A priced offer sent to a traveller before they book.</summary>
     Quote,
+
+    /// <summary>An order's human-readable number. Gapless per agency, like every other type here.</summary>
+    Order,
 }

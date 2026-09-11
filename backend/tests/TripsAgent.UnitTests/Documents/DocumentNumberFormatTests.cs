@@ -223,6 +223,7 @@ public class DocumentNumberFormatTests
     [InlineData(DocumentType.Voucher, "VCH-LAGOST-2026-000001")]
     [InlineData(DocumentType.Itinerary, "ITN-LAGOST-2026-000001")]
     [InlineData(DocumentType.Quote, "QUO-LAGOST-2026-000001")]
+    [InlineData(DocumentType.Order, "ORD-LAGOST-2026-000001")]
     public void Other_types_default_to_a_type_code_and_the_booking_prefix(DocumentType type, string expected)
     {
         DocumentNumberFormat.DefaultFor(SettingsFor("lagos-travel"), type).Render(1, 2026).Should().Be(expected);

@@ -1,0 +1,78 @@
+name: codeql
+
+# Static analysis for security bugs (issue #108): SQL built from strings, unvalidated redirects,
+# paths taken from user input, secrets flowing into logs — the classes of mistake a reviewer
+# reading a diff misses because each line looks fine on its own.
+#
+# Results appear on the pull request as annotations and under Security → Code scanning. The job
+# fails on an analysis error, not on a finding: whether a finding blocks a merge is set in
+# Settings → Code security → Code scanning → Protection rules (docs/BRANCH_PROTECTION.md Step 3).
+#
+# This is "advanced setup". GitHub refuses results from it while the repository's CodeQL
+# "default setup" is switched on, so default setup must stay off (BRANCH_PROTECTION.md Step 3).
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  # New queries ship with CodeQL itself, so an unchanged codebase can gain findings. Weekly
+  # keeps main's baseline current; Monday 04:00 UTC is 05:00 in Lagos.
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    # Load-bearing: these become the status checks "codeql-csharp" and
+    # "codeql-javascript-typescript" listed in docs/BRANCH_PROTECTION.md Step 4.
+    name: codeql-${{ matrix.language }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # to upload the results
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # C# is built for real, so CodeQL sees exactly the code the compiler sees.
+          - language: csharp
+            build-mode: manual
+          # TypeScript needs no build: CodeQL reads the source directly. This covers every app
+          # and package under frontend/, and the e2e tests.
+          - language: javascript-typescript
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        if: matrix.language == 'csharp'
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          # security-extended adds lower-precision security queries to the default set. It is
+          # noisier, and worth it for a system that holds money and passports.
+          queries: security-extended
+
+      # Between init and analyze, so CodeQL watches the compiler. Debug is enough — CodeQL wants
+      # the code, not an optimised binary.
+      - name: Build
+        if: matrix.build-mode == 'manual'
+        working-directory: backend
+        run: dotnet build TripsAgent.slnx
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}

@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Payments;
+using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Tenancy.Kyb;
 
 namespace TripsAgent.Application;
@@ -43,6 +45,15 @@ public static class DependencyInjection
         services.AddScoped<IPaymentWebhookProcessor>(sp => sp.GetRequiredService<PaymentWebhookHandler>());
 
         services.AddScoped<ILedgerIntegrityAudit, LedgerIntegrityAudit>();
+
+        services.AddScoped<DocumentIssuer>();
+        services.AddScoped<ConfigureDocumentNumberingHandler>();
+
+        services.AddScoped<PricingService>();
+        services.AddScoped<MarkupRuleService>();
+
+        // Zero until subscription tiers (#64) supply each agency's transaction fee.
+        services.AddSingleton<IPlatformFeePolicy, NoPlatformFeePolicy>();
 
         // Stages notifications in the caller's unit of work; the Worker sends them.
         services.AddScoped<INotifier, Notifier>();

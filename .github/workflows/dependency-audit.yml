@@ -1,0 +1,86 @@
+name: dependency-audit
+
+# Fails when any dependency — direct or transitive — has a known High or Critical vulnerability
+# (issue #108). Both jobs run scripts/audit_dependencies.py, which reads the tools' JSON, applies
+# the threshold, and honours each stack's VulnerabilityAllowlist.txt.
+#
+# Job names are load-bearing: docs/BRANCH_PROTECTION.md Step 4 lists them as required status
+# checks, matched by exact string.
+#
+# Why this is its own workflow rather than more jobs in ci.yml: it answers a different question.
+# ci.yml asks "is this change correct?", and its answer only changes when the code does. This
+# asks "is anything we depend on known to be broken?", and that answer changes when an advisory
+# is published — with no commit at all. So it also runs every morning, and a new advisory fails
+# the next pull request whether or not that pull request touched a dependency. That is on
+# purpose; docs/runbooks/vulnerable-dependency.md is what to do about it.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 5 * * *' # 06:00 in Lagos, before anyone starts work
+  workflow_dispatch:
+
+concurrency:
+  group: dependency-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  NODE_VERSION: '22'
+  DOTNET_NOLOGO: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+
+jobs:
+  audit-api:
+    name: audit-api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The gate proves itself before it is trusted: these tests fail if the script would pass a
+      # High, an expired allowlist entry, or an audit that never actually ran.
+      - name: Test the audit script
+        run: python3 -m unittest discover -s scripts/tests -v
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # `dotnet list package` reads what restore resolved. Without this step every project would
+      # report "no vulnerable packages" because nothing was looked at — the script refuses that.
+      - name: Restore
+        working-directory: backend
+        run: dotnet restore TripsAgent.slnx
+
+      # Runs `dotnet list package --vulnerable --include-transitive --format json`.
+      - name: Audit NuGet packages
+        run: python3 scripts/audit_dependencies.py dotnet
+
+  audit-web:
+    name: audit-web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Test the audit script
+        run: python3 -m unittest discover -s scripts/tests -v
+
+      # pnpm audit reads pnpm-lock.yaml and asks the registry about it. Nothing needs installing.
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Runs `pnpm audit --json`, the same data as `pnpm audit --audit-level high`.
+      - name: Audit npm packages
+        run: python3 scripts/audit_dependencies.py pnpm

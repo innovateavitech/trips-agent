@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Storage;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Tenancy.Kyb;
 
 namespace TripsAgent.Application.Tenancy.Kyb;
@@ -88,7 +89,9 @@ public sealed class UploadKybDocumentHandler
 
         var (sniffed, rewound) = await SniffContentTypeAsync(content, cancellationToken);
 
-        if (sniffed is null)
+        // Checked against KYB's own list, not just "recognised": the detector knows WebP because the
+        // asset pipeline accepts it, and a WebP certificate of incorporation is still not one.
+        if (!KybDocumentRules.IsAllowedContentType(sniffed))
         {
             return new UploadKybDocumentOutcome.Rejected(
                 $"That file is not a {string.Join(", ", KybDocumentRules.AllowedExtensions)}. "
@@ -98,7 +101,7 @@ public sealed class UploadKybDocumentHandler
         // Generated, never derived from the filename.
         var storageKey = $"kyb/{agencyId:N}/{submission.Id:N}/{Guid.CreateVersion7():N}";
 
-        var stored = await _storage.StoreAsync(rewound, storageKey, sniffed, cancellationToken);
+        var stored = await _storage.StoreAsync(rewound, storageKey, sniffed!, cancellationToken);
 
         // Re-checked against what was actually written, not what the request claimed: a client
         // can under-report Content-Length and stream more.
@@ -116,7 +119,7 @@ public sealed class UploadKybDocumentHandler
             documentType,
             fileName,
             storageKey,
-            sniffed,
+            sniffed!,
             stored.SizeBytes,
             stored.Checksum);
 

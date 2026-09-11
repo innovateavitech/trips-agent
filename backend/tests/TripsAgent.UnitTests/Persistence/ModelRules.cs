@@ -99,9 +99,17 @@ internal static class ModelRules
     /// Points in time are <see cref="DateTimeOffset"/>, never <see cref="DateTime"/>.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// A <c>DateTime</c> carries no offset, so "was this ticket issued before the time limit?"
     /// stops being answerable the moment two servers disagree about their local zone. Npgsql maps
     /// <see cref="DateTimeOffset"/> to <c>timestamp with time zone</c> and stores UTC.
+    /// </para>
+    /// <para>
+    /// <see cref="UtcTimestampConvention"/> is the first line of defence and fails the model build
+    /// outright. This rule stays as the backstop: it holds for a context that forgets to register
+    /// the convention, and it reports every offending column at once with a friendlier message
+    /// than an exception thrown on the first one.
+    /// </para>
     /// </remarks>
     internal static List<Violation> NaiveTimestamps(IModel model)
     {

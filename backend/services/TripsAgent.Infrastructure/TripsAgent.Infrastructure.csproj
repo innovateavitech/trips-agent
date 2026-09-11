@@ -14,6 +14,14 @@
     <PackageReference Include="MailKit" />
     <!-- The markup rule cache. Only Infrastructure talks to Redis; Application sees IMarkupRuleCache. -->
     <PackageReference Include="StackExchange.Redis" />
+
+
+    <!-- The asset pipeline's image processing. MIT-licensed; see SkiaImageProcessor for why not
+         ImageSharp. The Linux native build has to be named explicitly — the managed package only
+         brings Windows and macOS natives — and NoDependencies is the one that runs on a slim
+         container image without fontconfig. -->
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
 
     <!-- The outbox: its dispatcher is a BackgroundService, and its backlog is a health check. -->

@@ -95,6 +95,14 @@
     <PackageVersion Include="StackExchange.Redis" Version="2.13.17" />
   </ItemGroup>
 
+  <!-- Image processing for the asset pipeline (#18). SkiaSharp is MIT over BSD-licensed Skia.
+       SixLabors.ImageSharp was ruled out on licence: the Six Labors Split License needs a paid
+       commercial licence above a revenue threshold. See SkiaImageProcessor. -->
+  <ItemGroup Label="Image processing">
+    <PackageVersion Include="SkiaSharp" Version="3.119.4" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.4" />
+  </ItemGroup>
+
   <ItemGroup Label="Email">
     <!-- Plain SMTP, so it talks to Mailpit locally and to any SMTP relay in production without
          tying us to a cloud provider's SDK (CLAUDE.md: "Cloud is not chosen yet"). -->

@@ -4,6 +4,8 @@ import type { AuthApi } from '../auth/auth-api';
 import { AuthProvider } from '../auth/auth-provider';
 import { DashboardApiProvider, type DashboardApi } from '../features/dashboard';
 import { SearchApiProvider, type SearchApi } from '../features/search';
+import { BookingFlowApiProvider, type BookingFlowApi } from '../features/booking';
+import { BookingsApiProvider, type BookingsApi } from '../features/bookings';
 import { WalletApiProvider, type WalletApi } from '../features/wallet';
 
 export interface AppAdapters {
@@ -11,6 +13,8 @@ export interface AppAdapters {
   wallet: WalletApi;
   dashboard: DashboardApi;
   search: SearchApi;
+  bookingFlow: BookingFlowApi;
+  bookings: BookingsApi;
 }
 
 /**
@@ -32,7 +36,11 @@ export function AppProviders({
       <AuthProvider api={adapters.auth}>
         <WalletApiProvider value={adapters.wallet}>
           <DashboardApiProvider value={adapters.dashboard}>
-            <SearchApiProvider value={adapters.search}>{children}</SearchApiProvider>
+            <SearchApiProvider value={adapters.search}>
+              <BookingFlowApiProvider value={adapters.bookingFlow}>
+                <BookingsApiProvider value={adapters.bookings}>{children}</BookingsApiProvider>
+              </BookingFlowApiProvider>
+            </SearchApiProvider>
           </DashboardApiProvider>
         </WalletApiProvider>
       </AuthProvider>

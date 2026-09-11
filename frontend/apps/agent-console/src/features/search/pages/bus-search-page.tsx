@@ -62,9 +62,17 @@ export function BusSearchPage() {
           query={query}
           passengers={request.criteria.passengers}
           onResearch={() => search(request.criteria)}
-          // The booking flow (#53) takes it from here, including seat selection.
-          onSelect={(offer, direction) =>
-            navigate('/book/bus', { state: { product: 'bus', offerId: offer.id, direction } })
+          // The booking flow (#53) takes it from here.
+          onSelect={(offer) =>
+            navigate('/book/bus', {
+              state: {
+                draft: {
+                  product: 'bus',
+                  offer,
+                  passengers: { adults: request.criteria.passengers, children: 0, infants: 0 },
+                },
+              },
+            })
           }
         />
       )}

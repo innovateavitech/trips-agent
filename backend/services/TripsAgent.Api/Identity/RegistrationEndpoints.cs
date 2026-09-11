@@ -80,6 +80,53 @@ public static class RegistrationEndpoints
             .WithName("ResendVerification")
             .Produces<RegistrationAcceptedResponse>(StatusCodes.Status202Accepted);
 
+        // The wording has to be true whether or not the address has an account — see
+        // ForgotPasswordHandler.
+        group.MapPost("/forgot-password", async (
+                ForgotPasswordRequest request,
+                ForgotPasswordHandler handler,
+                CancellationToken cancellationToken) =>
+            {
+                await handler.HandleAsync(request, cancellationToken);
+
+                return Results.Accepted(value: new RegistrationAcceptedResponse(
+                    "If an account exists for that email address, we've sent password reset "
+                    + "instructions to it. The link expires in 30 minutes."));
+            })
+            .WithName("ForgotPassword")
+            .Produces<RegistrationAcceptedResponse>(StatusCodes.Status202Accepted);
+
+        group.MapPost("/reset-password", async (
+                ResetPasswordRequest request,
+                ResetPasswordHandler handler,
+                CancellationToken cancellationToken) =>
+            {
+                var outcome = await handler.HandleAsync(request, cancellationToken);
+
+                return outcome switch
+                {
+                    ResetPasswordOutcome.Reset => Results.Ok(new EmailVerifiedResponse(
+                        "Your password is changed. You have been signed out everywhere else.")),
+
+                    ResetPasswordOutcome.WeakPassword weak => Results.ValidationProblem(
+                        new Dictionary<string, string[]>(StringComparer.Ordinal)
+                        {
+                            ["newPassword"] = [.. weak.Problems],
+                        }),
+
+                    // One answer for unknown, expired and already-used: which it was is not the
+                    // user's problem to diagnose, and the fix is the same in all three.
+                    _ => Results.Problem(
+                        statusCode: StatusCodes.Status400BadRequest,
+                        title: "That reset link is no longer usable.",
+                        detail: "Links work once and expire after 30 minutes. Request a new one."),
+                };
+            })
+            .WithName("ResetPassword")
+            .Produces<EmailVerifiedResponse>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
         return app;
     }
 }

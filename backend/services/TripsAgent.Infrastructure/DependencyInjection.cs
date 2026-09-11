@@ -83,6 +83,11 @@ public static class DependencyInjection
                 ?? Path.Combine(Path.GetTempPath(), "tripsagent-storage"),
         }));
 
+        // The console owns the page that receives the reset token, so its address is
+        // configuration rather than something this assembly can know.
+        services.AddSingleton(new TripsAgent.Application.Identity.Registration.PasswordResetLinkBuilder(
+            configuration["Console:PasswordResetUrl"] ?? "https://localhost:5173/reset-password"));
+
         services.AddSingleton(ReadJwtOptions(configuration));
         services.AddSingleton<IAccessTokenIssuer>(sp => new JwtAccessTokenIssuer(
             sp.GetRequiredService<JwtOptions>(),

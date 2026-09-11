@@ -6,6 +6,7 @@ Where each part of the system is designed — tables, jobs, the money path — i
 
 ## How we work now
 
+- **An MVP, not perfection.** The goal is a working MVP. Meet each criterion the simplest way that is still safe with money and with tenants; what the MVP leaves out is listed below. When a question comes up, decide what is best for now, write the decision under *Decisions for the MVP*, and carry on.
 - **Four PRs close this out**, in the order below. Each one finishes every feature in it — schema, API, jobs, screens and tests, with no stand-ins left — and is merged before the next is opened; work on the next starts the moment the last is pushed. Work for a later PR may begin early on its own branch, but the PRs merge in order.
 - **Tick the boxes in the same PR.** The PR that builds something ticks its criteria here, so `main` always says what is built. Write `Closes #n` for every issue the PR finishes, so the issues close too.
 - **Stand-ins are a step, not the end.** Screens may be built against a stand-in behind a port while their backend is in flight. The feature is not done until the stand-in is gone.
@@ -23,9 +24,82 @@ Where each part of the system is designed — tables, jobs, the money path — i
 | **PR 4** · Launch readiness | F14 Security and launch readiness (queued) | 0 of 50 |
 
 
+## Where things stand
+
+The first place to look when picking this up again. Update it whenever a branch lands.
+
+**On `main`:** Milestone 1's foundation (see *Already built*), supplier search (#158), the booking and bookings screens against stand-ins (#159), rate limiting and the retention purge (#165), and this plan.
+
+| Branch | PR | What it holds | State (11 September, evening) |
+|---|---|---|---|
+| `feat/M1-ticket-issuance` | 1 | F1: ticket issuance, the status poller and the time-limit monitor (#36–#38, committed); checkout saga, reversal and the resolution backend (#42–#44) in progress; then the booking screens switch to the real API | agent working, not pushed |
+| `feat/M1-notifications-documents` | 1 | F2: notifications (#45) and invoice and voucher PDFs (#46); documents in the booking screens | agent working, not pushed |
+| `feat/M2-catalog-api` | 2 | F3 backend: catalog schema, publish rules and product API (#160 and #161, all criteria met); ClamAV scanning (#18); the Package pricing type | pushed, done |
+| `feat/M2-catalog-screens` | 2 | Console: catalog list and editor and the pricing product picker (#162–#164); group departure screens (F6); CRM screens (F7), all against stand-ins; the catalog backend merged in, with the real catalog adapter next | pushed |
+| `feat/M2-storefront` | 2 | F4: site builder, domains and the public storefront (#58–#60) | agent working, not pushed |
+| `feat/M2-crm` | 2 | F7 backend (#62), based on the console branch | paused, not started |
+| — | 2 | F5 customer commerce (#61) and the F6 group tours backend (#57) | not started: F5 needs F1 and F4, F6 needs F3 |
+| — | 3, 4 | F8–F14 | not started |
+
+**Next:** when both PR 1 branches are pushed, merge them into one branch, regenerate the API client, run every gate, tick F1 and F2 here, open PR 1 with `Closes` for every finished issue, and merge it once CI is green. Then PR 2 the same way.
+
+## Decisions for the MVP
+
+The client questions in [§7 of the architecture plan](ARCHITECTURE_AND_DELIVERY_PLAN.md#7-open-questions-for-the-client) are answered here for the MVP, so no work waits on them. Each is the plan's own recommendation where it made one; revisit any of them if the client answers differently.
+
+1. **Supplier credentials:** the platform holds one Trips Africa merchant account. Per-agency credentials stay possible in the schema, unused.
+2. **Merchant of record for payments:** the platform, through Paystack; money settles into the agency's wallet. Split settlement to agency subaccounts comes after the MVP.
+3. **Who fronts the money:** agencies pre-fund their wallets. A booking holds the wallet before the supplier confirms and captures it when the ticket issues; a card payment in the console tops the wallet up first. Credit for agencies comes after the MVP.
+4. **Platform fee:** taken from the agency's margin, never added to the traveller's price.
+5. **Flight cancellation:** an offline request in the MVP — the console records it and support handles it with Trips Africa. Bus cancellation uses the API.
+6. **Sub-agent branding:** one site per tenant; sub-agents sell under the principal's brand.
+7. **Hierarchy depth:** two levels, principal and sub-agent.
+8. **Wallet allowance:** a hard cap on what a sub-agent may draw from the principal's wallet.
+9. **Price-change re-consent:** any rise needs consent; a fall passes through.
+10. **Time limit and slow payment rails:** a live countdown at checkout; payment methods that are not instant are hidden when under 30 minutes remain.
+11. **Publish gate:** a site can go live with at least one published product or flight search switched on.
+12. **Cancelled group departures:** everyone who paid gets a full refund to where the money came from. Cancelling a departure puts each paid booking on it in the resolution queue as a refund.
+13. **Unpaid installments:** never cancelled automatically; flagged to the agency at T+7 with a suggested action.
+14. **Suspended agencies:** existing bookings stand, travellers keep their documents through their magic link, and support services them; no new bookings, and the storefront goes offline.
+15. **Downgrades:** existing usage is kept, new usage is blocked, and the agency gets 30 days' notice to put it right.
+16. **Search speed:** the 5-second target is measured on cached results; a live supplier search is bounded by its 20-second timeout.
+17. **Currency:** each agency sells in its own base currency only (NGN for now).
+18. **Card data:** never touches our servers; cards are entered only on Paystack's hosted page (PCI SAQ-A).
+19. **Email sender:** a neutral sending domain with no Trips branding, the agency's name as the display name and its address as reply-to. Per-agency sending domains come after the MVP.
+20. **Subdomain squatting:** a reserved-word and known-brand denylist; flagged claims go to manual review.
+21. **Traveller accounts:** none — guest checkout with a magic-link "manage my booking" page.
+22. **Multi-city and return confirmations:** one order line per priced journey, with a child row for each supplier confirmation.
+23. **Platform fee on installments:** taken in proportion with each payment.
+24. **Loyalty and reviews:** only the entitlement flag in the MVP.
+25. **Seller on invoices:** the agency, in its own name; the platform bills the agency separately for its fees.
+26. **NDPA:** erasure is PII anonymisation that keeps financial and audit records; the retention purge stays a dry run until counsel reviews the table; hosting goes to the nearest region once a cloud is chosen.
+27. **Supplier unknowns:** the poller keeps its conservative defaults; the questions go to Trips Africa in writing, outside engineering.
+
+Decided during the build:
+
+- **File storage:** the MVP stores uploads with the local storage adapter behind `IBlobStorage` (signed URLs), scanned by ClamAV when one is configured. An S3-compatible adapter (`AWSSDK.S3`, which also covers MinIO) is added once a cloud is chosen.
+- **Catalog prices:** the price an agent types is the base price, and markup rules, where the agency sets any, apply on top. With no rule, the customer pays what was typed.
+- **Product descriptions** are plain text wherever they are shown.
+- **Stand-ins:** each screen defaults to its real endpoint; a stand-in stays only behind demo mode (`VITE_AUTH_MODE=mock`), so the console can still be shown without a backend.
+- **Visa document capture in the booking flow** (#53) is left out: visas are sold as catalog products with their own checklist.
+
+## What the MVP leaves out
+
+Each feature meets its criteria the simplest safe way. These wait until after the MVP:
+
+- **F2:** full templates for flights and buses; one plain template serves tours, visas and group departures. No SMS or WhatsApp sending.
+- **F4:** two site templates and a fixed set of blocks (hero, product grid, text, contact). SSL issuance and renewal go through a port with a development adapter; a real ACME adapter follows once hosting is chosen.
+- **F5 and F6:** installment reminders, but no automatic charging of saved cards; waitlist offers by email only.
+- **F7:** SMS and WhatsApp are logged, not sent.
+- **F8:** the dashboard shows core counts and sales; the top-agent leaderboard and feature flags wait.
+- **F9:** monthly billing only; promotions wait.
+- **F11:** CSV exports only, no XLSX; scheduled reports wait.
+- **F12:** bank accounts verified by hand; reconciliation from Paystack's settlement export.
+- **F14:** a written penetration-test scope and an internal checklist run, with the external test after launch; one recorded load-test run.
+
 ## PR 1 · Milestone 1: the money path
 
-**Why here:** Everything later sells through it, it carries the most risk — real tickets, real money — and Milestone 1's acceptance tests already say what done means. It also brings this plan to `main`.
+**Why here:** Everything later sells through it, it carries the most risk — real tickets, real money — and Milestone 1's acceptance tests already say what done means.
 
 **Done when:** Every box in F1 and F2: a ticket issued end to end against Trips Africa staging, a forced failure provably reversed, a tampered hash blocking issuance, concurrent submits producing one ticket, the ledger soak holding, every booking producing its invoice and voucher, and the booking screens running on the real API.
 
@@ -404,7 +478,7 @@ POST /api/v1/catalog/products/{productId}/departures  catalog.edit     → Depar
 PUT  /api/v1/catalog/departures/{id}                  catalog.edit     → Departure; 409 on a stale version, or capacity below seats taken
 POST /api/v1/catalog/departures/{id}/close            catalog.publish  → Departure: stops new bookings, existing ones stand
 POST /api/v1/catalog/departures/{id}/reopen           catalog.publish  → Departure: back to the status its seats give it
-POST /api/v1/catalog/departures/{id}/cancel           catalog.publish  → Departure; 409 while any seat is confirmed (open question 12)
+POST /api/v1/catalog/departures/{id}/cancel           catalog.publish  → Departure: each paid booking on it goes to the resolution queue as a full refund (decision 12)
 GET  /api/v1/catalog/departures/{id}/manifest         catalog.view     → ManifestEntry[]
 GET  /api/v1/catalog/departures/{id}/waitlist         catalog.view     → WaitlistEntry[]
 ```

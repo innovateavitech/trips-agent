@@ -46,7 +46,8 @@ public sealed class PostgresFixture : IAsyncLifetime
         string databaseName,
         ITenantContext? tenantContext = null,
         IPlatformScope? platformScope = null,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null,
+        TripsAgent.Application.Auditing.IAuditContext? auditContext = null)
     {
         await using (var admin = new Npgsql.NpgsqlConnection(ConnectionString))
         {
@@ -81,7 +82,7 @@ public sealed class PostgresFixture : IAsyncLifetime
             Npgsql.NpgsqlConnection.ClearPool(stale);
         }
 
-        return Connect(databaseName, tenantContext, platformScope, clock);
+        return Connect(databaseName, tenantContext, platformScope, clock, auditContext);
     }
 
     /// <summary>
@@ -97,7 +98,8 @@ public sealed class PostgresFixture : IAsyncLifetime
         string databaseName,
         ITenantContext? tenantContext = null,
         IPlatformScope? platformScope = null,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null,
+        TripsAgent.Application.Auditing.IAuditContext? auditContext = null)
     {
         var builder = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString)
         {
@@ -118,10 +120,23 @@ public sealed class PostgresFixture : IAsyncLifetime
             CommandTimeout = 60,
         };
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(builder.ConnectionString)
-            .UseSnakeCaseNamingConvention()
-            .Options;
+            .UseSnakeCaseNamingConvention();
+
+        // The audit interceptor is added at composition time rather than inside AppDbContext, so
+        // a context built here only audits if this adds it. Added only when an audit context was
+        // asked for, so tests that do not care keep the cheaper path — and so nothing is
+        // registered twice for tests that wire their own.
+        if (auditContext is not null)
+        {
+            optionsBuilder.AddInterceptors(new TripsAgent.Infrastructure.Auditing.AuditSaveChangesInterceptor(
+                auditContext,
+                new TripsAgent.Infrastructure.Auditing.AuditRedactionPolicy(),
+                clock ?? TimeProvider.System));
+        }
+
+        var options = optionsBuilder.Options;
 
         // Defaults to no tenant, which is what a migration or a seed run looks like.
         var fallback = TestTenancy.None();
@@ -130,7 +145,8 @@ public sealed class PostgresFixture : IAsyncLifetime
             options,
             clock ?? TimeProvider.System,
             tenantContext ?? fallback.Tenant,
-            platformScope ?? fallback.Scope);
+            platformScope ?? fallback.Scope,
+            auditContext);
     }
 
     private static string Quote(string identifier) =>

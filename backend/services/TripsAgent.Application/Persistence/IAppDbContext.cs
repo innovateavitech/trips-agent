@@ -35,6 +35,10 @@ public interface IAppDbContext
 
     public DbSet<UserRole> UserRoles { get; }
 
+    public DbSet<Permission> Permissions { get; }
+
+    public DbSet<RolePermission> RolePermissions { get; }
+
     public DbSet<OtpCode> OtpCodes { get; }
 
     public DbSet<RefreshToken> RefreshTokens { get; }

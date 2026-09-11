@@ -1,3 +1,4 @@
+using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
 
 namespace TripsAgent.Domain.Tenancy.Kyb;
@@ -38,7 +39,7 @@ public enum KybDocumentType
 /// corrected one that follows are different things, and keeping both is what lets an admin see
 /// what changed — and what lets us answer "why was this agency approved?" a year later.
 /// </remarks>
-public sealed class KybSubmission : Entity, IAuditableEntity, ITenantScoped
+public sealed class KybSubmission : Entity, IAuditableEntity, ITenantScoped, IAuditLogged
 {
     /// <summary>Documents required before a submission can be handed over.</summary>
     public static IReadOnlyList<KybDocumentType> RequiredDocuments { get; } =

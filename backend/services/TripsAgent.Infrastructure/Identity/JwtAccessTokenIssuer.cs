@@ -86,10 +86,15 @@ public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer
             SecurityAlgorithms.HmacSha256);
     }
 
-    public AccessToken Issue(User user, IReadOnlyCollection<string> roles, Guid? rootAgencyId)
+    public AccessToken Issue(
+        User user,
+        IReadOnlyCollection<string> roles,
+        IReadOnlyCollection<string> permissions,
+        Guid? rootAgencyId)
     {
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(roles);
+        ArgumentNullException.ThrowIfNull(permissions);
 
         var now = _clock.GetUtcNow();
         var expiresAt = now.Add(_options.AccessTokenLifetime);
@@ -112,6 +117,11 @@ public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer
         foreach (var role in roles)
         {
             claims.Add(new Claim(TripsClaimTypes.Role, role));
+        }
+
+        foreach (var permission in permissions)
+        {
+            claims.Add(new Claim(TripsClaimTypes.Permission, permission));
         }
 
         var descriptor = new SecurityTokenDescriptor

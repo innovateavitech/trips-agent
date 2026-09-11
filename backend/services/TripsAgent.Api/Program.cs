@@ -3,6 +3,7 @@ using System.Text;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using TripsAgent.Api.Authorization;
 using TripsAgent.Api.Identity;
 using TripsAgent.Api.Scheduling;
 using TripsAgent.Api.Tenancy;
@@ -63,7 +64,9 @@ builder.Services
         options.MapInboundClaims = false;
     });
 
-builder.Services.AddAuthorization();
+// A policy per permission code, each satisfied by a claim on the token. Registered from the
+// catalogue rather than listed by hand, so a new permission cannot end up with no policy.
+builder.Services.AddAuthorizationBuilder().AddPermissionPolicies();
 
 // The outbox check reports Degraded, never Unhealthy, when messages are piling up: restarting the
 // API cannot fix a backlog the Worker or the broker is causing. See OutboxBacklogHealthCheck.
@@ -105,6 +108,10 @@ app.UseAuthorization();
 // It has to run after UseAuthentication — before that there is no identity to read.
 app.UseTenantContext();
 
+// Tells the audit log who is acting. Without it every audited change is attributed to nobody,
+// which is exactly the question the log exists to answer.
+app.UseAuditContext();
+
 app.MapHealthChecks("/health");
 
 // The Hangfire dashboard can requeue, delete and trigger jobs, several of which move money. It is
@@ -130,6 +137,7 @@ if (hangfireOptions.DashboardEnabled)
 app.MapRegistrationEndpoints();
 app.MapAuthenticationEndpoints();
 app.MapKybEndpoints();
+app.MapKybReviewEndpoints();
 
 app.MapGet("/", () => Results.Ok(new
 {

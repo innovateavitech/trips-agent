@@ -22,5 +22,13 @@ public interface IAccessTokenIssuer
     /// <param name="rootAgencyId">
     /// The principal at the top of that agency's tree. Null for platform staff.
     /// </param>
-    public AccessToken Issue(User user, IReadOnlyCollection<string> roles, Guid? rootAgencyId);
+    /// <param name="permissions">
+    /// Permission codes the user holds through those roles. Carried on the token so an
+    /// authorisation check is a claim comparison rather than a query.
+    /// </param>
+    public AccessToken Issue(
+        User user,
+        IReadOnlyCollection<string> roles,
+        IReadOnlyCollection<string> permissions,
+        Guid? rootAgencyId);
 }

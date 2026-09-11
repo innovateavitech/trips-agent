@@ -26,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<UploadKybDocumentHandler>();
         services.AddScoped<SubmitKybHandler>();
         services.AddScoped<GetKybStatusHandler>();
+        services.AddScoped<KybReviewHandler>();
+        services.AddScoped<KybDocumentLink>();
 
         return services;
     }

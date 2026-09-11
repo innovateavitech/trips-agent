@@ -62,8 +62,8 @@ export function ResetPasswordPage() {
             This link is incomplete
           </h1>
           <p className="text-sm text-muted-foreground">
-            Reset links carry a one-time code, and this one arrived without it. Ask for a fresh
-            link and open it straight from your email.
+            Reset links carry a one-time code, and this one arrived without it. Ask for a fresh link
+            and open it straight from your email.
           </p>
         </div>
 
@@ -148,10 +148,7 @@ function ResetFailure({ error }: { error: unknown }) {
       tone="destructive"
       title={title}
       action={
-        <Link
-          to="/forgot-password"
-          className="font-medium underline underline-offset-4"
-        >
+        <Link to="/forgot-password" className="font-medium underline underline-offset-4">
           Ask for a new link
         </Link>
       }

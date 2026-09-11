@@ -100,7 +100,9 @@ describe('validateVerification', () => {
   });
 
   it.each(['12345', '1234567', '12a456'])('rejects %s', (code) => {
-    expect(validateVerification({ email: complete.email, code }).code).toBe('The code is 6 digits.');
+    expect(validateVerification({ email: complete.email, code }).code).toBe(
+      'The code is 6 digits.',
+    );
   });
 
   it('asks for the code when it is blank rather than describing its shape', () => {

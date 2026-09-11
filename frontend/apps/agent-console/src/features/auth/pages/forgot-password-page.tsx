@@ -46,7 +46,9 @@ export function ForgotPasswordPage() {
     return (
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Check your email</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Check your email
+          </h1>
           <p className="text-sm text-muted-foreground">
             If <span className="font-medium text-foreground">{email.trim()}</span> has an account, a
             reset link is on its way. It works once, and expires in 30 minutes.

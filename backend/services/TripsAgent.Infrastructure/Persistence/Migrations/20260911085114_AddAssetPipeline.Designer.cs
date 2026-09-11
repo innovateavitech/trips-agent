@@ -12,7 +12,7 @@ using TripsAgent.Infrastructure.Persistence;
 namespace TripsAgent.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260911080034_AddAssetPipeline")]
+    [Migration("20260911085114_AddAssetPipeline")]
     partial class AddAssetPipeline
     {
         /// <inheritdoc />
@@ -304,6 +304,171 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_audit_logs_entity");
 
                     b.ToTable("audit_logs", "platform");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Documents.DocumentNumberFormat", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("document_type");
+
+                    b.Property<bool>("IncludeYear")
+                        .HasColumnType("boolean")
+                        .HasColumnName("include_year");
+
+                    b.Property<int>("Padding")
+                        .HasColumnType("integer")
+                        .HasColumnName("padding");
+
+                    b.Property<string>("Prefix")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("prefix");
+
+                    b.Property<bool>("ResetsYearly")
+                        .HasColumnType("boolean")
+                        .HasColumnName("resets_yearly");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_document_number_formats");
+
+                    b.HasIndex("AgencyId", "DocumentType")
+                        .IsUnique()
+                        .HasDatabaseName("ix_document_number_formats_agency_id_document_type");
+
+                    b.ToTable("document_number_formats", "documents", t =>
+                        {
+                            t.HasCheckConstraint("ck_document_number_formats_padding_range", "padding BETWEEN 1 AND 10");
+
+                            t.HasCheckConstraint("ck_document_number_formats_prefix_shape", "prefix ~ '^[A-Z0-9]([A-Z0-9/-]*[A-Z0-9])?$'");
+
+                            t.HasCheckConstraint("ck_document_number_formats_reset_needs_year", "include_year OR NOT resets_yearly");
+                        });
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Documents.DocumentNumberSequence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("document_type");
+
+                    b.Property<long>("LastValue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_value");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id")
+                        .HasName("pk_document_number_sequences");
+
+                    b.HasIndex("AgencyId", "DocumentType", "Year")
+                        .IsUnique()
+                        .HasDatabaseName("ix_document_number_sequences_agency_id_document_type_year");
+
+                    b.ToTable("document_number_sequences", "documents", t =>
+                        {
+                            t.HasCheckConstraint("ck_document_number_sequences_last_value_positive", "last_value >= 1");
+
+                            t.HasCheckConstraint("ck_document_number_sequences_year", "year = 0 OR year BETWEEN 2000 AND 9999");
+                        });
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Documents.GeneratedDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DocumentNumber")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("document_number");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("document_type");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at");
+
+                    b.Property<long>("SequenceNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("sequence_number");
+
+                    b.Property<int>("SequenceYear")
+                        .HasColumnType("integer")
+                        .HasColumnName("sequence_year");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_generated_documents");
+
+                    b.HasIndex("AgencyId", "DocumentType", "DocumentNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_generated_documents_agency_id_document_type_document_number");
+
+                    b.HasIndex("AgencyId", "DocumentType", "SequenceYear", "SequenceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_generated_documents_agency_id_document_type_sequence");
+
+                    b.ToTable("generated_documents", "documents", t =>
+                        {
+                            t.HasCheckConstraint("ck_generated_documents_sequence_number_positive", "sequence_number >= 1");
+                        });
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Identity.LoginAttempt", b =>
@@ -1470,6 +1635,195 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.ToTable("admin_alerts", "platform");
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Pricing.MarkupRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<bool>("AppliesToSubAgents")
+                        .HasColumnType("boolean")
+                        .HasColumnName("applies_to_sub_agents");
+
+                    b.Property<string>("CalculationType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("calculation_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("EffectiveFrom")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("effective_from");
+
+                    b.Property<DateTimeOffset?>("EffectiveTo")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("effective_to");
+
+                    b.Property<long?>("MaxMarkupMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("max_markup_minor");
+
+                    b.Property<long?>("MinMarkupMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("min_markup_minor");
+
+                    b.Property<int?>("PercentBasisPoints")
+                        .HasColumnType("integer")
+                        .HasColumnName("percent_basis_points");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer")
+                        .HasColumnName("priority");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<string>("ProductType")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("product_type");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("scope");
+
+                    b.Property<Guid?>("SupersededById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("superseded_by_id");
+
+                    b.Property<string>("SupplierCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("supplier_code");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long?>("ValueMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("value_minor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_markup_rules");
+
+                    b.HasIndex("SupersededById")
+                        .HasDatabaseName("ix_markup_rules_superseded_by_id");
+
+                    b.HasIndex("AgencyId", "EffectiveTo")
+                        .HasDatabaseName("ix_markup_rules_agency_id_effective_to");
+
+                    b.ToTable("markup_rules", "pricing");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Pricing.PriceQuote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<string>("Breakdown")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("breakdown");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<long>("FxRateBillionths")
+                        .HasColumnType("bigint")
+                        .HasColumnName("fx_rate_billionths");
+
+                    b.Property<long>("GrossAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("gross_amount_minor");
+
+                    b.Property<long>("MarkupAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("markup_amount_minor");
+
+                    b.Property<Guid?>("MarkupRuleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("markup_rule_id");
+
+                    b.Property<long>("NetAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("net_amount_minor");
+
+                    b.Property<long>("PlatformFeeMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("platform_fee_minor");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<string>("ProductType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("product_type");
+
+                    b.Property<string>("SupplierCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("supplier_code");
+
+                    b.Property<long>("TaxAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_amount_minor");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_price_quotes");
+
+                    b.HasIndex("MarkupRuleId")
+                        .HasDatabaseName("ix_price_quotes_markup_rule_id");
+
+                    b.HasIndex("AgencyId", "CreatedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_price_quotes_agency_id_created_at");
+
+                    b.ToTable("price_quotes", "pricing");
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Tenancy.Agency", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1937,6 +2291,36 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_asset_variants_assets_asset_id");
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Documents.DocumentNumberFormat", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_document_number_formats_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Documents.DocumentNumberSequence", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_document_number_sequences_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Documents.GeneratedDocument", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_generated_documents_agencies_agency_id");
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Identity.OtpCode", b =>
                 {
                     b.HasOne("TripsAgent.Domain.Identity.User", null)
@@ -2104,6 +2488,38 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_wallet_transactions_wallets_wallet_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Pricing.MarkupRule", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_markup_rules_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Pricing.MarkupRule", null)
+                        .WithMany()
+                        .HasForeignKey("SupersededById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_markup_rules_markup_rules_superseded_by_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Pricing.PriceQuote", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_price_quotes_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Pricing.MarkupRule", null)
+                        .WithMany()
+                        .HasForeignKey("MarkupRuleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_price_quotes_markup_rules_markup_rule_id");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Tenancy.Agency", b =>

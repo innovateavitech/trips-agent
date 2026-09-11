@@ -10,7 +10,7 @@ It takes about five minutes from a clean clone.
 
 ## 1. Before you start
 
-- **Docker** running (PostgreSQL, Mailpit, RabbitMQ come from `docker-compose.yml`)
+- **Docker** running (PostgreSQL, Mailpit, RabbitMQ and Redis come from `docker-compose.yml`)
 - **.NET 10 SDK** and **pnpm**
 - Paystack **test** keys, if you want the live top-up — and note *where* they have to be:
 
@@ -41,7 +41,7 @@ Two machine-level things that will spoil a demo if you meet them cold:
 ## 2. Start it
 
 ```bash
-docker compose up -d postgres mailpit rabbitmq
+docker compose up -d postgres mailpit rabbitmq redis
 
 cd backend
 dotnet run --project services/TripsAgent.Api -- migrate    # schema, then reference data
@@ -49,7 +49,19 @@ dotnet run --project services/TripsAgent.Api -- seed       # three demo agencies
 dotnet run --project services/TripsAgent.Api               # serves http://localhost:5002
 ```
 
-Run the API in **its own terminal** and leave it there.
+Run the API in **its own terminal** and leave it there. Redis has to be up first: the pricing
+screens read each agency's markup rules through it.
+
+Then the **Worker**, in a terminal of its own:
+
+```bash
+cd backend
+dotnet run --project services/TripsAgent.Worker
+```
+
+It sends the emails the platform queues — a staff KYB decision reaches the agency through it — and
+drains payment webhooks, runs the nightly ledger audit and scans uploads. The demo still runs
+without it, but a staff approval then never reaches the agency's inbox.
 
 Then, in two more terminals:
 
@@ -128,7 +140,13 @@ The credit is not taken from that redirect: the server asks Paystack what happen
 answer credits anything. Paystack's webhook arrives at the same time and is deliberately harmless
 — the same event five times still credits once.
 
-**f. If you want to show the books.** The statement, and the nightly ledger integrity audit
+**f. Set the agency's markup.** **Pricing rules** → set a default markup, say 10%. The **Which rule
+wins?** card prices a sample fare as you type: the net, the markup, VAT on the markup, and what the
+agency keeps. Add an override for buses and watch the explainer name the new rule. Then change the
+default: the old rule is retired, not edited, and stays listed under **Earlier rules** — a price
+already quoted never moves.
+
+**g. If you want to show the books.** The statement, and the nightly ledger integrity audit
 (`ledger-integrity-audit` in the Hangfire dashboard at `/hangfire`), prove
 `wallet balance = SUM(ledger entries)`.
 
@@ -141,13 +159,13 @@ the top-up in step (e). You skip onboarding and review, which is most of what wo
 
 **Live, end to end:** registration and email verification (through Mailpit), sign-in with token
 refresh, KYB upload and submission, the staff review queue and its decisions, wallet balance,
-top-up through Paystack test mode, the double-entry ledger behind it, and the nightly integrity
-audit.
+top-up through Paystack test mode, the double-entry ledger behind it, the nightly integrity
+audit, pricing rules with the live "which rule wins" preview, quotes that freeze their price, and the
+emails the Worker sends.
 
 **Not built yet, and shown against a clearly-marked mock layer:** the dashboard's figures, flight
-and bus search, the booking flow, the bookings list, and pricing rules. Those screens exist and
-behave, but the supplier integration (issues #32–#40) and the checkout saga (#42) are still being
-built. Say so rather than letting anyone assume a ticket was issued.
+and bus search, the booking flow and the bookings list. Those screens exist and behave, but supplier
+search and price confirmation (issues #33–#35) and the checkout saga (#42) are still being built. Say so rather than letting anyone assume a ticket was issued.
 
 ---
 
@@ -161,4 +179,6 @@ built. Say so rather than letting anyone assume a ticket was issued.
 | Every authenticated call 500s with **`Jwt:SigningKey is not valid base64`** | The whole `.env` was sourced into the API's shell. Start a fresh terminal and export only the two Paystack variables |
 | The KYB queue is empty | Every submission has been decided. The queue only shows undecided ones today — register a new agency (step a) to put something in it |
 | The seeded "pending" agency is already verified | Somebody approved it on this database. That is why the walk-through starts at registration; a fresh agency is always pending |
+| The **Pricing rules** screen shows an error, or `/api/v1/pricing/…` returns 500 | Redis is not running. `docker compose up -d redis` — pricing reads markup rules through it |
+| A staff approval never produces an email | The Worker is not running (§2). The approval itself worked — the agency's screen still updates within about fifteen seconds |
 | Sign-in works, then every request 401s | The API restarted with a new signing key. Sign in again |

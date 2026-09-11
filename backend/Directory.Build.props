@@ -58,8 +58,10 @@
        copy can hold an edit that exists nowhere else, so a person compares before removing it. -->
   <Target Name="RejectSyncConflictCopies" BeforeTargets="CoreCompile">
     <ItemGroup>
+      <!-- A copied file ("Foo 2.cs") or anything inside a copied directory ("Interceptors 2/Foo.cs"):
+           a path segment ending in a space and digits. -->
       <_SyncConflictCopy Include="@(Compile)"
-                         Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Filename)', ' \d+$'))" />
+                         Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Identity)', ' \d+([/\\]|\.[^/\\]+$)'))" />
     </ItemGroup>
     <Error Condition="'@(_SyncConflictCopy)' != ''"
            Text="Sync-conflict copies found — files like 'Foo 2.cs' left beside 'Foo.cs' by iCloud or Dropbox, each redefining a type: @(_SyncConflictCopy->'%(Identity)', ', '). Compare each with its original (cmp 'Foo 2.cs' Foo.cs) and delete it if identical. If it differs, it may hold an edit that exists nowhere else — look before deleting." />

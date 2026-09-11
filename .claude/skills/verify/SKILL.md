@@ -20,11 +20,12 @@ compiles every `*.cs` it finds, so one copy breaks the build with a wall of CS01
 they are git-ignored, so `git status` looks clean.
 
 ```bash
-find . -name "* [0-9].*" -not -path "*/node_modules/*" -not -path "*/.git/*" \
-       -not -path "*/bin/*" -not -path "*/obj/*" -not -path "*/.next/*"
+find . \( -name "* [0-9].*" -o -type d -name "* [0-9]" \) -not -path "*/node_modules/*" -not -path "*/.git/*" \
+       -not -path "*/bin/*" -not -path "*/obj/*" -not -path "*/.next/*" -not -path "*/.turbo/*"
 ```
 
-Expect no output. For each file found, compare it with its original: `cmp "Foo 2.cs" Foo.cs`.
+Expect no output. Directories get copied too (`components 2/`), often empty. For each file found, compare
+it with its original: `cmp "Foo 2.cs" Foo.cs`; for a directory, `diff -rq "components 2" components`.
 Delete it only if they are identical. If it **differs**, stop and show the user the difference —
 a conflict copy can hold an edit that exists nowhere else.
 

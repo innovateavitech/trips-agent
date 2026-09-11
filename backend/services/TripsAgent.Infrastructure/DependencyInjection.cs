@@ -20,6 +20,7 @@ using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Notifications;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Pricing;
+using TripsAgent.Infrastructure.Search;
 using TripsAgent.Infrastructure.Security;
 using TripsAgent.Infrastructure.Storage;
 using TripsAgent.Infrastructure.Suppliers;
@@ -205,6 +206,10 @@ public static class DependencyInjection
         // Each agency's markup rules, cached in Redis — or read straight from the database when no
         // Redis is configured. Either way pricing gives the same answer; only the speed differs.
         services.AddPricingCache(configuration);
+
+        // Net search results, per agency, for a few minutes (#40). After the pricing cache, whose
+        // Redis connection it reuses.
+        services.AddSearchCache(configuration);
 
         return services;
     }

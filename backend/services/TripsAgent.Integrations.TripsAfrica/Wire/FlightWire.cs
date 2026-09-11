@@ -126,6 +126,9 @@ internal sealed class FlightEntryWire
 
     public string? FlightClass { get; init; }
 
+    /// <summary>Flying time: <c>4h:30m</c>. Exact, unlike a difference of two local times in unknown zones.</summary>
+    public string? FlightDuration { get; init; }
+
     /// <summary>A count ("2") with a unit ("PC"), or a unit alone ("KGS") on domestic results.</summary>
     public string? Baggages { get; init; }
 

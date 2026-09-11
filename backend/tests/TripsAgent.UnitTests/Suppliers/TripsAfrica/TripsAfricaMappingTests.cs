@@ -54,6 +54,25 @@ public class TripsAfricaMappingTests
             .Should().BeNull("rounding a supplier's price turns it into a price they never gave");
     }
 
+    [Theory]
+    [InlineData("4h:30m", 270)]
+    [InlineData("10h:05m", 605)]
+    [InlineData("0h:59m", 59)]
+    [InlineData(" 1h:00m ", 60)]
+    public void A_supplier_duration_reads_as_minutes(string duration, int minutes)
+    {
+        TripsAfricaMapping.ParseDuration(duration).Should().Be(minutes);
+    }
+
+    [Theory]
+    [InlineData("1h:75m")]
+    [InlineData("soon")]
+    [InlineData("")]
+    public void A_duration_that_does_not_read_cleanly_is_null_rather_than_a_guess(string duration)
+    {
+        TripsAfricaMapping.ParseDuration(duration).Should().BeNull();
+    }
+
     // ------------------------------------------------------------------------- flight search
 
     [Fact]
@@ -96,6 +115,8 @@ public class TripsAfricaMappingTests
         first.DestinationIata.Should().Be("CMN");
         first.BaggageAllowance.Should().Be("2 pieces");
         first.FareBasis.Should().Be("KA0WAAFA");
+        first.MarketingCarrierName.Should().Be("Royal Air Maroc");
+        first.DurationMinutes.Should().Be(270, "the supplier's own flying time, not a difference of two local times");
 
         offer.FlightSegments[1].SegmentIndex.Should().Be(1);
         offer.FlightSegments[1].DestinationIata.Should().Be("LHR");
@@ -254,6 +275,7 @@ public class TripsAfricaMappingTests
         segment.AvailableSeats.Should().Be(2);
         segment.SeatNumbers.Should().Equal("1", "11");
         segment.ReservationIdExt.Should().Be("res-0001");
+        segment.VehicleType.Should().Be("Hiace");
     }
 
     // -------------------------------------------------------------------- price confirmation
@@ -282,6 +304,7 @@ public class TripsAfricaMappingTests
         lines.Should().OnlyContain(line => SupplierBookingConfirmation.HashesMatch(line.HashExpected, line.HashReceived));
         lines[2].NewPrice.Should().Be(new Money(4_335_600));
         lines[0].TicketTimeLimit.Should().Be(new DateTimeOffset(2026, 10, 1, 6, 9, 46, Lagos));
+        lines[0].TicketTimeLimit!.Value.Offset.Should().Be(TimeSpan.Zero, "the database refuses any instant that is not UTC");
     }
 
     [Fact]
@@ -473,7 +496,7 @@ public class TripsAfricaMappingTests
                 "FlightEntries": [
                   { "FlightNumber": "554", "MarketingAirlineCode": "AT", "MarketingAirlineName": "Royal Air Maroc",
                     "OperatingAirlineCode": "AT", "DepartureDate": "2026-10-02T06:45:00", "DepartureAirportCode": "LOS",
-                    "ArrivalDate": "2026-10-02T11:15:00", "ArrivalAirportCode": "CMN", "FlightClass": "Economy",
+                    "ArrivalDate": "2026-10-02T11:15:00", "ArrivalAirportCode": "CMN", "FlightClass": "Economy", "FlightDuration": "4h:30m",
                     "Baggages": "2", "BaggageUnit": "PC",
                     "AvailablePassengerSeats": [{ "PassengerType": "ADT", "FareBasis": "KA0WAAFA" }] },
                   { "FlightNumber": "800", "MarketingAirlineCode": "AT", "MarketingAirlineName": "Royal Air Maroc",

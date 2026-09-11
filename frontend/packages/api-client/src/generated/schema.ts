@@ -471,6 +471,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/search/flights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SearchFlights"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/search/buses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SearchBuses"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assets/limits": {
         parameters: {
             query?: never;
@@ -592,6 +624,30 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        BusSearchRequest: {
+            tripType: string;
+            departureTerminalId: string;
+            arrivalTerminalId: string;
+            /** Format: date */
+            date: string;
+            /** Format: date */
+            returnDate: null | string;
+            /** Format: int32 */
+            passengers: number | string;
+        };
+        BusTripResponse: {
+            operator: string;
+            vehicle: null | string;
+            departureTerminalId: string;
+            arrivalTerminalId: string;
+            departsAt: string;
+            arrivesAt: null | string;
+            /** Format: int32 */
+            durationMinutes: null | number | string;
+            /** Format: int32 */
+            availableSeats: number | string;
+            seatNumbers: string[];
+        };
         CurrentUserResponse: {
             /** Format: uuid */
             userId: string;
@@ -603,6 +659,37 @@ export interface components {
         };
         EmailVerifiedResponse: {
             message: string;
+        };
+        FlightJourneyResponse: {
+            /** Format: int32 */
+            durationMinutes: number | string;
+            /** Format: int32 */
+            stops: number | string;
+            segments: components["schemas"]["FlightSegmentResponse"][];
+        };
+        FlightSearchRequest: {
+            tripType: string;
+            legs: components["schemas"]["SearchLegRequest"][];
+            /** Format: int32 */
+            adults: number | string;
+            /** Format: int32 */
+            children: number | string;
+            /** Format: int32 */
+            infants: number | string;
+            cabin: null | string;
+        };
+        FlightSegmentResponse: {
+            carrierCode: string;
+            carrierName: null | string;
+            flightNumber: string;
+            origin: string;
+            destination: string;
+            departsAt: string;
+            arrivesAt: string;
+            /** Format: int32 */
+            durationMinutes: number | string;
+            cabin: null | string;
+            baggageAllowance: null | string;
         };
         ForgotPasswordRequest: {
             email: string;
@@ -775,6 +862,20 @@ export interface components {
             supersededById: null | string;
             status: string;
         };
+        OfferMarginResponse: {
+            /** Format: int64 */
+            netMinor: number | string;
+            /** Format: int64 */
+            markupMinor: number | string;
+            /** Format: int64 */
+            taxMinor: number | string;
+        };
+        OfferPriceResponse: {
+            currency: string;
+            /** Format: int64 */
+            sellMinor: number | string;
+            margin: null | components["schemas"]["OfferMarginResponse"];
+        };
         PricePreviewRequest: {
             productType: string;
             /** Format: uuid */
@@ -900,6 +1001,31 @@ export interface components {
         ResetPasswordRequest: {
             token: string;
             newPassword: string;
+        };
+        SearchLegRequest: {
+            origin: string;
+            destination: string;
+            /** Format: date */
+            date: string;
+        };
+        SearchOfferResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            leg: number | string;
+            journeys: components["schemas"]["FlightJourneyResponse"][];
+            busTrips: components["schemas"]["BusTripResponse"][];
+            price: components["schemas"]["OfferPriceResponse"];
+        };
+        SearchResponse: {
+            /** Format: uuid */
+            searchId: string;
+            /** Format: date-time */
+            searchedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            fromCache: boolean;
+            offers: components["schemas"]["SearchOfferResponse"][];
         };
         StartTopUpRequest: {
             /** Format: int64 */
@@ -1716,6 +1842,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PriceQuoteWithMarginResponse"];
+                };
+            };
+        };
+    };
+    SearchFlights: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlightSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SearchBuses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BusSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
         };

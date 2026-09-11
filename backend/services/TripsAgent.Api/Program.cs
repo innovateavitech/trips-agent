@@ -9,6 +9,7 @@ using TripsAgent.Api.Identity;
 using TripsAgent.Api.Payments;
 using TripsAgent.Api.Pricing;
 using TripsAgent.Api.Scheduling;
+using TripsAgent.Api.Search;
 using TripsAgent.Api.Storage;
 using TripsAgent.Api.Tenancy;
 using TripsAgent.Application;
@@ -154,6 +155,7 @@ app.MapKybEndpoints();
 app.MapKybReviewEndpoints();
 app.MapWalletEndpoints();
 app.MapPricingEndpoints();
+app.MapSearchEndpoints();
 
 app.MapAssetEndpoints();
 

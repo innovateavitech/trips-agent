@@ -180,7 +180,9 @@ public sealed record SupplierFlightSegmentQuote(
     DateTimeOffset ArrivalAt,
     string? Cabin = null,
     string? BaggageAllowance = null,
-    string? FareBasis = null);
+    string? FareBasis = null,
+    string? MarketingCarrierName = null,
+    int? DurationMinutes = null);
 
 /// <summary>One bus trip within an offer.</summary>
 public sealed record SupplierBusSegmentQuote(
@@ -191,7 +193,8 @@ public sealed record SupplierBusSegmentQuote(
     DateTimeOffset? ArrivalAt,
     int? AvailableSeats,
     IReadOnlyList<string> SeatNumbers,
-    string? ReservationIdExt = null);
+    string? ReservationIdExt = null,
+    string? VehicleType = null);
 
 /// <summary>A traveller, as a supplier needs them for confirmation and ticketing.</summary>
 public sealed record SupplierPassenger(

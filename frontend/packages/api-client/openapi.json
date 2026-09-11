@@ -929,6 +929,126 @@
         }
       }
     },
+    "/api/v1/search/flights": {
+      "post": {
+        "tags": [
+          "Search"
+        ],
+        "operationId": "SearchFlights",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlightSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/search/buses": {
+      "post": {
+        "tags": [
+          "Search"
+        ],
+        "operationId": "SearchBuses",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/assets/limits": {
       "get": {
         "tags": [
@@ -1310,6 +1430,110 @@
           }
         }
       },
+      "BusSearchRequest": {
+        "required": [
+          "tripType",
+          "departureTerminalId",
+          "arrivalTerminalId",
+          "date",
+          "returnDate",
+          "passengers"
+        ],
+        "type": "object",
+        "properties": {
+          "tripType": {
+            "type": "string"
+          },
+          "departureTerminalId": {
+            "type": "string"
+          },
+          "arrivalTerminalId": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "returnDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "passengers": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "BusTripResponse": {
+        "required": [
+          "operator",
+          "vehicle",
+          "departureTerminalId",
+          "arrivalTerminalId",
+          "departsAt",
+          "arrivesAt",
+          "durationMinutes",
+          "availableSeats",
+          "seatNumbers"
+        ],
+        "type": "object",
+        "properties": {
+          "operator": {
+            "type": "string"
+          },
+          "vehicle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "departureTerminalId": {
+            "type": "string"
+          },
+          "arrivalTerminalId": {
+            "type": "string"
+          },
+          "departsAt": {
+            "type": "string"
+          },
+          "arrivesAt": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "durationMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "availableSeats": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "seatNumbers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "CurrentUserResponse": {
         "required": [
           "userId",
@@ -1356,6 +1580,151 @@
         "properties": {
           "message": {
             "type": "string"
+          }
+        }
+      },
+      "FlightJourneyResponse": {
+        "required": [
+          "durationMinutes",
+          "stops",
+          "segments"
+        ],
+        "type": "object",
+        "properties": {
+          "durationMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "stops": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlightSegmentResponse"
+            }
+          }
+        }
+      },
+      "FlightSearchRequest": {
+        "required": [
+          "tripType",
+          "legs",
+          "adults",
+          "children",
+          "infants",
+          "cabin"
+        ],
+        "type": "object",
+        "properties": {
+          "tripType": {
+            "type": "string"
+          },
+          "legs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchLegRequest"
+            }
+          },
+          "adults": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "children": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "infants": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "cabin": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "FlightSegmentResponse": {
+        "required": [
+          "carrierCode",
+          "carrierName",
+          "flightNumber",
+          "origin",
+          "destination",
+          "departsAt",
+          "arrivesAt",
+          "durationMinutes",
+          "cabin",
+          "baggageAllowance"
+        ],
+        "type": "object",
+        "properties": {
+          "carrierCode": {
+            "type": "string"
+          },
+          "carrierName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "flightNumber": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "departsAt": {
+            "type": "string"
+          },
+          "arrivesAt": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "cabin": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "baggageAllowance": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -2078,6 +2447,71 @@
           }
         }
       },
+      "OfferMarginResponse": {
+        "required": [
+          "netMinor",
+          "markupMinor",
+          "taxMinor"
+        ],
+        "type": "object",
+        "properties": {
+          "netMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "markupMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "taxMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "OfferPriceResponse": {
+        "required": [
+          "currency",
+          "sellMinor",
+          "margin"
+        ],
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "sellMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "margin": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OfferMarginResponse"
+              }
+            ]
+          }
+        }
+      },
       "PricePreviewRequest": {
         "required": [
           "productType",
@@ -2620,6 +3054,98 @@
           }
         }
       },
+      "SearchLegRequest": {
+        "required": [
+          "origin",
+          "destination",
+          "date"
+        ],
+        "type": "object",
+        "properties": {
+          "origin": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "SearchOfferResponse": {
+        "required": [
+          "id",
+          "leg",
+          "journeys",
+          "busTrips",
+          "price"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "leg": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "journeys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlightJourneyResponse"
+            }
+          },
+          "busTrips": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BusTripResponse"
+            }
+          },
+          "price": {
+            "$ref": "#/components/schemas/OfferPriceResponse"
+          }
+        }
+      },
+      "SearchResponse": {
+        "required": [
+          "searchId",
+          "searchedAt",
+          "expiresAt",
+          "fromCache",
+          "offers"
+        ],
+        "type": "object",
+        "properties": {
+          "searchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "searchedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fromCache": {
+            "type": "boolean"
+          },
+          "offers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchOfferResponse"
+            }
+          }
+        }
+      },
       "StartTopUpRequest": {
         "required": [
           "amountMinor"
@@ -2805,6 +3331,9 @@
     },
     {
       "name": "Pricing"
+    },
+    {
+      "name": "Search"
     },
     {
       "name": "Assets"

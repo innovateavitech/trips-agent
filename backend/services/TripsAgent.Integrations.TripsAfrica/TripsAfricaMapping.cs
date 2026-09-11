@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Suppliers;
@@ -27,7 +28,7 @@ namespace TripsAgent.Integrations.TripsAfrica;
 /// rather than shown with a hole in it, and the adapter logs how many went.
 /// </para>
 /// </remarks>
-internal static class TripsAfricaMapping
+internal static partial class TripsAfricaMapping
 {
     /// <summary>PascalCase out, as documented; case-insensitive in, because their own samples are not consistent.</summary>
     internal static readonly JsonSerializerOptions Json = new()
@@ -238,7 +239,9 @@ internal static class TripsAfricaMapping
             BaggageAllowance: Baggage(entry),
             FareBasis: Clip(
                 entry.AvailablePassengerSeats?.FirstOrDefault(seat => seat.PassengerType == "ADT")?.FareBasis,
-                30));
+                30),
+            MarketingCarrierName: Clip(entry.MarketingAirlineName, 100),
+            DurationMinutes: ParseDuration(entry.FlightDuration));
     }
 
     /// <summary>"2" + "PC" → "2 pieces". Domestic results send "KGS" with no amount, which says nothing.</summary>
@@ -348,7 +351,9 @@ internal static class TripsAfricaMapping
             code,
             oldPrice,
             newPrice,
-            wire.TicketTimeLimit,
+            // Sent as Lagos time (+01:00). A deadline is an instant, and the database refuses any
+            // instant that is not UTC — so it becomes UTC here, before the booking ever holds it.
+            wire.TicketTimeLimit?.ToUniversalTime(),
             HashExpected: ExpectedHash(wire, code, merchantKey),
             HashReceived: wire.Hash?.Trim() ?? string.Empty);
     }
@@ -461,6 +466,25 @@ internal static class TripsAfricaMapping
 
         return true;
     }
+
+    /// <summary>"4h:30m" → 270. Null for anything else, rather than a guess.</summary>
+    internal static int? ParseDuration(string? value)
+    {
+        var match = DurationPattern().Match(value ?? string.Empty);
+
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        var hours = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+        var minutes = int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture);
+
+        return minutes < 60 ? (hours * 60) + minutes : null;
+    }
+
+    [GeneratedRegex(@"^\s*(\d{1,3})h\s*:?\s*(\d{1,2})m\s*$", RegexOptions.CultureInvariant)]
+    private static partial Regex DurationPattern();
 
     /// <summary>A bus time: always Lagos, because every terminal is in Nigeria.</summary>
     internal static bool TryLagosTime(string? value, out DateTimeOffset at) => TryAirportTime(value, "LOS", out at);

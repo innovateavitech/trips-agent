@@ -145,7 +145,8 @@ internal static class TripsAfricaBusMapping
             arrives,
             AvailableSeats: Math.Max(0, bus.TotalAvailableSeats ?? seats.Count),
             SeatNumbers: seats,
-            ReservationIdExt: Clip(bus.ReservationId, 200));
+            ReservationIdExt: Clip(bus.ReservationId, 200),
+            VehicleType: Clip(bus.BusType, 60));
 
         return new SupplierOfferQuote(
             OfferRef(reference),

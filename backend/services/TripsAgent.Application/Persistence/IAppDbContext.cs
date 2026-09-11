@@ -8,6 +8,7 @@ using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Pricing;
+using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
 
@@ -133,6 +134,22 @@ public interface IAppDbContext
 
     /// <summary>What is in those carts.</summary>
     public DbSet<CartItem> CartItems { get; }
+
+    /// <summary>The aggregators we buy from. Platform reference data: not tenant-scoped.</summary>
+    public DbSet<Supplier> Suppliers { get; }
+
+    /// <summary>Every search an agency ran. The criteria hash is the search cache key (#40).</summary>
+    public DbSet<SearchRequest> SearchRequests { get; }
+
+    /// <summary>The supplier's session for a search, which confirmation must quote back.</summary>
+    public DbSet<SearchSession> SearchSessions { get; }
+
+    /// <summary>What a search found, at the net rate. Markup is applied when read, never stored here.</summary>
+    public DbSet<SupplierOffer> SupplierOffers { get; }
+
+    public DbSet<FlightSegment> FlightSegments { get; }
+
+    public DbSet<BusSegment> BusSegments { get; }
 
     /// <summary>
     /// What this context is about to write.

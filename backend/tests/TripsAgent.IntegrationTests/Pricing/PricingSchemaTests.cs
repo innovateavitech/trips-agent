@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using NpgsqlTypes;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Tenancy;
@@ -18,6 +19,7 @@ public sealed class PricingSchemaTests
 {
     private const string RestrictViolation = "23001";
     private const string CheckViolation = "23514";
+    private const string InsufficientPrivilege = "42501";
 
     private readonly PostgresFixture _postgres;
 
@@ -53,9 +55,24 @@ public sealed class PricingSchemaTests
         await using var world = await WorldAsync();
         var rule = await world.AddRuleAsync();
 
-        var act = () => world.Db.Database.ExecuteSqlRawAsync("DELETE FROM pricing.markup_rules WHERE id = {0}", rule.Id);
+        // As the owner: the trigger is what this test is about, and it binds even the owner. The
+        // policed role never gets this far — see the next test.
+        var act = () => world.Owner.Database.ExecuteSqlRawAsync("DELETE FROM pricing.markup_rules WHERE id = {0}", rule.Id);
 
         (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(RestrictViolation);
+    }
+
+    [Fact]
+    public async Task The_application_role_cannot_delete_a_rule_at_all()
+    {
+        // An earlier wall than the trigger, for the role the application actually runs as: it was
+        // never granted DELETE on this table. Two independent reasons a rule cannot disappear.
+        await using var world = await WorldAsync();
+        var rule = await world.AddRuleAsync();
+
+        var act = () => world.Db.Database.ExecuteSqlRawAsync("DELETE FROM pricing.markup_rules WHERE id = {0}", rule.Id);
+
+        (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(InsufficientPrivilege);
     }
 
     [Fact]
@@ -126,6 +143,7 @@ public sealed class PricingSchemaTests
     [InlineData("'Global', NULL, NULL, 'Percentage', 1000, NULL, 500, 100", "a minimum above the maximum")]
     [InlineData("'Global', NULL, NULL, 'Percentage', 100001, NULL, NULL, NULL", "a percentage above 1000%")]
     [InlineData("'Global', NULL, NULL, 'Percentage', NULL, NULL, NULL, NULL", "a percentage rule with no percentage")]
+    [InlineData("'Global', NULL, NULL, 'Fixed', NULL, NULL, NULL, NULL", "a fixed rule with no amount")]
     [InlineData("'Global', 'Tour', NULL, 'Percentage', 1000, NULL, NULL, NULL", "a global rule naming a product type")]
     [InlineData("'Product', 'Tour', NULL, 'Percentage', 1000, NULL, NULL, NULL", "a product rule with no product")]
     [InlineData("'Supplier', NULL, NULL, 'Percentage', 1000, NULL, NULL, NULL", "a supplier rule with no supplier")]
@@ -197,10 +215,11 @@ public sealed class PricingSchemaTests
         await world.InsertQuoteAsync(net: 100_000, markup: 10_000, gross: 110_000, ruleId: rule.Id);
 
         // Drop the trigger to prove the second line of defence stands on its own.
-        await world.Db.Database.ExecuteSqlRawAsync(
+        // As the owner: disabling a trigger is DDL, which the policed role cannot run.
+        await world.Owner.Database.ExecuteSqlRawAsync(
             "ALTER TABLE pricing.markup_rules DISABLE TRIGGER markup_rules_terms_immutable_trg");
 
-        var act = () => world.Db.Database.ExecuteSqlRawAsync("DELETE FROM pricing.markup_rules WHERE id = {0}", rule.Id);
+        var act = () => world.Owner.Database.ExecuteSqlRawAsync("DELETE FROM pricing.markup_rules WHERE id = {0}", rule.Id);
 
         (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be("23503");
     }
@@ -215,7 +234,8 @@ public sealed class PricingSchemaTests
         await world.InsertQuoteAsync(net: 100_000, markup: 10_000, gross: 110_000, ruleId: rule.Id);
 
         Guid otherId;
-        await using (var setup = _postgres.Connect(world.Database))
+        // As the owner: registering an agency is platform work, not something one tenant can do.
+        await using (var setup = _postgres.Connect(world.Database, asApplicationRole: false))
         {
             var other = Agency.RegisterPrincipal("Abuja Tours Limited", "abuja-tours", "NG", "NGN", "Africa/Lagos");
             setup.Agencies.Add(other);
@@ -249,23 +269,36 @@ public sealed class PricingSchemaTests
         }
 
         var tenancy = TestTenancy.For(agencyId);
-        return new World(database, agencyId, _postgres.Connect(database, tenancy.Tenant, tenancy.Scope));
+        return new World(
+            database,
+            agencyId,
+            _postgres.Connect(database, tenancy.Tenant, tenancy.Scope),
+            _postgres.Connect(database, asApplicationRole: false));
     }
 
     private sealed class World : IAsyncDisposable
     {
-        public World(string database, Guid agencyId, AppDbContext db)
+        public World(string database, Guid agencyId, AppDbContext db, AppDbContext owner)
         {
             Database = database;
             AgencyId = agencyId;
             Db = db;
+            Owner = owner;
         }
 
         public string Database { get; }
 
         public Guid AgencyId { get; }
 
+        /// <summary>As the tenant, under the policed application role — how production connects.</summary>
         public AppDbContext Db { get; }
+
+        /// <summary>
+        /// The same database as its owner, for the tests that isolate one layer of protection.
+        /// The policed role cannot disable a trigger, and has no DELETE grant at all, so through
+        /// <see cref="Db"/> the trigger or foreign key under test would never be reached.
+        /// </summary>
+        public AppDbContext Owner { get; }
 
         public static MarkupRuleTerms Terms(int percent) => new()
         {
@@ -294,8 +327,15 @@ public sealed class PricingSchemaTests
                      gross_amount_minor, markup_rule_id, created_at, updated_at)
                 VALUES (gen_random_uuid(), {0}, 'Tour', 'NGN', {1}, {2}, {3}, {4}, now(), now())
                 """,
-                AgencyId, net, markup, gross, (object?)ruleId ?? DBNull.Value);
+                AgencyId, net, markup, gross,
+                // Typed, because a null carries no type of its own: EF cannot map a bare DBNull to a
+                // store type, and throws before PostgreSQL ever sees the statement.
+                new NpgsqlParameter("markup_rule_id", NpgsqlDbType.Uuid) { Value = (object?)ruleId ?? DBNull.Value });
 
-        public ValueTask DisposeAsync() => Db.DisposeAsync();
+        public async ValueTask DisposeAsync()
+        {
+            await Db.DisposeAsync();
+            await Owner.DisposeAsync();
+        }
     }
 }

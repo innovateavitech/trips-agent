@@ -159,12 +159,19 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
 
                     -- A percentage rule has a percentage (basis points, 0 to 1000%); a fixed rule has an
                     -- amount and no caps, because a cap on a number that never moves does nothing.
+                    --
+                    -- The IS NOT NULLs are load-bearing. A CHECK passes when its expression is NULL, not
+                    -- only when it is true, and "NULL BETWEEN 0 AND 100000" is NULL rather than false —
+                    -- so without them a percentage rule with no percentage, or a fixed rule with no
+                    -- amount, satisfied this constraint and was stored.
                     ADD CONSTRAINT ck_markup_rules_calculation_shape
                         CHECK (
                             (calculation_type = 'Percentage'
+                                AND percent_basis_points IS NOT NULL
                                 AND percent_basis_points BETWEEN 0 AND 100000
                                 AND value_minor IS NULL)
                          OR (calculation_type = 'Fixed'
+                                AND value_minor IS NOT NULL
                                 AND value_minor >= 0
                                 AND percent_basis_points IS NULL
                                 AND min_markup_minor IS NULL

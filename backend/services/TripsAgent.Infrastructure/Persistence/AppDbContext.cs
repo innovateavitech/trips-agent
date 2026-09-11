@@ -320,6 +320,10 @@ public class AppDbContext : DbContext, IAppDbContext
 
         // Money is a long in the database, always. See MoneyConverter for why.
         Conventions.MoneyConventions.Apply(configurationBuilder);
+
+        // Instants are DateTimeOffset, always. A DateTime here fails the model build by name,
+        // rather than reaching a column that cannot say which zone it meant.
+        Conventions.UtcTimestampConvention.Apply(configurationBuilder);
     }
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)

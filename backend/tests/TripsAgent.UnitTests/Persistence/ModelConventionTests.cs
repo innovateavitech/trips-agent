@@ -106,9 +106,62 @@ public class ModelConventionTests
     // ------------------------------------------------------------------ timestamps
 
     [Fact]
-    public void A_naive_DateTime_column_is_reported()
+    public void A_naive_DateTime_property_fails_the_model_build()
     {
-        var model = BuildProbeModel(b => b.Entity<HasANaiveTimestamp>().ToTable("has_a_naive_timestamp"));
+        var build = () => BuildProbeModel(b => b.Entity<HasANaiveTimestamp>().ToTable("has_a_naive_timestamp"));
+
+        // Named entity and property, because the person reading this stack trace is looking for
+        // the line to change, not for a lecture about time zones.
+        build.Should().Throw<InvalidOperationException>()
+            .WithMessage("*HasANaiveTimestamp.IssuedAt is a DateTime*")
+            .WithMessage("*Use DateTimeOffset*");
+    }
+
+    [Fact]
+    public void A_nullable_DateTime_property_fails_the_model_build()
+    {
+        var build = () => BuildProbeModel(b => b.Entity<HasANullableNaiveTimestamp>().ToTable("has_a_nullable_naive_timestamp"));
+
+        // DateTime? is the same mistake with a question mark: "optional" says nothing about zone.
+        build.Should().Throw<InvalidOperationException>()
+            .WithMessage("*HasANullableNaiveTimestamp.CancelledAt is a DateTime*");
+    }
+
+    [Fact]
+    public void A_DateTimeOffset_property_is_pinned_to_a_timestamptz_column()
+    {
+        var model = BuildProbeModel(b => b.Entity<WellNamed>().ToTable("well_named"));
+
+        var property = model
+            .FindEntityType(typeof(WellNamed))!
+            .GetProperty(nameof(WellNamed.IssuedAt));
+
+        // No per-entity HasColumnType anywhere: a new entity gets this for free.
+        property.GetColumnType().Should().Be(UtcTimestampConvention.TimestampColumnType);
+    }
+
+    [Fact]
+    public void A_DateOnly_or_TimeOnly_property_is_left_alone()
+    {
+        // A departure date and a check-in time are calendar values, not instants. They have no
+        // zone to get wrong, and forcing them to timestamptz would invent a time of day.
+        var model = BuildProbeModel(b => b.Entity<HasCalendarValues>().ToTable("has_calendar_values"));
+
+        var entity = model.FindEntityType(typeof(HasCalendarValues))!;
+
+        entity.GetProperty(nameof(HasCalendarValues.DepartureDate)).GetColumnType().Should().Be("date");
+        entity.GetProperty(nameof(HasCalendarValues.CheckInTime)).GetColumnType().Should().Be("time without time zone");
+    }
+
+    [Fact]
+    public void A_naive_DateTime_column_is_reported_by_the_backstop_rule()
+    {
+        // Belt and braces. The convention above is what a developer actually hits, but it only
+        // guards models that register it; this rule guards the finalised model however it was
+        // built, so the probe model here is deliberately built without the convention.
+        var model = BuildProbeModel(
+            b => b.Entity<HasANaiveTimestamp>().ToTable("has_a_naive_timestamp"),
+            withTimestampConvention: false);
 
         var violations = ModelRules.NaiveTimestamps(model);
 
@@ -182,7 +235,12 @@ public class ModelConventionTests
     /// A throwaway model that runs the same conventions as <see cref="AppDbContext"/>, so a probe
     /// entity is configured exactly the way a real one would be.
     /// </summary>
-    private static IModel BuildProbeModel(Action<ModelBuilder> configure)
+    /// <param name="configure">The probe entity under test.</param>
+    /// <param name="withTimestampConvention">
+    /// False to leave <see cref="UtcTimestampConvention"/> off, which is the only way to build a
+    /// model containing a <c>DateTime</c> and so the only way to prove the backstop rule fires.
+    /// </param>
+    private static IModel BuildProbeModel(Action<ModelBuilder> configure, bool withTimestampConvention = true)
     {
         var options = new DbContextOptionsBuilder<ProbeDbContext>()
             .UseNpgsql("Host=model-building-only;Database=none")
@@ -190,7 +248,7 @@ public class ModelConventionTests
             .ReplaceService<IModelCacheKeyFactory, FreshModelPerContextFactory>()
             .Options;
 
-        using var context = new ProbeDbContext(options, configure);
+        using var context = new ProbeDbContext(options, configure, withTimestampConvention);
         return DesignTimeModelOf(context);
     }
 
@@ -231,15 +289,27 @@ public class ModelConventionTests
     private sealed class ProbeDbContext : DbContext
     {
         private readonly Action<ModelBuilder> _configure;
+        private readonly bool _withTimestampConvention;
 
-        public ProbeDbContext(DbContextOptions<ProbeDbContext> options, Action<ModelBuilder> configure)
+        public ProbeDbContext(
+            DbContextOptions<ProbeDbContext> options,
+            Action<ModelBuilder> configure,
+            bool withTimestampConvention)
             : base(options)
         {
             _configure = configure;
+            _withTimestampConvention = withTimestampConvention;
         }
 
-        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+        {
             MoneyConventions.Apply(configurationBuilder);
+
+            if (_withTimestampConvention)
+            {
+                UtcTimestampConvention.Apply(configurationBuilder);
+            }
+        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder) => _configure(modelBuilder);
     }
@@ -276,5 +346,21 @@ public class ModelConventionTests
         public Guid Id { get; set; }
 
         public DateTime IssuedAt { get; set; }
+    }
+
+    private sealed class HasANullableNaiveTimestamp
+    {
+        public Guid Id { get; set; }
+
+        public DateTime? CancelledAt { get; set; }
+    }
+
+    private sealed class HasCalendarValues
+    {
+        public Guid Id { get; set; }
+
+        public DateOnly DepartureDate { get; set; }
+
+        public TimeOnly CheckInTime { get; set; }
     }
 }

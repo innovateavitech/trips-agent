@@ -395,6 +395,25 @@ Fixed-date departures sold by the seat, with deposits, installment plans, a wait
 - **Issues:** #57
 - **Open questions it meets:** 12, 13 — see [§7 of the architecture plan](ARCHITECTURE_AND_DELIVERY_PLAN.md#7-open-questions-for-the-client)
 
+**Departures contract.** The console is built to it, and the backend builds to it:
+
+```
+GET  /api/v1/catalog/departures?productId=&from=      catalog.view     → Departure[]
+GET  /api/v1/catalog/departures/{id}                  catalog.view     → Departure
+POST /api/v1/catalog/products/{productId}/departures  catalog.edit     → Departure (201)
+PUT  /api/v1/catalog/departures/{id}                  catalog.edit     → Departure; 409 on a stale version, or capacity below seats taken
+POST /api/v1/catalog/departures/{id}/close            catalog.publish  → Departure: stops new bookings, existing ones stand
+POST /api/v1/catalog/departures/{id}/reopen           catalog.publish  → Departure: back to the status its seats give it
+POST /api/v1/catalog/departures/{id}/cancel           catalog.publish  → Departure; 409 while any seat is confirmed (open question 12)
+GET  /api/v1/catalog/departures/{id}/manifest         catalog.view     → ManifestEntry[]
+GET  /api/v1/catalog/departures/{id}/waitlist         catalog.view     → WaitlistEntry[]
+```
+
+- **DepartureRequest:** `departureDate` (date), `isGroupDeparture`, `minPax`, `capacityTotal`, `cutoffDaysBefore`, `depositType` (None · Percent · Fixed), `depositPercentBasisPoints?`, `depositAmountMinor?`, `priceTiers[] {minPax, maxPax?, pricePerPaxMinor}` — contiguous from 1, the last one open-ended — and `installments[] {sequence, dueBasis (FromBooking · BeforeDeparture), dueOffsetDays, percentOfBalanceBasisPoints}` summing to 10,000, the whole balance after the deposit. With no installments the balance is due at the cutoff. A `PUT` also carries the `version` it was read at.
+- **Departure** adds `id`, `productId`, `productTitle`, `currency`, `capacityReserved`, `capacityConfirmed`, `seatsLeft`, `waitlistCount`, `cutoffAt` (instant), `version`, and `status` (Open · Guaranteed · NearlyFull · SoldOut · Closed · Cancelled). The server works the status out: guaranteed once confirmed seats reach `minPax`, nearly full at 85% taken, sold out when full; closed and cancelled are the agent's.
+- **ManifestEntry:** `orderReference`, `travellerName`, `paxType` (Adult · Child · Infant), `room?`, `status` (Reserved · Confirmed). **WaitlistEntry:** `id`, `name`, `paxCount`, `status` (Waiting · Offered · Converted · Expired), `joinedAt`, `offeredAt?`, `expiresAt?`.
+- The table's `max_pax` stays equal to `capacity_total` until something needs them to differ. Visas have no departures.
+
 #### #57 · Group departures, deposits and installments
 
 Fixed-date departures sold by the seat.

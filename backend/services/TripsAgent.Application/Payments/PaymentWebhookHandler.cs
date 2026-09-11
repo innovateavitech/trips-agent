@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Payments;
@@ -36,10 +37,11 @@ public interface IWebhookDispatcher
 /// <summary>The processing half of the webhook path, as the job runner sees it.</summary>
 public interface IPaymentWebhookProcessor
 {
-    /// <summary>Processes one recorded event.</summary>
+    /// <summary>Processes one recorded event, if no other worker has it.</summary>
     public Task ProcessAsync(Guid webhookEventId, CancellationToken cancellationToken = default);
 
-    /// <summary>Processes everything still pending. The backstop for a lost enqueue.</summary>
+    /// <summary>Processes everything due. The backstop for a lost enqueue, and the retry loop.</summary>
+    /// <returns>How many events this run claimed.</returns>
     public Task<int> DrainAsync(CancellationToken cancellationToken = default);
 }
 
@@ -65,6 +67,11 @@ public interface IPaymentWebhookProcessor
 /// event row first means the database decides which delivery is the real one.
 /// </para>
 /// <para>
+/// Processing is claimed the same way. The enqueued job and the timed drain can both reach one
+/// event, and so can two overlapping drains; a conditional UPDATE from Pending to Processing lets
+/// exactly one of them go on.
+/// </para>
+/// <para>
 /// And the amount is never taken from the payload. The webhook says <i>something happened</i>;
 /// what happened is established by asking the gateway. A replayed genuine body carries a valid
 /// signature, so without that rule anyone who captured one could name their own top-up amount.
@@ -72,11 +79,16 @@ public interface IPaymentWebhookProcessor
 /// </remarks>
 public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
 {
+    /// <summary>The most events one drain run claims.</summary>
+    public const int DrainBatchSize = 200;
+
     private readonly IAppDbContext _db;
     private readonly IPaymentGateway _gateway;
     private readonly IPlatformScope _platformScope;
     private readonly IWebhookDispatcher _dispatcher;
     private readonly VerifyTopUpHandler _verify;
+    private readonly IPlatformAlerter _alerter;
+    private readonly IUniqueViolationDetector _uniqueViolations;
     private readonly TimeProvider _clock;
     private readonly ILogger<PaymentWebhookHandler> _logger;
 
@@ -86,6 +98,8 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
         IPlatformScope platformScope,
         IWebhookDispatcher dispatcher,
         VerifyTopUpHandler verify,
+        IPlatformAlerter alerter,
+        IUniqueViolationDetector uniqueViolations,
         TimeProvider clock,
         ILogger<PaymentWebhookHandler> logger)
     {
@@ -94,6 +108,8 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
         _platformScope = platformScope;
         _dispatcher = dispatcher;
         _verify = verify;
+        _alerter = alerter;
+        _uniqueViolations = uniqueViolations;
         _clock = clock;
         _logger = logger;
     }
@@ -104,6 +120,11 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
     /// <summary>
     /// Verifies and records a delivery. Fast, and safe to call with the same body repeatedly.
     /// </summary>
+    /// <remarks>
+    /// Throws when the delivery could not be recorded for any reason other than having been
+    /// recorded already. The endpoint then answers 5xx and the gateway redelivers — which is
+    /// safe, because the unique index turns the redelivery into a duplicate once one succeeds.
+    /// </remarks>
     public async Task<WebhookOutcome> ReceiveAsync(
         string? rawBody,
         string? signature,
@@ -143,11 +164,15 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
 
         try
         {
-            // The unique index decides. If this throws, another delivery of the same event won.
+            // The unique index decides. If it refuses, another delivery of the same event won.
             await _db.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (_uniqueViolations.IsUniqueViolation(ex))
         {
+            // Only a unique violation means "already received". Any other failure means this
+            // delivery was never recorded, and acknowledging it would lose it for good — so
+            // those propagate, and the gateway is told to try again.
+            _db.ChangeTracker.Clear();
             LogDuplicate(_logger, envelope.EventId);
             return WebhookOutcome.Duplicate;
         }
@@ -172,69 +197,176 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
     }
 
     /// <summary>Processes one recorded event: asks the gateway what happened, and credits if so.</summary>
-    public async Task ProcessAsync(Guid webhookEventId, CancellationToken cancellationToken = default)
+    public Task ProcessAsync(Guid webhookEventId, CancellationToken cancellationToken = default) =>
+        ProcessClaimedAsync(webhookEventId, cancellationToken);
+
+    /// <summary>Processes every event that is due. Runs on a timer.</summary>
+    public async Task<int> DrainAsync(CancellationToken cancellationToken = default)
+    {
+        List<Guid> due;
+        var now = _clock.GetUtcNow();
+
+        using (var scope = _platformScope.Enter("gateway webhook — finding deliveries due for processing"))
+        {
+            due = await Due(now)
+                .AsNoTracking()
+                .OrderBy(e => e.CreatedAt)
+                .Select(e => e.Id)
+                .Take(DrainBatchSize)
+                .ToListAsync(cancellationToken);
+        }
+
+        var claimed = 0;
+
+        foreach (var id in due)
+        {
+            if (await ProcessClaimedAsync(id, cancellationToken))
+            {
+                claimed++;
+            }
+        }
+
+        return claimed;
+    }
+
+    /// <summary>
+    /// Events a worker may take: pending and past their back-off, or claimed by a worker whose
+    /// claim has lapsed — most likely one that died mid-flight.
+    /// </summary>
+    private IQueryable<PaymentWebhookEvent> Due(DateTimeOffset now) =>
+        _db.PaymentWebhookEvents.Where(e =>
+            (e.ProcessingStatus == WebhookProcessingStatus.Pending
+             && (e.NextAttemptAt == null || e.NextAttemptAt <= now))
+            || (e.ProcessingStatus == WebhookProcessingStatus.Processing && e.ClaimExpiresAt <= now));
+
+    /// <returns>True when this call claimed the event.</returns>
+    private async Task<bool> ProcessClaimedAsync(Guid webhookEventId, CancellationToken cancellationToken)
     {
         using var scope = _platformScope.Enter("gateway webhook — processing a recorded delivery");
 
-        var record = await _db.PaymentWebhookEvents
-            .FirstOrDefaultAsync(e => e.Id == webhookEventId, cancellationToken);
+        var now = _clock.GetUtcNow();
+        var claimUntil = now + PaymentWebhookEvent.ProcessingLease;
 
-        if (record is null || record.ProcessingStatus != WebhookProcessingStatus.Pending)
+        // The claim: one UPDATE, conditional on the event still being up for grabs. PostgreSQL
+        // row-locks it, so of two workers racing here exactly one sees "1 row" and goes on. A
+        // read-then-check in C# would let both through, and both would verify and post.
+        var claimed = await Due(now)
+            .Where(e => e.Id == webhookEventId)
+            .ExecuteUpdateAsync(
+                set => set
+                    .SetProperty(e => e.ProcessingStatus, WebhookProcessingStatus.Processing)
+                    .SetProperty(e => e.ClaimExpiresAt, claimUntil)
+                    .SetProperty(e => e.UpdatedAt, now),
+                cancellationToken);
+
+        if (claimed != 1)
         {
-            // Already processed, ignored or dead-lettered. Re-running must not credit again.
-            return;
+            // Done already, dead-lettered, waiting out a back-off, or another worker has it.
+            return false;
         }
 
-        if (!TryReadEnvelope(record.Payload, out var envelope) || string.IsNullOrWhiteSpace(envelope.Reference))
+        // Untracked: the verification below may clear the change tracker, and this row is
+        // re-read fresh before it is written.
+        var payload = await _db.PaymentWebhookEvents
+            .AsNoTracking()
+            .Where(e => e.Id == webhookEventId)
+            .Select(e => new { e.EventId, e.EventType, e.Payload })
+            .FirstAsync(cancellationToken);
+
+        if (!TryReadEnvelope(payload.Payload, out var envelope) || string.IsNullOrWhiteSpace(envelope.Reference))
         {
-            record.MarkIgnored(_clock.GetUtcNow());
-            await _db.SaveChangesAsync(cancellationToken);
-            return;
+            await FinishAsync(webhookEventId, record => record.MarkIgnored(_clock.GetUtcNow()), cancellationToken);
+            return true;
         }
 
         try
         {
             // Asks the gateway. The payload is a notification, not a source of truth about money.
-            await _verify.HandleAsync(envelope.Reference, cancellationToken);
+            var outcome = await _verify.HandleAsync(envelope.Reference, cancellationToken);
 
-            record.MarkProcessed(_clock.GetUtcNow());
-            await _db.SaveChangesAsync(cancellationToken);
+            if (outcome == TopUpVerificationOutcome.StillPending)
+            {
+                // The gateway announced a charge but will not yet confirm it. Marking the event
+                // processed would mean nothing ever asks again, so it waits and retries.
+                await FinishAsync(
+                    webhookEventId,
+                    record => record.RetryLater("The gateway has not confirmed the payment yet.", _clock.GetUtcNow()),
+                    cancellationToken);
+
+                return true;
+            }
+
+            await FinishAsync(webhookEventId, record => record.MarkProcessed(_clock.GetUtcNow()), cancellationToken);
+        }
+        catch (PaymentGatewayUnavailableException ex)
+        {
+            // Not our fault and not the payload's. Back off without using up an attempt, so a
+            // gateway outage does not dead-letter every payment that arrived during it.
+            LogGatewayUnavailable(_logger, ex, payload.EventId);
+
+            _db.ChangeTracker.Clear();
+            await FinishAsync(webhookEventId, record => record.RetryLater(ex.Message, _clock.GetUtcNow()), cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            LogProcessingFailed(_logger, ex, record.EventId);
+            LogProcessingFailed(_logger, ex, payload.EventId);
 
-            // Back to Pending until the attempt budget runs out, then dead-lettered for a person.
-            record.MarkFailed(ex.Message);
-            await _db.SaveChangesAsync(cancellationToken);
+            // Whatever the failed attempt staged is still tracked, and would be re-sent by the
+            // save below and fail again. Discard it, then record the failure on its own.
+            _db.ChangeTracker.Clear();
+            await FinishAsync(webhookEventId, record => record.MarkFailed(ex.Message, _clock.GetUtcNow()), cancellationToken);
+        }
+
+        return true;
+    }
+
+    /// <summary>Re-reads the event, applies <paramref name="apply"/>, saves, and alerts on a dead letter.</summary>
+    private async Task FinishAsync(
+        Guid webhookEventId,
+        Action<PaymentWebhookEvent> apply,
+        CancellationToken cancellationToken)
+    {
+        var record = await _db.PaymentWebhookEvents.FirstAsync(e => e.Id == webhookEventId, cancellationToken);
+
+        apply(record);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        if (record.IsDeadLettered)
+        {
+            await AlertDeadLetterAsync(record, cancellationToken);
         }
     }
 
-    /// <summary>Processes every pending event. Runs on a timer as the backstop.</summary>
-    public async Task<int> DrainAsync(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// A money event has stopped retrying. Somebody may have been charged and not credited.
+    /// </summary>
+    /// <remarks>
+    /// P1, and never silent: the gateway was told 200 long ago, so it will not redeliver, and
+    /// nothing else in the system will pick this event up again.
+    /// </remarks>
+    private async Task AlertDeadLetterAsync(PaymentWebhookEvent record, CancellationToken cancellationToken)
     {
-        List<Guid> pending;
+        TryReadEnvelope(record.Payload, out var envelope);
 
-        using (var scope = _platformScope.Enter("gateway webhook — finding pending deliveries"))
+        try
         {
-            pending = await _db.PaymentWebhookEvents
-                .AsNoTracking()
-                .Where(e => e.ProcessingStatus == WebhookProcessingStatus.Pending)
-                .OrderBy(e => e.CreatedAt)
-                .Select(e => e.Id)
-                .Take(200)
-                .ToListAsync(cancellationToken);
+            await _alerter.RaiseAsync(
+                new PlatformAlert(
+                    AlertSeverity.P1,
+                    $"Payment webhook {record.EventId} was dead-lettered — a charged payment may not be credited",
+                    $"The {record.EventType} webhook for payment reference {envelope.Reference ?? "(none)"} stopped "
+                    + $"retrying after {record.Attempts} failed attempt(s) and {record.TransientFailures} time(s) the "
+                    + $"gateway could not be reached.\n\nLast error: {record.LastError}\n\n"
+                    + "The gateway will not redeliver it. Check the payment in the gateway's dashboard; if it was "
+                    + "paid, fix the cause and set this event back to Pending in payments.payment_webhook_events "
+                    + "so the drain retries it.",
+                    nameof(PaymentWebhookHandler)),
+                cancellationToken);
         }
-
-        var processed = 0;
-
-        foreach (var id in pending)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            await ProcessAsync(id, cancellationToken);
-            processed++;
+            LogAlertFailed(_logger, ex, record.EventId);
         }
-
-        return processed;
     }
 
     /// <summary>The few fields we read out of a delivery.</summary>
@@ -296,7 +428,15 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
         Message = "Webhook {WebhookEventId} was recorded but could not be queued; the drain will pick it up.")]
     private static partial void LogEnqueueFailed(ILogger logger, Exception exception, Guid webhookEventId);
 
+    [LoggerMessage(Level = LogLevel.Warning,
+        Message = "The gateway could not be reached for webhook {EventId}; it will be retried after a back-off.")]
+    private static partial void LogGatewayUnavailable(ILogger logger, Exception exception, string eventId);
+
     [LoggerMessage(Level = LogLevel.Error,
         Message = "Webhook {EventId} failed processing and will be retried.")]
     private static partial void LogProcessingFailed(ILogger logger, Exception exception, string eventId);
+
+    [LoggerMessage(Level = LogLevel.Critical,
+        Message = "Webhook {EventId} was dead-lettered and the alert could not be raised.")]
+    private static partial void LogAlertFailed(ILogger logger, Exception exception, string eventId);
 }

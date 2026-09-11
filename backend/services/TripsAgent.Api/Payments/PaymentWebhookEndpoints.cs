@@ -13,9 +13,15 @@ namespace TripsAgent.Api.Payments;
 /// HMAC would never match again.
 /// </para>
 /// <para>
-/// Always 200 for a delivery we understood, including a duplicate. A gateway reads any other
-/// status as "try again", so returning 500 because our own processing failed just multiplies the
-/// deliveries. Failures are recorded and retried on our side, not on theirs.
+/// 200 for a delivery we recorded, including a duplicate. A gateway reads any other status as
+/// "try again", so a failure in our own <i>processing</i> is recorded and retried on our side,
+/// never reported back to theirs.
+/// </para>
+/// <para>
+/// The exception is a delivery we could not <i>record</i>. Answering 200 for that would lose it
+/// for good — nothing on our side knows it arrived — so it surfaces as a 5xx and the gateway
+/// redelivers. That is safe: once one delivery is recorded, the unique index on the event id
+/// turns the rest into duplicates.
 /// </para>
 /// </remarks>
 public static class PaymentWebhookEndpoints

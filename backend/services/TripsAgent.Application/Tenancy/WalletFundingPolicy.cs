@@ -25,8 +25,8 @@ public sealed record WalletFundingDecision(bool IsAllowed, string? Reason)
 /// visibly disabled with a reason, not to fail silently when pressed.
 /// </para>
 /// <para>
-/// The wallet itself arrives later in M1. This exists now so that when it does, the rule is
-/// already written, tested, and impossible to overlook.
+/// The wallet itself is opened by KYB approval, in the same save that verifies the agency, so a
+/// verified agency always has a wallet for its top-ups to land in.
 /// </para>
 /// </remarks>
 public static class WalletFundingPolicy

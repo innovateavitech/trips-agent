@@ -7,6 +7,7 @@ using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Orders;
 using TripsAgent.Application.Payments;
 using TripsAgent.Application.Pricing;
+using TripsAgent.Application.Search;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy.Kyb;
 
@@ -64,6 +65,12 @@ public static class DependencyInjection
         // Picks the adapter for a supplier and product from whatever adapters the host registered.
         // Adding an aggregator is a new ISupplierAdapter registration, never a change here.
         services.AddScoped<ISupplierAdapterRegistry, SupplierAdapterRegistry>();
+
+        // Flight and bus search: cached at the net rate, priced with the agency's markup on every read (#40).
+        services.AddScoped<SupplierSearchService>();
+
+        // Confirms a booking's price and raises a P1 alert when a supplier hash fails (#35).
+        services.AddScoped<PriceConfirmationService>();
 
         // The request-side half of an upload. The pipeline itself — ProcessAssetHandler — is
         // registered by AddAssetProcessing in the Worker only, because it needs a virus scanner

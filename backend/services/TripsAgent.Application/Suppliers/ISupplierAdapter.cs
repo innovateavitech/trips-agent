@@ -180,7 +180,9 @@ public sealed record SupplierFlightSegmentQuote(
     DateTimeOffset ArrivalAt,
     string? Cabin = null,
     string? BaggageAllowance = null,
-    string? FareBasis = null);
+    string? FareBasis = null,
+    string? MarketingCarrierName = null,
+    int? DurationMinutes = null);
 
 /// <summary>One bus trip within an offer.</summary>
 public sealed record SupplierBusSegmentQuote(
@@ -191,7 +193,8 @@ public sealed record SupplierBusSegmentQuote(
     DateTimeOffset? ArrivalAt,
     int? AvailableSeats,
     IReadOnlyList<string> SeatNumbers,
-    string? ReservationIdExt = null);
+    string? ReservationIdExt = null,
+    string? VehicleType = null);
 
 /// <summary>A traveller, as a supplier needs them for confirmation and ticketing.</summary>
 public sealed record SupplierPassenger(
@@ -227,12 +230,18 @@ public sealed record SupplierTravelDocument(
 }
 
 /// <summary>A request to lock the price of one offer.</summary>
+/// <param name="AdditionalRoutes">
+/// The other routes' offers when a supplier prices each route separately but confirms them together —
+/// a Trips Africa domestic return, or a bus return. Their answer is then an array, one element per
+/// route, and every element is verified on its own. Null for everything else.
+/// </param>
 public sealed record SupplierPriceConfirmationRequest(
     SupplierProductType ProductType,
     string SupplierSessionId,
     string OfferRef,
     SupplierOfferReference Reference,
-    IReadOnlyList<SupplierPassenger> Passengers);
+    IReadOnlyList<SupplierPassenger> Passengers,
+    IReadOnlyList<SupplierOfferReference>? AdditionalRoutes = null);
 
 /// <summary>What the supplier confirmed.</summary>
 /// <param name="TripType">The supplier's own trip-type word, which the issue call must send back.</param>

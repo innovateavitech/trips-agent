@@ -131,6 +131,7 @@ public static class SchedulingRegistration
         // Registered here rather than in AddInfrastructure because this is where the Hangfire
         // client becomes available. Both hosts get it: the API enqueues, the Worker executes.
         services.AddScoped<IWebhookDispatcher, HangfireWebhookDispatcher>();
+        services.AddScoped<PaymentWebhookDrainJob>();
 
         return services;
     }

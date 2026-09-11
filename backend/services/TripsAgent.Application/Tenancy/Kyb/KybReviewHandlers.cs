@@ -5,7 +5,9 @@ using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Contracts.Tenancy;
+using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
+using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
 
 namespace TripsAgent.Application.Tenancy.Kyb;
@@ -164,6 +166,10 @@ public sealed partial class KybReviewHandler
         submission.Approve(reviewerUserId, now);
         agency.MarkVerified(now);
 
+        // In the same save as the approval. A verified agency may start a top-up at once, and
+        // a payment with no wallet to land in is money taken and never credited.
+        await OpenWalletAsync(agency, cancellationToken);
+
         await ResolveAlertsFor(submissionId, now, cancellationToken);
 
         _audit.SetReason("KYB approved");
@@ -227,6 +233,33 @@ public sealed partial class KybReviewHandler
         using var scope = _platformScope.Enter("KYB review — serves a document to a reviewer");
 
         return await _db.KybDocuments.FirstOrDefaultAsync(d => d.Id == documentId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Opens the agency's wallet in its base currency, and the ledger account behind it.
+    /// </summary>
+    /// <remarks>
+    /// Checks first, because an agency can be approved again after a later resubmission, and the
+    /// unique indexes on both tables would refuse a second of either.
+    /// </remarks>
+    private async Task OpenWalletAsync(Agency agency, CancellationToken cancellationToken)
+    {
+        var currency = agency.BaseCurrency.Trim().ToUpperInvariant();
+
+        if (!await _db.Wallets.AnyAsync(w => w.AgencyId == agency.Id && w.Currency == currency, cancellationToken))
+        {
+            _db.Wallets.Add(Wallet.OpenFor(agency.Id, currency));
+        }
+
+        var hasAccount = await _db.LedgerAccounts.AnyAsync(
+            a => a.AgencyId == agency.Id && a.AccountType == LedgerAccountType.AgencyWallet && a.Currency == currency,
+            cancellationToken);
+
+        if (!hasAccount)
+        {
+            _db.LedgerAccounts.Add(LedgerAccount.ForAgency(
+                agency.Id, LedgerAccountType.AgencyWallet, currency, $"{LedgerAccountType.AgencyWallet} ({currency})"));
+        }
     }
 
     /// <summary>Closes the queue entry, so a decided submission stops appearing as outstanding.</summary>

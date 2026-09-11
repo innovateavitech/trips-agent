@@ -28,13 +28,41 @@ public sealed class HangfireWebhookDispatcher : IWebhookDispatcher
 }
 
 /// <summary>
+/// The drain, as Hangfire runs it: one run at a time.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Hangfire starts a recurring job on schedule whether or not the previous run has finished, and
+/// a drain waiting on a slow gateway can outlast its two-minute interval. Two drains would then
+/// work the same list. The claim in <see cref="PaymentWebhookHandler"/> already stops them
+/// processing one event twice; this stops them wasting a worker finding that out.
+/// </para>
+/// <para>
+/// Here, not on <c>DrainAsync</c>, because Application does not reference Hangfire. A run that
+/// cannot take the lock within ten seconds is dropped rather than retried — the next tick is at
+/// most two minutes away, and a queue of retried drains is the pile-up this exists to avoid.
+/// </para>
+/// </remarks>
+public sealed class PaymentWebhookDrainJob
+{
+    private readonly IPaymentWebhookProcessor _processor;
+
+    public PaymentWebhookDrainJob(IPaymentWebhookProcessor processor) => _processor = processor;
+
+    [DisableConcurrentExecution(timeoutInSeconds: 10)]
+    [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
+    public Task<int> RunAsync(CancellationToken cancellationToken) => _processor.DrainAsync(cancellationToken);
+}
+
+/// <summary>
 /// Drains pending webhook events on a timer.
 /// </summary>
 /// <remarks>
 /// <para>
 /// The enqueue in <see cref="HangfireWebhookDispatcher"/> is the fast path; this is the one
 /// that makes the guarantee. An enqueue can be lost — the process can die between the insert and
-/// the enqueue — and a payment nobody credited is the worst failure this module has.
+/// the enqueue — and a payment nobody credited is the worst failure this module has. It is also
+/// the retry loop: an event that failed waits out its back-off and is picked up here.
 /// </para>
 /// <para>
 /// Every two minutes, because the agent's own browser redirect already verifies immediately. The
@@ -51,9 +79,9 @@ public static class PaymentWebhookDrainSchedule
     {
         ArgumentNullException.ThrowIfNull(recurringJobs);
 
-        recurringJobs.AddOrUpdate<IPaymentWebhookProcessor>(
+        recurringJobs.AddOrUpdate<PaymentWebhookDrainJob>(
             JobId,
-            processor => processor.DrainAsync(CancellationToken.None),
+            job => job.RunAsync(CancellationToken.None),
             CronExpression,
             new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
     }

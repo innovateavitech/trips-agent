@@ -3,12 +3,14 @@ import type { ReactNode } from 'react';
 import type { AuthApi } from '../auth/auth-api';
 import { AuthProvider } from '../auth/auth-provider';
 import { DashboardApiProvider, type DashboardApi } from '../features/dashboard';
+import { SearchApiProvider, type SearchApi } from '../features/search';
 import { WalletApiProvider, type WalletApi } from '../features/wallet';
 
 export interface AppAdapters {
   auth: AuthApi;
   wallet: WalletApi;
   dashboard: DashboardApi;
+  search: SearchApi;
 }
 
 /**
@@ -29,7 +31,9 @@ export function AppProviders({
     <QueryClientProvider client={queryClient}>
       <AuthProvider api={adapters.auth}>
         <WalletApiProvider value={adapters.wallet}>
-          <DashboardApiProvider value={adapters.dashboard}>{children}</DashboardApiProvider>
+          <DashboardApiProvider value={adapters.dashboard}>
+            <SearchApiProvider value={adapters.search}>{children}</SearchApiProvider>
+          </DashboardApiProvider>
         </WalletApiProvider>
       </AuthProvider>
     </QueryClientProvider>

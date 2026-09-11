@@ -27,6 +27,17 @@ public sealed class TripsAfricaOptions
     public TimeSpan BookingTimeout { get; init; } = TimeSpan.FromSeconds(60);
 
     /// <summary>
+    /// How long the ticket-issue call may take (#36: 45 seconds) before its outcome is recorded as
+    /// unknown and handed to the status poller. The issue call has a client and a timeout of its own,
+    /// set apart from every other call (ADR-0003).
+    /// </summary>
+    /// <remarks>
+    /// Must stay below <c>SupplierPollSchedule.IssueRecoveryDelay</c> — startup refuses otherwise — so the
+    /// poller never takes over an issue call that is still legitimately waiting for its answer.
+    /// </remarks>
+    public TimeSpan IssueTimeout { get; init; } = TimeSpan.FromSeconds(45);
+
+    /// <summary>
     /// How long one search attempt may take (#33: 20 seconds). Search is a read, so it is the one call
     /// the adapter does retry — see <see cref="SearchAttempts"/>.
     /// </summary>

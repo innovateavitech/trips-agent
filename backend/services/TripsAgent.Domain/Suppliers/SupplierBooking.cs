@@ -30,12 +30,27 @@ public sealed record PriceConfirmationLine(
 /// also holds if the answer turns out to be N order lines, each with one confirmation.
 /// </para>
 /// <para>
-/// Only the transitions this issue needs are here: creation, price confirmation, and the guard on
-/// entering <see cref="SupplierBookingStatus.Issuing"/>. Issuance (#36) and polling (#37) add theirs.
+/// <b>Where it goes.</b> Created, price confirmed, then <see cref="SupplierBookingStatus.Issuing"/>
+/// exactly once (#36). The issue call's answer either settles it or leaves it for the status poller
+/// (#37), which is the only thing that ever learns a final outcome: there are no webhooks. A held
+/// booking that is never issued lapses at its ticket time limit (#38).
+/// </para>
+/// <para>
+/// <b>An aggregate root</b>, so what happens to it — <see cref="BookingTicketed"/>,
+/// <see cref="PaymentReversalRequired"/>, <see cref="SupplierBookingExpired"/> — is written to the
+/// outbox in the same transaction as the change that caused it.
+/// </para>
+/// <para>
+/// <b><see cref="Version"/> is compared on every write.</b> The issuer and the poller can both finish
+/// with one booking at the same moment; the second writer's save fails, and it reads again and sees
+/// what the first one did instead of overwriting it.
 /// </para>
 /// </remarks>
-public sealed class SupplierBooking : Entity, IAuditableEntity, ITenantScoped
+public sealed class SupplierBooking : AggregateRoot, IAuditableEntity, ITenantScoped
 {
+    private const int FailureReasonMaxLength = 1000;
+    private const int PnrMaxLength = 50;
+
     private readonly List<SupplierBookingConfirmation> _confirmations = [];
 
     private SupplierBooking()
@@ -143,11 +158,35 @@ public sealed class SupplierBooking : Entity, IAuditableEntity, ITenantScoped
 
     public string? FailureReason { get; private set; }
 
+    /// <summary>Bumped on every change and compared on write. See the remarks on the class.</summary>
+    public int Version { get; private set; }
+
+    /// <summary>
+    /// When the poller last put this booking in front of a person. One alert per booking: whoever
+    /// picks it up looks at the whole booking, and an alert every poll would bury the queue.
+    /// </summary>
+    public DateTimeOffset? EscalatedAt { get; private set; }
+
+    /// <summary>When the agent was warned the ticket time limit was an hour away.</summary>
+    public DateTimeOffset? SixtyMinuteWarningSentAt { get; private set; }
+
+    /// <summary>When the agent was warned the ticket time limit was fifteen minutes away.</summary>
+    public DateTimeOffset? FifteenMinuteWarningSentAt { get; private set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
 
     public IReadOnlyList<SupplierBookingConfirmation> Confirmations => _confirmations;
+
+    /// <summary>
+    /// True while the supplier's final answer is still owed: issuing, outcome unknown, or ticket
+    /// pending. These are the bookings the poller asks about, and the only ones it may change.
+    /// </summary>
+    public bool IsAwaitingOutcome =>
+        Status is SupplierBookingStatus.Issuing
+            or SupplierBookingStatus.IssueOutcomeUnknown
+            or SupplierBookingStatus.TicketPending;
 
     /// <summary>
     /// Records what the supplier confirmed, verifying each element's hash on its own.
@@ -196,6 +235,8 @@ public sealed class SupplierBooking : Entity, IAuditableEntity, ITenantScoped
             Status = SupplierBookingStatus.PriceRejected;
             FailureReason = $"Price confirmation hash mismatch at {at:O}.";
         }
+
+        Touch();
     }
 
     /// <summary>
@@ -207,8 +248,16 @@ public sealed class SupplierBooking : Entity, IAuditableEntity, ITenantScoped
     /// is resolved by polling the supplier, and re-entering this state is how a second real ticket
     /// gets issued.
     /// </remarks>
-    public void BeginIssue(DateTimeOffset at)
+    /// <param name="at">When the issue call is about to be sent.</param>
+    /// <param name="recoverAfter">
+    /// When the poller takes over if no answer is ever recorded. Defaults to
+    /// <see cref="SupplierPollSchedule.IssueRecoveryDelay"/>.
+    /// </param>
+    public void BeginIssue(DateTimeOffset at, TimeSpan? recoverAfter = null)
     {
+        var recovery = recoverAfter ?? SupplierPollSchedule.IssueRecoveryDelay;
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(recovery, TimeSpan.Zero);
+
         if (Status != SupplierBookingStatus.PriceConfirmed)
         {
             throw new InvalidOperationException(
@@ -228,7 +277,279 @@ public sealed class SupplierBooking : Entity, IAuditableEntity, ITenantScoped
 
         Status = SupplierBookingStatus.Issuing;
         IssueStartedAt = at;
+
+        // Saved before the call leaves, so a worker killed mid-call still leaves a trail: if nothing
+        // records an answer by then, the poller takes the booking over at this moment and asks the
+        // supplier what happened. It never issues again (ADR-0003).
+        NextPollAt = at + recovery;
+        Touch();
     }
+
+    /// <summary>
+    /// The issue call answered with a ticket. Terminal, and announced as <see cref="BookingTicketed"/>.
+    /// </summary>
+    /// <returns>False when the booking is no longer issuing — the poller settled it first — and nothing changed.</returns>
+    public bool RecordIssueTicketed(string? pnr, int? supplierStatusCode, DateTimeOffset at)
+    {
+        if (Status != SupplierBookingStatus.Issuing)
+        {
+            return false;
+        }
+
+        RecordSupplierAnswer(pnr, supplierStatusCode);
+        MarkTicketed(at, supplierStatusPollId: null);
+        return true;
+    }
+
+    /// <summary>
+    /// The supplier accepted the issue call but has not finished ticketing — Trips Africa's
+    /// <c>TicketPending</c>, its most common answer. The poller asks again in thirty seconds.
+    /// </summary>
+    /// <returns>False when the booking is no longer issuing, and nothing changed.</returns>
+    public bool RecordIssuePending(string? pnr, int? supplierStatusCode, DateTimeOffset at)
+    {
+        if (Status != SupplierBookingStatus.Issuing)
+        {
+            return false;
+        }
+
+        RecordSupplierAnswer(pnr, supplierStatusCode);
+        Status = SupplierBookingStatus.TicketPending;
+        NextPollAt = SupplierPollSchedule.Next(PollAttempts, at, TicketTimeLimit);
+        FailureReason = null;
+        Touch();
+        return true;
+    }
+
+    /// <summary>
+    /// The issue call did not settle the outcome: no usable answer came back, the supplier refused, or
+    /// it answered with a code the status query has to confirm. Moves to
+    /// <see cref="SupplierBookingStatus.IssueOutcomeUnknown"/>, for the poller.
+    /// </summary>
+    /// <remarks>
+    /// Never back to <see cref="SupplierBookingStatus.PriceConfirmed"/>, whatever went wrong: a booking
+    /// that could be issued again is a second ticket waiting to happen. One recovery path for every
+    /// uncertain outcome — the status query — exactly as ADR-0003 decided.
+    /// </remarks>
+    /// <param name="reason">What happened, for whoever reads the booking later.</param>
+    /// <param name="pnr">The booking reference, if the answer carried one.</param>
+    /// <param name="supplierStatusCode">The supplier's code, if the answer carried one.</param>
+    /// <param name="at">When the answer arrived, or the call gave up.</param>
+    /// <param name="pollNow">
+    /// True when the supplier did answer — a refusal, or a status to confirm — so the status query can
+    /// run at once. False for a timeout or a dropped connection, where the supplier may still be working
+    /// on the request: the first poll then waits the usual thirty seconds.
+    /// </param>
+    /// <returns>False when the booking is no longer issuing, and nothing changed.</returns>
+    public bool RecordIssueUnresolved(string reason, string? pnr, int? supplierStatusCode, DateTimeOffset at, bool pollNow)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
+        if (Status != SupplierBookingStatus.Issuing)
+        {
+            return false;
+        }
+
+        RecordSupplierAnswer(pnr, supplierStatusCode);
+        Status = SupplierBookingStatus.IssueOutcomeUnknown;
+        NextPollAt = pollNow ? at : SupplierPollSchedule.Next(PollAttempts, at, TicketTimeLimit);
+        FailureReason = Clip(reason, FailureReasonMaxLength);
+        Touch();
+        return true;
+    }
+
+    /// <summary>
+    /// Records one status poll and acts on it. The only way a booking awaiting its outcome ever gets one.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    /// <item>Ticketed: terminal, announced as <see cref="BookingTicketed"/>.</item>
+    /// <item>Failed or cancelled — Trips Africa's 0, 1 and 11: terminal, announced as
+    /// <see cref="PaymentReversalRequired"/>, naming this poll as its evidence.</item>
+    /// <item>Pending: polled again on the back-off. <b>Never resolved by a timeout</b>: the money stays
+    /// held for a ticket that may yet be issued, past the time limit included (#37).</item>
+    /// <item>Any other answer — Trips Africa's 100, "Error" — needs a person: one alert, and polling
+    /// carries on. Nothing is reversed on it.</item>
+    /// <item>No answer at all: polled again on the back-off.</item>
+    /// </list>
+    /// A booking still unresolved at its time limit plus <see cref="SupplierPollSchedule.TicketTimeLimitBuffer"/>
+    /// raises one alert too, and keeps being polled.
+    /// </remarks>
+    /// <returns>The poll row, which the caller saves with the booking, and the alert to raise, if any.</returns>
+    public SupplierPollRecorded RecordStatusPoll(SupplierStatusObservation observation, DateTimeOffset at)
+    {
+        ArgumentNullException.ThrowIfNull(observation);
+
+        if (!IsAwaitingOutcome)
+        {
+            throw new InvalidOperationException($"Booking {Id} is {Status}; it has no outcome left to poll for.");
+        }
+
+        PollAttempts++;
+        LastPolledAt = at;
+        RecordSupplierAnswer(observation.Pnr, observation.SupplierStatusCode);
+
+        var answered = observation.Outcome == SupplierPollOutcome.Answered;
+
+        if (answered && observation.ReportedStatus == SupplierBookingStatus.Ticketed)
+        {
+            var ticketed = Poll(observation, at, SupplierPollAction.MarkedTicketed);
+            MarkTicketed(at, ticketed.Id);
+            return new SupplierPollRecorded(ticketed, Alert: null);
+        }
+
+        if (answered
+            && observation.ReportedStatus is SupplierBookingStatus.Failed or SupplierBookingStatus.Cancelled
+            && observation.SupplierStatusCode is { } code)
+        {
+            var reported = observation.ReportedStatus.Value;
+            var evidence = Poll(observation, at, SupplierPollAction.ReversalRequested);
+
+            Status = reported;
+            NextPollAt = null;
+            FailureReason = Clip(
+                $"The supplier reported status {code} ({reported}) at {at:O}: no ticket will be issued, and the "
+                + "payment is to be reversed.",
+                FailureReasonMaxLength);
+            Touch();
+
+            Raise(new PaymentReversalRequired(
+                Id, AgencyId, OrderLineId, code, observation.HttpStatusCode, evidence.Id, FailureReason!, at));
+
+            return new SupplierPollRecorded(evidence, Alert: null);
+        }
+
+        // Still open. An answer of "pending" says where it is; anything else from a booking that was
+        // issuing means the issuer is gone and the outcome is, from here, unknown.
+        if (answered && observation.ReportedStatus == SupplierBookingStatus.TicketPending)
+        {
+            Status = SupplierBookingStatus.TicketPending;
+        }
+        else if (Status == SupplierBookingStatus.Issuing)
+        {
+            Status = SupplierBookingStatus.IssueOutcomeUnknown;
+        }
+
+        NextPollAt = SupplierPollSchedule.Next(PollAttempts, at, TicketTimeLimit);
+
+        SupplierPollAlert? alert = null;
+
+        if (EscalatedAt is null)
+        {
+            if (answered && observation.ReportedStatus != SupplierBookingStatus.TicketPending)
+            {
+                alert = SupplierPollAlert.SupplierReportedError;
+            }
+            else if (SupplierPollSchedule.IsPastDeadline(TicketTimeLimit, at))
+            {
+                alert = SupplierPollAlert.UnresolvedPastTimeLimit;
+            }
+        }
+
+        if (alert is not null)
+        {
+            EscalatedAt = at;
+        }
+
+        Touch();
+
+        var poll = Poll(observation, at, alert is null ? SupplierPollAction.Rescheduled : SupplierPollAction.AlertRaised);
+        return new SupplierPollRecorded(poll, alert);
+    }
+
+    /// <summary>
+    /// The ticket time limit passed before issuing began, so the supplier has released the booking.
+    /// Terminal, and announced as <see cref="SupplierBookingExpired"/>.
+    /// </summary>
+    /// <remarks>
+    /// <b>Only a booking still waiting to be issued can lapse.</b> Once issuing has begun the
+    /// confirmation is consumed and the outcome belongs to the supplier and the poller: a booking that
+    /// is issuing, pending or ticketed may hold a real ticket, and expiring it would clobber that.
+    /// </remarks>
+    /// <returns>False when there is nothing to expire, and nothing changed.</returns>
+    public bool Expire(DateTimeOffset at)
+    {
+        if (Status != SupplierBookingStatus.PriceConfirmed || TicketTimeLimit is not { } limit || at < limit)
+        {
+            return false;
+        }
+
+        Status = SupplierBookingStatus.Expired;
+        NextPollAt = null;
+        FailureReason = $"The ticket time limit passed at {limit:O} before the ticket was issued.";
+        Touch();
+
+        Raise(new SupplierBookingExpired(Id, AgencyId, OrderLineId, limit, at));
+        return true;
+    }
+
+    /// <summary>Records that the agent has been warned the ticket time limit is near. Once per warning.</summary>
+    /// <returns>False when this warning was already sent or no longer applies, and nothing changed.</returns>
+    public bool RecordTimeLimitWarning(TicketTimeLimitWarning warning, DateTimeOffset at)
+    {
+        if (Status != SupplierBookingStatus.PriceConfirmed || TicketTimeLimit is not { } limit || at >= limit)
+        {
+            return false;
+        }
+
+        switch (warning)
+        {
+            case TicketTimeLimitWarning.SixtyMinutes when SixtyMinuteWarningSentAt is null:
+                SixtyMinuteWarningSentAt = at;
+                break;
+
+            case TicketTimeLimitWarning.FifteenMinutes when FifteenMinuteWarningSentAt is null:
+                FifteenMinuteWarningSentAt = at;
+                break;
+
+            default:
+                return false;
+        }
+
+        Touch();
+        return true;
+    }
+
+    private void MarkTicketed(DateTimeOffset at, Guid? supplierStatusPollId)
+    {
+        Status = SupplierBookingStatus.Ticketed;
+        NextPollAt = null;
+        FailureReason = null;
+        Touch();
+
+        Raise(new BookingTicketed(Id, AgencyId, OrderLineId, Pnr, SupplierStatusCode, supplierStatusPollId, at));
+    }
+
+    private SupplierStatusPoll Poll(SupplierStatusObservation observation, DateTimeOffset at, SupplierPollAction action) =>
+        SupplierStatusPoll.Record(
+            AgencyId,
+            Id,
+            at,
+            observation.Outcome,
+            action,
+            observation.HttpStatusCode,
+            observation.SupplierStatusCode,
+            observation.SupplierApiCallId,
+            Clip(observation.Message, FailureReasonMaxLength));
+
+    private void RecordSupplierAnswer(string? pnr, int? supplierStatusCode)
+    {
+        // Trips Africa writes a missing PNR as the string "null".
+        if (!string.IsNullOrWhiteSpace(pnr) && !string.Equals(pnr.Trim(), "null", StringComparison.OrdinalIgnoreCase))
+        {
+            Pnr = Clip(pnr.Trim(), PnrMaxLength);
+        }
+
+        if (supplierStatusCode is { } code)
+        {
+            SupplierStatusCode = code;
+        }
+    }
+
+    private void Touch() => Version++;
+
+    private static string? Clip(string? value, int maxLength) =>
+        value is null || value.Length <= maxLength ? value : value[..maxLength];
 }
 
 /// <summary>

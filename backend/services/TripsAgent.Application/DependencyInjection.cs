@@ -72,6 +72,13 @@ public static class DependencyInjection
         // Confirms a booking's price and raises a P1 alert when a supplier hash fails (#35).
         services.AddScoped<PriceConfirmationService>();
 
+        // The booking pipeline after confirmation: issue once and never again (#36), learn the outcome
+        // by polling because there are no webhooks (#37), and lapse held bookings at their ticket time
+        // limit (#38). The Worker runs all three; the API only ever asks for the first.
+        services.AddScoped<TicketIssuanceService>();
+        services.AddScoped<SupplierBookingStatusPoller>();
+        services.AddScoped<TicketTimeLimitMonitor>();
+
         // The request-side half of an upload. The pipeline itself — ProcessAssetHandler — is
         // registered by AddAssetProcessing in the Worker only, because it needs a virus scanner
         // and an image library that the API has no business loading.

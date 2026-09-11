@@ -165,18 +165,18 @@ public class TripsAfricaAdapterTests
         TripsAfricaSearchCircuits? circuits = null)
     {
         options ??= new TripsAfricaOptions();
-        var (runner, booking, credentials, supplier) = Parts(network, options, circuits);
-        return new TripsAfricaFlightAdapter(runner, booking, credentials, supplier, options, NullLogger<TripsAfricaFlightAdapter>.Instance);
+        var (runner, booking, ticketing, credentials, supplier) = Parts(network, options, circuits);
+        return new TripsAfricaFlightAdapter(runner, booking, ticketing, credentials, supplier, options, NullLogger<TripsAfricaFlightAdapter>.Instance);
     }
 
     private static TripsAfricaBusAdapter Bus(ScriptedNetwork network)
     {
         var options = new TripsAfricaOptions();
-        var (runner, booking, credentials, supplier) = Parts(network, options, circuits: null);
-        return new TripsAfricaBusAdapter(runner, booking, credentials, supplier, NullLogger<TripsAfricaBusAdapter>.Instance);
+        var (runner, booking, ticketing, credentials, supplier) = Parts(network, options, circuits: null);
+        return new TripsAfricaBusAdapter(runner, booking, ticketing, credentials, supplier, NullLogger<TripsAfricaBusAdapter>.Instance);
     }
 
-    private static (TripsAfricaSearchRunner, TripsAfricaBookingHttp, TripsAfricaCredentials, TripsAfricaSupplier) Parts(
+    private static (TripsAfricaSearchRunner, TripsAfricaBookingHttp, TripsAfricaTicketing, TripsAfricaCredentials, TripsAfricaSupplier) Parts(
         ScriptedNetwork network,
         TripsAfricaOptions options,
         TripsAfricaSearchCircuits? circuits)
@@ -194,7 +194,10 @@ public class TripsAfricaAdapterTests
             options,
             NullLogger<TripsAfricaSearchRunner>.Instance);
 
-        return (runner, new TripsAfricaBookingHttp(http), credentials, supplier);
+        var booking = new TripsAfricaBookingHttp(http);
+        var ticketing = new TripsAfricaTicketing(new TripsAfricaIssueHttp(http), booking, credentials, supplier);
+
+        return (runner, booking, ticketing, credentials, supplier);
     }
 
     private static SupplierSearchQuery FlightQuery(string origin, string destination) =>

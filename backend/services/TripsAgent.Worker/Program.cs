@@ -94,4 +94,10 @@ DataRetentionSchedule.Register(recurringJobs);
 // enqueues each asset directly, so like the webhook drain this normally finds nothing.
 AssetSweepSchedule.Register(recurringJobs);
 
+// The booking pipeline's clockwork. The status poller is the only way a booking's outcome is ever
+// learned — Trips Africa has no webhooks — and the only thing that asks for a payment to be reversed
+// (#37). The time limit monitor warns agents before a held fare lapses, and lapses it after (#38).
+SupplierBookingStatusPollSchedule.Register(recurringJobs);
+TicketTimeLimitMonitorSchedule.Register(recurringJobs);
+
 await host.RunAsync();

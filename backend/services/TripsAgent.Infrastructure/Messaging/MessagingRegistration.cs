@@ -37,6 +37,11 @@ public static class MessagingRegistration
     public static IReadOnlyList<(MessageQueue Queue, Type Consumer)> ConsumerRoutes { get; } =
     [
         (MessageQueue.NotificationsEmail, typeof(NotificationQueuedConsumer)),
+
+        // Issuing a ticket (#36). The endpoint's retry and RabbitMQ's redelivery are both safe here —
+        // a second pass finds the booking already issuing and sends nothing. What is never retried is
+        // the supplier call itself (ADR-0003).
+        (MessageQueue.BookingSaga, typeof(Suppliers.IssueSupplierTicketConsumer)),
     ];
 
     /// <summary>Registers a publish-only bus. Use this in the API.</summary>

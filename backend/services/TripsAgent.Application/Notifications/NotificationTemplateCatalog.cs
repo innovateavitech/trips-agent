@@ -74,6 +74,12 @@ public static class NotificationTemplateCatalog
     /// <summary>A traveller's booking needs them to do something, or it will be lost.</summary>
     public const string BookingNeedsAttention = "booking.needs-attention";
 
+    /// <summary>An agent's held booking is close to its ticket time limit (#38). Sent at T-60 and T-15 minutes.</summary>
+    public const string BookingTimeLimitWarning = "booking.time-limit-warning";
+
+    /// <summary>An agent's held booking passed its ticket time limit before it was issued (#38).</summary>
+    public const string BookingExpired = "booking.expired";
+
     // ------------------------------------------------------------------ brand tokens
 
     /// <summary>Whose mail this appears to be: the agency's trading name, or <see cref="ProductName"/>.</summary>
@@ -164,6 +170,56 @@ public static class NotificationTemplateCatalog
                   Reference: {{reference}}
 
                   You can see the full statement in your console.
+                  """),
+
+        // The ticket time limit (#38). To the agent, not the traveller: the agent is the one who can
+        // still act — finish the booking, or rebook and refund — and whether and how to tell their own
+        // customer is theirs to decide.
+        AgencyFacing(
+            BookingTimeLimitWarning,
+            version: 1,
+            subject: "{{minutesLeft}} minutes left to ticket {{bookingReference}}",
+            tokens: ["bookingReference", "itinerarySummary", "minutesLeft", "deadline"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>The fare held for <strong>{{bookingReference}}</strong> ({{itinerarySummary}}) must be
+                     ticketed by <strong>{{deadline}}</strong> — about {{minutesLeft}} minutes from now.</p>
+                  <p>After that the airline or operator releases the seats and the price is no longer
+                     guaranteed. Open the booking in your {{brandName}} console to finish it.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  The fare held for {{bookingReference}} ({{itinerarySummary}}) must be ticketed by
+                  {{deadline}} — about {{minutesLeft}} minutes from now.
+
+                  After that the airline or operator releases the seats and the price is no longer
+                  guaranteed. Open the booking in your {{brandName}} console to finish it.
+                  """),
+
+        AgencyFacing(
+            BookingExpired,
+            version: 1,
+            subject: "{{bookingReference}} expired before it was ticketed",
+            tokens: ["bookingReference", "itinerarySummary", "deadline"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>The fare held for <strong>{{bookingReference}}</strong> ({{itinerarySummary}}) was not
+                     ticketed by its time limit, {{deadline}}, and the supplier has released it. No ticket
+                     was issued.</p>
+                  <p>It is waiting in your resolution queue, where you can rebook it or refund your
+                     customer. Funds held in your wallet for the order are released once nothing else on
+                     it still needs them.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  The fare held for {{bookingReference}} ({{itinerarySummary}}) was not ticketed by its
+                  time limit, {{deadline}}, and the supplier has released it. No ticket was issued.
+
+                  It is waiting in your resolution queue, where you can rebook it or refund your
+                  customer. Funds held in your wallet for the order are released once nothing else on
+                  it still needs them.
                   """),
 
         // ------------------------------------------------------------------ traveller-facing

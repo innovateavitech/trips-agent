@@ -18,6 +18,12 @@ public enum AdminAlertType
 
     /// <summary>The nightly audit found the books disagreeing with themselves.</summary>
     LedgerIntegrity = 6,
+
+    /// <summary>
+    /// The supplier answered a status query about a booking awaiting its ticket with an error. The
+    /// money is still held and nothing has been reversed; a person has to find out what happened.
+    /// </summary>
+    SupplierBookingError = 7,
 }
 
 /// <summary>How quickly somebody needs to look.</summary>

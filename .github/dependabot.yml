@@ -33,6 +33,15 @@ updates:
     commit-message:
       prefix: chore(deps)
     labels: [dependencies]
+    ignore:
+      # Roslyn moves by hand, never by Dependabot, for two independent reasons:
+      #  1. Microsoft.EntityFrameworkCore.Design depends on an EXACT Roslyn version, and central
+      #     package management applies our pin transitively — so any bump is a restore-time
+      #     version conflict (NU1107 on Microsoft.CodeAnalysis.Common). That is what #144 hit.
+      #  2. Our analyzers (TRIPS001, TRIPS002) must not be built against a Roslyn newer than the
+      #     compiler in the .NET SDK that loads them.
+      # Update these deliberately, together with EF Core and the SDK.
+      - dependency-name: 'Microsoft.CodeAnalysis*'
     groups:
       nuget-minor:
         update-types: [minor, patch]

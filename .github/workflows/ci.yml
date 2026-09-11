@@ -272,7 +272,13 @@ jobs:
     name: commitlint
     runs-on: ubuntu-latest
     # There is no pull request title to check on a push to main.
-    if: github.event_name == 'pull_request'
+    #
+    # Nor on Dependabot's. Its titles are machine-written and not ours to shape: it capitalises
+    # "Bump" on grouped updates and runs past 72 characters on long package names, so holding a
+    # bot to a person's commit style fails every one of its pull requests for nothing. The part of
+    # the rule that matters — the conventional prefix — is fixed by commit-message.prefix in
+    # .github/dependabot.yml. A skipped job counts as passing for a required check.
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v7
 

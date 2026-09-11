@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
@@ -85,6 +86,12 @@ public interface IAppDbContext
     /// own books, which an agency must never see. Permission controls access, not a filter.
     /// </remarks>
     public DbSet<ReconciliationException> ReconciliationExceptions { get; }
+
+    /// <summary>How each document type's numbers are written, where the agency has chosen.</summary>
+    public DbSet<DocumentNumberFormat> DocumentNumberFormats { get; }
+
+    /// <summary>Issued documents, and the gapless numbers they own.</summary>
+    public DbSet<GeneratedDocument> GeneratedDocuments { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

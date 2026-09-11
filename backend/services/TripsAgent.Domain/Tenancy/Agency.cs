@@ -1,3 +1,4 @@
+using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
 
 namespace TripsAgent.Domain.Tenancy;
@@ -17,7 +18,7 @@ namespace TripsAgent.Domain.Tenancy;
 /// them years later.
 /// </para>
 /// </remarks>
-public sealed partial class Agency : Entity, IAuditableEntity
+public sealed partial class Agency : Entity, IAuditableEntity, IAuditLogged
 {
     /// <summary>Nigerian VAT, in basis points. 7.5% at the time of writing.</summary>
     public const int DefaultVatRateBasisPoints = 750;

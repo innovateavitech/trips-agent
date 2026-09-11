@@ -32,7 +32,7 @@ public class JwtAccessTokenIssuerTests
         var rootAgencyId = Guid.CreateVersion7();
         var user = User.ForAgency(agencyId, "ada@example.com", "hash", "Ada", "O");
 
-        var token = Decode(NewIssuer().Issue(user, ["Owner", "Agent"], rootAgencyId).Value);
+        var token = Decode(NewIssuer().Issue(user, ["Owner", "Agent"], [], rootAgencyId).Value);
 
         token.Claims.Should().Contain(c => c.Type == TripsClaimTypes.Subject && c.Value == user.Id.ToString());
         token.Claims.Should().Contain(c => c.Type == TripsClaimTypes.AgencyId && c.Value == agencyId.ToString());
@@ -49,7 +49,7 @@ public class JwtAccessTokenIssuerTests
         var agencyId = Guid.CreateVersion7();
         var user = User.ForAgency(agencyId, "ada@example.com", "hash", "Ada", "O");
 
-        var token = Decode(NewIssuer().Issue(user, [], rootAgencyId: null).Value);
+        var token = Decode(NewIssuer().Issue(user, [], [], rootAgencyId: null).Value);
 
         token.Claims.Should().Contain(c => c.Type == TripsClaimTypes.RootAgencyId && c.Value == agencyId.ToString());
     }
@@ -59,7 +59,7 @@ public class JwtAccessTokenIssuerTests
     {
         var user = User.ForPlatform("admin@tripsagent.test", "hash", "Ada", "O");
 
-        var token = Decode(NewIssuer().Issue(user, ["Super Admin"], null).Value);
+        var token = Decode(NewIssuer().Issue(user, ["Super Admin"], [], null).Value);
 
         // Not an empty Guid: that would look like a real tenant, and match no rows.
         token.Claims.Should().NotContain(c => c.Type == TripsClaimTypes.AgencyId);
@@ -72,7 +72,7 @@ public class JwtAccessTokenIssuerTests
     {
         var user = User.ForPlatform("admin@tripsagent.test", "hash", "Ada", "O");
 
-        var issued = NewIssuer().Issue(user, [], null);
+        var issued = NewIssuer().Issue(user, [], [], null);
 
         issued.ExpiresAt.Should().Be(Now.AddMinutes(15));
         Decode(issued.Value).ValidTo.Should().BeCloseTo(Now.AddMinutes(15).UtcDateTime, TimeSpan.FromSeconds(1));
@@ -83,7 +83,7 @@ public class JwtAccessTokenIssuerTests
     {
         var user = User.ForPlatform("admin@tripsagent.test", "hash", "Ada", "O");
 
-        var token = Decode(NewIssuer().Issue(user, [], null).Value);
+        var token = Decode(NewIssuer().Issue(user, [], [], null).Value);
 
         token.Issuer.Should().Be("https://tripsagent.test");
         token.Audiences.Should().Contain("trips-agent-api");
@@ -95,8 +95,8 @@ public class JwtAccessTokenIssuerTests
         var user = User.ForPlatform("admin@tripsagent.test", "hash", "Ada", "O");
         var issuer = NewIssuer();
 
-        var first = Decode(issuer.Issue(user, [], null).Value).Id;
-        var second = Decode(issuer.Issue(user, [], null).Value).Id;
+        var first = Decode(issuer.Issue(user, [], [], null).Value).Id;
+        var second = Decode(issuer.Issue(user, [], [], null).Value).Id;
 
         // So one token can be named in a log without the token itself appearing there.
         first.Should().NotBeNullOrEmpty();
@@ -109,7 +109,7 @@ public class JwtAccessTokenIssuerTests
         var user = User.ForAgency(Guid.CreateVersion7(), "ada@example.com", "argon2id$secret-hash", "Ada", "O");
 
         // A JWT is signed, not encrypted — anyone holding it can read every claim.
-        NewIssuer().Issue(user, [], null).Value.Should().NotContain("secret-hash");
+        NewIssuer().Issue(user, [], [], null).Value.Should().NotContain("secret-hash");
     }
 
     [Fact]

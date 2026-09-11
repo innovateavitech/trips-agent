@@ -42,10 +42,25 @@ public sealed class TokenPairFactory
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        var roles = await RolesForAsync(user, cancellationToken);
+        var roleIds = await RoleIdsForAsync(user, cancellationToken);
+
+        var roles = await _db.Roles
+            .Where(role => roleIds.Contains(role.Id))
+            .Select(role => role.Name)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        // Gathered from the roles the user actually holds in this agency, so a permission cannot
+        // arrive from a role granted somewhere else.
+        var permissions = await (
+            from rolePermission in _db.RolePermissions
+            join permission in _db.Permissions on rolePermission.PermissionId equals permission.Id
+            where roleIds.Contains(rolePermission.RoleId)
+            select permission.Code).Distinct().ToListAsync(cancellationToken);
+
         var rootAgencyId = await RootAgencyIdForAsync(user, cancellationToken);
 
-        var access = _accessTokens.Issue(user, roles, rootAgencyId);
+        var access = _accessTokens.Issue(user, roles, permissions, rootAgencyId);
 
         // Opaque and random, not a JWT: it carries no information, so there is nothing to read
         // out of it, and it is only ever meaningful next to the row that records it.
@@ -62,14 +77,13 @@ public sealed class TokenPairFactory
         return new IssuedTokenPair(access, refreshValue, stored);
     }
 
-    /// <summary>The role names this user holds in the agency they are acting as.</summary>
-    private async Task<List<string>> RolesForAsync(User user, CancellationToken cancellationToken)
+    /// <summary>The roles this user holds in the agency they are acting as.</summary>
+    private async Task<List<Guid>> RoleIdsForAsync(User user, CancellationToken cancellationToken)
     {
         var grants =
             from userRole in _db.UserRoles
-            join role in _db.Roles on userRole.RoleId equals role.Id
             where userRole.UserId == user.Id
-            select new { userRole.AgencyId, role.Name };
+            select new { userRole.AgencyId, userRole.RoleId };
 
         // Platform staff have no agency of their own, so every grant they hold counts. Agency
         // users get only the roles granted in the agency they belong to — one person can hold
@@ -79,7 +93,7 @@ public sealed class TokenPairFactory
             grants = grants.Where(grant => grant.AgencyId == agencyId);
         }
 
-        return await grants.Select(grant => grant.Name).Distinct().ToListAsync(cancellationToken);
+        return await grants.Select(grant => grant.RoleId).Distinct().ToListAsync(cancellationToken);
     }
 
     private async Task<Guid?> RootAgencyIdForAsync(User user, CancellationToken cancellationToken)

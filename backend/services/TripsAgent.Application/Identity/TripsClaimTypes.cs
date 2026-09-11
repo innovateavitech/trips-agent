@@ -25,4 +25,16 @@ public static class TripsClaimTypes
 
     /// <summary>The user's email address, for display in the console.</summary>
     public const string Email = "email";
+
+    /// <summary>
+    /// One claim per permission code the user holds, e.g. <c>kyb.review</c>.
+    /// </summary>
+    /// <remarks>
+    /// Permissions travel in the token rather than being looked up per request, so an
+    /// authorisation check is a claim comparison and not a database round trip on the hot path.
+    /// The cost is staleness: a permission removed today survives in an issued token until it
+    /// expires. Fifteen minutes is the ceiling on that, which is the other reason access tokens
+    /// are short.
+    /// </remarks>
+    public const string Permission = "permission";
 }

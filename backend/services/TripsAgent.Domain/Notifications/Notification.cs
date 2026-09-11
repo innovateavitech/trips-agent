@@ -104,6 +104,10 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
     /// that runs three times from sending three emails.
     /// </param>
     /// <param name="recipientUserId">The user account, when the recipient has one. Travellers do not.</param>
+    /// <param name="attachmentAssetIds">
+    /// Stored files to attach — an invoice, a voucher. The same agency's, and servable by the time
+    /// the dispatcher reads them.
+    /// </param>
     public static Notification Queue(
         Guid agencyId,
         string templateKey,
@@ -114,7 +118,8 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
         string recipientName,
         string payload,
         string dedupeKey,
-        Guid? recipientUserId = null)
+        Guid? recipientUserId = null,
+        IReadOnlyList<Guid>? attachmentAssetIds = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(templateKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(locale);
@@ -140,6 +145,7 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
             Payload = payload,
             DedupeKey = dedupeKey,
             Status = NotificationStatus.Queued,
+            AttachmentAssetIds = attachmentAssetIds is null ? [] : attachmentAssetIds.Distinct().ToList(),
         };
     }
 
@@ -194,6 +200,12 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
 
     /// <summary>Why the most recent attempt failed, trimmed to <see cref="MaxErrorLength"/>.</summary>
     public string? LastError { get; private set; }
+
+    /// <summary>
+    /// Stored files sent with the message — an invoice, a voucher — by asset id. Read when it is
+    /// sent, so the row stays small and no file is ever copied into the database.
+    /// </summary>
+    public IReadOnlyList<Guid> AttachmentAssetIds { get; private set; } = [];
 
     public DateTimeOffset CreatedAt { get; set; }
 
@@ -274,6 +286,7 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
     /// True to stop here and mark it failed; false to put it back in the queue for the next
     /// attempt. When that attempt happens is the message broker's retry policy, not this row's business.
     /// </param>
+    /// <remarks>See also <see cref="RecordBounceReport"/>, for a refusal that arrives after the send.</remarks>
     public void RecordFailure(string error, bool giveUp)
     {
         ArgumentNullException.ThrowIfNull(error);
@@ -281,6 +294,32 @@ public sealed class Notification : Entity, IAuditableEntity, ITenantScoped
         CountAttemptUnlessClaimed();
         LastError = Trim(error);
         Status = giveUp ? NotificationStatus.Failed : NotificationStatus.Queued;
+    }
+
+    /// <summary>
+    /// The provider reported, after accepting the message, that the mailbox refused it for good —
+    /// an asynchronous hard bounce.
+    /// </summary>
+    /// <returns>False when there is nothing to change: it was never handed over, or is already bounced.</returns>
+    /// <remarks>
+    /// Not an attempt: the attempt was the send, and it was counted then. Clears
+    /// <see cref="DeliveredAt"/>, because a message the mailbox refused was not delivered, whatever
+    /// an earlier report said.
+    /// </remarks>
+    public bool RecordBounceReport(string reason)
+    {
+        ArgumentNullException.ThrowIfNull(reason);
+
+        if (Status is not (NotificationStatus.Sent or NotificationStatus.Delivered))
+        {
+            return false;
+        }
+
+        Status = NotificationStatus.Bounced;
+        DeliveredAt = null;
+        LastError = Trim(reason);
+
+        return true;
     }
 
     /// <summary>

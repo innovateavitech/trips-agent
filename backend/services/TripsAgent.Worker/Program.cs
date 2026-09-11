@@ -1,5 +1,6 @@
 using Hangfire;
 using TripsAgent.Application;
+using TripsAgent.Documents;
 using TripsAgent.Infrastructure;
 using TripsAgent.Infrastructure.Assets;
 using TripsAgent.Infrastructure.Auditing;
@@ -47,6 +48,11 @@ builder.Services.AddJobProcessing(builder.Configuration);
 // Development the pipeline alone is disabled — uploads stay pending and unserved — while every other
 // job here keeps running. See AssetPipelineStatus.
 builder.Services.AddAssetProcessing(builder.Configuration, builder.Environment);
+
+// Invoices and vouchers (issue #46), drawn with QuestPDF from documents.render. Here and only here:
+// the API numbers a reissue and queues it, but never renders. Documents__QuestPdfLicense names the
+// licence the business holds; see DocumentRenderingRegistration.
+builder.Services.AddDocumentRendering(builder.Configuration);
 
 // Graceful shutdown, the host half. On SIGTERM — which is what Docker, Kubernetes and systemd all
 // send first — the host gives every hosted service this long to stop before killing the process.

@@ -376,15 +376,34 @@ public class NotificationDispatcherTests
                 .SingleAsync();
         }
 
+        /// <summary>Files on disk for this database alone: logos and attachments.</summary>
+        public TripsAgent.Infrastructure.Storage.LocalFileBlobStorage Storage { get; } = new(
+            new TripsAgent.Infrastructure.Storage.LocalBlobStorageOptions
+            {
+                RootPath = Path.Combine(Path.GetTempPath(), "tripsagent-notification-tests", database),
+            });
+
+        /// <summary>The dispatcher as the Worker builds it, over <paramref name="db"/>.</summary>
+        public NotificationDispatcher Dispatcher(
+            AppDbContext db,
+            IEmailSender sender,
+            TripsAgent.Application.Tenancy.IPlatformScope scope) =>
+            new(
+                db,
+                sender,
+                scope,
+                new TripsAgent.Infrastructure.Assets.AgencyLogoSource(
+                    db, Storage, NullLogger<TripsAgent.Infrastructure.Assets.AgencyLogoSource>.Instance),
+                Storage,
+                TimeProvider.System,
+                NullLogger<NotificationDispatcher>.Instance);
+
         /// <summary>One consumer delivery: a fresh scope and context, as MassTransit gives each message.</summary>
         public async Task<NotificationDispatchOutcome> DispatchAsync(Guid id, IEmailSender? sender = null)
         {
             await using var db = Platform(out var scope);
 
-            var dispatcher = new NotificationDispatcher(
-                db, sender ?? new CapturingSender(Sent), scope, TimeProvider.System, NullLogger<NotificationDispatcher>.Instance);
-
-            return await dispatcher.DispatchAsync(id);
+            return await Dispatcher(db, sender ?? new CapturingSender(Sent), scope).DispatchAsync(id);
         }
 
         /// <summary>
@@ -397,10 +416,7 @@ public class NotificationDispatcherTests
             await using var db = postgres.Connect(
                 database, tenancy.Tenant, tenancy.Scope, retryOnFailure: true, interceptors: [interceptor]);
 
-            var dispatcher = new NotificationDispatcher(
-                db, sender, tenancy.Scope, TimeProvider.System, NullLogger<NotificationDispatcher>.Instance);
-
-            return await dispatcher.DispatchAsync(id);
+            return await Dispatcher(db, sender, tenancy.Scope).DispatchAsync(id);
         }
 
         public async Task<Notification> ReadAsync(Guid id)

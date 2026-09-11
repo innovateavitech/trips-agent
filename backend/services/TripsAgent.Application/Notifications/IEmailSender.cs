@@ -1,5 +1,17 @@
 namespace TripsAgent.Application.Notifications;
 
+/// <summary>A file sent with an email — a PDF to keep, or an image the body shows.</summary>
+/// <param name="FileName">What the recipient's mail client calls it.</param>
+/// <param name="ContentType">What the bytes are, e.g. <c>application/pdf</c>.</param>
+/// <param name="Content">The bytes.</param>
+/// <param name="ContentId">
+/// Set for an image the HTML body shows, which refers to it as <c>cid:{ContentId}</c> — the
+/// agency's logo. Embedded rather than linked, so it shows without the client fetching anything
+/// from a server whose name would give away where the mail really came from. Null for an ordinary
+/// attachment.
+/// </param>
+public sealed record EmailAttachment(string FileName, string ContentType, byte[] Content, string? ContentId = null);
+
 /// <summary>An email ready to send: who it goes to, and both renderings of the body.</summary>
 /// <param name="To">The recipient's address.</param>
 /// <param name="Subject">The subject line.</param>
@@ -17,13 +29,17 @@ namespace TripsAgent.Application.Notifications;
 /// Where a reply should go. For traveller mail that is the agency's own inbox — a traveller who
 /// replies must reach their agent, not us. Null means replies go to the From address.
 /// </param>
+/// <param name="Attachments">
+/// Files sent with it: PDFs to keep, and any image the body shows inline. Null or empty for none.
+/// </param>
 public sealed record EmailMessage(
     string To,
     string Subject,
     string HtmlBody,
     string TextBody,
     string? FromName = null,
-    string? ReplyTo = null);
+    string? ReplyTo = null,
+    IReadOnlyList<EmailAttachment>? Attachments = null);
 
 /// <summary>What the provider said when it accepted a message.</summary>
 /// <param name="ProviderMessageId">

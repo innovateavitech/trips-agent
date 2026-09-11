@@ -83,6 +83,21 @@ public static class DependencyInjection
         // Stages notifications in the caller's unit of work; the Worker sends them.
         services.AddScoped<INotifier, Notifier>();
 
+        // What the email provider says happened after it accepted a message — delivered, bounced,
+        // reported as spam (#45). Its webhook arrives with whichever provider is chosen.
+        services.AddScoped<NotificationDeliveryReports>();
+
+        // For the checkout saga (#42): the traveller's booking emails and the order's documents,
+        // both staged in the saga's own unit of work.
+        services.AddScoped<IBookingEmails, BookingEmails>();
+        services.AddScoped<IBookingDocuments, BookingDocuments>();
+
+        // Invoices and vouchers in the console (#46): list, reissue and download through signed
+        // links. The rendering itself — OrderDocumentService — is registered by AddDocumentRendering,
+        // in the Worker only, because it needs the PDF renderer the API has no business loading.
+        services.AddScoped<BookingDocumentsHandler>();
+        services.AddScoped<DocumentLinks>();
+
         return services;
     }
 }

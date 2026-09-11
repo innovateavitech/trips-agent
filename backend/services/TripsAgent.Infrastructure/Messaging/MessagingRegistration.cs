@@ -2,6 +2,8 @@ using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Messaging;
+using TripsAgent.Domain.Documents;
+using TripsAgent.Infrastructure.Documents;
 using TripsAgent.Infrastructure.Notifications;
 
 namespace TripsAgent.Infrastructure.Messaging;
@@ -37,6 +39,9 @@ public static class MessagingRegistration
     public static IReadOnlyList<(MessageQueue Queue, Type Consumer)> ConsumerRoutes { get; } =
     [
         (MessageQueue.NotificationsEmail, typeof(NotificationQueuedConsumer)),
+
+        // Both of its message types: an order's documents, and one reissued document (#46).
+        (MessageQueue.DocumentsRender, typeof(DocumentRenderConsumer)),
     ];
 
     /// <summary>Registers a publish-only bus. Use this in the API.</summary>
@@ -210,12 +215,25 @@ public static class MessagingRegistration
     /// <summary>
     /// Retries per queue. Notifications give up after <see cref="NotificationDispatcher.MaxAttempts"/>
     /// attempts in total — the first delivery plus four retries — so the broker dead-letters a
-    /// message at the same moment the dispatcher marks its row failed.
+    /// message at the same moment the dispatcher marks its row failed. Documents do the same with
+    /// <see cref="GeneratedDocument.MaxRenderAttempts"/>.
     /// </summary>
-    private static int RetryLimitFor(MessageQueue queue, MessageRetryOptions retry) =>
-        queue == MessageQueue.NotificationsEmail
-            ? Math.Min(retry.RetryLimit, NotificationDispatcher.MaxAttempts - 1)
-            : retry.RetryLimit;
+    /// <remarks>
+    /// Pinned to those limits rather than capped by <c>Messaging:RetryLimit</c>. With a lower setting
+    /// the broker would give up first and dead-letter a message whose row still says "queued" — and
+    /// nothing ever looks at a queued row again.
+    /// </remarks>
+    public static int RetryLimitFor(MessageQueue queue, MessageRetryOptions retry)
+    {
+        ArgumentNullException.ThrowIfNull(retry);
+
+        if (queue == MessageQueue.NotificationsEmail)
+        {
+            return NotificationDispatcher.MaxAttempts - 1;
+        }
+
+        return queue == MessageQueue.DocumentsRender ? GeneratedDocument.MaxRenderAttempts - 1 : retry.RetryLimit;
+    }
 
     /// <summary>
     /// Per-queue concurrency. One switch, so "how parallel is this queue" has a single answer you

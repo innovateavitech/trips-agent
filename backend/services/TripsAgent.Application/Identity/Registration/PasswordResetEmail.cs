@@ -1,46 +1,26 @@
-using System.Net;
+using System.Globalization;
 using TripsAgent.Application.Notifications;
 
 namespace TripsAgent.Application.Identity.Registration;
 
 /// <summary>The email carrying a password reset link.</summary>
+/// <remarks>
+/// The wording is the <c>identity.password-reset</c> template in <see cref="NotificationTemplateCatalog"/>,
+/// rendered here and sent at once rather than queued: the link is a working credential until it is
+/// used or expires, and a queued notification would store it. See <see cref="SynchronousEmail"/>.
+/// </remarks>
 public static class PasswordResetEmail
 {
-    public const string ProductName = "Trips Agent";
+    public const string ProductName = NotificationTemplateCatalog.ProductName;
 
-    public static EmailMessage Create(string to, string firstName, string resetUrl, TimeSpan validFor)
-    {
-        var name = WebUtility.HtmlEncode(firstName);
-        var url = WebUtility.HtmlEncode(resetUrl);
-        var minutes = (int)validFor.TotalMinutes;
-
-        return new EmailMessage(
+    public static EmailMessage Create(string to, string firstName, string resetUrl, TimeSpan validFor) =>
+        SynchronousEmail.Render(
+            NotificationTemplateCatalog.IdentityPasswordReset,
             to,
-            $"Reset your {ProductName} password",
-            $"""
-             <!doctype html>
-             <html lang="en">
-               <body>
-                 <p>Hello {name},</p>
-                 <p>Use this link to choose a new password:</p>
-                 <p><a href="{url}">Reset your password</a></p>
-                 <p>The link works once and expires in {minutes} minutes.</p>
-                 <p>If you did not ask for this, you can ignore this email — your password has
-                    not changed, and nobody can change it without this link.</p>
-               </body>
-             </html>
-             """,
-            $"""
-             Hello {firstName},
-
-             Use this link to choose a new password:
-
-                 {resetUrl}
-
-             The link works once and expires in {minutes} minutes.
-
-             If you did not ask for this, you can ignore this email — your password has not
-             changed, and nobody can change it without this link.
-             """);
-    }
+            firstName,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["resetUrl"] = resetUrl,
+                ["minutes"] = ((int)validFor.TotalMinutes).ToString(CultureInfo.InvariantCulture),
+            });
 }

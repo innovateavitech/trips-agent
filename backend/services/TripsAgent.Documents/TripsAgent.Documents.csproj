@@ -1,7 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The PDF renderer behind Application's IDocumentRenderer port (#46). A project of its own so
+       the PDF library stays out of Application, exactly as the email and storage SDKs do. -->
 
   <ItemGroup>
     <ProjectReference Include="..\TripsAgent.Application\TripsAgent.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="QuestPDF" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
   </ItemGroup>
 
   <PropertyGroup>

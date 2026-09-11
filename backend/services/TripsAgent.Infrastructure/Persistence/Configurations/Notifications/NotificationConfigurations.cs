@@ -35,6 +35,12 @@ public sealed class NotificationConfiguration : IEntityTypeConfiguration<Notific
         builder.Property(notification => notification.ProviderMessageId).HasMaxLength(500);
         builder.Property(notification => notification.LastError).HasMaxLength(Notification.MaxErrorLength);
 
+        // Ids, not files: the dispatcher reads each asset from storage when it sends. A native
+        // uuid[] rather than jsonb, because every element is the same simple type.
+        builder.Property(notification => notification.AttachmentAssetIds)
+            .HasColumnType("uuid[]")
+            .IsRequired();
+
         builder.HasOne<Agency>()
             .WithMany()
             .HasForeignKey(notification => notification.AgencyId)

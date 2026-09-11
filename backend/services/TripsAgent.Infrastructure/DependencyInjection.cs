@@ -112,6 +112,12 @@ public static class DependencyInjection
         // containers the same shape.
         services.AddScoped<NotificationDispatcher>();
 
+        // An agency's logo as PNG, for its travellers' email and its documents (#45, #46).
+        services.AddScoped<TripsAgent.Application.Assets.IAgencyLogoSource, Assets.AgencyLogoSource>();
+
+        // The supplier's side of an order — its PNR and ticket numbers — for vouchers (#46).
+        services.AddScoped<ISupplierBookingReader, SupplierBookingReader>();
+
         // Alerting: logs, the back-office queue and email. Scoped because it writes an
         // admin_alerts row through the request's DbContext.
         services.AddSingleton(ReadAlertOptions(configuration));

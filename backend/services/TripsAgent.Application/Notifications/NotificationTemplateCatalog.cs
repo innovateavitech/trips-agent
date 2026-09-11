@@ -59,6 +59,24 @@ public static class NotificationTemplateCatalog
 
     // ------------------------------------------------------------------ keys
 
+    /// <summary>
+    /// The code that proves a new account owns its email address. Rendered from here but sent at
+    /// once by <c>VerificationCodeIssuer</c>, never queued: a queued row would hold the live code.
+    /// </summary>
+    public const string IdentityVerifyEmail = "identity.verify-email";
+
+    /// <summary>
+    /// The link that resets a password. Sent at once by <c>ForgotPasswordHandler</c>, never queued,
+    /// for the same reason: a queued row would hold a working link.
+    /// </summary>
+    public const string IdentityPasswordReset = "identity.password-reset";
+
+    /// <summary>A traveller's invoice and vouchers, attached as PDFs (#46).</summary>
+    public const string DocumentsIssued = "documents.issued";
+
+    /// <summary>A corrected invoice or voucher that replaces one the traveller already has (#46).</summary>
+    public const string DocumentsReissued = "documents.reissued";
+
     /// <summary>An agency's KYB submission was approved.</summary>
     public const string KybApproved = "kyb.approved";
 
@@ -104,6 +122,60 @@ public static class NotificationTemplateCatalog
     /// <summary>Every template version this build knows about.</summary>
     public static readonly IReadOnlyList<NotificationTemplateDefinition> All =
     [
+        // Rendered from here like everything else, so the wording is versioned and reviewed in the
+        // same place — but sent synchronously and never queued. See the key constants.
+        AgencyFacing(
+            IdentityVerifyEmail,
+            version: 1,
+            subject: "{{code}} is your {{brandName}} verification code",
+            tokens: ["code", "minutes"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Use this code to verify your email address and finish setting up your
+                     {{brandName}} account:</p>
+                  <p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{code}}</p>
+                  <p>The code expires in {{minutes}} minutes and can be used once.</p>
+                  <p>If you did not try to create an account, you can ignore this email — nothing
+                     will happen without the code.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Use this code to verify your email address and finish setting up your {{brandName}} account:
+
+                      {{code}}
+
+                  The code expires in {{minutes}} minutes and can be used once.
+
+                  If you did not try to create an account, you can ignore this email — nothing will happen without the code.
+                  """),
+
+        AgencyFacing(
+            IdentityPasswordReset,
+            version: 1,
+            subject: "Reset your {{brandName}} password",
+            tokens: ["resetUrl", "minutes"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Use this link to choose a new password:</p>
+                  <p><a href="{{resetUrl}}">Reset your password</a></p>
+                  <p>The link works once and expires in {{minutes}} minutes.</p>
+                  <p>If you did not ask for this, you can ignore this email — your password has
+                     not changed, and nobody can change it without this link.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Use this link to choose a new password:
+
+                      {{resetUrl}}
+
+                  The link works once and expires in {{minutes}} minutes.
+
+                  If you did not ask for this, you can ignore this email — your password has not
+                  changed, and nobody can change it without this link.
+                  """),
+
         AgencyFacing(
             KybApproved,
             version: 1,
@@ -237,6 +309,61 @@ public static class NotificationTemplateCatalog
                   the price is no longer guaranteed.
 
                   Reply to this email if you need help.
+                  """),
+
+        // The PDFs themselves travel as attachments (Notification.AttachmentAssetIds), not as a
+        // link: every link we could put here today would be on our own domain.
+        TravellerFacing(
+            DocumentsIssued,
+            version: 1,
+            subject: "Your booking documents — {{bookingReference}}",
+            tokens: ["bookingReference", "itinerarySummary", "documentList"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Here are your documents from {{brandName}} for booking
+                     <strong>{{bookingReference}}</strong> ({{itinerarySummary}}).</p>
+                  <p>They are attached to this email as PDF files: {{documentList}}.</p>
+                  <p>Keep the voucher where you can find it on the day — it is what you show at
+                     check-in or at the terminal.</p>
+                  <p>Reply to this email if anything on them looks wrong.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Here are your documents from {{brandName}} for booking {{bookingReference}}
+                  ({{itinerarySummary}}).
+
+                  They are attached to this email as PDF files: {{documentList}}.
+
+                  Keep the voucher where you can find it on the day — it is what you show at
+                  check-in or at the terminal.
+
+                  Reply to this email if anything on them looks wrong.
+                  """),
+
+        TravellerFacing(
+            DocumentsReissued,
+            version: 1,
+            subject: "Updated {{documentList}} — {{bookingReference}}",
+            tokens: ["bookingReference", "itinerarySummary", "documentList"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>{{brandName}} has issued an updated {{documentList}} for booking
+                     <strong>{{bookingReference}}</strong> ({{itinerarySummary}}).</p>
+                  <p>It is attached to this email as a PDF, and it replaces the copy you were sent
+                     before. Please use this one from now on.</p>
+                  <p>Reply to this email if anything on it looks wrong.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  {{brandName}} has issued an updated {{documentList}} for booking
+                  {{bookingReference}} ({{itinerarySummary}}).
+
+                  It is attached to this email as a PDF, and it replaces the copy you were sent
+                  before. Please use this one from now on.
+
+                  Reply to this email if anything on it looks wrong.
                   """),
     ];
 

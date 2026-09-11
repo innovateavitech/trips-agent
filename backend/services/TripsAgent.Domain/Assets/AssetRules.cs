@@ -122,6 +122,9 @@ public static class AssetRules
 
         AssetPurpose.Attachment => AbsoluteMaxSizeBytes,
 
+        // Rendered by us, but still bounded: a runaway template should fail, not fill the bucket.
+        AssetPurpose.GeneratedDocument => AbsoluteMaxSizeBytes,
+
         _ => throw new ArgumentOutOfRangeException(nameof(purpose), purpose, "Unknown asset purpose."),
     };
 
@@ -133,12 +136,22 @@ public static class AssetRules
 
         AssetPurpose.Attachment => [MediaTypes.Pdf, .. ImageContentTypes],
 
+        AssetPurpose.GeneratedDocument => [MediaTypes.Pdf],
+
         _ => throw new ArgumentOutOfRangeException(nameof(purpose), purpose, "Unknown asset purpose."),
     };
 
     /// <summary>The extensions one purpose accepts, for the file picker.</summary>
-    public static IReadOnlyList<string> AllowedExtensions(AssetPurpose purpose) =>
-        purpose == AssetPurpose.Attachment ? [".pdf", .. ImageExtensions] : ImageExtensions;
+    public static IReadOnlyList<string> AllowedExtensions(AssetPurpose purpose) => purpose switch
+    {
+        AssetPurpose.Attachment => [".pdf", .. ImageExtensions],
+        AssetPurpose.GeneratedDocument => [".pdf"],
+        _ => ImageExtensions,
+    };
+
+    /// <summary>True for a purpose somebody may upload a file under. Generated documents are ours alone.</summary>
+    public static bool IsUploadable(AssetPurpose purpose) =>
+        Enum.IsDefined(purpose) && purpose != AssetPurpose.GeneratedDocument;
 
     public static bool IsAllowedSize(AssetPurpose purpose, long sizeBytes) =>
         sizeBytes > 0 && sizeBytes <= MaxSizeBytes(purpose);
@@ -180,6 +193,17 @@ public static class AssetRules
     /// <summary>The storage key for one rendition.</summary>
     public static string VariantKey(Guid agencyId, Guid assetId, AssetVariantKind kind) =>
         $"assets/{agencyId:N}/{assetId:N}/{kind.ToString().ToLowerInvariant()}.webp";
+
+    /// <summary>
+    /// The storage key for an issued document's PDF.
+    /// </summary>
+    /// <remarks>
+    /// From the document's id, never its printed number: a number prefix may contain a slash, and a
+    /// key is no place for text an agency configured. One key per document, written once — nothing
+    /// renders a document again after its file is stored.
+    /// </remarks>
+    public static string GeneratedDocumentKey(Guid agencyId, Guid documentId) =>
+        $"documents/{agencyId:N}/{documentId:N}.pdf";
 
     /// <summary>The extension a stored copy is given, so a bucket listing is readable.</summary>
     public static string ExtensionFor(string contentType) =>

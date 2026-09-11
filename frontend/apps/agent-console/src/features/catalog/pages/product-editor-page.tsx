@@ -183,6 +183,14 @@ function ProductEditor({ product, initial }: { product: Product | null; initial:
               <Badge tone="neutral">Not saved</Badge>
             )}
             {dirty ? <span className="text-xs text-muted-foreground">Unsaved changes</span> : null}
+            {product && product.productType !== 'Visa' ? (
+              <Link
+                to={`/departures?product=${product.id}`}
+                className={buttonVariants({ variant: 'outline' })}
+              >
+                Departures
+              </Link>
+            ) : null}
             {canPublish && product?.status === 'Draft' ? (
               <Button
                 variant="outline"

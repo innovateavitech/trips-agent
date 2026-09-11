@@ -1,5 +1,6 @@
 import {
   Bus,
+  CalendarDays,
   Compass,
   LayoutDashboard,
   LifeBuoy,
@@ -51,6 +52,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Bookings', to: '/bookings', icon: Ticket }, // #54
       { label: 'Resolution queue', to: '/resolution', icon: LifeBuoy }, // #54
       { label: 'Catalog', to: '/catalog', icon: Compass }, // build plan F3
+      { label: 'Group departures', to: '/departures', icon: CalendarDays }, // build plan F6
     ],
   },
   {

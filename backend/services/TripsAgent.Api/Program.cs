@@ -19,6 +19,7 @@ using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Scheduling;
 using TripsAgent.Integrations.Paystack;
+using TripsAgent.Integrations.TripsAfrica;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +33,7 @@ builder.Services.AddMessagePublishing(builder.Configuration);
 
 // Paystack behind IPaymentGateway. Nothing above this line knows which gateway is in use.
 builder.Services.AddPaystack(builder.Configuration);
+builder.Services.AddTripsAfrica(builder.Configuration);
 
 // Storage and client only. AddJobProcessing — the part that actually executes jobs — is called by
 // the Worker and must never be called here: every API instance would then race to run the cron.

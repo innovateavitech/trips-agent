@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Identity;
+using TripsAgent.Domain.Suppliers;
 
 namespace TripsAgent.Infrastructure.Persistence;
 
@@ -41,7 +42,27 @@ public static class ReferenceDataSeeder
         // and skips this would queue mail that can never be sent.
         await Notifications.NotificationTemplateSeeder.EnsureAsync(dbContext, TimeProvider.System, cancellationToken);
 
+        // The supplier rows adapters look themselves up by: an adapter with no row cannot audit a call.
+        await EnsureSuppliersAsync(dbContext, cancellationToken);
+
         return (permissions, roles);
+    }
+
+    /// <summary>
+    /// Every supplier we integrate with. Trips Africa is the first; the next is a new line here and a
+    /// new adapter, never a schema change. Base URL and credentials are configuration, not this row.
+    /// </summary>
+    private static async Task EnsureSuppliersAsync(AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        const string tripsAfrica = "trips_africa";
+
+        if (await dbContext.Suppliers.AnyAsync(supplier => supplier.Code == tripsAfrica, cancellationToken))
+        {
+            return;
+        }
+
+        dbContext.Suppliers.Add(Supplier.Register(tripsAfrica, "Trips Africa", SupplierKind.Multi, "https://api.staging.trips.ng"));
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static async Task<Dictionary<string, Guid>> EnsurePermissionsAsync(

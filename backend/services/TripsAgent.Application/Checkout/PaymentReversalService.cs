@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using TripsAgent.Application.Messaging;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Persistence;
+using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Suppliers;
@@ -54,6 +55,7 @@ public sealed partial class PaymentReversalService
     private readonly IAppDbContext _db;
     private readonly ITransactionRunner _transactions;
     private readonly WalletRefunds _refunds;
+    private readonly IPlatformScope _platformScope;
     private readonly IOutbox _outbox;
     private readonly IPlatformAlerter _alerter;
     private readonly IUniqueViolationDetector _uniqueViolations;
@@ -64,6 +66,7 @@ public sealed partial class PaymentReversalService
         IAppDbContext db,
         ITransactionRunner transactions,
         WalletRefunds refunds,
+        IPlatformScope platformScope,
         IOutbox outbox,
         IPlatformAlerter alerter,
         IUniqueViolationDetector uniqueViolations,
@@ -73,6 +76,7 @@ public sealed partial class PaymentReversalService
         _db = db;
         _transactions = transactions;
         _refunds = refunds;
+        _platformScope = platformScope;
         _outbox = outbox;
         _alerter = alerter;
         _uniqueViolations = uniqueViolations;
@@ -152,6 +156,11 @@ public sealed partial class PaymentReversalService
         var line = await _db.OrderLines.SingleAsync(candidate => candidate.Id == request.OrderLineId, cancellationToken);
         var order = await _db.Orders.Include(candidate => candidate.Lines).SingleAsync(candidate => candidate.Id == line.OrderId, cancellationToken);
         var now = _clock.GetUtcNow();
+
+        // Open until the save: giving back money that had been taken posts to the platform's own ledger
+        // accounts, which row-level security lets only a platform scope write. Everything above was read
+        // by id, under the agency's own filter.
+        using var scope = _platformScope.Enter("payment reversal — gives a booking's money back through the wallet and, when taken, the ledger");
 
         var refund = await _refunds.ReturnAsync(
             order, line, RefundReason.SupplierReversal, now, supplierStatusPollId: evidence!.Id, cancellationToken: cancellationToken);

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TripsAgent.Application.Messaging;
 using TripsAgent.Application.Persistence;
+using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
 
@@ -34,6 +35,7 @@ public sealed partial class ResolutionService
     private readonly IAppDbContext _db;
     private readonly ITransactionRunner _transactions;
     private readonly WalletRefunds _refunds;
+    private readonly IPlatformScope _platformScope;
     private readonly IOutbox _outbox;
     private readonly IUniqueViolationDetector _uniqueViolations;
     private readonly TimeProvider _clock;
@@ -43,6 +45,7 @@ public sealed partial class ResolutionService
         IAppDbContext db,
         ITransactionRunner transactions,
         WalletRefunds refunds,
+        IPlatformScope platformScope,
         IOutbox outbox,
         IUniqueViolationDetector uniqueViolations,
         TimeProvider clock,
@@ -51,6 +54,7 @@ public sealed partial class ResolutionService
         _db = db;
         _transactions = transactions;
         _refunds = refunds;
+        _platformScope = platformScope;
         _outbox = outbox;
         _uniqueViolations = uniqueViolations;
         _clock = clock;
@@ -105,6 +109,11 @@ public sealed partial class ResolutionService
                 "Someone may have resolved it already.");
 
         var now = _clock.GetUtcNow();
+
+        // Only now, with this agency's own order found under its own filter — order numbers are unique per
+        // agency, not across them — does the scope open, for the money: a refund of money that had been
+        // taken posts to the platform's ledger accounts. It stays open until the save.
+        using var scope = _platformScope.Enter("booking resolution — refunds a failed booking through the wallet and, when taken, the ledger");
 
         // A supplier reversal may already have given the money back; then there is nothing left to move.
         var refund = await _db.Refunds.AnyAsync(candidate => candidate.OrderLineId == line.Id, cancellationToken)

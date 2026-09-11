@@ -92,6 +92,11 @@ public sealed partial class CheckoutCompletion
             candidate => candidate.OrderId == order.Id && candidate.Status == WalletHoldStatus.Held,
             cancellationToken);
 
+        // From here to the save, the platform's own ledger accounts are written to: the scope has to stay
+        // open until the entries are inserted, or row-level security refuses them. Everything above was
+        // read by id under the agency's own filter.
+        using var scope = _platformScope.Enter("checkout — posts a ticketed booking to the platform's supplier-payable and revenue accounts");
+
         if (hold is not null)
         {
             await CaptureAsync(order, line, hold, now, cancellationToken);
@@ -124,8 +129,6 @@ public sealed partial class CheckoutCompletion
         var before = wallet.BalanceMinor;
 
         wallet.CaptureHold(hold, now);
-
-        using var scope = _platformScope.Enter("checkout — posts a ticketed booking to the platform's supplier-payable and revenue accounts");
 
         var walletAccount = await _accounts.AgencyWalletAsync(order.AgencyId, order.Currency, cancellationToken);
         var payable = await _accounts.PlatformAsync(LedgerAccountType.SupplierPayable, order.Currency, cancellationToken);

@@ -115,6 +115,7 @@ public sealed class BookingQueries
         var history = await _db.OrderStatusHistory.AsNoTracking()
             .Where(entry => entry.OrderId == order.Id)
             .OrderBy(entry => entry.ChangedAt)
+            .ThenBy(entry => entry.Id)
             .ToListAsync(cancellationToken);
 
         var timeline = history

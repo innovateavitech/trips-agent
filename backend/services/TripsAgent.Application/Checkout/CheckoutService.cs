@@ -9,6 +9,7 @@ using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Orders;
+using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Suppliers;
 
@@ -62,10 +63,17 @@ public sealed record CheckoutPriceConfirmation(
 /// lapses at its ticket time limit and the order is cancelled; nothing was charged.
 /// </para>
 /// <para>
-/// <b>Paying is one transaction</b>: the wallet hold, the order's move to Paid, and the message asking a
-/// Worker to issue the ticket commit together or not at all. The hold is placed before anything is sent
-/// to the supplier, so a short wallet fails at once; the money is only taken when the ticket exists
-/// (<see cref="CheckoutCompletion"/>), and given back if it never does (<see cref="PaymentReversalService"/>).
+/// <b>The wallet is held before the supplier is asked</b> (decision Q3 in docs/BUILD_PLAN.md). Confirming
+/// first holds the searched price — so a short wallet fails at once, before any supplier call — and then,
+/// in the same transaction that records the order, swaps that provisional hold for the booking's own, at
+/// the confirmed price. Every failure on the way gives the provisional hold back. The money is only taken
+/// when the ticket exists (<see cref="CheckoutCompletion"/>), and given back if it never does
+/// (<see cref="PaymentReversalService"/>).
+/// </para>
+/// <para>
+/// <b>Paying is one transaction</b>: the order's move to Paid and the message asking a Worker to issue the
+/// ticket commit together or not at all. Only a rise in price has to be accepted again; a fall passes
+/// through (decision Q9).
 /// </para>
 /// <para>
 /// <b>The same key twice is the same booking.</b> The console sends one idempotency key per payment
@@ -82,10 +90,19 @@ public sealed partial class CheckoutService
     /// </summary>
     public static readonly TimeSpan HoldGrace = TimeSpan.FromDays(1);
 
+    /// <summary>
+    /// How long the provisional hold — placed before the supplier is asked — may stand. The booking's own
+    /// hold replaces it within the supplier's timeout; one left behind by a crash is released by the
+    /// checkout sweeper once this passes.
+    /// </summary>
+    public static readonly TimeSpan ProvisionalHoldLifetime = TimeSpan.FromMinutes(10);
+
     /// <summary>The longest idempotency key accepted: the column's width.</summary>
     public const int MaxIdempotencyKeyLength = 100;
 
     private const int MaxPlaceAttempts = 3;
+
+    private const int MaxWalletAttempts = 3;
 
     private readonly IAppDbContext _db;
     private readonly ITransactionRunner _transactions;
@@ -163,7 +180,40 @@ public sealed partial class CheckoutService
             .SingleAsync(cancellationToken);
 
         var adapter = _adapters.Resolve(supplierCode, offer.ProductType);
+        var subject = new PricingSubject(PricedTypeOf(offer.ProductType), offer.Currency, supplierCode: supplierCode);
+        var searched = await _pricing.PriceAsync(subject, offer.TotalFareMinor, cancellationToken);
 
+        // Q3: the wallet first. A short wallet fails here, before any supplier call.
+        var provisionalHoldId = await PlaceProvisionalHoldAsync(
+            offer.Currency, searched.NetAmountMinor + searched.PlatformFeeMinor, cancellationToken);
+
+        try
+        {
+            return await ConfirmHeldAsync(
+                agencyId, offer, supplierSessionId, supplierCode, adapter, subject, searched.GrossAmountMinor,
+                travellers, provisionalHoldId, correlationId, cancellationToken);
+        }
+        catch
+        {
+            // Nothing was bought, so the money held for it goes straight back.
+            await ReleaseProvisionalHoldAsync(provisionalHoldId);
+            throw;
+        }
+    }
+
+    private async Task<CheckoutPriceConfirmation> ConfirmHeldAsync(
+        Guid agencyId,
+        SupplierOffer offer,
+        string supplierSessionId,
+        string supplierCode,
+        ISupplierAdapter adapter,
+        PricingSubject subject,
+        Money searchedSell,
+        IReadOnlyList<CheckoutTraveller> travellers,
+        Guid provisionalHoldId,
+        string? correlationId,
+        CancellationToken cancellationToken)
+    {
         SupplierPriceConfirmation confirmation;
 
         try
@@ -195,16 +245,14 @@ public sealed partial class CheckoutService
         }
 
         var ticketTimeLimit = await VerifyAsync(agencyId, supplierCode, confirmation, cancellationToken);
-        var now = _clock.GetUtcNow();
-
-        var subject = new PricingSubject(PricedTypeOf(offer.ProductType), offer.Currency, supplierCode: supplierCode);
         var confirmedNet = new Money(confirmation.Lines.Sum(line => line.NewPrice.AmountMinor));
-        var searched = await _pricing.PriceAsync(subject, offer.TotalFareMinor, cancellationToken);
         var title = await TitleAsync(offer.Id, offer.ProductType, cancellationToken);
 
-        var (reference, sell) = await _transactions.RunAsync(
+        var (reference, sell) = await WithWalletRetryAsync(() => _transactions.RunAsync(
             async token =>
             {
+                var now = _clock.GetUtcNow();
+
                 // The price the traveller will pay, frozen from here: the quote, then the order line
                 // copied from it (CLAUDE.md rule 5).
                 var quote = await _pricing.QuoteAsync(subject, confirmedNet, token);
@@ -259,15 +307,30 @@ public sealed partial class CheckoutService
                         phoneNumber: traveller.Phone));
                 }
 
+                // The provisional hold gives way to the booking's own, for exactly what the confirmed fare
+                // costs the agency — in one step, so the money is never unheld in between.
+                var provisional = await _db.WalletHolds.SingleAsync(hold => hold.Id == provisionalHoldId, token);
+                var wallet = await _db.Wallets.SingleAsync(candidate => candidate.Id == provisional.WalletId, token);
+                wallet.ReleaseHold(provisional, now);
+
+                var amount = line.NetAmountMinor + line.PlatformFeeMinor;
+
+                if (wallet.AvailableMinor < amount)
+                {
+                    throw NotEnough(amount, wallet.AvailableMinor, "The supplier's price rose above what the wallet can cover.");
+                }
+
+                _db.WalletHolds.Add(wallet.PlaceHold(amount, now, ticketTimeLimit - now + HoldGrace, order.Id));
+
                 await _db.SaveChangesAsync(token);
 
                 return (order.OrderNumber, line.GrossAmountMinor);
             },
-            cancellationToken);
+            cancellationToken));
 
         LogConfirmed(_logger, reference, sell.AmountMinor, ticketTimeLimit);
 
-        return new CheckoutPriceConfirmation(reference, sell, searched.GrossAmountMinor, offer.Currency, ticketTimeLimit);
+        return new CheckoutPriceConfirmation(reference, sell, searchedSell, offer.Currency, ticketTimeLimit);
     }
 
     // --------------------------------------------------------------------------- step 2: pay
@@ -310,7 +373,7 @@ public sealed partial class CheckoutService
             throw new CheckoutRefusedException(
                 CheckoutRefusal.Unprocessable,
                 "Card payment is not available for console bookings yet.",
-                "Nothing was booked or charged. Pay from the agency wallet; card payments arrive with the storefront checkout.");
+                "Nothing was booked or charged. Top the wallet up by card from the Wallet page, then pay from the wallet.");
         }
 
         for (var attempt = 1; ; attempt++)
@@ -397,8 +460,9 @@ public sealed partial class CheckoutService
                         "Nothing was charged. Search again for a fresh fare.");
                 }
 
-                // Price change gate (#42): the agent pays for the price they saw and accepted, or not at all.
-                if (acceptedSell != line.GrossAmountMinor)
+                // Price change gate (#42, decision Q9): a rise the agent has not accepted stops here. A fall
+                // passes through — they pay the lower, confirmed price.
+                if (line.GrossAmountMinor > acceptedSell)
                 {
                     throw new CheckoutRefusedException(
                         CheckoutRefusal.Conflict,
@@ -407,27 +471,26 @@ public sealed partial class CheckoutService
                         + "accept the new price, then pay.");
                 }
 
-                var wallet = await _db.Wallets.SingleOrDefaultAsync(candidate => candidate.Currency == order.Currency, token)
-                    ?? throw new CheckoutRefusedException(
-                        CheckoutRefusal.Unprocessable,
-                        $"This agency has no {order.Currency} wallet.",
-                        "A wallet is opened when KYB is approved. Nothing was booked or charged.");
+                // The hold placed when the price was confirmed (Q3). Should it be gone, the booking takes a new
+                // one now — still before anything is sent to the supplier.
+                var held = await _db.WalletHolds.AnyAsync(
+                    hold => hold.OrderId == order.Id && hold.Status == WalletHoldStatus.Held, token);
 
-                // What the agency owes Trips for this line: the supplier's net rate and the platform fee.
-                // The markup and tax are the agency's to collect from its customer.
-                var amount = line.NetAmountMinor + line.PlatformFeeMinor;
-
-                // Fails fast, before anything is sent to the supplier (#42).
-                if (wallet.AvailableMinor < amount)
+                if (!held)
                 {
-                    throw new CheckoutRefusedException(
-                        CheckoutRefusal.Unprocessable,
-                        "There is not enough in the wallet for this booking.",
-                        $"It needs {amount.AmountMinor} and {wallet.AvailableMinor.AmountMinor} is available (in kobo). "
-                        + "Nothing was booked or charged. Top up, then pay.");
+                    // What the agency owes Trips for this line: the supplier's net rate and the platform fee.
+                    // The markup and tax are the agency's to collect from its customer (decision Q4).
+                    var amount = line.NetAmountMinor + line.PlatformFeeMinor;
+                    var wallet = await WalletAsync(order.Currency, token);
+
+                    if (wallet.AvailableMinor < amount)
+                    {
+                        throw NotEnough(amount, wallet.AvailableMinor);
+                    }
+
+                    _db.WalletHolds.Add(wallet.PlaceHold(amount, now, limit - now + HoldGrace, order.Id));
                 }
 
-                _db.WalletHolds.Add(wallet.PlaceHold(amount, now, limit - now + HoldGrace, order.Id));
                 order.RecordPayment(OrderPaymentMethod.Wallet, key, now, paidByUserId);
                 line.RecordFulfilment(FulfilmentStatus.Confirming, now);
 
@@ -439,7 +502,7 @@ public sealed partial class CheckoutService
 
                 await _db.SaveChangesAsync(token);
 
-                LogPaid(_logger, order.OrderNumber, amount.AmountMinor);
+                LogPaid(_logger, order.OrderNumber);
                 return order.OrderNumber;
             },
             cancellationToken);
@@ -603,6 +666,99 @@ public sealed partial class CheckoutService
     private static partial void LogConfirmed(ILogger logger, string reference, long sellMinor, DateTimeOffset ticketTimeLimit);
 
     [LoggerMessage(Level = LogLevel.Information,
-        Message = "Booking {Reference} paid: {AmountMinor} kobo held in the wallet until the ticket is issued.")]
-    private static partial void LogPaid(ILogger logger, string reference, long amountMinor);
+        Message = "Booking {Reference} paid for; its wallet hold stands until the ticket is issued.")]
+    private static partial void LogPaid(ILogger logger, string reference);
+
+    [LoggerMessage(Level = LogLevel.Error,
+        Message = "Could not release provisional wallet hold {HoldId}; the checkout sweeper will once it expires.")]
+    private static partial void LogReleaseFailed(ILogger logger, Guid holdId, Exception exception);
+
+    // ------------------------------------------------------------------------- wallet holds
+
+    /// <summary>Holds <paramref name="amount"/> before the supplier is asked, or refuses — having asked nothing.</summary>
+    private Task<Guid> PlaceProvisionalHoldAsync(string currency, Money amount, CancellationToken cancellationToken) =>
+        WithWalletRetryAsync(() => _transactions.RunAsync(
+            async token =>
+            {
+                var wallet = await WalletAsync(currency, token);
+
+                if (wallet.AvailableMinor < amount)
+                {
+                    throw NotEnough(amount, wallet.AvailableMinor);
+                }
+
+                var hold = wallet.PlaceHold(amount, _clock.GetUtcNow(), ProvisionalHoldLifetime);
+                _db.WalletHolds.Add(hold);
+                await _db.SaveChangesAsync(token);
+
+                return hold.Id;
+            },
+            cancellationToken));
+
+    /// <summary>
+    /// Gives the provisional hold back after a checkout that went no further. Never throws: if it cannot,
+    /// the sweeper releases the hold once it expires.
+    /// </summary>
+    private async Task ReleaseProvisionalHoldAsync(Guid holdId)
+    {
+        // First, forget whatever the failed step had staged — a quote, an order — so this save cannot
+        // write it outside the transaction that was rolled back.
+        _db.ChangeTracker.Clear();
+
+        try
+        {
+            await WithWalletRetryAsync(() => _transactions.RunAsync(
+                async token =>
+                {
+                    var hold = await _db.WalletHolds.SingleOrDefaultAsync(candidate => candidate.Id == holdId, token);
+
+                    if (hold is null || hold.Status != WalletHoldStatus.Held)
+                    {
+                        return false;
+                    }
+
+                    var wallet = await _db.Wallets.SingleAsync(candidate => candidate.Id == hold.WalletId, token);
+                    wallet.ReleaseHold(hold, _clock.GetUtcNow());
+                    await _db.SaveChangesAsync(token);
+
+                    return true;
+                },
+                CancellationToken.None));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogReleaseFailed(_logger, holdId, ex);
+        }
+    }
+
+    /// <summary>Retries <paramref name="work"/> when the wallet moved underneath it — a top-up, another booking.</summary>
+    private async Task<T> WithWalletRetryAsync<T>(Func<Task<T>> work)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await work();
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < MaxWalletAttempts)
+            {
+                _db.ChangeTracker.Clear();
+            }
+        }
+    }
+
+    private async Task<Domain.Payments.Wallet> WalletAsync(string currency, CancellationToken cancellationToken) =>
+        await _db.Wallets.SingleOrDefaultAsync(candidate => candidate.Currency == currency, cancellationToken)
+        ?? throw new CheckoutRefusedException(
+            CheckoutRefusal.Unprocessable,
+            $"This agency has no {currency} wallet.",
+            "A wallet is opened when KYB is approved. Nothing was booked or charged.");
+
+    private static CheckoutRefusedException NotEnough(Money needed, Money available, string? why = null) =>
+        new(
+            CheckoutRefusal.Unprocessable,
+            "There is not enough in the wallet for this booking.",
+            (why is null ? string.Empty : why + " ")
+            + $"It needs {needed.AmountMinor} and {available.AmountMinor} is available (in kobo). Nothing was booked or charged. "
+            + "Top up, then try again.");
 }

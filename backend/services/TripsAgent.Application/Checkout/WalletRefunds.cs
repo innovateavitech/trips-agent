@@ -24,6 +24,10 @@ namespace TripsAgent.Application.Checkout;
 /// Adds a <see cref="Refund"/> row either way, and saves nothing: the caller owns the unit of work, and
 /// the unique index on the line is what makes a second refund impossible.
 /// </para>
+/// <para>
+/// <b>Call it inside an open <c>IPlatformScope</c>, and keep it open until the save.</b> Reversing a capture
+/// writes to the platform's own ledger accounts, which row-level security lets only a platform scope write.
+/// </para>
 /// </remarks>
 public sealed class WalletRefunds
 {

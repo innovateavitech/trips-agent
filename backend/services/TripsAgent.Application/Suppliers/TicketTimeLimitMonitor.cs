@@ -138,10 +138,11 @@ public sealed partial class TicketTimeLimitMonitor
 
                         if (order.PaidAt is null)
                         {
-                            // A price confirmed and never paid for: nothing is held and nobody's money is at
-                            // stake, so there is nothing to resolve. The order is simply closed.
+                            // A price confirmed and never paid for: the money held for it goes back, and there is
+                            // nothing to resolve. The order is simply closed.
                             line.RecordFulfilment(FulfilmentStatus.Cancelled, now);
                             order.ChangeStatus(OrderStatus.Cancelled, now, "The fare's ticket time limit passed before it was paid for.");
+                            await ReleaseHoldsAsync(line, now, token);
                         }
                         else
                         {

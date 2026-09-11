@@ -1,14 +1,22 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using StackExchange.Redis;
+using TripsAgent.Application.Checkout;
 using TripsAgent.Application.Concurrency;
+using TripsAgent.Application.Documents;
 using TripsAgent.Application.Messaging;
 using TripsAgent.Application.Notifications;
+using TripsAgent.Application.Orders;
+using TripsAgent.Application.Payments;
 using TripsAgent.Application.Persistence;
+using TripsAgent.Application.Pricing;
+using TripsAgent.Application.Security;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Common;
@@ -19,8 +27,11 @@ using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Infrastructure.Concurrency;
+using TripsAgent.Infrastructure.Documents;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Pricing;
+using TripsAgent.Infrastructure.Security;
 using TripsAgent.Infrastructure.Suppliers;
 using TripsAgent.Infrastructure.Tenancy;
 using TripsAgent.Integrations.TripsAfrica;
@@ -59,9 +70,11 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         ManualClock clock,
         TripsAfricaStub stub,
         ServiceProvider services,
-        RecordingAlerter alerts)
+        RecordingAlerter alerts,
+        Guid ownerUserId)
     {
         _postgres = postgres;
+        OwnerUserId = ownerUserId;
         _services = services;
         Database = database;
         AgencyId = agencyId;
@@ -87,6 +100,9 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
 
     public RecordingAlerter Alerts { get; }
 
+    /// <summary>The agency's owner: who pays and decides in these tests, and who its emails go to.</summary>
+    public Guid OwnerUserId { get; }
+
     public static async Task<BookingPipelineHarness> CreateAsync(
         PostgresFixture postgres,
         TripsAfricaStub stub,
@@ -99,6 +115,7 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         Guid agencyId;
         Guid supplierId;
         Guid walletId;
+        Guid ownerUserId;
 
         await using (var setup = await postgres.CreateEmptyDatabaseAsync(database, clock: clock))
         {
@@ -107,11 +124,14 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
             var agency = Agency.RegisterPrincipal("Lagos Travel Limited", "lagos-travel", "NG", "NGN", "Africa/Lagos");
             var supplier = Supplier.Register(TripsAfricaOptions.SupplierCode, "Trips Africa", SupplierKind.Multi, stub.BaseAddress.ToString());
             setup.Agencies.Add(agency);
+            // What the document numbering reads for an agency's order numbers, as registration creates it.
+            setup.AgencySettings.Add(AgencySettings.CreateDefault(agency));
             setup.Suppliers.Add(supplier);
             await setup.SaveChangesAsync();
 
             // The owner, who the time limit emails go to.
-            setup.Users.Add(User.ForAgency(agency.Id, "ada@lagos-travel.test", "not-a-real-hash", "Ada", "Okafor"));
+            var owner = User.ForAgency(agency.Id, "ada@lagos-travel.test", "not-a-real-hash", "Ada", "Okafor");
+            setup.Users.Add(owner);
 
             var wallet = Wallet.OpenFor(agency.Id, "NGN");
             wallet.Credit(new Money(10_000_000_00));
@@ -121,12 +141,13 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
             agencyId = agency.Id;
             supplierId = supplier.Id;
             walletId = wallet.Id;
+            ownerUserId = owner.Id;
         }
 
         var alerts = new RecordingAlerter();
         var services = Compose(postgres, database, clock, stub, redis, alerts, issueTimeoutSeconds);
 
-        return new BookingPipelineHarness(postgres, database, agencyId, supplierId, walletId, clock, stub, services, alerts);
+        return new BookingPipelineHarness(postgres, database, agencyId, supplierId, walletId, clock, stub, services, alerts, ownerUserId);
     }
 
     /// <summary>A unit of work as a message for the agency gets it: its own scope, the agency as tenant.</summary>
@@ -293,6 +314,100 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         return seeded;
     }
 
+    // ------------------------------------------------------------------------------ checkout
+
+    /// <summary>A flight fare from a search, as SupplierSearchService stores one: international, LOS → LHR.</summary>
+    public async Task<Guid> SeedFlightOfferAsync(long netMinor = 100_000)
+    {
+        var now = Clock.GetUtcNow();
+        await using var db = AsAgency();
+
+        var request = SearchRequest.Start(AgencyId, OwnerUserId, SupplierProductType.Flight, new string('a', 64), "{}", "OneWay", now);
+        var session = SearchSession.Open(AgencyId, request.Id, SupplierId, "8646790ccb9a4d0997a6b52693287256", null, now, now.AddMinutes(10));
+        var offer = SupplierOffer.Record(
+            AgencyId, session.Id, SupplierId, SupplierProductType.Flight, "5:2:0:7:-", new SupplierOfferReference("5", "2", "0", "7"),
+            "NGN", new Money(netMinor), new Money(netMinor), "{}", now, now.AddMinutes(10));
+
+        db.SearchRequests.Add(request);
+        db.SearchSessions.Add(session);
+        db.SupplierOffers.Add(offer);
+        db.FlightSegments.Add(FlightSegment.Create(
+            AgencyId, offer.Id, 0, 0, "P4", null, "P4 7121", "LOS", "LHR", now.AddDays(3), now.AddDays(3).AddHours(6), "Economy", null, null));
+
+        await db.SaveChangesAsync();
+        return offer.Id;
+    }
+
+    public static CheckoutTraveller Adult(string firstName = "Ngozi", string lastName = "Adeyemi") =>
+        new(PassengerType.Adult, "Mrs", firstName, lastName, Email: "ngozi@example.test", Phone: "+2348030000000");
+
+    public Task<T> InAgencyScopeAsync<T>(Func<IServiceProvider, Task<T>> work) => RunAsync(ScopeForAgency(), work);
+
+    public Task<T> InJobScopeAsync<T>(Func<IServiceProvider, Task<T>> work) => RunAsync(ScopeForJob(), work);
+
+    public Task<CheckoutPriceConfirmation> ConfirmPriceAsync(Guid offerId) =>
+        InAgencyScopeAsync(provider => provider.GetRequiredService<CheckoutService>().ConfirmPriceAsync(offerId, [Adult()]));
+
+    public Task<string> PayAsync(
+        CheckoutPriceConfirmation confirmation,
+        string idempotencyKey,
+        long? acceptedSellMinor = null,
+        OrderPaymentMethod method = OrderPaymentMethod.Wallet) =>
+        InAgencyScopeAsync(provider => provider.GetRequiredService<CheckoutService>().PlaceAsync(
+            confirmation.Reference, method, new Money(acceptedSellMinor ?? confirmation.Sell.AmountMinor), idempotencyKey, OwnerUserId));
+
+    public Task<TicketIssueOutcome> IssueLineAsync(IssueSupplierTicket message) =>
+        InAgencyScopeAsync(provider => provider.GetRequiredService<TicketIssuanceService>().IssueAsync(message.OrderLineId, message.IdempotencyKey));
+
+    public Task<bool> CompleteAsync(BookingTicketed ticketed) =>
+        InAgencyScopeAsync(provider => provider.GetRequiredService<CheckoutCompletion>().CompleteAsync(ticketed));
+
+    public Task<ReversalOutcome> ReverseAsync(PaymentReversalRequired request) =>
+        InAgencyScopeAsync(provider => provider.GetRequiredService<PaymentReversalService>().ReverseAsync(request));
+
+    public Task<bool> ResolveAsync(string reference, ResolutionChoice choice) =>
+        InAgencyScopeAsync(async provider =>
+        {
+            await provider.GetRequiredService<ResolutionService>().ResolveAsync(reference, choice, OwnerUserId);
+            return true;
+        });
+
+    /// <summary>The outbox's messages of a type, read back as the Worker would publish them.</summary>
+    public async Task<List<TMessage>> OutboxAsync<TMessage>() =>
+        (await OutboxPayloadsAsync<TMessage>())
+            .Select(payload => JsonSerializer.Deserialize<TMessage>(payload, OutboxMessage.JsonOptions)!)
+            .ToList();
+
+    /// <summary>Every entry of one ledger transaction. As the owner: platform accounts are not an agency's to read.</summary>
+    public async Task<List<LedgerEntry>> LedgerAsync(Guid transactionGroupId)
+    {
+        await using var owner = AsOwner();
+        return await owner.LedgerEntries.AsNoTracking().Where(entry => entry.TransactionGroupId == transactionGroupId).ToListAsync();
+    }
+
+    public async Task<Wallet> WalletAsync()
+    {
+        await using var db = AsAgency();
+        return await db.Wallets.AsNoTracking().SingleAsync(wallet => wallet.Id == WalletId);
+    }
+
+    /// <summary>Spends the wallet down until only <paramref name="leaveMinor"/> is available.</summary>
+    public async Task DrainWalletAsync(long leaveMinor)
+    {
+        await using var db = AsAgency();
+        var wallet = await db.Wallets.SingleAsync(candidate => candidate.Id == WalletId);
+        wallet.Debit(new Money(wallet.AvailableMinor.AmountMinor - leaveMinor));
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task<T> RunAsync<T>(AsyncServiceScope scope, Func<IServiceProvider, Task<T>> work)
+    {
+        await using (scope)
+        {
+            return await work(scope.ServiceProvider);
+        }
+    }
+
     public async ValueTask DisposeAsync() => await _services.DisposeAsync();
 
     private static ServiceProvider Compose(
@@ -349,6 +464,25 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         services.AddScoped<TicketIssuanceService>();
         services.AddScoped<SupplierBookingStatusPoller>();
         services.AddScoped<TicketTimeLimitMonitor>();
+
+        // The checkout and everything it stands on (#42, #43, #44), as AddApplication and AddInfrastructure wire them.
+        services.AddSingleton<IUniqueViolationDetector, PostgresUniqueViolationDetector>();
+        services.AddSingleton<IMarkupRuleCache>(new DatabaseOnlyMarkupRuleCache(NullLogger<DatabaseOnlyMarkupRuleCache>.Instance));
+        services.AddSingleton<IPlatformFeePolicy, NoPlatformFeePolicy>();
+        services.AddSingleton(new PriceQuoteOptions());
+        services.AddSingleton<ISecretProtector>(new AesGcmSecretProtector(RandomNumberGenerator.GetBytes(32)));
+        services.AddScoped<IDocumentNumberAllocator, DocumentNumberAllocator>();
+        services.AddScoped<PricingService>();
+        services.AddScoped<PlaceOrderHandler>();
+        services.AddScoped<PriceConfirmationService>();
+        services.AddScoped<LedgerAccounts>();
+        services.AddScoped<WalletRefunds>();
+        services.AddScoped<CheckoutService>();
+        services.AddScoped<CheckoutCompletion>();
+        services.AddScoped<CheckoutSweeper>();
+        services.AddScoped<PaymentReversalService>();
+        services.AddScoped<ResolutionService>();
+        services.AddScoped<BookingQueries>();
 
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }

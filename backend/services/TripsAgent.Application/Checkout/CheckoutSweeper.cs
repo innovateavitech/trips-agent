@@ -5,6 +5,7 @@ using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Orders;
+using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Suppliers;
 
 namespace TripsAgent.Application.Checkout;
@@ -24,6 +25,11 @@ namespace TripsAgent.Application.Checkout;
 /// <b>Sending it again is safe</b>, and is the only thing here that could look like a retry. It is not
 /// one: the issuer takes the booking from PriceConfirmed to Issuing under a row lock before it calls the
 /// supplier, so a second message finds it already issuing and sends nothing (ADR-0003).
+/// </para>
+/// <para>
+/// It also gives back a <b>provisional hold</b> — the one a price confirmation places before it asks the
+/// supplier — that nothing replaced or released: a checkout that died halfway. Once the hold's own
+/// lifetime has passed, the money goes back to the wallet.
 /// </para>
 /// </remarks>
 public sealed partial class CheckoutSweeper
@@ -48,12 +54,13 @@ public sealed partial class CheckoutSweeper
         _logger = logger;
     }
 
-    /// <returns>How many issue messages were sent again.</returns>
+    /// <returns>How many things it put right: issue messages sent again, and orphaned holds released.</returns>
     public async Task<int> RunAsync(CancellationToken cancellationToken = default)
     {
-        using var scope = _platformScope.Enter("checkout sweeper — finds every agency's paid bookings whose issue message never ran");
+        using var scope = _platformScope.Enter("checkout sweeper — finds every agency's stalled bookings and orphaned wallet holds");
 
         var now = _clock.GetUtcNow();
+        var released = await ReleaseOrphanedHoldsAsync(now, cancellationToken);
         var paidBefore = now - IssueNudgeAfter;
 
         var stalled = await (
@@ -80,10 +87,37 @@ public sealed partial class CheckoutSweeper
             LogResent(_logger, stalled.Count);
         }
 
-        return stalled.Count;
+        return stalled.Count + released;
+    }
+
+    private async Task<int> ReleaseOrphanedHoldsAsync(DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var orphaned = await _db.WalletHolds
+            .Where(hold => hold.OrderId == null && hold.Status == WalletHoldStatus.Held && hold.ExpiresAt <= now)
+            .OrderBy(hold => hold.ExpiresAt)
+            .Take(MaxPerRun)
+            .ToListAsync(cancellationToken);
+
+        foreach (var hold in orphaned)
+        {
+            var wallet = await _db.Wallets.SingleAsync(candidate => candidate.Id == hold.WalletId, cancellationToken);
+            wallet.ReleaseHold(hold, now);
+        }
+
+        if (orphaned.Count > 0)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+            LogReleased(_logger, orphaned.Count);
+        }
+
+        return orphaned.Count;
     }
 
     [LoggerMessage(Level = LogLevel.Warning,
         Message = "Sent {Count} issue messages again for bookings paid for but never issued. Look for a broker outage or dead letters.")]
     private static partial void LogResent(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Warning,
+        Message = "Released {Count} provisional wallet holds left behind by checkouts that stopped halfway.")]
+    private static partial void LogReleased(ILogger logger, int count);
 }

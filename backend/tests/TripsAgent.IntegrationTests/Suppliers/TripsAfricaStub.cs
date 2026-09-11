@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using TripsAgent.Integrations.TripsAfrica;
 
 namespace TripsAgent.IntegrationTests.Suppliers;
 
@@ -37,6 +38,10 @@ internal sealed class TripsAfricaStub : IAsyncDisposable
     public const string IssuePath = "/api/v2/ticketing/issue";
     public const string StatusPath = "/api/Flight/GetBookingStatus";
     public const string BusReservationPath = "/api/Bus/MyReservation";
+    public const string ConfirmPath = "/api/Flight/ConfirmTicketPrice";
+
+    /// <summary>The merchant key the harness's credential store hands out, which the confirmation hash is signed with.</summary>
+    public const string SigningKey = "test-merchant-key";
 
     private readonly ConcurrentQueue<StubRequest> _journal = new();
     private WebApplication? _app;
@@ -51,6 +56,25 @@ internal sealed class TripsAfricaStub : IAsyncDisposable
 
     public Func<StubRequest, CancellationToken, Task<StubAnswer>> OnStatus { get; set; } =
         (_, _) => Task.FromResult(Status(3));
+
+    public Func<StubRequest, CancellationToken, Task<StubAnswer>> OnConfirm { get; set; } =
+        (_, _) => Task.FromResult(Confirmed("36516|12QFDT", 1_000, BookingPipelineHarness.Start.AddMinutes(45)));
+
+    /// <summary>
+    /// The documented international confirmation, signed the way Trips Africa signs it:
+    /// SHA-512 of <c>{MerchantKey}*{ConfirmationCode}*{NewPriceWhole}</c>. Pass <paramref name="hash"/> to tamper with it.
+    /// </summary>
+    public static StubAnswer Confirmed(string code, long newPriceWhole, DateTimeOffset ticketTimeLimit, long? oldPriceWhole = null, string? hash = null)
+    {
+        var old = oldPriceWhole ?? newPriceWhole;
+        var signed = hash ?? ConfirmationHash.Compute(SigningKey, code, newPriceWhole);
+        var limit = ticketTimeLimit.ToOffset(TimeSpan.FromHours(1)).ToString("yyyy-MM-dd'T'HH:mm:sszzz", System.Globalization.CultureInfo.InvariantCulture);
+
+        return StubAnswer.Json($$"""
+            { "ConfirmationCode": "{{code}}", "TicketTimeLimit": "{{limit}}", "OldPrice": {{old}}.00, "NewPrice": {{newPriceWhole}}.00,
+              "OldPriceWhole": {{old}}, "NewPriceWhole": {{newPriceWhole}}, "Hash": "{{signed}}", "Errors": [] }
+            """);
+    }
 
     /// <summary>The documented success answer to an issue call.</summary>
     public static StubAnswer Issued(string bookingStatus, string pnr = "RE6MIK") =>
@@ -72,6 +96,7 @@ internal sealed class TripsAfricaStub : IAsyncDisposable
         app.MapPost(IssuePath, (HttpContext context) => stub.AnswerAsync(context, stub.OnIssue));
         app.MapPost(StatusPath, (HttpContext context) => stub.AnswerAsync(context, stub.OnStatus));
         app.MapPost(BusReservationPath, (HttpContext context) => stub.AnswerAsync(context, stub.OnStatus));
+        app.MapPost(ConfirmPath, (HttpContext context) => stub.AnswerAsync(context, stub.OnConfirm));
 
         await app.StartAsync();
 

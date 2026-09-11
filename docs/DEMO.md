@@ -87,23 +87,37 @@ Password for all of them: **`Password123`**
 
 ## 4. The demo, in order
 
-**a. An agency that cannot trade yet.** Sign in at :5173 as `owner@pendingtravel.example.com`.
-The sidebar shows **Verification**. The screen says what is missing, or — if the seeder already
-submitted for them — that the documents are with Trips. Note the wallet: funding is blocked, and
-the screen says why in the API's own words rather than failing when pressed.
+Start at registration rather than with a seeded account. It is one extra minute, it shows two
+more screens, and — the practical reason — it works on a database somebody has already clicked
+around in. A seeded "pending" agency stops being pending the first time anyone approves it.
 
-**b. Staff review it.** In the other browser, sign in at :5174 as `admin@tripsagent.example.com`.
-The **KYB queue** lists agencies oldest-first, because the one waiting longest is losing the most
-business. Open a submission: the agency's details and every uploaded document, each behind a
-freshly signed link. **Approve** it.
+**a. An agency signs itself up.** At :5173 → **Register your agency**. Business name, your name,
+an email, a password. The email can be anything at `*.example.com` — nothing is delivered
+anywhere real, and Paystack accepts the domain later.
 
-**c. The agent's screen answers by itself.** Go back to :5173 without touching anything. Within
-about fifteen seconds the page updates: verified, and the wallet is open. Approval is what opens
-it — before this the platform never created one, which is the bug the money-path audit found.
+You land on **Confirm your email**, because the server answered *accepted*, not *created*: it has
+emailed a six-digit code and the account does nothing until that comes back. Open
+**http://localhost:8025**, read the code, type it in. (Pasting `123 456` with the spaces works.)
 
-**d. Real money, in test mode.** Open **Wallet** → add ₦5,000. You land on Paystack's hosted
-page — the card never touches this application, which is what keeps us in PCI SAQ-A. Pay with
-Paystack's test card:
+**b. Signed in, and unable to trade.** Sign in with what you just registered. The sidebar shows
+**Verification**, and the wallet is not there — funding is blocked and the screen says why in the
+API's own words rather than failing when pressed. This is the honest state of a new agency: it
+can look around and it cannot sell anything.
+
+Upload the three KYB documents (any PDF or image will do) and submit.
+
+**c. Trips staff review it.** In another browser window, :5174, sign in as
+`admin@tripsagent.example.com`. The **KYB queue** lists agencies oldest-first, because the one
+waiting longest is losing the most business. Open the submission: the agency's details and every
+document, each behind a freshly signed link. **Approve** it.
+
+**d. The agent's screen answers by itself.** Back on :5173, without touching anything. Within
+about fifteen seconds: verified, and the wallet is open. Approval is what opens it — before this
+the platform never created one, which is the bug the money-path audit found.
+
+**e. Real money, in test mode.** **Wallet** → add ₦5,000. You land on Paystack's hosted page —
+the card never touches this application, which is what keeps us in PCI SAQ-A. Pay with Paystack's
+test card:
 
 ```
 4084 0840 8408 4081    CVV 408    any future expiry    PIN 0000    OTP 123456
@@ -114,11 +128,14 @@ The credit is not taken from that redirect: the server asks Paystack what happen
 answer credits anything. Paystack's webhook arrives at the same time and is deliberately harmless
 — the same event five times still credits once.
 
-**e. If you want to show the books.** The statement, and the nightly ledger integrity audit
-(`payment-webhook-drain` and `ledger-integrity-audit` in the Hangfire dashboard at
-`/hangfire`, if enabled) prove `wallet balance = SUM(ledger entries)`.
+**f. If you want to show the books.** The statement, and the nightly ledger integrity audit
+(`ledger-integrity-audit` in the Hangfire dashboard at `/hangfire`), prove
+`wallet balance = SUM(ledger entries)`.
 
----
+### The short version, if you are pressed
+
+Sign in as `owner@lagostravel.example.com` — already verified, wallet open — and go straight to
+the top-up in step (e). You skip onboarding and review, which is most of what works.
 
 ## 5. What is live, and what is not
 
@@ -142,5 +159,6 @@ built. Say so rather than letting anyone assume a ticket was issued.
 | Wallet says **"no wallet yet"** | The database predates the wallet backfill. Re-run `-- migrate` |
 | Top-up returns **502** | Almost always the Paystack key missing from the API's *environment* (see §1 — `.env` is not read by `dotnet run`). The API log carries Paystack's own words: `401 Format is Authorization Bearer [secret key]` means no key reached it |
 | Every authenticated call 500s with **`Jwt:SigningKey is not valid base64`** | The whole `.env` was sourced into the API's shell. Start a fresh terminal and export only the two Paystack variables |
-| The KYB queue is empty | Every submission has been decided. The queue only shows undecided ones today |
+| The KYB queue is empty | Every submission has been decided. The queue only shows undecided ones today — register a new agency (step a) to put something in it |
+| The seeded "pending" agency is already verified | Somebody approved it on this database. That is why the walk-through starts at registration; a fresh agency is always pending |
 | Sign-in works, then every request 401s | The API restarted with a new signing key. Sign in again |

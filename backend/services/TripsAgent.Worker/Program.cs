@@ -41,8 +41,9 @@ builder.Services.AddOutboxDispatcher();
 builder.Services.AddJobProcessing(builder.Configuration);
 
 // The asset pipeline (issue #18): virus scan, EXIF strip, resize, WebP. Here and only here, so the
-// API never loads a scanner or an image decoder. Throws — and so the Worker does not start — when
-// no real virus scanner is configured outside Development. See AssetProcessingRegistration.
+// API never loads a scanner or an image decoder. With no real virus scanner configured outside
+// Development the pipeline alone is disabled — uploads stay pending and unserved — while every other
+// job here keeps running. See AssetPipelineStatus.
 builder.Services.AddAssetProcessing(builder.Configuration, builder.Environment);
 
 // Graceful shutdown, the host half. On SIGTERM — which is what Docker, Kubernetes and systemd all

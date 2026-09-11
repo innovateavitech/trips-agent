@@ -13,7 +13,8 @@ using TripsAgent.Infrastructure.Storage;
 namespace TripsAgent.UnitTests.Assets;
 
 /// <summary>
-/// The Worker refuses to run the pipeline without a real virus scanner, except in Development.
+/// Without a real virus scanner the asset pipeline is disabled — and only the pipeline. The Worker
+/// still starts, because it also runs the payment and ledger jobs.
 /// </summary>
 public class VirusScannerRegistrationTests
 {
@@ -21,39 +22,55 @@ public class VirusScannerRegistrationTests
     [InlineData("Development")]
     [InlineData("Staging")]
     [InlineData("Production")]
-    public void With_no_scanner_configured_the_worker_does_not_start(string environment)
+    public void With_no_scanner_configured_the_pipeline_is_disabled_and_nothing_throws(string environment)
     {
-        var act = () => Register(scanner: null, environment);
+        using var provider = Register(scanner: null, environment).BuildServiceProvider();
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*No virus scanner is configured*");
+        var status = provider.GetRequiredService<AssetPipelineStatus>();
+        status.IsEnabled.Should().BeFalse();
+        status.DisabledReason.Should().Contain("No virus scanner is configured");
+        provider.GetRequiredService<IVirusScanner>().Should().BeOfType<UnavailableVirusScanner>();
     }
 
     [Theory]
     [InlineData("Staging")]
     [InlineData("Production")]
-    public void The_development_scanner_is_refused_outside_development(string environment)
+    public void The_development_scanner_is_never_used_outside_development(string environment)
     {
-        var act = () => Register(AssetProcessingRegistration.EicarTestOnly, environment);
+        using var provider = Register(AssetProcessingRegistration.EicarTestOnly, environment).BuildServiceProvider();
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage($"*{AssetProcessingRegistration.EicarTestOnly}*{environment}*");
+        var status = provider.GetRequiredService<AssetPipelineStatus>();
+        status.IsEnabled.Should().BeFalse();
+        status.DisabledReason.Should().Contain(environment);
+        provider.GetRequiredService<IVirusScanner>().Should().BeOfType<UnavailableVirusScanner>();
     }
 
     [Fact]
     public void The_development_scanner_is_allowed_in_development()
     {
-        var services = Register(AssetProcessingRegistration.EicarTestOnly, "Development");
+        using var provider = Register(AssetProcessingRegistration.EicarTestOnly, "Development").BuildServiceProvider();
 
-        using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<AssetPipelineStatus>().IsEnabled.Should().BeTrue();
         provider.GetRequiredService<IVirusScanner>().Should().BeOfType<EicarTestVirusScanner>();
     }
 
     [Fact]
-    public void An_unknown_scanner_name_is_refused_rather_than_ignored()
+    public void An_unknown_scanner_name_disables_the_pipeline_and_names_the_typo()
     {
-        var act = () => Register("clamav-typo", "Production");
+        using var provider = Register("clamav-typo", "Production").BuildServiceProvider();
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*clamav-typo*");
+        var status = provider.GetRequiredService<AssetPipelineStatus>();
+        status.IsEnabled.Should().BeFalse();
+        status.DisabledReason.Should().Contain("clamav-typo");
+    }
+
+    [Fact]
+    public async Task With_no_real_scanner_nothing_can_ever_come_back_clean()
+    {
+        var scanner = new UnavailableVirusScanner("no scanner configured");
+
+        (await scanner.ScanAsync("%PDF-1.7 an ordinary document"u8.ToArray()))
+            .Should().BeOfType<VirusScanResult.Unavailable>();
     }
 
     private static ServiceCollection Register(string? scanner, string environment)
@@ -252,5 +269,55 @@ public sealed class LocalBlobUrlSignerTests : IDisposable
         public override DateTimeOffset GetUtcNow() => _now;
 
         public void Advance(TimeSpan by) => _now = _now.Add(by);
+    }
+}
+
+/// <summary>
+/// A disabled pipeline skips its jobs rather than failing them into hours of retries.
+/// </summary>
+public class AssetPipelineJobTests
+{
+    [Fact]
+    public async Task A_disabled_pipeline_never_calls_the_processor()
+    {
+        var processor = new CountingProcessor();
+
+        await new AssetProcessingJob(processor, AssetPipelineStatus.Disabled("no scanner")).RunAsync(Guid.NewGuid(), CancellationToken.None);
+        var swept = await new AssetSweepJob(processor, AssetPipelineStatus.Disabled("no scanner")).RunAsync(CancellationToken.None);
+
+        processor.Processed.Should().Be(0);
+        processor.Swept.Should().Be(0);
+        swept.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task An_enabled_pipeline_runs_both_jobs()
+    {
+        var processor = new CountingProcessor();
+
+        await new AssetProcessingJob(processor, AssetPipelineStatus.Enabled).RunAsync(Guid.NewGuid(), CancellationToken.None);
+        await new AssetSweepJob(processor, AssetPipelineStatus.Enabled).RunAsync(CancellationToken.None);
+
+        processor.Processed.Should().Be(1);
+        processor.Swept.Should().Be(1);
+    }
+
+    private sealed class CountingProcessor : IAssetProcessor
+    {
+        public int Processed { get; private set; }
+
+        public int Swept { get; private set; }
+
+        public Task ProcessAsync(Guid assetId, CancellationToken cancellationToken = default)
+        {
+            Processed++;
+            return Task.CompletedTask;
+        }
+
+        public Task<int> SweepAsync(CancellationToken cancellationToken = default)
+        {
+            Swept++;
+            return Task.FromResult(0);
+        }
     }
 }

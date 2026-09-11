@@ -28,6 +28,7 @@ public static class AssetProcessingRegistration
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddVirusScanner(configuration, environment);
+        services.AddHostedService<AssetPipelineStatusReporter>();
 
         // Stateless, so one instance serves every job.
         services.AddSingleton<IImageProcessor, SkiaImageProcessor>();
@@ -41,18 +42,19 @@ public static class AssetProcessingRegistration
     }
 
     /// <summary>
-    /// Registers the configured virus scanner, or refuses to start.
+    /// Registers the configured virus scanner — or, with no usable one, disables the asset pipeline.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Refusing is the point. Issue #18 says nothing unscanned is served, and the easiest way to
-    /// break that is not a bug in the pipeline — it is a deployment that quietly runs with no real
-    /// scanner. So there is no default: a Worker with no scanner named does not start, and the
-    /// development scanner is refused everywhere except Development.
+    /// Issue #18 says nothing unscanned is served, and the easiest way to break that is not a bug in
+    /// the pipeline — it is a deployment that quietly runs with no real scanner. So there is no
+    /// default, and the development scanner is never used outside Development.
     /// </para>
     /// <para>
-    /// Throwing here takes the host down before it runs a single job, which the orchestrator
-    /// reports as a failed deploy — exactly the right amount of noise.
+    /// What happens without one is deliberately narrow. This used to throw, which took the whole
+    /// Worker down — and with it the payment-webhook drain, the ledger integrity audit and every
+    /// consumer. Now the pipeline alone is disabled (see <see cref="AssetPipelineStatus"/>): uploads
+    /// stay pending and unserved, and a critical log line says why at every start.
     /// </para>
     /// </remarks>
     public static IServiceCollection AddVirusScanner(
@@ -64,43 +66,42 @@ public static class AssetProcessingRegistration
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(environment);
 
-        var configured = configuration[VirusScannerSetting];
+        var status = Resolve(configuration[VirusScannerSetting], environment);
+        services.AddSingleton(status);
 
+        if (status.IsEnabled)
+        {
+            services.AddSingleton<IVirusScanner, EicarTestVirusScanner>();
+        }
+        else
+        {
+            services.AddSingleton<IVirusScanner>(new UnavailableVirusScanner(status.DisabledReason!));
+        }
+
+        return services;
+    }
+
+    private static AssetPipelineStatus Resolve(string? configured, IHostEnvironment environment)
+    {
         if (string.IsNullOrWhiteSpace(configured))
         {
-            throw new InvalidOperationException(
-                $"""
-                 No virus scanner is configured at {VirusScannerSetting}, so the Worker will not start.
-
-                 Every uploaded file is scanned before it can be served (issue #18), and running
-                 without a scanner would mark files clean that nobody checked. No production
-                 scanner has been chosen yet — that is an open product decision.
-
-                 For local development set {VirusScannerSetting}={EicarTestOnly} (it is already set
-                 in the Worker's appsettings.Development.json). That scanner detects only the EICAR
-                 test file and is refused outside Development.
-                 """);
+            return AssetPipelineStatus.Disabled(
+                $"No virus scanner is configured at {VirusScannerSetting}. No production scanner has been "
+                + "chosen yet — that is an open product decision. For local development set "
+                + $"{VirusScannerSetting}={EicarTestOnly}; it is already set in the Worker's appsettings.Development.json.");
         }
 
         if (string.Equals(configured, EicarTestOnly, StringComparison.OrdinalIgnoreCase))
         {
-            if (!environment.IsDevelopment())
-            {
-                throw new InvalidOperationException(
-                    $"""
-                     {VirusScannerSetting} is {EicarTestOnly} in the {environment.EnvironmentName} environment.
-
-                     That scanner detects nothing but the EICAR test file. It is allowed only in
-                     Development, because anywhere else it would label real uploads "scanned clean"
-                     without scanning them. Register a real scanner before deploying the Worker.
-                     """);
-            }
-
-            services.AddSingleton<IVirusScanner, EicarTestVirusScanner>();
-            return services;
+            return environment.IsDevelopment()
+                ? AssetPipelineStatus.Enabled
+                : AssetPipelineStatus.Disabled(
+                    $"{VirusScannerSetting} is {EicarTestOnly} in the {environment.EnvironmentName} environment. "
+                    + "That scanner detects nothing but the EICAR test file, so outside Development it would "
+                    + "label real uploads clean without scanning them.");
         }
 
-        throw new InvalidOperationException(
+        return AssetPipelineStatus.Disabled(
             $"{VirusScannerSetting} is '{configured}', which is not a scanner this build knows. "
             + $"The only one available today is {EicarTestOnly}, for Development.");
     }

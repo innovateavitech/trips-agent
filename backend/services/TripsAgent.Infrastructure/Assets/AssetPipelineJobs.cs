@@ -37,12 +37,21 @@ public sealed class HangfireAssetPipelineDispatcher : IAssetPipelineDispatcher
 public sealed class AssetProcessingJob
 {
     private readonly IAssetProcessor _processor;
+    private readonly AssetPipelineStatus _status;
 
-    public AssetProcessingJob(IAssetProcessor processor) => _processor = processor;
+    public AssetProcessingJob(IAssetProcessor processor, AssetPipelineStatus status)
+    {
+        _processor = processor;
+        _status = status;
+    }
 
+    /// <remarks>
+    /// Does nothing while the pipeline is disabled: the asset stays pending and unserved, and ten
+    /// retries of a scan that cannot happen would only fill the dashboard with failures.
+    /// </remarks>
     [AutomaticRetry(Attempts = 10)]
     public Task RunAsync(Guid assetId, CancellationToken cancellationToken) =>
-        _processor.ProcessAsync(assetId, cancellationToken);
+        _status.IsEnabled ? _processor.ProcessAsync(assetId, cancellationToken) : Task.CompletedTask;
 }
 
 /// <summary>
@@ -55,12 +64,19 @@ public sealed class AssetProcessingJob
 public sealed class AssetSweepJob
 {
     private readonly IAssetProcessor _processor;
+    private readonly AssetPipelineStatus _status;
 
-    public AssetSweepJob(IAssetProcessor processor) => _processor = processor;
+    public AssetSweepJob(IAssetProcessor processor, AssetPipelineStatus status)
+    {
+        _processor = processor;
+        _status = status;
+    }
 
+    /// <remarks>Does nothing while the pipeline is disabled — there is nothing it could re-enqueue usefully.</remarks>
     [DisableConcurrentExecution(timeoutInSeconds: 10)]
     [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
-    public Task<int> RunAsync(CancellationToken cancellationToken) => _processor.SweepAsync(cancellationToken);
+    public Task<int> RunAsync(CancellationToken cancellationToken) =>
+        _status.IsEnabled ? _processor.SweepAsync(cancellationToken) : Task.FromResult(0);
 }
 
 /// <summary>

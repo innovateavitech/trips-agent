@@ -15,9 +15,9 @@ namespace TripsAgent.Infrastructure.Assets;
 /// handling real malware.
 /// </para>
 /// <para>
-/// <see cref="AssetProcessingRegistration"/> refuses to start the Worker with this outside the
-/// Development environment. A scanner that passes everything is worse than none: it writes
-/// "scanned clean" on files nobody checked.
+/// <see cref="AssetProcessingRegistration"/> never uses this outside the Development environment;
+/// there the asset pipeline is disabled instead. A scanner that passes everything is worse than
+/// none: it writes "scanned clean" on files nobody checked.
 /// </para>
 /// </remarks>
 public sealed class EicarTestVirusScanner : IVirusScanner

@@ -29,9 +29,60 @@ public sealed class PostgresFixture : IAsyncLifetime
         .WithPassword("postgres")
         .Build();
 
+    /// <summary>
+    /// The role row-level security polices — what the application runs as in production. The
+    /// migration creates it NOLOGIN when missing; the test server creates it first, with a password,
+    /// so tests can connect as exactly that. Short, deliberately: it is not a secret.
+    /// </summary>
+    public const string ApplicationRole = "tripsagent_app";
+
+    private const string ApplicationRolePassword = "tripsagent_app";
+
+    /// <summary>The superuser connection — the schema owner, which bypasses row-level security.</summary>
     public string ConnectionString => _container.GetConnectionString();
 
-    public Task InitializeAsync() => _container.StartAsync();
+    public async Task InitializeAsync()
+    {
+        await _container.StartAsync();
+
+        await using var admin = new Npgsql.NpgsqlConnection(ConnectionString);
+        await admin.OpenAsync();
+
+        await using var command = admin.CreateCommand();
+        command.CommandText =
+            $"CREATE ROLE {ApplicationRole} LOGIN PASSWORD '{ApplicationRolePassword}' NOSUPERUSER NOBYPASSRLS";
+        await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// A connection string for <paramref name="databaseName"/>, as the policed application role or
+    /// as the owner. Pooling is off unless asked for; see <see cref="Connect"/> for why.
+    /// </summary>
+    public string ConnectionStringFor(string databaseName, bool asApplicationRole, bool pooled = false)
+    {
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString)
+        {
+            Database = databaseName,
+            Pooling = pooled,
+            Timeout = 60,
+            CommandTimeout = 60,
+        };
+
+        if (asApplicationRole)
+        {
+            builder.Username = ApplicationRole;
+            builder.Password = ApplicationRolePassword;
+        }
+
+        if (pooled)
+        {
+            // One physical connection, so a test can prove a pooled connection handed to the next
+            // caller does not carry the previous caller's tenant.
+            builder.MaxPoolSize = 1;
+        }
+
+        return builder.ConnectionString;
+    }
 
     public Task DisposeAsync() => _container.DisposeAsync().AsTask();
 
@@ -82,7 +133,9 @@ public sealed class PostgresFixture : IAsyncLifetime
             Npgsql.NpgsqlConnection.ClearPool(stale);
         }
 
-        return Connect(databaseName, tenantContext, platformScope, clock, auditContext);
+        // As the owner: every caller migrates with this context, and migrating is DDL. Contexts for
+        // acting as a tenant come from Connect, which defaults to the policed application role.
+        return Connect(databaseName, tenantContext, platformScope, clock, auditContext, asApplicationRole: false);
     }
 
     /// <summary>
@@ -99,9 +152,14 @@ public sealed class PostgresFixture : IAsyncLifetime
         ITenantContext? tenantContext = null,
         IPlatformScope? platformScope = null,
         TimeProvider? clock = null,
-        TripsAgent.Application.Auditing.IAuditContext? auditContext = null)
+        TripsAgent.Application.Auditing.IAuditContext? auditContext = null,
+        bool asApplicationRole = true,
+        bool pooled = false)
     {
-        var builder = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionString)
+        // As the application role by default, so every test acting as a tenant runs under row-level
+        // security exactly as production does (ADR-0006). A flow that only works as a superuser
+        // fails here instead of in the first real deployment.
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder(ConnectionStringFor(databaseName, asApplicationRole, pooled))
         {
             Database = databaseName,
 
@@ -110,7 +168,7 @@ public sealed class PostgresFixture : IAsyncLifetime
             // finished tests sit on idle connections until the server runs out of them, and the
             // suite starts failing with "sorry, too many clients already" as it grows. Capping
             // the pool size only moves the ceiling; not pooling at all removes it.
-            Pooling = false,
+            Pooling = pooled,
 
             // The cost of not pooling is a fresh TCP connection per operation, and against a
             // container under load from the whole suite the default 15-second timeouts are

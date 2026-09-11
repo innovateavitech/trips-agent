@@ -73,13 +73,55 @@ public class VirusScannerRegistrationTests
             .Should().BeOfType<VirusScanResult.Unavailable>();
     }
 
-    private static ServiceCollection Register(string? scanner, string environment)
+    [Theory]
+    [InlineData("Development")]
+    [InlineData("Staging")]
+    [InlineData("Production")]
+    public void ClamAV_with_a_host_switches_the_pipeline_on_in_every_environment(string environment)
     {
+        using var provider = Register(
+                AssetProcessingRegistration.ClamAv,
+                environment,
+                new() { ["Assets:ClamAv:Host"] = "clamav.internal", ["Assets:ClamAv:Port"] = "3310" })
+            .BuildServiceProvider();
+
+        provider.GetRequiredService<AssetPipelineStatus>().IsEnabled.Should().BeTrue();
+        provider.GetRequiredService<IVirusScanner>().Should().BeOfType<ClamAvVirusScanner>()
+            .Which.Name.Should().Be("clamav");
+    }
+
+    [Fact]
+    public void ClamAV_is_chosen_whatever_the_case_it_is_written_in()
+    {
+        using var provider = Register("clamav", "Production", new() { ["Assets:ClamAv:Host"] = "clamav.internal" })
+            .BuildServiceProvider();
+
+        provider.GetRequiredService<IVirusScanner>().Should().BeOfType<ClamAvVirusScanner>();
+    }
+
+    [Fact]
+    public void ClamAV_without_a_host_leaves_the_pipeline_off_and_says_what_is_missing()
+    {
+        using var provider = Register(AssetProcessingRegistration.ClamAv, "Production").BuildServiceProvider();
+
+        var status = provider.GetRequiredService<AssetPipelineStatus>();
+        status.IsEnabled.Should().BeFalse();
+        status.DisabledReason.Should().Contain("Assets:ClamAv:Host");
+        provider.GetRequiredService<IVirusScanner>().Should().BeOfType<UnavailableVirusScanner>();
+    }
+
+    private static ServiceCollection Register(
+        string? scanner,
+        string environment,
+        Dictionary<string, string?>? settings = null)
+    {
+        var values = new Dictionary<string, string?>(settings ?? [])
+        {
+            [AssetProcessingRegistration.VirusScannerSetting] = scanner,
+        };
+
         var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                [AssetProcessingRegistration.VirusScannerSetting] = scanner,
-            })
+            .AddInMemoryCollection(values)
             .Build();
 
         var services = new ServiceCollection();

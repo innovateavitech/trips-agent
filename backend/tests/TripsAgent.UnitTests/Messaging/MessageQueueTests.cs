@@ -28,7 +28,6 @@ public class MessageQueueTests
         "reports.generate",
         "domains.provision",
         "analytics.rollup",
-        "crm.followup",
     ];
 
     [Fact]

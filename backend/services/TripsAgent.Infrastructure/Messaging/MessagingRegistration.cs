@@ -59,11 +59,6 @@ public static class MessagingRegistration
         // Both are safe to redeliver — each does its work once per order line.
         (MessageQueue.BookingSaga, typeof(Checkout.BookingTicketedConsumer)),
         (MessageQueue.PaymentsReversal, typeof(Checkout.PaymentReversalRequiredConsumer)),
-
-        // The CRM's side of a confirmed booking (#62): the customer record it belongs to. On its own
-        // queue, so it is retried on its own — the same event also renders the traveller's documents,
-        // and that work must not be repeated because a customer record failed to write.
-        (MessageQueue.CrmFollowUp, typeof(Crm.BookingConfirmedCrmConsumer)),
     ];
 
     /// <summary>Registers a publish-only bus. Use this in the API.</summary>

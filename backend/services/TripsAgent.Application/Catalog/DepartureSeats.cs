@@ -215,32 +215,60 @@ public sealed class DepartureSeats
     /// Puts the departure's status back in line with its seats (job 9). Does nothing while the agent
     /// has closed or cancelled it.
     /// </summary>
+    /// <remarks>
+    /// Reads the counts straight from the database rather than from anything the caller's change
+    /// tracker is holding: the seats were just moved by an <c>ExecuteUpdate</c>, which the tracker
+    /// knows nothing about, so a departure loaded earlier in the same unit of work would carry the
+    /// counts as they were before the move. The write is a compare-and-set on the status, so a
+    /// concurrent move that got there first simply wins.
+    /// </remarks>
     /// <returns>The status it now has.</returns>
     public async Task<DepartureStatus> RefreshStatusAsync(Guid departureId, CancellationToken cancellationToken = default)
     {
-        var departure = await _db.Departures.FirstOrDefaultAsync(
-            candidate => candidate.Id == departureId, cancellationToken);
+        var row = await _db.Departures.AsNoTracking()
+            .Where(candidate => candidate.Id == departureId)
+            .Select(candidate => new
+            {
+                candidate.Status,
+                candidate.IsGroupDeparture,
+                candidate.MinPax,
+                candidate.CapacityTotal,
+                candidate.CapacityReserved,
+                candidate.CapacityConfirmed,
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (departure is null)
+        if (row is null)
         {
             return DepartureStatus.Cancelled;
         }
 
-        // A seat sold between this read and this write is not a conflict worth failing on: the move
-        // that sold it refreshes the status itself, and the nightly sweep is the backstop.
-        if (departure.RefreshStatus())
+        if (DepartureStatusRules.IsManual(row.Status))
         {
-            try
-            {
-                await _db.SaveChangesAsync(cancellationToken);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                _db.ChangeTracker.Clear();
-            }
+            return row.Status;
         }
 
-        return departure.Status;
+        var next = DepartureStatusRules.FromSeats(
+            new SeatCount(row.CapacityTotal, row.CapacityReserved, row.CapacityConfirmed),
+            row.IsGroupDeparture,
+            row.MinPax);
+
+        if (next == row.Status)
+        {
+            return row.Status;
+        }
+
+        var now = _clock.GetUtcNow();
+
+        await _db.Departures
+            .Where(candidate => candidate.Id == departureId && candidate.Status == row.Status)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(candidate => candidate.Status, next)
+                    .SetProperty(candidate => candidate.UpdatedAt, now),
+                cancellationToken);
+
+        return next;
     }
 
     private async Task<int> SeatsLeftAsync(Guid departureId, CancellationToken cancellationToken)

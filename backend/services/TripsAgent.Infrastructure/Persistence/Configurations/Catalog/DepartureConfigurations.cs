@@ -306,3 +306,104 @@ public sealed class PaxManifestEntryConfiguration : IEntityTypeConfiguration<Pax
             .HasDatabaseName("ix_pax_manifests_order_line_id");
     }
 }
+
+/// <summary>
+/// <c>catalog.booking_payment_schedules</c>: what one booking on a departure pays, and when.
+/// </summary>
+/// <remarks>
+/// A snapshot of the departure's terms taken on the day, so a later edit to those terms cannot move
+/// a payment somebody has already been told about (CLAUDE.md rule 5). One per order line.
+/// </remarks>
+public sealed class BookingPaymentScheduleConfiguration : IEntityTypeConfiguration<BookingPaymentSchedule>
+{
+    /// <summary>Long enough for a full name as anybody writes it.</summary>
+    public const int MaxContactNameLength = 200;
+
+    /// <summary>The practical ceiling on an address; the same length identity uses.</summary>
+    public const int MaxContactEmailLength = 320;
+
+    public void Configure(EntityTypeBuilder<BookingPaymentSchedule> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("booking_payment_schedules", CatalogSchema.Name);
+        builder.HasKey(schedule => schedule.Id);
+        builder.Property(schedule => schedule.Id).ValueGeneratedNever();
+
+        builder.Property(schedule => schedule.Currency).HasMaxLength(3).IsFixedLength().IsRequired();
+        builder.Property(schedule => schedule.ContactName).HasMaxLength(MaxContactNameLength).IsRequired();
+        builder.Property(schedule => schedule.ContactEmail).HasMaxLength(MaxContactEmailLength);
+
+        // Not computed: a total read from the items would change if an item were ever cancelled,
+        // and the point of a bill is that it does not.
+        builder.Ignore(schedule => schedule.TotalMinor);
+        builder.Ignore(schedule => schedule.OutstandingMinor);
+
+        builder.HasOne<Agency>()
+            .WithMany()
+            .HasForeignKey(schedule => schedule.AgencyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Composite, for the reason every other reference here is: a plain key would accept another
+        // agency's departure, because foreign-key checks run as the table owner and skip RLS.
+        builder.HasOne<Departure>()
+            .WithMany()
+            .HasForeignKey(schedule => new { schedule.AgencyId, schedule.DepartureId })
+            .HasPrincipalKey(departure => new { departure.AgencyId, departure.Id })
+            .OnDelete(DeleteBehavior.Restrict)
+            .HasConstraintName("fk_booking_payment_schedules_departures_departure_id");
+
+        builder.HasOne<OrderLine>()
+            .WithMany()
+            .HasForeignKey(schedule => new { schedule.AgencyId, schedule.OrderLineId })
+            .HasPrincipalKey(line => new { line.AgencyId, line.Id })
+            .OnDelete(DeleteBehavior.Restrict)
+            .HasConstraintName("fk_booking_payment_schedules_order_lines_order_line_id");
+
+        builder.HasMany(schedule => schedule.Items)
+            .WithOne()
+            .HasForeignKey(item => item.ScheduleId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(schedule => schedule.Items).UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        // One bill per line, said in the database as well as in the model.
+        builder.HasIndex(schedule => schedule.OrderLineId)
+            .IsUnique()
+            .HasDatabaseName("ix_booking_payment_schedules_order_line_id");
+
+        builder.HasIndex(schedule => new { schedule.AgencyId, schedule.DepartureId })
+            .HasDatabaseName("ix_booking_payment_schedules_agency_id_departure_id");
+    }
+}
+
+/// <summary><c>catalog.booking_installments</c>: one payment on a booking's schedule.</summary>
+public sealed class BookingInstallmentConfiguration : IEntityTypeConfiguration<BookingInstallment>
+{
+    /// <summary>"Deposit", "Balance", "Payment 2" — a label, not a sentence.</summary>
+    public const int MaxLabelLength = 60;
+
+    public void Configure(EntityTypeBuilder<BookingInstallment> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("booking_installments", CatalogSchema.Name);
+        builder.HasKey(item => item.Id);
+        builder.Property(item => item.Id).ValueGeneratedNever();
+
+        builder.Property(item => item.Label).HasMaxLength(MaxLabelLength).IsRequired();
+        builder.Property(item => item.State).HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(item => item.LastReminderStage).HasConversion<string?>().HasMaxLength(20);
+
+        builder.HasOne<Agency>()
+            .WithMany()
+            .HasForeignKey(item => item.AgencyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(item => item.ScheduleId)
+            .HasDatabaseName("ix_booking_installments_schedule_id");
+
+        // What InstallmentReminderJob (job 11) reads every day: what is still owed, soonest first.
+        builder.HasIndex(item => new { item.State, item.DueDate })
+            .HasDatabaseName("ix_booking_installments_state_due_date");
+    }
+}

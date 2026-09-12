@@ -103,6 +103,16 @@ public static class DependencyInjection
         services.AddScoped<ProductCatalogService>();
         services.AddScoped<ProductCategoryService>();
 
+        // Group departures (#57): the agent's dated runs, the seats they are sold by, the queue for
+        // the ones that sell out, and the jobs that keep all three honest (plan §3 jobs 6, 9, 10, 11).
+        services.AddScoped<DepartureService>();
+        services.AddScoped<DepartureSeats>();
+        services.AddScoped<DepartureWaitlistService>();
+        services.AddScoped<DepartureHoldExpiry>();
+        services.AddScoped<DepartureStatusSweep>();
+        services.AddScoped<DepartureInstallments>();
+        services.AddScoped<InstallmentReminders>();
+
         // Stages notifications in the caller's unit of work; the Worker sends them.
         services.AddScoped<INotifier, Notifier>();
 

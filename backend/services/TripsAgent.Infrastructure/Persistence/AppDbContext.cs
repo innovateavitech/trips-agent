@@ -275,6 +275,12 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <inheritdoc />
     public DbSet<PaxManifestEntry> PaxManifests => Set<PaxManifestEntry>();
 
+    /// <inheritdoc />
+    public DbSet<BookingPaymentSchedule> BookingPaymentSchedules => Set<BookingPaymentSchedule>();
+
+    /// <inheritdoc />
+    public DbSet<BookingInstallment> BookingInstallments => Set<BookingInstallment>();
+
     /// <summary>Every notification queued, and what happened to it. Tenant-scoped.</summary>
     public DbSet<Notification> Notifications => Set<Notification>();
 

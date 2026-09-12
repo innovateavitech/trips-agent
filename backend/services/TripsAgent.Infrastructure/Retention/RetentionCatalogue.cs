@@ -181,6 +181,10 @@ public static partial class RetentionCatalogue
             + "a candidate for anonymisation once counsel reviews the schedule (build plan decision 26)."),
         new("catalog.pax_manifests", RetentionTreatment.Kept, "With their order line",
             "Which departure a booked traveller is on, and their room. The traveller's own details live on orders.order_travellers."),
+        new("catalog.booking_payment_schedules", RetentionTreatment.Protected, SevenYears,
+            "What a booking on a departure was billed, and who was billed. A financial record, and it carries a name and an email."),
+        new("catalog.booking_installments", RetentionTreatment.Protected, SevenYears,
+            "The payments that schedule was split into, and whether they were paid."),
 
         // ---------------------------------------------------------------- supplier bookings
         new("supplier.supplier_bookings", RetentionTreatment.Protected, SevenYears,

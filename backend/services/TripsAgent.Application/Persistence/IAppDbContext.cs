@@ -130,6 +130,15 @@ public interface IAppDbContext
     /// <summary>Who is on a departure, and which room they are in.</summary>
     public DbSet<PaxManifestEntry> PaxManifests { get; }
 
+    /// <summary>
+    /// What one booking on a departure pays, and when: the departure's terms snapshotted on the day
+    /// it was booked. One per order line.
+    /// </summary>
+    public DbSet<BookingPaymentSchedule> BookingPaymentSchedules { get; }
+
+    /// <summary>The payments a schedule is split into. Read by job 11 to send reminders.</summary>
+    public DbSet<BookingInstallment> BookingInstallments { get; }
+
     /// <summary>Every message sent to anyone, and what happened to it. Tenant-scoped.</summary>
     public DbSet<Notification> Notifications { get; }
 

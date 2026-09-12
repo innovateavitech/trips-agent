@@ -105,6 +105,8 @@ The source of truth is `RetentionCatalogue.Tables` in
 | `catalog.departure_holds` | No | With their cart | Purged | Deleted by the cart's `ON DELETE CASCADE`; a hold on a cart that became nothing is not a record of anything |
 | `catalog.departure_waitlist` | Yes — name, email | While the departure exists | Kept | Somebody asked to be told about a seat. Considered and left alone for the MVP: a candidate for anonymisation once counsel reviews the schedule |
 | `catalog.pax_manifests` | No | With their order line | Kept | Which departure a booked traveller is on, and their room; their own details live on `orders.order_travellers` |
+| `catalog.booking_payment_schedules` | Yes — name, email | 7 years | Protected | What a booking on a departure was billed, and who was billed |
+| `catalog.booking_installments` | No | 7 years | Protected | The payments that schedule was split into, and whether they were paid |
 
 ### Supplier bookings
 

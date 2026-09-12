@@ -1,4 +1,8 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using TripsAgent.Application.Checkout;
+using TripsAgent.Application.Messaging;
+using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Catalog;
@@ -81,14 +85,30 @@ public abstract record DepartureChangeOutcome
 /// </remarks>
 public sealed class DepartureService
 {
+    /// <summary>What the agent reads in the resolution queue, and the traveller in their refund.</summary>
+    private const string CancelledReason =
+        "The agency cancelled this departure. Refund the traveller in full.";
+
     private readonly IAppDbContext _db;
     private readonly ITenantContext _tenant;
+    private readonly DepartureInstallments _installments;
+    private readonly INotifier _notifier;
+    private readonly IOutbox _outbox;
     private readonly TimeProvider _clock;
 
-    public DepartureService(IAppDbContext db, ITenantContext tenant, TimeProvider clock)
+    public DepartureService(
+        IAppDbContext db,
+        ITenantContext tenant,
+        DepartureInstallments installments,
+        INotifier notifier,
+        IOutbox outbox,
+        TimeProvider clock)
     {
         _db = db;
         _tenant = tenant;
+        _installments = installments;
+        _notifier = notifier;
+        _outbox = outbox;
         _clock = clock;
     }
 
@@ -467,9 +487,21 @@ public sealed class DepartureService
     }
 
     /// <summary>
-    /// Puts every booking on the departure that has not already failed or been refunded into the
-    /// resolution queue, with the reason the agent will read there (decision 12).
+    /// Puts every booking on the departure into the resolution queue as a full refund, closes what
+    /// is still owed on it, and tells the traveller (decision 12).
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The money is not moved here. Flagging the line is what the resolution queue reads, and
+    /// refunding is <c>ResolutionService</c>'s — doing it in the same transaction as the
+    /// cancellation would mean a gateway call inside a request handler.
+    /// </para>
+    /// <para>
+    /// <see cref="FailedLines.FlagAgencyCancellation"/> rather than the ordinary flag, because these
+    /// bookings are paid and confirmed: the agency hosts the departure itself, so there is no
+    /// supplier ticket to contradict.
+    /// </para>
+    /// </remarks>
     private async Task RefundEveryBookingAsync(
         Departure departure,
         DateTimeOffset now,
@@ -486,20 +518,76 @@ public sealed class DepartureService
             return;
         }
 
-        var lines = await _db.OrderLines
+        var orderIds = await _db.OrderLines.AsNoTracking()
             .Where(line => lineIds.Contains(line.Id))
-            .Where(line => line.FulfilmentStatus == FulfilmentStatus.Reserved
-                        || line.FulfilmentStatus == FulfilmentStatus.Confirming
-                        || line.FulfilmentStatus == FulfilmentStatus.Confirmed)
+            .Select(line => line.OrderId)
+            .Distinct()
             .ToListAsync(cancellationToken);
 
-        foreach (var line in lines)
+        var orders = await _db.Orders.Include(order => order.Lines)
+            .Where(order => orderIds.Contains(order.Id))
+            .ToListAsync(cancellationToken);
+
+        var title = await _db.Products.AsNoTracking()
+            .Where(product => product.Id == departure.ProductId)
+            .Select(product => product.Title)
+            .FirstOrDefaultAsync(cancellationToken) ?? "your departure";
+
+        foreach (var order in orders)
         {
-            line.RecordFulfilment(
-                FulfilmentStatus.FailedNeedsResolution,
-                now,
-                "The agency cancelled this departure. Refund the traveller in full.");
+            // An order already cancelled or refunded has nothing left to refund, and its own rule
+            // refuses to be moved again.
+            if (order.Status is OrderStatus.Cancelled or OrderStatus.Refunded)
+            {
+                continue;
+            }
+
+            foreach (var line in order.Lines.Where(line => lineIds.Contains(line.Id)))
+            {
+                if (!FailedLines.FlagAgencyCancellation(order, line, CancelledReason, now, _outbox))
+                {
+                    continue;
+                }
+
+                await _installments.CancelForLineAsync(line.Id, cancellationToken);
+                await TellTravellerAsync(departure, order, line, title, cancellationToken);
+            }
         }
+    }
+
+    /// <summary>
+    /// Tells the traveller their departure is off, in the agency's name. Traveller-facing, so it
+    /// never mentions Trips — CLAUDE.md rule 4.
+    /// </summary>
+    private async Task TellTravellerAsync(
+        Departure departure,
+        Order order,
+        OrderLine line,
+        string title,
+        CancellationToken cancellationToken)
+    {
+        var schedule = await _db.BookingPaymentSchedules.AsNoTracking()
+            .FirstOrDefaultAsync(candidate => candidate.OrderLineId == line.Id, cancellationToken);
+
+        if (schedule?.ContactEmail is not { } address)
+        {
+            return;
+        }
+
+        await _notifier.QueueEmailAsync(
+            new EmailNotificationRequest(
+                departure.AgencyId,
+                NotificationTemplateCatalog.DepartureCancelled,
+                address,
+                schedule.ContactName,
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["bookingReference"] = order.OrderNumber,
+                    ["departureTitle"] = title,
+                    ["departureDate"] = departure.DepartureDate.ToString("d MMMM yyyy", CultureInfo.InvariantCulture),
+                },
+                $"{NotificationTemplateCatalog.DepartureCancelled}:{line.Id}"),
+            cancellationToken);
     }
 
     /// <summary>Fills in the product title, the currency and the waitlist count, in two queries.</summary>

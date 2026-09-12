@@ -22,6 +22,7 @@ public static class IdentitySeedData
     public const string DevelopmentPassword = "Password123";
 
     public const string SuperAdminEmail = "admin@tripsagent.example.com";
+    public const string FinanceAdminEmail = "finance@tripsagent.example.com";
     public const string OperationsAdminEmail = "ops@tripsagent.example.com";
     public const string VerifiedAgentEmail = "owner@lagostravel.example.com";
     public const string SubAgentEmail = "owner@ikejabranch.example.com";
@@ -49,6 +50,9 @@ public static class IdentitySeedData
         PermissionCodes.BookingCancel,
         PermissionCodes.BookingRefund,
         PermissionCodes.WalletView,
+        PermissionCodes.PayoutView,
+        PermissionCodes.DisputeView,
+        PermissionCodes.DisputeRespond,
         PermissionCodes.MarginView,
         PermissionCodes.MarginEdit,
         PermissionCodes.CatalogView,
@@ -82,6 +86,22 @@ public static class IdentitySeedData
         PermissionCodes.All.Select(permission => permission.Code).ToList();
 
     /// <summary>
+    /// Finance authorise withdrawals and work the money queues, and do nothing else.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately narrow. <c>platform.payout.approve</c> is the one permission that ends with
+    /// money in somebody else's bank account, and the point of a role that holds it is that it
+    /// holds almost nothing besides — so a day-to-day support login never carries it.
+    /// </remarks>
+    public static IReadOnlyList<string> FinanceAdminPermissions { get; } =
+    [
+        PermissionCodes.PayoutApprove,
+        PermissionCodes.FinanceReview,
+        PermissionCodes.PlatformReportView,
+        PermissionCodes.ReportView,
+    ];
+
+    /// <summary>
     /// Operations staff review KYB and support agencies. Deliberately without
     /// <c>agency.suspend</c> or <c>subscription.manage</c> — those are commercial decisions.
     /// </summary>
@@ -111,5 +131,8 @@ public static class IdentitySeedData
 
         (Role.SystemRoles.OperationsAdmin, RoleScope.Platform,
             "Trips staff who review KYB and support agencies.", OperationsAdminPermissions),
+
+        (Role.SystemRoles.FinanceAdmin, RoleScope.Platform,
+            "Trips staff who authorise withdrawals and work the money queues.", FinanceAdminPermissions),
     ];
 }

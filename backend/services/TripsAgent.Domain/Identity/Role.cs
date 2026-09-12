@@ -34,6 +34,11 @@ public sealed class Role : Entity, IAuditableEntity
 
         /// <summary>Trips staff who review KYB and support agencies.</summary>
         public const string OperationsAdmin = "Operations Admin";
+
+        /// <summary>
+        /// Trips staff who authorise withdrawals. The only role that may send money out.
+        /// </summary>
+        public const string FinanceAdmin = "Finance Admin";
     }
 
     private Role()

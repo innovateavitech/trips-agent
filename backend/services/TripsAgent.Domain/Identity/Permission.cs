@@ -58,6 +58,18 @@ public static class PermissionCodes
     public const string MarginView = "margin.view";
     public const string MarginEdit = "margin.edit";
 
+    /// <summary>See where the agency is paid, and the withdrawals it has made.</summary>
+    public const string PayoutView = "payout.view";
+
+    /// <summary>Add a bank account and ask for money. Not the same as being able to send it.</summary>
+    public const string PayoutRequest = "payout.request";
+
+    /// <summary>See chargebacks raised against this agency.</summary>
+    public const string DisputeView = "dispute.view";
+
+    /// <summary>File evidence answering a chargeback.</summary>
+    public const string DisputeRespond = "dispute.respond";
+
     public const string CatalogView = "catalog.view";
     public const string CatalogEdit = "catalog.edit";
     public const string CatalogPublish = "catalog.publish";
@@ -85,6 +97,19 @@ public static class PermissionCodes
     public const string PlatformReportView = "platform.report.view";
     public const string SubscriptionManage = "subscription.manage";
     public const string PlatformUserManage = "platform.user.manage";
+
+    /// <summary>
+    /// Authorise an agency's withdrawal, so money leaves the platform. Trips Finance only.
+    /// </summary>
+    /// <remarks>
+    /// The one permission in the system that ends with money in somebody else's bank account.
+    /// Deliberately separate from every other platform permission so that granting an operations
+    /// user what they need to do their job never grants them this by accident.
+    /// </remarks>
+    public const string PayoutApprove = "platform.payout.approve";
+
+    /// <summary>Work the reconciliation queue and the dispute queue across every agency.</summary>
+    public const string FinanceReview = "platform.finance.review";
 
     /// <summary>Categories used to group permissions on the role editor.</summary>
     public static class Categories
@@ -118,6 +143,10 @@ public static class PermissionCodes
         (WalletFund, Categories.Money, "Top the wallet up"),
         (MarginView, Categories.Money, "See net rates and the markup applied"),
         (MarginEdit, Categories.Money, "Change markup rules"),
+        (PayoutView, Categories.Money, "See bank accounts and past withdrawals"),
+        (PayoutRequest, Categories.Money, "Add a bank account and request a withdrawal"),
+        (DisputeView, Categories.Money, "See chargebacks raised against this agency"),
+        (DisputeRespond, Categories.Money, "File evidence answering a chargeback"),
 
         (CatalogView, Categories.Catalog, "See tours, visas and group departures"),
         (CatalogEdit, Categories.Catalog, "Create and edit catalog products"),
@@ -142,6 +171,8 @@ public static class PermissionCodes
         (PlatformReportView, Categories.Platform, "See platform-wide reporting across agencies"),
         (SubscriptionManage, Categories.Platform, "Manage subscription tiers and pricing"),
         (PlatformUserManage, Categories.Platform, "Manage Trips back-office users"),
+        (PayoutApprove, Categories.Platform, "Approve a withdrawal — this sends real money"),
+        (FinanceReview, Categories.Platform, "Work the reconciliation and dispute queues"),
     ];
 
     /// <summary>Codes that only Trips staff may ever hold.</summary>
@@ -153,5 +184,7 @@ public static class PermissionCodes
         PlatformReportView,
         SubscriptionManage,
         PlatformUserManage,
+        PayoutApprove,
+        FinanceReview,
     ];
 }

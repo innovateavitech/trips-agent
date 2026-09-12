@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
-import { api } from './api/client';
+import { api, sessionTransport } from './api/client';
 import { publicApi } from './api/public-client';
 import { AppProviders, type AppAdapters } from './app/providers';
 import { createQueryClient } from './app/query-client';
@@ -9,6 +9,7 @@ import { createAppRouter } from './app/router';
 import { AUTH_MODE } from './app/settings';
 import { createHttpAuthApi } from './auth/http-auth-api';
 import { mockAuthApi } from './auth/mock/mock-auth-api';
+import { createHttpAnalyticsApi, mockAnalyticsApi } from './features/analytics';
 import { mockDashboardApi } from './features/dashboard';
 import { mockSearchApi } from './features/search';
 import { createHttpBookingFlowApi, mockBookingFlowApi } from './features/booking';
@@ -26,8 +27,14 @@ import './index.css';
  *   search     mock until the supplier search endpoints exist (#33, #34)
  *   bookingFlow  real `/api/v1/bookings` (#42); the stand-in with `VITE_AUTH_MODE=mock`
  *   bookings     real `/api/v1/bookings` (#42, #44); the stand-in with `VITE_AUTH_MODE=mock`
+ *   analytics    real `/api/v1/analytics` and `/api/v1/reports` (issues 67, 68); the stand-in
+ *                with `VITE_AUTH_MODE=mock`
  */
 const adapters: AppAdapters = {
+  analytics:
+    AUTH_MODE === 'mock'
+      ? mockAnalyticsApi
+      : createHttpAnalyticsApi({ api, send: sessionTransport.authFetch }),
   auth: AUTH_MODE === 'mock' ? mockAuthApi : createHttpAuthApi({ api, publicApi }),
   wallet: mockWalletApi,
   dashboard: mockDashboardApi,

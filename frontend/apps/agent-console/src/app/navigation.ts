@@ -1,9 +1,11 @@
 import {
+  BarChart3,
   Bus,
   LayoutDashboard,
   LifeBuoy,
   Plane,
   ShieldCheck,
+  FileSpreadsheet,
   SlidersHorizontal,
   Ticket,
   Wallet,
@@ -56,6 +58,13 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Wallet', to: '/wallet', icon: Wallet }, // #51
       { label: 'Pricing rules', to: '/pricing', icon: SlidersHorizontal }, // #55
+    ],
+  },
+  {
+    label: 'Insight',
+    items: [
+      { label: 'Analytics', to: '/analytics', icon: BarChart3 }, // issue 67
+      { label: 'Reports', to: '/reports', icon: FileSpreadsheet }, // issue 68
     ],
   },
   {

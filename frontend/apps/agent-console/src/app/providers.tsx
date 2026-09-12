@@ -2,6 +2,7 @@ import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { AuthApi } from '../auth/auth-api';
 import { AuthProvider } from '../auth/auth-provider';
+import { AnalyticsApiProvider, type AnalyticsApi } from '../features/analytics';
 import { DashboardApiProvider, type DashboardApi } from '../features/dashboard';
 import { SearchApiProvider, type SearchApi } from '../features/search';
 import { BookingFlowApiProvider, type BookingFlowApi } from '../features/booking';
@@ -9,6 +10,7 @@ import { BookingsApiProvider, type BookingsApi } from '../features/bookings';
 import { WalletApiProvider, type WalletApi } from '../features/wallet';
 
 export interface AppAdapters {
+  analytics: AnalyticsApi;
   auth: AuthApi;
   wallet: WalletApi;
   dashboard: DashboardApi;
@@ -38,7 +40,9 @@ export function AppProviders({
           <DashboardApiProvider value={adapters.dashboard}>
             <SearchApiProvider value={adapters.search}>
               <BookingFlowApiProvider value={adapters.bookingFlow}>
-                <BookingsApiProvider value={adapters.bookings}>{children}</BookingsApiProvider>
+                <BookingsApiProvider value={adapters.bookings}>
+                  <AnalyticsApiProvider value={adapters.analytics}>{children}</AnalyticsApiProvider>
+                </BookingsApiProvider>
               </BookingFlowApiProvider>
             </SearchApiProvider>
           </DashboardApiProvider>

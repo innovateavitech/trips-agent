@@ -444,7 +444,7 @@ The Next.js traveller-facing site.
 
 ### F5 · Customer commerce
 
-**M2 · In progress** · 6 of 6 boxes ticked
+**M2 · Queued** · 0 of 6 boxes ticked
 
 Travellers buy on the agent's storefront: a cart mixing flights, buses, tours and visas, guest checkout, card payment, a magic link to manage the booking, and partial failures routed to the agent's resolution queue.
 
@@ -512,7 +512,7 @@ Fixed-date departures sold by the seat.
 
 ### F7 · CRM
 
-**M2 · Queued** · 0 of 6 boxes ticked
+**M2 · In progress** · branch `feat/M2-crm` · 6 of 6 boxes ticked
 
 Leads from the storefront's trip-request widget, a pipeline from New to Won, quotes with a public accept link, follow-up tasks, and a customer record built from every inquiry, quote and booking.
 

@@ -144,6 +144,7 @@ public sealed partial class OrderRefunds
 
         // Whatever the line cost the agency comes back first, whether or not the card refund works:
         // the agency should not be left paying a supplier's net rate for a booking being unwound.
+        // Nothing below commits on its own, so a refusal rolls this back with everything else.
         var undone = await _wallet.UndoCostAsync(order, line, now, cancellationToken);
 
         if (amount.AmountMinor <= 0)
@@ -175,11 +176,15 @@ public sealed partial class OrderRefunds
                 order.AgencyId,
                 cancellationToken);
 
-            return undone is null
-                ? null
-                : Record(order, line, reason, RefundMethod.WalletHoldReleased, undone, now,
-                    supplierStatusPollId, refundedByUserId,
-                    "The card refund could not be sent: the agency's wallet could not cover it. A person has been told.");
+            // Nothing is closed as refunded when nothing was refunded. The line stays in the queue,
+            // the agent sees why, and a retry once the funds are recovered still works. The alert
+            // repeats on each retry, which is the right noise for a traveller who is owed money.
+            throw new CheckoutRefusedException(
+                CheckoutRefusal.Conflict,
+                "This booking cannot be refunded yet.",
+                $"It was paid by card, and {order.Currency} {amount.AmountMinor} (in kobo) has to go back to that "
+                + "card — more than this agency's wallet holds. Nothing was sent. Top the wallet up, then refund it "
+                + "again; we have told the team.");
         }
 
         var sent = await _gateway.RefundAsync(
@@ -197,11 +202,12 @@ public sealed partial class OrderRefunds
                 order.AgencyId,
                 cancellationToken);
 
-            return undone is null
-                ? null
-                : Record(order, line, reason, RefundMethod.WalletHoldReleased, undone, now,
-                    supplierStatusPollId, refundedByUserId,
-                    $"The card refund was refused by the gateway ({sent.Status}). A person has been told.");
+            throw new CheckoutRefusedException(
+                CheckoutRefusal.Conflict,
+                "The card refund was refused.",
+                $"The payment gateway would not send {order.Currency} {amount.AmountMinor} (in kobo) back to the "
+                + $"card this booking was paid with: {sent.FailureReason ?? sent.Status}. Nothing was sent, and the "
+                + "booking is still waiting. We have told the team, who will refund it by hand.");
         }
 
         // The money leaves the agency's wallet and goes back out through the account it arrived in.

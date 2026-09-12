@@ -218,6 +218,16 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                 ALTER TABLE payments.payment_transactions
                     ADD CONSTRAINT ck_payment_transactions_order_purpose CHECK (
                         (order_id IS NULL) OR (purpose = 'OrderPayment'));
+
+                -- A traveller's payment on a storefront is a new kind of statement line: money in,
+                -- but not a top-up anybody at the agency made (build plan F5). The CHECK from
+                -- AddLedgerAndWallets lists the kinds by name, so it has to learn this one.
+                ALTER TABLE payments.wallet_transactions
+                    DROP CONSTRAINT ck_wallet_transactions_type;
+
+                ALTER TABLE payments.wallet_transactions
+                    ADD CONSTRAINT ck_wallet_transactions_type
+                        CHECK (type IN ('TopUp', 'BookingPayment', 'Refund', 'Reversal', 'Adjustment', 'CustomerPayment'));
                 """);
 
             // ------------------------------------------------------------------ the application role
@@ -255,6 +265,13 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
             }
 
             migrationBuilder.Sql("""
+                ALTER TABLE payments.wallet_transactions
+                    DROP CONSTRAINT IF EXISTS ck_wallet_transactions_type;
+
+                ALTER TABLE payments.wallet_transactions
+                    ADD CONSTRAINT ck_wallet_transactions_type
+                        CHECK (type IN ('TopUp', 'BookingPayment', 'Refund', 'Reversal', 'Adjustment'));
+
                 ALTER TABLE payments.payment_transactions
                     DROP CONSTRAINT IF EXISTS ck_payment_transactions_order_purpose;
                 ALTER TABLE orders.booking_access_tokens

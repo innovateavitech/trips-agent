@@ -276,7 +276,7 @@ public sealed partial class StorefrontCheckoutService
         }
 
         var order = await RecordAsync(agency, cart, request.Contact, prepared, deadline, now, cancellationToken);
-        var due = AmountDueNow(order, prepared);
+        var due = await AmountDueNowAsync(order, prepared, cancellationToken);
 
         var started = await StartPaymentAsync(agency, order, due, request.ReturnUrl, cancellationToken);
 
@@ -521,13 +521,35 @@ public sealed partial class StorefrontCheckoutService
     /// out"): the schedule drives reminders, and the agency takes the money.
     /// </para>
     /// </remarks>
-    private Money AmountDueNow(Order order, IReadOnlyList<PreparedLine> prepared)
+    private async Task<Money> AmountDueNowAsync(
+        Order order,
+        IReadOnlyList<PreparedLine> prepared,
+        CancellationToken cancellationToken)
     {
         var deferred = default(Money);
 
         for (var index = 0; index < prepared.Count; index++)
         {
-            if (prepared[index].Item.DepartureId is null)
+            if (prepared[index].Item.DepartureId is not { } departureId)
+            {
+                continue;
+            }
+
+            // Only a departure the agent actually sells on a plan defers anything. One with no
+            // deposit and no instalments has a schedule too — a single line due at the cutoff — and
+            // a traveller buying it on the storefront pays for it there and then, like any other
+            // product. Deferring that would be reading "when we would chase an agent's customer for
+            // it" as "when the card is charged".
+            var plan = await _db.Departures.AsNoTracking()
+                .Where(candidate => candidate.Id == departureId)
+                .Select(candidate => new
+                {
+                    candidate.DepositType,
+                    HasInstallments = candidate.Installments != null && candidate.Installments.Items.Count > 0,
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (plan is null || (plan.DepositType == DepositType.None && !plan.HasInstallments))
             {
                 continue;
             }
@@ -542,9 +564,12 @@ public sealed partial class StorefrontCheckoutService
                 continue;
             }
 
-            var later = schedule.Items.Where(item => item.DueDate > schedule.BookedOn).Sum(item => item.AmountMinor.AmountMinor);
+            var later = schedule.Items
+                .Where(item => item.DueDate > schedule.BookedOn)
+                .Sum(item => item.AmountMinor.AmountMinor);
 
-            // Never more than the line's own net: a schedule can only defer what the seats cost.
+            // Never more than the line's own net: a schedule can only defer what the seats cost, and
+            // the agency's markup and our fee are collected with the deposit.
             deferred += new Money(Math.Min(later, line.NetAmountMinor.AmountMinor));
         }
 

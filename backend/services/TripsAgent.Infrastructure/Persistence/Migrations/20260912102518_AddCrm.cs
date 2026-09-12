@@ -31,11 +31,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
             migrationBuilder.EnsureSchema(
                 name: "crm");
 
-            migrationBuilder.AddUniqueConstraint(
-                name: "ak_products_agency_id_id",
-                schema: "catalog",
-                table: "products",
-                columns: new[] { "agency_id", "id" });
+            // catalog.products (agency_id, id) is what a tenant-scoped foreign key points at, and it
+            // is created by AddGroupDepartures, which runs before this. Both migrations were written
+            // on branches that could not see each other, and both needed it; adding it twice is what
+            // PostgreSQL refuses, so this one leaves it to the earlier migration.
 
             migrationBuilder.CreateTable(
                 name: "customers",
@@ -823,10 +822,7 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                 name: "customers",
                 schema: "crm");
 
-            migrationBuilder.DropUniqueConstraint(
-                name: "ak_products_agency_id_id",
-                schema: "catalog",
-                table: "products");
+            // The alternate key above is dropped by AddGroupDepartures, which added it.
 
             migrationBuilder.DropIndex(
                 name: "ix_orders_agency_id_customer_id",

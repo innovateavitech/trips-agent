@@ -93,6 +93,18 @@ The source of truth is `RetentionCatalogue.Tables` in
 | `catalog.visa_details` | No | With their product | Kept | What a visa product says about the visa |
 | `catalog.visa_document_requirements` | No | With their product | Kept | The applicant's checklist: a list of documents, not anyone's documents |
 
+### Group departures
+
+| Table | Personal data | Kept for | Treatment | Why |
+|---|---|---|---|---|
+| `catalog.departures` | No | With their product | Kept | A dated run of a tour; order lines freeze their own price, so this is not a financial record |
+| `catalog.departure_price_tiers` | No | With their departure | Kept | Current prices only; a quote or order line froze its own copy |
+| `catalog.installment_plans` | No | With their departure | Kept | How a departure is paid for: terms, not anybody's payments |
+| `catalog.installment_schedule_items` | No | With their plan | Kept | The payments the balance is split into, as offsets; replaced whenever the departure is saved |
+| `catalog.departure_holds` | No | With their cart | Purged | Deleted by the cart's `ON DELETE CASCADE`; a hold on a cart that became nothing is not a record of anything |
+| `catalog.departure_waitlist` | Yes — name, email | While the departure exists | Kept | Somebody asked to be told about a seat. Considered and left alone for the MVP: a candidate for anonymisation once counsel reviews the schedule |
+| `catalog.pax_manifests` | No | With their order line | Kept | Which departure a booked traveller is on, and their room; their own details live on `orders.order_travellers` |
+
 ### Supplier bookings
 
 | Table | Personal data | Kept for | Treatment | Why |

@@ -109,6 +109,21 @@ public interface IAppDbContext
     /// <summary>Each agency's own categories and themes.</summary>
     public DbSet<ProductCategory> ProductCategories { get; }
 
+    /// <summary>
+    /// Dated runs of a tour or package, sold by the seat. Load one with its tiers and its
+    /// installment plan to change it: a save replaces the whole departure.
+    /// </summary>
+    public DbSet<Departure> Departures { get; }
+
+    /// <summary>Seats held for a cart during checkout. Released by job 6 when they time out.</summary>
+    public DbSet<DepartureHold> DepartureHolds { get; }
+
+    /// <summary>Who is waiting for a seat on a full departure, and in what order.</summary>
+    public DbSet<DepartureWaitlistEntry> DepartureWaitlist { get; }
+
+    /// <summary>Who is on a departure, and which room they are in.</summary>
+    public DbSet<PaxManifestEntry> PaxManifests { get; }
+
     /// <summary>Every message sent to anyone, and what happened to it. Tenant-scoped.</summary>
     public DbSet<Notification> Notifications { get; }
 

@@ -251,6 +251,27 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <summary>A product's itinerary days. Written only through <see cref="Product"/>.</summary>
     public DbSet<TourItineraryDay> TourItineraryDays => Set<TourItineraryDay>();
 
+    /// <inheritdoc />
+    public DbSet<Departure> Departures => Set<Departure>();
+
+    /// <summary>A departure's price ladder. Written only through <see cref="Departure"/>.</summary>
+    public DbSet<DeparturePriceTier> DeparturePriceTiers => Set<DeparturePriceTier>();
+
+    /// <summary>A departure's installment terms. Written only through <see cref="Departure"/>.</summary>
+    public DbSet<InstallmentPlan> InstallmentPlans => Set<InstallmentPlan>();
+
+    /// <summary>The payments a plan is split into. Written only through <see cref="InstallmentPlan"/>.</summary>
+    public DbSet<InstallmentScheduleItem> InstallmentScheduleItems => Set<InstallmentScheduleItem>();
+
+    /// <inheritdoc />
+    public DbSet<DepartureHold> DepartureHolds => Set<DepartureHold>();
+
+    /// <inheritdoc />
+    public DbSet<DepartureWaitlistEntry> DepartureWaitlist => Set<DepartureWaitlistEntry>();
+
+    /// <inheritdoc />
+    public DbSet<PaxManifestEntry> PaxManifests => Set<PaxManifestEntry>();
+
     /// <summary>Every notification queued, and what happened to it. Tenant-scoped.</summary>
     public DbSet<Notification> Notifications => Set<Notification>();
 

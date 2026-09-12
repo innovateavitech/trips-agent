@@ -139,6 +139,13 @@ public sealed class OrderTravellerConfiguration : IEntityTypeConfiguration<Order
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(traveller => traveller.OrderLineId).HasDatabaseName("ix_order_travellers_order_line_id");
+
+        // Leads with agency_id, like every tenant-scoped index. It replaces the plain agency_id index
+        // EF kept until the alternate key (agency_id, id) was added for the departures manifest's
+        // composite foreign key: a unique constraint is an index in PostgreSQL, but not one the
+        // model exposes, and TenantFilterCoverageTests reads the model.
+        builder.HasIndex(traveller => new { traveller.AgencyId, traveller.OrderLineId })
+            .HasDatabaseName("ix_order_travellers_agency_id_order_line_id");
     }
 }
 

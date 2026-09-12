@@ -161,6 +161,25 @@ public static partial class RetentionCatalogue
         new("catalog.visa_document_requirements", RetentionTreatment.Kept, "With their product",
             "The applicant's checklist: a list of documents, not anyone's documents."),
 
+        // ---------------------------------------------------------------- group departures
+        new("catalog.departures", RetentionTreatment.Kept, "With their product",
+            "A dated run of a tour. Order lines freeze their own price, so this is not a financial record."),
+        new("catalog.departure_price_tiers", RetentionTreatment.Kept, "With their departure",
+            "Current prices only. A quote or order line froze its own copy of the price it used."),
+        new("catalog.installment_plans", RetentionTreatment.Kept, "With their departure",
+            "How a departure is paid for. Terms, not anybody's payments."),
+        new("catalog.installment_schedule_items", RetentionTreatment.Kept, "With their plan",
+            "The payments the balance is split into, as offsets. Replaced whenever the departure is saved."),
+        new("catalog.departure_holds", RetentionTreatment.Purged, "With their cart",
+            "Deleted by the cart's ON DELETE CASCADE. A hold on a cart that became nothing is not a record of anything.",
+            PurgedWith: "orders.carts"),
+        new("catalog.departure_waitlist", RetentionTreatment.Kept,
+            "While the departure exists",
+            "Holds a name and an email somebody gave to be told about a seat. Considered and left alone for the MVP: "
+            + "a candidate for anonymisation once counsel reviews the schedule (build plan decision 26)."),
+        new("catalog.pax_manifests", RetentionTreatment.Kept, "With their order line",
+            "Which departure a booked traveller is on, and their room. The traveller's own details live on orders.order_travellers."),
+
         // ---------------------------------------------------------------- supplier bookings
         new("supplier.supplier_bookings", RetentionTreatment.Protected, SevenYears,
             "The booking with the airline or operator — the cost side of the order line."),

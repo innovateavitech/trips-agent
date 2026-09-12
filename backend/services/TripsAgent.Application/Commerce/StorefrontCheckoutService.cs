@@ -427,10 +427,6 @@ public sealed partial class StorefrontCheckoutService
                 cart.LinkCustomer(customer.Id);
                 cart.Convert(order.Id, now);
 
-                // The link the traveller manages the booking with, issued now so the confirmation
-                // email has one to carry.
-                _links.Issue(order.AgencyId, order.Id, now);
-
                 await _db.SaveChangesAsync(token);
 
                 // After the save, because a schedule names the order line it bills, and the line

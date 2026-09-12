@@ -124,6 +124,12 @@ public static class NotificationTemplateCatalog
     public const string DepartureCancelled = "departure.cancelled";
 
     /// <summary>
+    /// The link a traveller manages their own booking with, sent once their payment has gone through
+    /// (build plan F5, decision 21 — there are no traveller accounts to sign in to).
+    /// </summary>
+    public const string BookingManageLink = "booking.manage-link";
+
+    /// <summary>
     /// A quote the agency has sent to one of its own customers (#62). The customer's link to it is the
     /// whole point of the email, and it goes to the agency's own storefront — never to ours.
     /// </summary>
@@ -634,6 +640,40 @@ public static class NotificationTemplateCatalog
 
                   Suggested action: call the traveller, and either take the payment or release the
                   seat so somebody on the waitlist can have it.
+                  """),
+
+        // The traveller's own way back into their booking. It goes to the agency's own site, and the
+        // email says the agency's name: a traveller has no idea a platform is involved, and this is
+        // one of the places it would be easiest to give that away (CLAUDE.md rule 4).
+        TravellerFacing(
+            BookingManageLink,
+            version: 1,
+            subject: "Manage your booking with {{brandName}} — {{bookingReference}}",
+            tokens: ["bookingReference", "manageUrl"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Thank you — your payment has gone through, and we are confirming the details now.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>Reference</strong></td><td>{{bookingReference}}</td></tr>
+                  </table>
+                  <p>You can see your booking, and download your documents as they are ready, here:</p>
+                  <p><a href="{{manageUrl}}">Manage your booking</a></p>
+                  <p>Keep this link — it is how you get back in, and there is no password to remember.
+                     Reply to this email if anything looks wrong.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Thank you - your payment has gone through, and we are confirming the details now.
+
+                      Reference: {{bookingReference}}
+
+                  You can see your booking, and download your documents as they are ready, here:
+
+                      {{manageUrl}}
+
+                  Keep this link - it is how you get back in, and there is no password to remember.
+                  Reply to this email if anything looks wrong.
                   """),
 
         TravellerFacing(

@@ -75,6 +75,8 @@ public sealed partial class CustomerOrderPayments : IOrderPaymentSettlement
     private readonly IPlatformScope _platformScope;
     private readonly WalletTopUpService _credits;
     private readonly AgencyLineFulfilment _agencyLines;
+    private readonly BookingAccessLinks _links;
+    private readonly INotifier _notifications;
     private readonly IOutbox _outbox;
     private readonly IPlatformAlerter _alerter;
     private readonly IUniqueViolationDetector _uniqueViolations;
@@ -88,6 +90,8 @@ public sealed partial class CustomerOrderPayments : IOrderPaymentSettlement
         IPlatformScope platformScope,
         WalletTopUpService credits,
         AgencyLineFulfilment agencyLines,
+        BookingAccessLinks links,
+        INotifier notifications,
         IOutbox outbox,
         IPlatformAlerter alerter,
         IUniqueViolationDetector uniqueViolations,
@@ -100,6 +104,8 @@ public sealed partial class CustomerOrderPayments : IOrderPaymentSettlement
         _platformScope = platformScope;
         _credits = credits;
         _agencyLines = agencyLines;
+        _links = links;
+        _notifications = notifications;
         _outbox = outbox;
         _alerter = alerter;
         _uniqueViolations = uniqueViolations;
@@ -240,7 +246,11 @@ public sealed partial class CustomerOrderPayments : IOrderPaymentSettlement
         {
             try
             {
-                await _transactions.RunAsync(token => FundOnceAsync(payment, token), cancellationToken);
+                if (await _transactions.RunAsync(token => FundOnceAsync(payment, token), cancellationToken))
+                {
+                    await SendBookingLinkAsync(payment, cancellationToken);
+                }
+
                 return;
             }
             catch (DbUpdateConcurrencyException) when (attempt < MaxAttempts)
@@ -347,6 +357,78 @@ public sealed partial class CustomerOrderPayments : IOrderPaymentSettlement
     }
 
     /// <summary>
+    /// Emails the traveller the link they manage their booking with (decision 21).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A second, small save after the funding, rather than part of it: funding is the money path and
+    /// owns its own transaction and retries, and an email has no business being able to fail it. The
+    /// cost is a narrow window — the process dying between the two — in which the booking stands and
+    /// the link is never sent. The traveller can be sent one again from the console.
+    /// </para>
+    /// <para>
+    /// Keyed on the order, so a webhook and the traveller's own return page racing to settle the same
+    /// payment can never send two.
+    /// </para>
+    /// </remarks>
+    private async Task SendBookingLinkAsync(PaymentTransaction payment, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var order = await _db.Orders.AsNoTracking()
+                .Where(candidate => candidate.Id == payment.OrderId)
+                .Select(candidate => new { candidate.Id, candidate.AgencyId, candidate.OrderNumber, candidate.CustomerId })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (order is null)
+            {
+                return;
+            }
+
+            var customer = await _db.Customers.AsNoTracking()
+                .Where(candidate => candidate.Id == order.CustomerId)
+                .Select(candidate => new { candidate.Name, candidate.Email })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (customer is null || string.IsNullOrWhiteSpace(customer.Email))
+            {
+                // Nowhere to send it. The booking stands, and the agent has the traveller's details.
+                return;
+            }
+
+            var url = await _links.UrlForAsync(order.AgencyId, order.Id, cancellationToken);
+
+            if (url is null)
+            {
+                return;
+            }
+
+            await _notifications.QueueEmailAsync(
+                new EmailNotificationRequest(
+                    order.AgencyId,
+                    NotificationTemplateCatalog.BookingManageLink,
+                    customer.Email,
+                    customer.Name,
+                    new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        ["bookingReference"] = order.OrderNumber,
+                        ["manageUrl"] = url,
+                    },
+                    DedupeKey: $"{NotificationTemplateCatalog.BookingManageLink}:{order.Id}"),
+                cancellationToken);
+
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The money is in and the booking is on its way; nothing after that commits may fail it.
+            // Discard whatever was staged so no later save on this context tries it again.
+            _db.ChangeTracker.Clear();
+            LogLinkFailed(_logger, ex, payment.Reference);
+        }
+    }
+
+    /// <summary>
     /// How long a line's money stays held before the sweeper may give it back.
     /// </summary>
     /// <remarks>
@@ -398,4 +480,8 @@ public sealed partial class CustomerOrderPayments : IOrderPaymentSettlement
     [LoggerMessage(Level = LogLevel.Critical,
         Message = "Could not raise the alert for customer payment {Reference}, held for review.")]
     private static partial void LogAlertFailed(ILogger logger, Exception exception, string reference);
+
+    [LoggerMessage(Level = LogLevel.Error,
+        Message = "Could not send the manage-my-booking link for payment {Reference}. The booking stands.")]
+    private static partial void LogLinkFailed(ILogger logger, Exception exception, string reference);
 }

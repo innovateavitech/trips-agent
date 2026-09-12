@@ -34,6 +34,7 @@ public sealed class PublicStorefrontEndpointTests : IClassFixture<RedisFixture>,
     private const string SitePath = "/api/v1/public/storefront/site";
     private const string CatalogPath = "/api/v1/public/storefront/catalog";
     private const string SitemapPath = "/api/v1/public/storefront/sitemap";
+    private const string GridPath = "/api/v1/public/storefront/grid";
 
     private const string LagosHost = "lagos-travel.localhost";
     private const string LagosSecondHost = "www.lagostravel.test";
@@ -313,6 +314,64 @@ public sealed class PublicStorefrontEndpointTests : IClassFixture<RedisFixture>,
     }
 
     [Fact]
+    public async Task A_product_grid_shows_what_the_published_page_puts_in_it()
+    {
+        // The home page's second block is a grid of the newest products (the template's own layout).
+        var grid = await Get<PublicProductGridResponse>($"{GridPath}?page=home&block=2", LagosHost);
+
+        grid.Products.Should().NotBeEmpty();
+        grid.Products.Should().OnlyContain(product => product.Title.StartsWith("Kano") || product.Title.StartsWith("UK"));
+        grid.Products.Should().NotContain(product => product.Title.Contains("Unfinished"));
+    }
+
+    [Fact]
+    public async Task A_grid_that_is_not_there_is_empty_rather_than_an_error()
+    {
+        // A page that does not exist, a position with nothing at it, and a position holding a block
+        // of some other kind. None of the three may take the page down: a section goes missing, and
+        // the rest of the site renders.
+        foreach (var query in new[] { "?page=nowhere&block=0", "?page=home&block=99", "?page=home&block=0" })
+        {
+            var grid = await Get<PublicProductGridResponse>($"{GridPath}{query}", LagosHost);
+
+            grid.Products.Should().BeEmpty();
+        }
+    }
+
+    [Fact]
+    public async Task A_grid_on_a_hostname_nobody_has_claimed_has_no_website()
+    {
+        using var response = await GetAsync($"{GridPath}?page=home&block=2", "somebody-elses-domain.test");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task An_image_the_site_refers_to_comes_back_with_a_link_to_it()
+    {
+        var site = await GetSiteAsync(LagosHost);
+
+        // The snapshot keeps asset ids, because a signed link expires and a published version does
+        // not. Every id the page will need has to arrive with a link beside it, or the renderer has
+        // no way to ask for one.
+        var referenced = site.Content.Pages
+            .SelectMany(page => page.Blocks)
+            .Select(block => block.Hero?.ImageAssetId)
+            .OfType<Guid>()
+            .Concat(site.Theme.LogoAssetId is { } logo ? [logo] : Array.Empty<Guid>())
+            .Distinct()
+            .ToList();
+
+        foreach (var assetId in referenced)
+        {
+            site.Images.Should().ContainKey(assetId.ToString());
+        }
+
+        // And nothing else: the map is what this page refers to, not a directory of the agency's files.
+        site.Images.Keys.Should().OnlyContain(key => referenced.Any(id => id.ToString() == key));
+    }
+
+    [Fact]
     public async Task The_sitemap_lists_the_sites_pages_and_its_products_against_its_main_address()
     {
         var sitemap = await Get<PublicSitemapResponse>(SitemapPath, LagosSecondHost);
@@ -355,9 +414,9 @@ public sealed class PublicStorefrontEndpointTests : IClassFixture<RedisFixture>,
     }
 
     /// <summary>An image that went through the whole pipeline: uploaded, scanned clean, processed.</summary>
-    private static Asset ReadyImage(Guid agencyId)
+    private static Asset ReadyImage(Guid agencyId, AssetPurpose purpose = AssetPurpose.ProductMedia)
     {
-        var asset = Asset.Reserve(agencyId, AssetPurpose.ProductMedia, "photo.jpg", Now.AddMinutes(15));
+        var asset = Asset.Reserve(agencyId, purpose, "photo.jpg", Now.AddMinutes(15));
         asset.RecordUpload("image/jpeg", 250_000);
         asset.TryBeginProcessing(Now);
         asset.RecordCleanScan(Now);
@@ -365,6 +424,29 @@ public sealed class PublicStorefrontEndpointTests : IClassFixture<RedisFixture>,
 
         return asset;
     }
+
+    /// <summary>The processed sizes of an image, which is what a link is actually signed for.</summary>
+    private static AssetVariant[] Renditions(Asset asset) =>
+    [
+        AssetVariant.Create(
+            asset.AgencyId,
+            asset.Id,
+            AssetVariantKind.Medium,
+            AssetRules.VariantKey(asset.AgencyId, asset.Id, AssetVariantKind.Medium),
+            AssetRules.VariantContentType,
+            1_024,
+            683,
+            80_000),
+        AssetVariant.Create(
+            asset.AgencyId,
+            asset.Id,
+            AssetVariantKind.Large,
+            AssetRules.VariantKey(asset.AgencyId, asset.Id, AssetVariantKind.Large),
+            AssetRules.VariantContentType,
+            1_600,
+            1_067,
+            180_000),
+    ];
 
     private static Agency Verified(Agency agency)
     {
@@ -413,11 +495,32 @@ public sealed class PublicStorefrontEndpointTests : IClassFixture<RedisFixture>,
             return;
         }
 
+        var heroImage = ReadyImage(agency.Id, AssetPurpose.SiteMedia);
+        db.Assets.Add(heroImage);
+        db.AssetVariants.AddRange(Renditions(heroImage));
+
         var content = SiteSnapshots.Serialize(new SiteContentSnapshot(
             SiteSnapshots.SchemaVersion,
             new SiteSnapshotSettings(agency.LegalName, "en", null, null, false),
             new SiteSnapshotBusiness(null, "hello@agency.test", null, null, []),
-            [new SiteSnapshotPage(SitePageRules.HomeSlug, "Home", "Home", true, 0, null, null, [])]));
+            [
+                new SiteSnapshotPage(
+                    SitePageRules.HomeSlug,
+                    "Home",
+                    "Home",
+                    true,
+                    0,
+                    null,
+                    null,
+                    // Block 0 is not a grid and block 1 is, which is what the grid tests read back.
+                    [
+                        SiteBlocks.Text(new TextBlockConfig(null, $"Welcome to {agency.LegalName}.")),
+                        SiteBlocks.Hero(
+                            new HeroBlockConfig("Travel well", null, heroImage.Id, null, null)),
+                        SiteBlocks.ProductGrid(
+                            new ProductGridBlockConfig("Popular right now", SiteBlocks.LatestMode, null, [], 6)),
+                    ]),
+            ]));
 
         var theme = SiteSnapshots.Serialize(new SiteThemeSnapshot(
             SiteSnapshots.SchemaVersion, "horizon", null, "#1F2933", null, SiteFonts.DefaultHeading, SiteFonts.Body));
@@ -438,6 +541,10 @@ public sealed class PublicStorefrontEndpointTests : IClassFixture<RedisFixture>,
         var tourImage = ReadyImage(agencyId);
         var visaImage = ReadyImage(agencyId);
         db.Assets.AddRange(tourImage, visaImage);
+
+        // Without its renditions an image has no link to sign, so it would be quietly absent from
+        // every page — and a test that never noticed would be proving nothing.
+        db.AssetVariants.AddRange([.. Renditions(tourImage), .. Renditions(visaImage)]);
 
         var tour = Product.CreateDraft(
             agencyId,

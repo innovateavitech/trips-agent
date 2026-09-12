@@ -90,6 +90,12 @@ public sealed record SiteSnapshotPage(
 /// <param name="PrimaryHostname">The host canonical URLs point at.</param>
 /// <param name="Indexable">Whether search engines may index this host: a live site on its main address.</param>
 /// <param name="Content">Pages are empty unless the site is live or previewed.</param>
+/// <param name="Images">
+/// A signed link for every image the site refers to by asset id — its logo and each hero — keyed by
+/// that id as a string. The snapshot keeps ids rather than links because a link is signed and expires;
+/// this map is built fresh on every request so the renderer never has to ask for one itself, and an
+/// image that has not been scanned clean is simply missing from it.
+/// </param>
 public sealed record PublicSiteResponse(
     string Status,
     Guid SiteId,
@@ -100,4 +106,5 @@ public sealed record PublicSiteResponse(
     int? VersionNumber,
     DateTimeOffset? PublishedAt,
     SiteContentSnapshot Content,
-    SiteThemeSnapshot Theme);
+    SiteThemeSnapshot Theme,
+    IReadOnlyDictionary<string, string> Images);

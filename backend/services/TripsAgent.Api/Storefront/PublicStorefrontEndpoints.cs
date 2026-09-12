@@ -140,6 +140,49 @@ public static class PublicStorefrontEndpoints
             .Produces<PublicProductResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        group.MapGet("/grid", async (
+                HttpContext http,
+                PublicSiteResolver resolver,
+                PublicSiteService sites,
+                PublicCatalogService catalog,
+                CancellationToken cancellationToken,
+                [FromQuery] string page,
+                [FromQuery] int block) =>
+            {
+                var route = await resolver.ResolveAsync(http.Request.Host.Value, cancellationToken);
+
+                if (route is null || !route.Serveable)
+                {
+                    return UnknownHost();
+                }
+
+                var site = await sites.GetAsync(route, PreviewTokenOf(http), cancellationToken);
+
+                // The block is found in the version being shown, so a preview's grids resolve against
+                // the draft the previewer is looking at rather than against what is published.
+                var config = site?.Content.Pages
+                    .FirstOrDefault(candidate => candidate.Slug == page)
+                    ?.Blocks
+                    .ElementAtOrDefault(block)
+                    ?.ProductGrid;
+
+                if (config is null)
+                {
+                    // No such page, or nothing at that position, or something there that is not a
+                    // grid. All three are "there is no grid here", which is an empty grid rather than
+                    // an error: a page with one section missing still renders.
+                    return Results.Ok(new PublicProductGridResponse([]));
+                }
+
+                Cache(http);
+
+                return Results.Ok(new PublicProductGridResponse(
+                    await catalog.ForGridAsync(config, cancellationToken)));
+            })
+            .WithName("GetPublicProductGrid")
+            .Produces<PublicProductGridResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         group.MapGet("/sitemap", async (
                 HttpContext http,
                 PublicSiteResolver resolver,

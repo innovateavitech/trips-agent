@@ -29,6 +29,10 @@ public sealed class PublicSiteService
     private static readonly AssetVariantKind[] LogoPreference =
         [AssetVariantKind.Medium, AssetVariantKind.Original, AssetVariantKind.Large, AssetVariantKind.Thumbnail];
 
+    /// <summary>A hero fills the width of the page, so it wants the largest rendition there is.</summary>
+    private static readonly AssetVariantKind[] HeroPreference =
+        [AssetVariantKind.Large, AssetVariantKind.Original, AssetVariantKind.Medium, AssetVariantKind.Thumbnail];
+
     private readonly IAppDbContext _db;
     private readonly AssetDelivery _delivery;
     private readonly SitePreviewTokens _previewTokens;
@@ -99,6 +103,8 @@ public sealed class PublicSiteService
             : null;
 
         var theme = SiteSnapshots.ReadTheme(version?.ThemeSnapshot);
+        var resolvedContent = content ?? Closed(site, branding);
+        var resolvedTheme = theme ?? await FallbackThemeAsync(site, branding, cancellationToken);
 
         return new PublicSiteResponse(
             status,
@@ -111,8 +117,9 @@ public sealed class PublicSiteService
             Indexable: status == PublicSiteStatuses.Live && route.IsPrimaryHostname,
             version?.VersionNumber,
             version?.PublishedAt,
-            content ?? Closed(site, branding),
-            theme ?? await FallbackThemeAsync(site, branding, cancellationToken));
+            resolvedContent,
+            resolvedTheme,
+            await ImagesAsync(resolvedContent, resolvedTheme, cancellationToken));
     }
 
     /// <summary>The site's canonical address, for canonical links and the sitemap.</summary>
@@ -149,6 +156,82 @@ public sealed class PublicSiteService
             .Select(kind => links.FirstOrDefault(link => link.Kind == kind))
             .FirstOrDefault(link => link is not null)
             ?.Url;
+    }
+
+    /// <summary>
+    /// A signed link for every image the page will need, in one pass: the logo, and each hero's image.
+    /// </summary>
+    /// <remarks>
+    /// The snapshot stores asset ids rather than links, because a link is signed and expires while a
+    /// published version does not. Resolving them here keeps the renderer to a single request and
+    /// keeps the signing in the one place that is allowed to do it. An asset that has not been scanned
+    /// clean gets no link, so it is simply absent and the page renders without it.
+    /// </remarks>
+    private async Task<IReadOnlyDictionary<string, string>> ImagesAsync(
+        SiteContentSnapshot content,
+        SiteThemeSnapshot theme,
+        CancellationToken cancellationToken)
+    {
+        var heroes = content.Pages
+            .SelectMany(page => page.Blocks)
+            .Select(block => block.Hero?.ImageAssetId)
+            .OfType<Guid>()
+            .Distinct()
+            .ToList();
+
+        var urls = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        // The logo wants a different rendition from a hero, so the two are resolved separately even
+        // though they land in the same map.
+        if (await LogoUrlAsync(theme.LogoAssetId, cancellationToken) is { } logoUrl)
+        {
+            urls[theme.LogoAssetId!.Value.ToString()] = logoUrl;
+        }
+
+        foreach (var (assetId, url) in await ImageUrlsAsync(heroes, HeroPreference, cancellationToken))
+        {
+            urls[assetId.ToString()] = url;
+        }
+
+        return urls;
+    }
+
+    /// <summary>A signed link for each of <paramref name="assetIds"/> that has one.</summary>
+    private async Task<IReadOnlyDictionary<Guid, string>> ImageUrlsAsync(
+        List<Guid> assetIds,
+        AssetVariantKind[] preference,
+        CancellationToken cancellationToken)
+    {
+        if (assetIds.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var assets = await _db.Assets.AsNoTracking()
+            .Where(asset => assetIds.Contains(asset.Id))
+            .ToListAsync(cancellationToken);
+
+        var variants = await _db.AssetVariants.AsNoTracking()
+            .Where(variant => assetIds.Contains(variant.AssetId))
+            .ToListAsync(cancellationToken);
+
+        var urls = new Dictionary<Guid, string>();
+
+        foreach (var asset in assets)
+        {
+            var links = await _delivery.LinksForAsync(asset, variants, cancellationToken);
+
+            var link = preference
+                .Select(kind => links.FirstOrDefault(candidate => candidate.Kind == kind))
+                .FirstOrDefault(candidate => candidate is not null);
+
+            if (link is not null)
+            {
+                urls[asset.Id] = link.Url;
+            }
+        }
+
+        return urls;
     }
 
     private Task<SiteVersion?> VersionAsync(Guid versionId, CancellationToken cancellationToken) =>

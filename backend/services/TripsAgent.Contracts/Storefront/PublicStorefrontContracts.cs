@@ -45,6 +45,17 @@ public sealed record PublicProductSummary(
     IReadOnlyList<string> Categories,
     string? ImageUrl);
 
+/// <summary>
+/// The products one product-grid block shows, resolved from the published snapshot.
+/// </summary>
+/// <remarks>
+/// The caller names the block by where it sits, not by what it should hold: which page, and which
+/// block on that page. What that grid means — the newest six tours, or these four in this order — is
+/// read from the version the agency published, so nobody can ask a site to show products its owner
+/// did not put on it.
+/// </remarks>
+public sealed record PublicProductGridResponse(IReadOnlyList<PublicProductSummary> Products);
+
 /// <summary>A page of the catalog, with the choices a traveller can narrow it by.</summary>
 /// <param name="Total">How many products match the filters, across every page.</param>
 public sealed record PublicCatalogResponse(

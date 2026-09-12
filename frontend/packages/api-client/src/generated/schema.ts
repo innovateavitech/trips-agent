@@ -583,6 +583,358 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/storefront/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSiteTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/site": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSite"];
+        put?: never;
+        post: operations["CreateSite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/site/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateSiteSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/theme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSiteTheme"];
+        put: operations["SaveSiteTheme"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/pages/{pageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSitePage"];
+        put: operations["SaveSitePage"];
+        post?: never;
+        delete: operations["DeleteSitePage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateSitePage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSiteVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/versions/stage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StageSite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/versions/{versionId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PublishSiteVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/versions/{versionId}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RollBackSiteVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/preview-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateSitePreviewLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSiteDomains"];
+        put?: never;
+        post: operations["AddSiteDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/domains/{domainId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["RemoveSiteDomain"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/domains/{domainId}/primary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MakeSiteDomainPrimary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/storefront/domains/{domainId}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CheckSiteDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/hostname-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListHostnameReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/hostname-reviews/{domainId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ApproveHostname"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/storefront/site": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPublicSite"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/storefront/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["BrowsePublicCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/storefront/catalog/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPublicProduct"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/storefront/grid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPublicProductGrid"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/storefront/sitemap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPublicSitemap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assets/limits": {
         parameters: {
             query?: never;
@@ -647,6 +999,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListProducts"];
+        put?: never;
+        post: operations["CreateProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetProduct"];
+        put: operations["SaveProduct"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PublishProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/unpublish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UnpublishProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ArchiveProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListProductCategories"];
+        put?: never;
+        post: operations["CreateProductCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/documents": {
         parameters: {
             query?: never;
@@ -683,6 +1131,9 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AddSiteDomainRequest: {
+            hostname: string;
+        };
         AssetLinkResponse: {
             kind: string;
             url: string;
@@ -892,10 +1343,35 @@ export interface components {
             availableSeats: number | string;
             seatNumbers: string[];
         };
+        CategoryRequest: {
+            name: string;
+            type: string;
+        };
+        CategoryResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            type: string;
+        };
         ConfirmPriceRequest: {
             /** Format: uuid */
             offerId: string;
             travellers: components["schemas"]["BookingTravellerRequest"][];
+        };
+        ContactBlockConfig: {
+            heading: string;
+            intro: null | string;
+            showEmail: boolean;
+            showPhone: boolean;
+            showWhatsApp: boolean;
+            showAddress: boolean;
+        };
+        CreateSitePageRequest: {
+            title: string;
+            slug: null | string;
+        };
+        CreateSiteRequest: {
+            templateCode: string;
         };
         CurrentUserResponse: {
             /** Format: uuid */
@@ -943,6 +1419,27 @@ export interface components {
         ForgotPasswordRequest: {
             email: string;
         };
+        HeroBlockConfig: {
+            heading: string;
+            subheading: null | string;
+            /** Format: uuid */
+            imageAssetId: null | string;
+            ctaLabel: null | string;
+            ctaHref: null | string;
+        };
+        HostnameReviewResponse: {
+            /** Format: uuid */
+            domainId: string;
+            hostname: string;
+            type: string;
+            verificationStatus: string;
+            needsReview: boolean;
+            /** Format: uuid */
+            agencyId: string;
+            agencyName: string;
+            /** Format: date-time */
+            claimedAt: string;
+        };
         HttpValidationProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -953,6 +1450,14 @@ export interface components {
             errors?: {
                 [key: string]: string[];
             };
+        };
+        InclusionRequest: {
+            kind: string;
+            text: string;
+        };
+        InclusionResponse: {
+            kind: string;
+            text: string;
         };
         InheritedMarkupRuleResponse: {
             /** Format: uuid */
@@ -979,6 +1484,22 @@ export interface components {
             /** Format: date-time */
             effectiveTo: null | string;
             summary: string;
+        };
+        ItineraryDayRequest: {
+            /** Format: int32 */
+            dayNumber: number | string;
+            title: string;
+            description: string;
+            meals: string[];
+            accommodation: string;
+        };
+        ItineraryDayResponse: {
+            /** Format: int32 */
+            dayNumber: number | string;
+            title: string;
+            description: string;
+            meals: string[];
+            accommodation: string;
         };
         KybDocumentResponse: {
             /** Format: uuid */
@@ -1220,6 +1741,30 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        PriceVariantRequest: {
+            name: string;
+            paxType: string;
+            /** Format: int32 */
+            occupancy: null | number | string;
+            /** Format: int32 */
+            minGroupSize: null | number | string;
+            /** Format: int32 */
+            maxGroupSize: null | number | string;
+            /** Format: int64 */
+            priceMinor: number | string;
+        };
+        PriceVariantResponse: {
+            name: string;
+            paxType: string;
+            /** Format: int32 */
+            occupancy: null | number | string;
+            /** Format: int32 */
+            minGroupSize: null | number | string;
+            /** Format: int32 */
+            maxGroupSize: null | number | string;
+            /** Format: int64 */
+            priceMinor: number | string;
+        };
         PricingSettingsResponse: {
             currency: string;
             /** Format: int32 */
@@ -1238,6 +1783,239 @@ export interface components {
             status?: null | number | string;
             detail?: null | string;
             instance?: null | string;
+        };
+        ProductGridBlockConfig: {
+            heading: string;
+            mode: string;
+            productType: null | string;
+            productIds: string[];
+            /** Format: int32 */
+            limit: number | string;
+        };
+        ProductMediaRequest: {
+            /** Format: uuid */
+            assetId: string;
+            caption: string;
+        };
+        ProductMediaResponse: {
+            /** Format: uuid */
+            assetId: string;
+            caption: string;
+            previewUrl: null | string;
+        };
+        ProductRequest: {
+            productType: string;
+            title: string;
+            slug: null | string;
+            summary: string;
+            description: string;
+            destinationCountry: string;
+            destinationCity: string;
+            /** Format: int32 */
+            durationDays: null | number | string;
+            currency: string;
+            /** Format: int64 */
+            basePriceMinor: number | string;
+            /** Format: date */
+            availableFrom: null | string;
+            /** Format: date */
+            availableTo: null | string;
+            /** Format: uuid */
+            heroAssetId: null | string;
+            media: components["schemas"]["ProductMediaRequest"][];
+            categoryIds: string[];
+            itinerary: components["schemas"]["ItineraryDayRequest"][];
+            inclusions: components["schemas"]["InclusionRequest"][];
+            priceVariants: components["schemas"]["PriceVariantRequest"][];
+            visa: null | components["schemas"]["VisaDetailsRequest"];
+        };
+        ProductResponse: {
+            /** Format: uuid */
+            id: string;
+            productType: string;
+            title: string;
+            slug: string;
+            summary: string;
+            description: string;
+            destinationCountry: string;
+            destinationCity: string;
+            /** Format: int32 */
+            durationDays: null | number | string;
+            currency: string;
+            /** Format: int64 */
+            basePriceMinor: number | string;
+            /** Format: date */
+            availableFrom: null | string;
+            /** Format: date */
+            availableTo: null | string;
+            /** Format: uuid */
+            heroAssetId: null | string;
+            media: components["schemas"]["ProductMediaResponse"][];
+            categoryIds: string[];
+            itinerary: components["schemas"]["ItineraryDayResponse"][];
+            inclusions: components["schemas"]["InclusionResponse"][];
+            priceVariants: components["schemas"]["PriceVariantResponse"][];
+            visa: null | components["schemas"]["VisaDetailsResponse"];
+            status: string;
+            /** Format: date-time */
+            publishedAt: null | string;
+            /** Format: date-time */
+            updatedAt: string;
+            publishProblems: components["schemas"]["PublishProblemResponse"][];
+        };
+        ProductSummaryResponse: {
+            /** Format: uuid */
+            id: string;
+            productType: string;
+            title: string;
+            slug: string;
+            status: string;
+            destinationCity: string;
+            destinationCountry: string;
+            /** Format: int32 */
+            durationDays: null | number | string;
+            /** Format: int64 */
+            basePriceMinor: number | string;
+            currency: string;
+            heroPreviewUrl: null | string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: int32 */
+            publishProblemCount: number | string;
+        };
+        PublicCatalogFilters: {
+            productTypes: string[];
+            destinations: string[];
+            categories: string[];
+            /** Format: int64 */
+            minPriceMinor: null | number | string;
+            /** Format: int64 */
+            maxPriceMinor: null | number | string;
+        };
+        PublicCatalogResponse: {
+            products: components["schemas"]["PublicProductSummary"][];
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            filters: components["schemas"]["PublicCatalogFilters"];
+        };
+        PublicInclusion: {
+            kind: string;
+            text: string;
+        };
+        PublicItineraryDay: {
+            /** Format: int32 */
+            dayNumber: number | string;
+            title: string;
+            description: string;
+            meals: string[];
+            accommodation: string;
+        };
+        PublicPriceOption: {
+            name: string;
+            paxType: string;
+            /** Format: int32 */
+            occupancy: null | number | string;
+            /** Format: int64 */
+            priceMinor: number | string;
+        };
+        PublicProductGridResponse: {
+            products: components["schemas"]["PublicProductSummary"][];
+        };
+        PublicProductImage: {
+            url: string;
+            caption: string;
+        };
+        PublicProductResponse: {
+            slug: string;
+            productType: string;
+            title: string;
+            summary: string;
+            description: string;
+            destinationCity: string;
+            destinationCountry: string;
+            /** Format: int32 */
+            durationDays: null | number | string;
+            currency: string;
+            /** Format: int64 */
+            fromPriceMinor: number | string;
+            /** Format: date */
+            availableFrom: null | string;
+            /** Format: date */
+            availableTo: null | string;
+            categories: string[];
+            images: components["schemas"]["PublicProductImage"][];
+            itinerary: components["schemas"]["PublicItineraryDay"][];
+            inclusions: components["schemas"]["PublicInclusion"][];
+            prices: components["schemas"]["PublicPriceOption"][];
+            visa: null | components["schemas"]["PublicVisaDetails"];
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PublicProductSummary: {
+            slug: string;
+            productType: string;
+            title: string;
+            summary: string;
+            destinationCity: string;
+            destinationCountry: string;
+            /** Format: int32 */
+            durationDays: null | number | string;
+            currency: string;
+            /** Format: int64 */
+            fromPriceMinor: number | string;
+            categories: string[];
+            imageUrl: null | string;
+        };
+        PublicSiteResponse: {
+            status: string;
+            /** Format: uuid */
+            siteId: string;
+            hostname: string;
+            primaryHostname: string;
+            isPrimaryHostname: boolean;
+            indexable: boolean;
+            /** Format: int32 */
+            versionNumber: null | number | string;
+            /** Format: date-time */
+            publishedAt: null | string;
+            content: components["schemas"]["SiteContentSnapshot"];
+            theme: components["schemas"]["SiteThemeSnapshot"];
+            images: {
+                [key: string]: string;
+            };
+        };
+        PublicSitemapEntry: {
+            path: string;
+            /** Format: date-time */
+            lastModified: string;
+            changeFrequency: string;
+        };
+        PublicSitemapResponse: {
+            baseUrl: string;
+            entries: components["schemas"]["PublicSitemapEntry"][];
+        };
+        PublicVisaDetails: {
+            visaType: string;
+            entryType: string;
+            /** Format: int32 */
+            processingTimeDays: number | string;
+            /** Format: int32 */
+            validityDays: number | string;
+            /** Format: int64 */
+            totalFeeMinor: number | string;
+            documents: components["schemas"]["PublicVisaDocument"][];
+        };
+        PublicVisaDocument: {
+            label: string;
+            isMandatory: boolean;
+        };
+        PublishProblemResponse: {
+            field: string;
+            message: string;
         };
         RefreshTokenRequest: {
             refreshToken: string;
@@ -1274,6 +2052,16 @@ export interface components {
         ResolveBookingRequest: {
             action: string;
         };
+        SaveSitePageRequest: {
+            title: string;
+            slug: null | string;
+            showInNav: boolean;
+            metaTitle: null | string;
+            metaDescription: null | string;
+            /** Format: int32 */
+            revision: number | string;
+            blocks: components["schemas"]["SitePageBlockRequest"][];
+        };
         SearchLegRequest: {
             origin: string;
             destination: string;
@@ -1299,6 +2087,230 @@ export interface components {
             fromCache: boolean;
             offers: components["schemas"]["SearchOfferResponse"][];
         };
+        SiteBlockDto: {
+            type: string;
+            hero: null | components["schemas"]["HeroBlockConfig"];
+            productGrid: null | components["schemas"]["ProductGridBlockConfig"];
+            text: null | components["schemas"]["TextBlockConfig"];
+            contact: null | components["schemas"]["ContactBlockConfig"];
+        };
+        SiteContentSnapshot: {
+            /** Format: int32 */
+            schemaVersion: number | string;
+            site: components["schemas"]["SiteSnapshotSettings"];
+            business: components["schemas"]["SiteSnapshotBusiness"];
+            pages: components["schemas"]["SiteSnapshotPage"][];
+        };
+        SiteDnsRecordResponse: {
+            recordType: string;
+            name: string;
+            hostLabel: string;
+            value: string;
+            purpose: string;
+        };
+        SiteDomainCheckResponse: {
+            /** Format: date-time */
+            checkedAt: string;
+            recordType: string;
+            recordName: string;
+            expected: string;
+            observed: string[];
+            outcome: string;
+            resolver: string;
+            detail: null | string;
+        };
+        SiteDomainResponse: {
+            /** Format: uuid */
+            id: string;
+            hostname: string;
+            type: string;
+            isPrimary: boolean;
+            needsReview: boolean;
+            verificationStatus: string;
+            sslStatus: string;
+            /** Format: date-time */
+            verifiedAt: null | string;
+            /** Format: date-time */
+            lastCheckedAt: null | string;
+            /** Format: date-time */
+            nextCheckAt: null | string;
+            /** Format: date-time */
+            sslExpiresAt: null | string;
+            sslLastError: null | string;
+            dnsRecords: components["schemas"]["SiteDnsRecordResponse"][];
+            recentChecks: components["schemas"]["SiteDomainCheckResponse"][];
+            canRemove: boolean;
+            canMakePrimary: boolean;
+            canCheckNow: boolean;
+        };
+        SitePageBlockRequest: {
+            /** Format: uuid */
+            id: null | string;
+            block: components["schemas"]["SiteBlockDto"];
+        };
+        SitePageBlockResponse: {
+            /** Format: uuid */
+            id: string;
+            block: components["schemas"]["SiteBlockDto"];
+        };
+        SitePageResponse: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            pageType: string;
+            title: string;
+            isSystem: boolean;
+            showInNav: boolean;
+            /** Format: int32 */
+            position: number | string;
+            metaTitle: null | string;
+            metaDescription: null | string;
+            /** Format: int32 */
+            revision: number | string;
+            blocks: components["schemas"]["SitePageBlockResponse"][];
+        };
+        SitePageSummaryResponse: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            pageType: string;
+            title: string;
+            isSystem: boolean;
+            showInNav: boolean;
+            /** Format: int32 */
+            position: number | string;
+            /** Format: int32 */
+            blockCount: number | string;
+        };
+        SitePreviewLinkRequest: {
+            /** Format: uuid */
+            versionId: null | string;
+        };
+        SitePreviewLinkResponse: {
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        SitePublishCheckResponse: {
+            canPublish: boolean;
+            problems: components["schemas"]["SitePublishProblemResponse"][];
+        };
+        SitePublishProblemResponse: {
+            code: string;
+            message: string;
+        };
+        SiteResponse: {
+            /** Format: uuid */
+            id: string;
+            status: string;
+            templateCode: string;
+            templateName: string;
+            settings: components["schemas"]["SiteSettingsResponse"];
+            pages: components["schemas"]["SitePageSummaryResponse"][];
+            staged: null | components["schemas"]["SiteVersionResponse"];
+            published: null | components["schemas"]["SiteVersionResponse"];
+            hasUnstagedChanges: boolean;
+            hasUnpublishedChanges: boolean;
+            publishCheck: components["schemas"]["SitePublishCheckResponse"];
+            primaryHostname: null | string;
+            siteUrl: null | string;
+        };
+        SiteSettingsRequest: {
+            name: string;
+            seoTitle: null | string;
+            seoDescription: null | string;
+            flightSearchEnabled: boolean;
+            contactEmail: null | string;
+            contactPhone: null | string;
+            whatsAppNumber: null | string;
+            contactAddress: null | string;
+            socialLinks: components["schemas"]["SiteSocialLinkDto"][];
+        };
+        SiteSettingsResponse: {
+            name: string;
+            seoTitle: null | string;
+            seoDescription: null | string;
+            flightSearchEnabled: boolean;
+            contactEmail: null | string;
+            contactPhone: null | string;
+            whatsAppNumber: null | string;
+            contactAddress: null | string;
+            socialLinks: components["schemas"]["SiteSocialLinkDto"][];
+        };
+        SiteSnapshotBusiness: {
+            contactAddress: null | string;
+            email: null | string;
+            phone: null | string;
+            whatsApp: null | string;
+            socialLinks: components["schemas"]["SiteSocialLinkDto"][];
+        };
+        SiteSnapshotPage: {
+            slug: string;
+            pageType: string;
+            title: string;
+            showInNav: boolean;
+            /** Format: int32 */
+            position: number | string;
+            metaTitle: null | string;
+            metaDescription: null | string;
+            blocks: components["schemas"]["SiteBlockDto"][];
+        };
+        SiteSnapshotSettings: {
+            name: string;
+            language: string;
+            seoTitle: null | string;
+            seoDescription: null | string;
+            flightSearchEnabled: boolean;
+        };
+        SiteSocialLinkDto: {
+            network: string;
+            url: string;
+        };
+        SiteTemplateResponse: {
+            code: string;
+            name: string;
+            description: string;
+            pageTitles: string[];
+        };
+        SiteThemeRequest: {
+            /** Format: uuid */
+            logoAssetId: null | string;
+            primaryColor: string;
+            secondaryColor: null | string;
+        };
+        SiteThemeResponse: {
+            /** Format: uuid */
+            logoAssetId: null | string;
+            logoPreviewUrl: null | string;
+            primaryColor: string;
+            secondaryColor: null | string;
+        };
+        SiteThemeSnapshot: {
+            /** Format: int32 */
+            schemaVersion: number | string;
+            templateCode: string;
+            /** Format: uuid */
+            logoAssetId: null | string;
+            primaryColor: string;
+            secondaryColor: null | string;
+            headingFont: string;
+            bodyFont: string;
+        };
+        SiteVersionResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            versionNumber: number | string;
+            status: string;
+            /** Format: date-time */
+            stagedAt: null | string;
+            stagedBy: null | string;
+            /** Format: date-time */
+            publishedAt: null | string;
+            publishedBy: null | string;
+            canRollBackTo: boolean;
+            isLive: boolean;
+        };
         StartTopUpRequest: {
             /** Format: int64 */
             amountMinor: number | string;
@@ -1306,6 +2318,10 @@ export interface components {
         StartTopUpResponse: {
             authorizationUrl: string;
             reference: string;
+        };
+        TextBlockConfig: {
+            heading: null | string;
+            body: string;
         };
         TokenPairResponse: {
             accessToken: string;
@@ -1329,6 +2345,40 @@ export interface components {
             reference: string;
             /** Format: int64 */
             amountMinor: null | number | string;
+        };
+        VisaDetailsRequest: {
+            visaType: string;
+            entryType: string;
+            /** Format: int32 */
+            processingTimeDays: number | string;
+            /** Format: int32 */
+            validityDays: number | string;
+            /** Format: int64 */
+            consularFeeMinor: number | string;
+            /** Format: int64 */
+            serviceFeeMinor: number | string;
+            documents: components["schemas"]["VisaDocumentRequest"][];
+        };
+        VisaDetailsResponse: {
+            visaType: string;
+            entryType: string;
+            /** Format: int32 */
+            processingTimeDays: number | string;
+            /** Format: int32 */
+            validityDays: number | string;
+            /** Format: int64 */
+            consularFeeMinor: number | string;
+            /** Format: int64 */
+            serviceFeeMinor: number | string;
+            documents: components["schemas"]["VisaDocumentResponse"][];
+        };
+        VisaDocumentRequest: {
+            label: string;
+            isMandatory: boolean;
+        };
+        VisaDocumentResponse: {
+            label: string;
+            isMandatory: boolean;
         };
         WalletBalanceResponse: {
             /** Format: int64 */
@@ -2502,6 +3552,998 @@ export interface operations {
             };
         };
     };
+    ListSiteTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteTemplateResponse"][];
+                };
+            };
+        };
+    };
+    GetSite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateSite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSiteRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateSiteSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetSiteTheme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteThemeResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SaveSiteTheme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteThemeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteThemeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetSitePage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SitePageResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SaveSitePage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveSitePageRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SitePageResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeleteSitePage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateSitePage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSitePageRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SitePageResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListSiteVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteVersionResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    StageSite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteVersionResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    PublishSiteVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteVersionResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RollBackSiteVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteVersionResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateSitePreviewLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SitePreviewLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SitePreviewLinkResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListSiteDomains: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteDomainResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AddSiteDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddSiteDomainRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteDomainResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RemoveSiteDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    MakeSiteDomainPrimary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteDomainResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CheckSiteDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SiteDomainResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListHostnameReviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HostnameReviewResponse"][];
+                };
+            };
+        };
+    };
+    ApproveHostname: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HostnameReviewResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetPublicSite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicSiteResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    BrowsePublicCatalog: {
+        parameters: {
+            query?: {
+                type?: string;
+                destination?: string;
+                category?: string;
+                minPrice?: number | string;
+                maxPrice?: number | string;
+                q?: string;
+                page?: number | string;
+                pageSize?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCatalogResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetPublicProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicProductResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetPublicProductGrid: {
+        parameters: {
+            query: {
+                page: string;
+                block: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicProductGridResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetPublicSitemap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicSitemapResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     GetAssetUploadLimits: {
         parameters: {
             query?: never;
@@ -2626,6 +4668,365 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListProducts: {
+        parameters: {
+            query?: {
+                type?: string;
+                status?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductSummaryResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SaveProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    PublishProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UnpublishProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ArchiveProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListProductCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryResponse"][];
+                };
+            };
+        };
+    };
+    CreateProductCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

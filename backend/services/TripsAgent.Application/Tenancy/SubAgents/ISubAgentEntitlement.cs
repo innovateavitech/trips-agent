@@ -34,7 +34,7 @@ public sealed record SubAgentEntitlementDecision(
 /// </para>
 /// <para>
 /// Until F9 lands, <see cref="UnlimitedSubAgentEntitlement"/> is registered and answers yes to
-/// everything. Replacing it is a one-line change in <c>ApplicationServices</c>: register an
+/// everything. Replacing it is a one-line change in <c>DependencyInjection.AddApplication</c>: register an
 /// implementation that reads the agency's subscription and its tier's entitlement value, and
 /// nothing in this feature changes. The count of existing sub-agents is passed in, so the
 /// implementation does not have to repeat the query.
@@ -63,7 +63,7 @@ public interface ISubAgentEntitlement
 /// <remarks>
 /// Deliberately a real implementation rather than a null check at the call site. A null check
 /// spreads — every new caller has to remember it — whereas this makes "no plan limits yet" a
-/// single registered decision that one line in <c>ApplicationServices</c> replaces.
+/// single registered decision that one line in <c>DependencyInjection.AddApplication</c> replaces.
 /// </remarks>
 public sealed class UnlimitedSubAgentEntitlement : ISubAgentEntitlement
 {

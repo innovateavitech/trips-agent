@@ -48,7 +48,7 @@ Milestone 3 is assembled on top of them. Two things wait on other branches: `Sto
 needs calling from `PublicSiteResolver` once the storefront lands (the site-serving half of decision
 14), and `ISubAgentEntitlement` needs an implementation that reads the `max_sub_agents` entitlement
 once F9 lands — until then `UnlimitedSubAgentEntitlement` allows everything, and swapping it is one
-line in `ApplicationServices`.
+line in `DependencyInjection.AddApplication`.
 
 PR 1 is open from `feat/M1-notifications-documents`. When it merges, assemble PR 2: merge the catalog, storefront, CRM, group tours and commerce branches into one, regenerate the API client, run every gate, tick F3-F7 here, and open it with `Closes` for each finished issue.
 

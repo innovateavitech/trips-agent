@@ -20,6 +20,12 @@ public static class AssetProcessingRegistration
     /// <summary>The value selecting <see cref="EicarTestVirusScanner"/>. Development only.</summary>
     public const string EicarTestOnly = "EicarTestOnly";
 
+    /// <summary>
+    /// The value selecting <see cref="ClamAvVirusScanner"/>: a real scanner, allowed in every
+    /// environment. Needs <c>Assets:ClamAv:Host</c>.
+    /// </summary>
+    public const string ClamAv = "ClamAv";
+
     public static IServiceCollection AddAssetProcessing(
         this IServiceCollection services,
         IConfiguration configuration,
@@ -51,10 +57,16 @@ public static class AssetProcessingRegistration
     /// default, and the development scanner is never used outside Development.
     /// </para>
     /// <para>
-    /// What happens without one is deliberately narrow. This used to throw, which took the whole
-    /// Worker down — and with it the payment-webhook drain, the ledger integrity audit and every
-    /// consumer. Now the pipeline alone is disabled (see <see cref="AssetPipelineStatus"/>): uploads
-    /// stay pending and unserved, and a critical log line says why at every start.
+    /// Configuring <see cref="ClamAv"/> with a clamd host is what switches the pipeline on anywhere
+    /// else. The host is not contacted here: a clamd that is down when the Worker starts is the same
+    /// as one that goes down later — each scan comes back unavailable, the asset waits, and the job
+    /// is retried until clamd answers.
+    /// </para>
+    /// <para>
+    /// What happens without a usable scanner is deliberately narrow. This used to throw, which took
+    /// the whole Worker down — and with it the payment-webhook drain, the ledger integrity audit and
+    /// every consumer. Now the pipeline alone is disabled (see <see cref="AssetPipelineStatus"/>):
+    /// uploads stay pending and unserved, and a critical log line says why at every start.
     /// </para>
     /// </remarks>
     public static IServiceCollection AddVirusScanner(
@@ -66,43 +78,56 @@ public static class AssetProcessingRegistration
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(environment);
 
-        var status = Resolve(configuration[VirusScannerSetting], environment);
+        var (status, scanner) = Choose(configuration, environment);
+
         services.AddSingleton(status);
 
-        if (status.IsEnabled)
-        {
-            services.AddSingleton<IVirusScanner, EicarTestVirusScanner>();
-        }
-        else
-        {
-            services.AddSingleton<IVirusScanner>(new UnavailableVirusScanner(status.DisabledReason!));
-        }
+        // Every scanner here is stateless — ClamAV opens a connection per scan — so one instance
+        // serves every job.
+        services.AddSingleton(scanner);
 
         return services;
     }
 
-    private static AssetPipelineStatus Resolve(string? configured, IHostEnvironment environment)
+    private static (AssetPipelineStatus Status, IVirusScanner Scanner) Choose(
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
+        var configured = configuration[VirusScannerSetting];
+
         if (string.IsNullOrWhiteSpace(configured))
         {
-            return AssetPipelineStatus.Disabled(
-                $"No virus scanner is configured at {VirusScannerSetting}. No production scanner has been "
-                + "chosen yet — that is an open product decision. For local development set "
-                + $"{VirusScannerSetting}={EicarTestOnly}; it is already set in the Worker's appsettings.Development.json.");
+            return Disabled(
+                $"No virus scanner is configured at {VirusScannerSetting}. Set it to {ClamAv}, with "
+                + $"{ClamAvOptions.SectionName}:Host pointing at a clamd daemon. For local development "
+                + $"{EicarTestOnly} also works; it is already set in the Worker's appsettings.Development.json.");
+        }
+
+        if (string.Equals(configured, ClamAv, StringComparison.OrdinalIgnoreCase))
+        {
+            var options = configuration.GetSection(ClamAvOptions.SectionName).Get<ClamAvOptions>() ?? new ClamAvOptions();
+
+            return options.Problem() is { } problem
+                ? Disabled($"{VirusScannerSetting} is {ClamAv}, but {problem}")
+                : (AssetPipelineStatus.Enabled, new ClamAvVirusScanner(options));
         }
 
         if (string.Equals(configured, EicarTestOnly, StringComparison.OrdinalIgnoreCase))
         {
             return environment.IsDevelopment()
-                ? AssetPipelineStatus.Enabled
-                : AssetPipelineStatus.Disabled(
+                ? (AssetPipelineStatus.Enabled, new EicarTestVirusScanner())
+                : Disabled(
                     $"{VirusScannerSetting} is {EicarTestOnly} in the {environment.EnvironmentName} environment. "
                     + "That scanner detects nothing but the EICAR test file, so outside Development it would "
                     + "label real uploads clean without scanning them.");
         }
 
-        return AssetPipelineStatus.Disabled(
+        return Disabled(
             $"{VirusScannerSetting} is '{configured}', which is not a scanner this build knows. "
-            + $"The only one available today is {EicarTestOnly}, for Development.");
+            + $"Use {ClamAv}, or {EicarTestOnly} in Development.");
     }
+
+    /// <summary>The pipeline switched off, with a scanner behind it that can only ever say "unavailable".</summary>
+    private static (AssetPipelineStatus Status, IVirusScanner Scanner) Disabled(string reason) =>
+        (AssetPipelineStatus.Disabled(reason), new UnavailableVirusScanner(reason));
 }

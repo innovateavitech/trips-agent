@@ -104,6 +104,46 @@ public sealed class Cart : Entity, IAuditableEntity, ITenantScoped
 
     public bool HasExpiredAt(DateTimeOffset now) => now >= ExpiresAt;
 
+    /// <summary>True when the cart can still be added to, emptied, or checked out.</summary>
+    public bool IsOpenAt(DateTimeOffset now) => Status == CartStatus.Active && !HasExpiredAt(now);
+
+    /// <summary>
+    /// Names the customer this cart turned out to belong to, once checkout asked who they are.
+    /// </summary>
+    /// <remarks>
+    /// A guest cart keeps its <see cref="SessionToken"/> as well: the traveller has no account to sign
+    /// in to (decision 21), so the token is still the only thing their browser can find the cart with.
+    /// </remarks>
+    public void LinkCustomer(Guid customerId)
+    {
+        ArgumentOutOfRangeException.ThrowIfEqual(customerId, Guid.Empty);
+        CustomerId = customerId;
+    }
+
+    /// <summary>Gives an active cart its full life again, from <paramref name="now"/>.</summary>
+    /// <remarks>
+    /// Called when the traveller touches the cart. Without it a cart would expire an hour after the
+    /// first item went in it, however busy the traveller had been with it since.
+    /// </remarks>
+    public void KeepAlive(DateTimeOffset now, TimeSpan lifetime)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(lifetime, TimeSpan.Zero);
+
+        if (Status != CartStatus.Active)
+        {
+            return;
+        }
+
+        var until = now + lifetime;
+
+        if (until > ExpiresAt)
+        {
+            ExpiresAt = until;
+        }
+
+        UpdatedAt = now;
+    }
+
     /// <summary>Adds an item. Refuses a currency the cart cannot total.</summary>
     public CartItem Add(CartItem item, DateTimeOffset now)
     {

@@ -180,7 +180,7 @@ public class OrderTests
         var quote = Quote(net: 100_000, markup: 0, tax: 0, fee: 0, gross: 100_000, validity: TimeSpan.FromMinutes(30));
         var tooLate = Now.AddMinutes(31);
 
-        var item = CartItem.FromQuote(quote, "LOS → ABV", """{"adults":1}""", tooLate);
+        var item = CartItem.FromQuote(quote, "LOS → ABV", """{"adults":1}""", 1, tooLate);
         var line = () => OrderLine.FromQuote(quote, "LOS → ABV", """{"adults":1}""", tooLate);
 
         item.IndicativeGrossMinor.Should().Be(new Money(100_000));
@@ -200,8 +200,8 @@ public class OrderTests
     {
         var cart = Cart.Open(Agency, "NGN", Now, TimeSpan.FromDays(7), sessionToken: "sess-abc");
 
-        cart.Add(CartItem.FromQuote(Quote(100_000, 10_000, 750, 500, 110_750), "LOS → ABV", """{"adults":1}""", Now), Now);
-        cart.Add(CartItem.FromQuote(Quote(50_000, 5_000, 375, 0, 55_375), "ABV → KAN", """{"adults":1}""", Now), Now);
+        cart.Add(CartItem.FromQuote(Quote(100_000, 10_000, 750, 500, 110_750), "LOS → ABV", """{"adults":1}""", 1, Now), Now);
+        cart.Add(CartItem.FromQuote(Quote(50_000, 5_000, 375, 0, 55_375), "ABV → KAN", """{"adults":1}""", 1, Now), Now);
 
         cart.IndicativeTotalMinor.Should().Be(new Money(166_125));
         cart.Items.Should().HaveCount(2);
@@ -211,7 +211,7 @@ public class OrderTests
     public void A_cart_refuses_an_item_in_another_currency()
     {
         var cart = Cart.Open(Agency, "NGN", Now, TimeSpan.FromDays(7), sessionToken: "sess-abc");
-        var usd = CartItem.FromQuote(Quote(100, 0, 0, 0, 100, currency: "USD"), "LOS → JFK", """{"adults":1}""", Now);
+        var usd = CartItem.FromQuote(Quote(100, 0, 0, 0, 100, currency: "USD"), "LOS → JFK", """{"adults":1}""", 1, Now);
 
         var act = () => cart.Add(usd, Now);
 
@@ -222,7 +222,7 @@ public class OrderTests
     public void An_expired_cart_cannot_be_added_to()
     {
         var cart = Cart.Open(Agency, "NGN", Now, TimeSpan.FromHours(1), sessionToken: "sess-abc");
-        var item = CartItem.FromQuote(Quote(100_000, 0, 0, 0, 100_000), "LOS → ABV", """{"adults":1}""", Now);
+        var item = CartItem.FromQuote(Quote(100_000, 0, 0, 0, 100_000), "LOS → ABV", """{"adults":1}""", 1, Now);
 
         var act = () => cart.Add(item, Now.AddHours(2));
 
@@ -241,7 +241,7 @@ public class OrderTests
         cart.ConvertedOrderId.Should().Be(orderId);
 
         var act = () => cart.Add(
-            CartItem.FromQuote(Quote(1_000, 0, 0, 0, 1_000), "LOS → ABV", """{"adults":1}""", Now),
+            CartItem.FromQuote(Quote(1_000, 0, 0, 0, 1_000), "LOS → ABV", """{"adults":1}""", 1, Now),
             Now.AddMinutes(6));
         act.Should().Throw<InvalidOperationException>();
     }

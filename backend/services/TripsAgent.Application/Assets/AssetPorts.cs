@@ -22,7 +22,8 @@ public abstract record VirusScanResult
 }
 
 /// <summary>
-/// Checks a file for malware. A port: no scanner has been chosen.
+/// Checks a file for malware. A port: ClamAV sits behind it today (<c>ClamAvVirusScanner</c>), and
+/// another engine would be another implementation, not a change to the pipeline.
 /// </summary>
 /// <remarks>
 /// Implementations must answer <see cref="VirusScanResult.Unavailable"/> rather than throw or guess

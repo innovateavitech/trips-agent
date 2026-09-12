@@ -2,8 +2,9 @@ namespace TripsAgent.Domain.Pricing;
 
 /// <summary>The kinds of thing an agency sells, as far as pricing is concerned.</summary>
 /// <remarks>
-/// Flights and buses come from the supplier; tours, visas and group departures are the agency's
-/// own catalog. A markup rule can target any of them by type.
+/// Flights and buses come from the supplier; tours, packages, visas and group departures are the
+/// agency's own catalog. A markup rule can target any of them by type. Stored by name, so the
+/// numbers only have to stay unique — a new type goes on the end.
 /// </remarks>
 public enum PricedProductType
 {
@@ -12,6 +13,9 @@ public enum PricedProductType
     Tour = 3,
     Visa = 4,
     GroupDeparture = 5,
+
+    /// <summary>A catalog package: a bundle sold as one product, built like a tour.</summary>
+    Package = 6,
 }
 
 /// <summary>

@@ -87,6 +87,7 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
     private readonly IPlatformScope _platformScope;
     private readonly IWebhookDispatcher _dispatcher;
     private readonly VerifyTopUpHandler _verify;
+    private readonly IOrderPaymentSettlement _orderPayments;
     private readonly IPlatformAlerter _alerter;
     private readonly IUniqueViolationDetector _uniqueViolations;
     private readonly TimeProvider _clock;
@@ -98,6 +99,7 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
         IPlatformScope platformScope,
         IWebhookDispatcher dispatcher,
         VerifyTopUpHandler verify,
+        IOrderPaymentSettlement orderPayments,
         IPlatformAlerter alerter,
         IUniqueViolationDetector uniqueViolations,
         TimeProvider clock,
@@ -108,6 +110,7 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
         _platformScope = platformScope;
         _dispatcher = dispatcher;
         _verify = verify;
+        _orderPayments = orderPayments;
         _alerter = alerter;
         _uniqueViolations = uniqueViolations;
         _clock = clock;
@@ -200,6 +203,32 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
     public Task ProcessAsync(Guid webhookEventId, CancellationToken cancellationToken = default) =>
         ProcessClaimedAsync(webhookEventId, cancellationToken);
 
+    /// <summary>
+    /// Settles one payment, whatever it was for: a wallet top-up, or a traveller's booking.
+    /// </summary>
+    /// <remarks>
+    /// Routed on the payment's own purpose rather than on anything the gateway sent, because the
+    /// gateway knows nothing about what our reference was for. A reference that belongs to no
+    /// payment of ours is treated as a top-up, which reports it as unknown and logs it.
+    /// </remarks>
+    /// <returns>True when the gateway has no final answer yet, so the event should be retried.</returns>
+    private async Task<bool> SettleAsync(string reference, CancellationToken cancellationToken)
+    {
+        var purpose = await _db.PaymentTransactions.AsNoTracking()
+            .Where(payment => payment.Reference == reference)
+            .Select(payment => (PaymentPurpose?)payment.Purpose)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (purpose == PaymentPurpose.OrderPayment)
+        {
+            // A traveller paying on an agency's storefront (build plan F5). The money credits the
+            // agency's wallet, exactly as a top-up does, and then funds the booking it was for.
+            return await _orderPayments.SettleAsync(reference, cancellationToken);
+        }
+
+        return await _verify.HandleAsync(reference, cancellationToken) == TopUpVerificationOutcome.StillPending;
+    }
+
     /// <summary>Processes every event that is due. Runs on a timer.</summary>
     public async Task<int> DrainAsync(CancellationToken cancellationToken = default)
     {
@@ -282,9 +311,9 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
         try
         {
             // Asks the gateway. The payload is a notification, not a source of truth about money.
-            var outcome = await _verify.HandleAsync(envelope.Reference, cancellationToken);
+            var stillPending = await SettleAsync(envelope.Reference, cancellationToken);
 
-            if (outcome == TopUpVerificationOutcome.StillPending)
+            if (stillPending)
             {
                 // The gateway announced a charge but will not yet confirm it. Marking the event
                 // processed would mean nothing ever asks again, so it waits and retries.

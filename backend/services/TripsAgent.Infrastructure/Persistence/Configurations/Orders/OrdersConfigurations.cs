@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using TripsAgent.Domain.Catalog;
 using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Tenancy;
@@ -150,6 +151,13 @@ public sealed class OrderTravellerConfiguration : IEntityTypeConfiguration<Order
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(traveller => traveller.OrderLineId).HasDatabaseName("ix_order_travellers_order_line_id");
+
+        // Leads with agency_id, like every tenant-scoped index. It replaces the plain agency_id index
+        // EF kept until the alternate key (agency_id, id) was added for the departures manifest's
+        // composite foreign key: a unique constraint is an index in PostgreSQL, but not one the
+        // model exposes, and TenantFilterCoverageTests reads the model.
+        builder.HasIndex(traveller => new { traveller.AgencyId, traveller.OrderLineId })
+            .HasDatabaseName("ix_order_travellers_agency_id_order_line_id");
     }
 }
 
@@ -252,6 +260,62 @@ public sealed class CartItemConfiguration : IEntityTypeConfiguration<CartItem>
             .HasForeignKey(item => item.PriceQuoteId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // A tour or a visa points at its product; a group departure at the dated run it is seats on.
+        // Restrict, not cascade: a product that somebody has in their cart is not deleted out from
+        // under them.
+        builder.HasOne<Departure>()
+            .WithMany()
+            .HasForeignKey(item => item.DepartureId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(item => item.CartId).HasDatabaseName("ix_cart_items_cart_id");
+
+        // The seats a checkout is sitting on, so the expiry job can find the item a lapsed hold
+        // belongs to. Partial: only an item being checked out has one.
+        builder.HasIndex(item => item.DepartureHoldId)
+            .HasFilter("departure_hold_id IS NOT NULL")
+            .HasDatabaseName("ix_cart_items_departure_hold_id");
+    }
+}
+
+/// <summary>
+/// <c>orders.booking_access_tokens</c>. The traveller's "manage my booking" links (build plan F5,
+/// decision 21).
+/// </summary>
+/// <remarks>
+/// Only the hash of a secret is stored, and the unique index on it is what turns a presented link
+/// into exactly one booking. See <see cref="BookingAccessToken"/>.
+/// </remarks>
+public sealed class BookingAccessTokenConfiguration : IEntityTypeConfiguration<BookingAccessToken>
+{
+    public void Configure(EntityTypeBuilder<BookingAccessToken> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.ToTable("booking_access_tokens", OrdersSchema.Name);
+        builder.HasKey(token => token.Id);
+        builder.Property(token => token.Id).ValueGeneratedNever();
+
+        // SHA-256, hex: exactly 64 characters, always.
+        builder.Property(token => token.TokenHash).HasMaxLength(64).IsFixedLength().IsRequired();
+
+        builder.HasOne<Agency>()
+            .WithMany()
+            .HasForeignKey(token => token.AgencyId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Order>()
+            .WithMany()
+            .HasForeignKey(token => token.OrderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // How a link is looked up, and the reason one secret can never open two bookings.
+        builder.HasIndex(token => token.TokenHash)
+            .IsUnique()
+            .HasDatabaseName("ix_booking_access_tokens_token_hash");
+
+        // The agent's view of a booking shows whether its traveller still has a working link.
+        builder.HasIndex(token => new { token.OrderId, token.ExpiresAt })
+            .HasDatabaseName("ix_booking_access_tokens_order_id_expires_at");
     }
 }

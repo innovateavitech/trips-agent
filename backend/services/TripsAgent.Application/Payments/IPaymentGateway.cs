@@ -46,6 +46,37 @@ public sealed record GatewayVerification(
     public bool Succeeded => Outcome == GatewayPaymentOutcome.Succeeded;
 }
 
+/// <summary>What the gateway said when asked to send money back.</summary>
+/// <param name="Outcome">What its answer means for the refund.</param>
+/// <param name="Status">Its own status string, kept verbatim for support.</param>
+/// <param name="GatewayRefundReference">Its reference for the refund, for reconciliation.</param>
+public sealed record GatewayRefund(
+    GatewayRefundOutcome Outcome,
+    string Status,
+    string? GatewayRefundReference,
+    string? FailureReason)
+{
+    /// <summary>True when the gateway has accepted the refund and will pay it out.</summary>
+    public bool Accepted => Outcome is GatewayRefundOutcome.Accepted or GatewayRefundOutcome.AlreadyRefunded;
+}
+
+/// <summary>What a gateway's answer to a refund request means.</summary>
+public enum GatewayRefundOutcome
+{
+    /// <summary>
+    /// Taken on. The money reaches the card when the gateway's own settlement does, which for a
+    /// Nigerian card is days rather than seconds — so "accepted" is the strongest thing that can
+    /// honestly be said at this moment.
+    /// </summary>
+    Accepted = 1,
+
+    /// <summary>The gateway has already refunded this payment. Nothing was sent twice.</summary>
+    AlreadyRefunded = 2,
+
+    /// <summary>Refused, and asking again will not change that — too old, or already reversed.</summary>
+    Refused = 3,
+}
+
 /// <summary>
 /// Taking money, as the application sees it.
 /// </summary>
@@ -93,6 +124,33 @@ public interface IPaymentGateway
     /// </para>
     /// </remarks>
     public Task<GatewayVerification> VerifyAsync(string reference, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends money back to the card a payment came from.
+    /// </summary>
+    /// <param name="reference">Our reference for the original payment.</param>
+    /// <param name="amount">
+    /// How much to send back, which may be less than was paid: one line of a multi-line booking is
+    /// refunded on its own.
+    /// </param>
+    /// <param name="reason">Why, for the gateway's own record and for the payer's statement.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <remarks>
+    /// <para>
+    /// <b>Card details are not needed and are never sent.</b> A refund names the original payment,
+    /// and the gateway knows where the money came from. Nothing here could carry a card number.
+    /// </para>
+    /// <para>
+    /// Throws <see cref="PaymentGatewayUnavailableException"/> when the gateway could not be asked —
+    /// which is an unknown outcome, not a failure, and the caller must not record a refund it did
+    /// not get an answer for.
+    /// </para>
+    /// </remarks>
+    public Task<GatewayRefund> RefundAsync(
+        string reference,
+        Money amount,
+        string reason,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// True when <paramref name="signature"/> matches <paramref name="payload"/>.

@@ -10,6 +10,16 @@ namespace TripsAgent.Application.Payments;
 /// </summary>
 /// <remarks>
 /// <para>
+/// <b>Every payment lands here, whatever it was for.</b> An agent topping their wallet up and a
+/// traveller paying for a booking on a storefront are the same movement of money: it arrived in the
+/// platform's gateway clearing account, and the platform now owes it to the agency. What the money
+/// is then <i>spent</i> on is the checkout's business, not this class's — the booking holds and
+/// captures from the wallet exactly as an agent-funded booking does, so there is one money path and
+/// not two (build plan F5, decision 2).
+/// </para>
+/// </remarks>
+/// <remarks>
+/// <para>
 /// The only place a top-up is credited. Both the webhook and the browser-redirect verification
 /// route through here, because they routinely both arrive for the same payment and either could
 /// be first.
@@ -71,12 +81,14 @@ public sealed class WalletTopUpService
         var walletAccount = await AgencyAccountAsync(payment.AgencyId, payment.Currency, cancellationToken);
         var clearingAccount = await PlatformAccountAsync(LedgerAccountType.GatewayClearing, payment.Currency, cancellationToken);
 
+        var (received, credited, statementType) = Wording(payment);
+
         // Money arrived into gateway clearing (an asset, so a debit) and increased what we owe
         // the agency (a liability, so a credit). See LedgerDirection's remarks.
         var transaction = LedgerTransaction
             .Begin(now, nameof(PaymentTransaction), payment.Id)
-            .Debit(clearingAccount, amount, $"Top-up received — {payment.Reference}")
-            .Credit(walletAccount, amount, $"Wallet top-up — {payment.Reference}");
+            .Debit(clearingAccount, amount, $"{received} — {payment.Reference}")
+            .Credit(walletAccount, amount, $"{credited} — {payment.Reference}");
 
         _db.LedgerEntries.AddRange(transaction.Build());
 
@@ -85,10 +97,10 @@ public sealed class WalletTopUpService
 
         _db.WalletTransactions.Add(WalletTransaction.Record(
             wallet,
-            WalletTransactionType.TopUp,
+            statementType,
             amount,
             balanceBefore,
-            $"Wallet top-up — {payment.Reference}",
+            $"{credited} — {payment.Reference}",
             transaction.TransactionGroupId,
             now));
 
@@ -100,6 +112,19 @@ public sealed class WalletTopUpService
 
         return true;
     }
+
+    /// <summary>
+    /// How this payment reads in the ledger and on the agency's statement.
+    /// </summary>
+    /// <remarks>
+    /// A traveller's payment is still a credit to the wallet, but calling it a top-up on the agency's
+    /// statement would be a lie: nobody at the agency paid it in. It reads as what it is, and the
+    /// booking that spends it appears as its own line a moment later.
+    /// </remarks>
+    private static (string Received, string Credited, WalletTransactionType Statement) Wording(PaymentTransaction payment) =>
+        payment.Purpose == PaymentPurpose.OrderPayment
+            ? ("Customer payment received", "Customer payment", WalletTransactionType.CustomerPayment)
+            : ("Top-up received", "Wallet top-up", WalletTransactionType.TopUp);
 
     /// <summary>The agency's wallet account, opened the first time it is needed.</summary>
     /// <remarks>

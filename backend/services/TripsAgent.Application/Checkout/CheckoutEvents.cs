@@ -10,15 +10,23 @@ namespace TripsAgent.Application.Checkout;
 /// A paid order line has its ticket, and its money has been taken: the booking is confirmed (#42).
 /// </summary>
 /// <remarks>
+/// <para>
 /// Hook the traveller's "booking confirmed" email, the invoice and the voucher here. Raised once per
 /// line, after <c>BookingTicketed</c> has been turned into a captured payment.
+/// </para>
+/// <para>
+/// <see cref="SupplierBookingId"/> is null for a line the agency fulfils itself — a tour, a visa, a
+/// package or a seat on its own departure (build plan F5). There is no supplier behind those, so
+/// there is no supplier booking; everything else about a confirmation is the same, which is why they
+/// share this event rather than having one of their own.
+/// </para>
 /// </remarks>
 public sealed record BookingConfirmed(
     Guid AgencyId,
     Guid OrderId,
     string OrderNumber,
     Guid OrderLineId,
-    Guid SupplierBookingId,
+    Guid? SupplierBookingId,
     string? Pnr,
     DateTimeOffset ConfirmedAt);
 

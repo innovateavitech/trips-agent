@@ -1,6 +1,6 @@
+import { int64 } from '@trips/utils';
 import type { ApiClient, Schemas } from '@trips/api-client';
 import { unwrap } from '../../api/errors';
-import { int64 } from '../../api/int64';
 import type { BookingsApi } from './bookings-api';
 import type {
   BookingDetail,

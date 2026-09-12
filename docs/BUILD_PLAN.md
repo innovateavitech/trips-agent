@@ -30,18 +30,21 @@ The first place to look when picking this up again. Update it whenever a branch 
 
 **On `main`:** Milestone 1's foundation (see *Already built*), supplier search (#158), the booking and bookings screens against stand-ins (#159), rate limiting and the retention purge (#165), and this plan.
 
-| Branch | PR | What it holds | State (11 September, evening) |
+| Branch | PR | What it holds | State (12 September, evening) |
 |---|---|---|---|
 | `feat/M1-ticket-issuance` | 1 | F1: ticket issuance, the status poller, the time-limit monitor, the checkout saga, payment reversals and the resolution backend (#36-#38, #42-#44); the booking screens on the real API | pushed, merged into the PR 1 branch |
 | `feat/M1-notifications-documents` | 1 | **The PR 1 branch:** F1 merged in, plus F2 - notifications (#45), branded invoice and voucher PDFs (#46), the traveller's emails wired to the pipeline's events, and documents with download and reissue in the booking screens | pushed, PR open |
-| `feat/M2-catalog-api` | 2 | F3 backend: catalog schema, publish rules and product API (#160 and #161, all criteria met); ClamAV scanning (#18); the Package pricing type | pushed, done |
-| `feat/M2-catalog-screens` | 2 | Console: catalog list and editor and the pricing product picker (#162–#164); group departure screens (F6); CRM screens (F7), all against stand-ins; the catalog backend merged in, with the real catalog adapter next | pushed |
-| `feat/M2-storefront` | 2 | F4: the site builder with versioned publish and rollback is committed; domains and the public storefront still to come (#58-#60) | in progress, not pushed |
-| `feat/M2-crm` | 2 | F7 backend (#62), on top of the console branch | just started, not pushed |
-| — | 2 | F5 customer commerce (#61) and the F6 group tours backend (#57) | not started: F5 needs F1 and F4, F6 needs F3 |
-| — | 3, 4 | F8–F14 | not started |
+| `feat/M2-catalog-api` | 2 | F3 backend: catalog schema, publish rules, product API (#160, #161), ClamAV scanning (#18), the Package pricing type | merged into the PR 2 branch |
+| `feat/M2-catalog-screens` | 2 | Console: catalog list and editor, the pricing product picker (#162-#164), group departure and CRM screens, catalog on the real API | merged into the PR 2 branch |
+| `feat/M2-storefront` | 2 | F4: site builder, custom domains and certificates, the public host-resolved API and the Next.js site (#58-#60) | merged into the PR 2 branch |
+| `feat/M2-crm` | 2 | F7: leads, quotes, tasks, timeline, customer 360, the public trip-request and quote endpoints (#62) | merged into the PR 2 branch |
+| `feat/M2-departures` | 2 | F6 (#57) whole: the departures schema and API, seat holds and the no-oversell CHECK, status from the seats, the waitlist with timed offers, installment schedules and reminders, decision 12's refunds, and the console on the real API | pushed |
+| `feat/M2-commerce` | 2 | F5 whole (#61): the cart, guest checkout, card payment through the gateway, the magic link to manage a booking, partial failures routed to the resolution queue and refunds to a traveller's card. The storefront and CRM branches are merged in, so it also holds the storefront's cart, checkout and departure pages — the departure detail page F4 could not build without group departures | pushed, done |
+| `feat/M3-admin-console` | 3 | F8: agency directory, lifecycle with reasons and audit, back-office roles, operations dashboard (#66) | pushed |
+| `feat/M3-billing` | 3 | F9: tiers, entitlements, recurring billing and dunning (#64, #65) | agent working |
+| — | 3, 4 | F10-F14 | not started |
 
-**Next:** PR 1 is open from `feat/M1-notifications-documents`. When it merges, assemble PR 2: merge the catalog, storefront, CRM, group tours and commerce branches into one, regenerate the API client, run every gate, tick F3-F7 here, and open it with `Closes` for each finished issue.
+**Next:** PR 2 is open from `feat/M2-commerce`. When it merges, re-check decision 14's storefront half (the admin console's `StorefrontAvailability` belongs in `PublicSiteResolver`), then assemble PR 3 from the admin console and billing branches, with sub-agents, analytics, payouts and the loyalty flag still to build. `feat/M2-commerce` already carries the storefront and CRM merges, so it is the branch to merge the others into.
 
 ## Decisions for the MVP
 
@@ -85,7 +88,8 @@ Decided during the build:
 - **Checkout saga:** built as services, the transactional outbox and scheduled jobs rather than a MassTransit state machine; a booking's messages stay in order through row locks, versions and idempotent handlers.
 - **Proving one ticket per booking:** the chaos test counts supplier calls on an in-process stub, and the kill test cancels the call mid-flight. Both prove what #36 asks: one supplier call, and recovery through `GetBookingStatus`.
 - **Paying by card in the console:** the agent tops up the wallet first; a card payment inside the booking flow comes later.
-- **Refunds:** to the wallet for console bookings; refunds to a traveller's card come with F5.
+- **Refunds:** to the wallet for console bookings; a booking a traveller paid for by card on the
+  storefront is refunded to that card through the gateway (F5). Money goes back the way it came.
 - **Resolving a failed booking:** "retry" means booking again from search; escalating slow resolutions waits until after the MVP.
 - **To check on Trips Africa staging:** a bus booking with no PNR is polled with the flight status endpoint, which their documentation does not cover for buses.
 
@@ -96,7 +100,9 @@ Each feature meets its criteria the simplest safe way. These wait until after th
 - **F1:** escalating slow resolutions; a card payment inside the console's booking flow.
 - **F2:** full templates for flights and buses; one plain template serves tours, visas and group departures. No SMS or WhatsApp sending.
 - **F4:** two site templates and a fixed set of blocks (hero, product grid, text, contact). SSL issuance and renewal go through a port with a development adapter; a real ACME adapter follows once hosting is chosen.
-- **F5 and F6:** installment reminders, but no automatic charging of saved cards; waitlist offers by email only.
+- **F5 and F6:** installment reminders, but no automatic charging of saved cards; waitlist offers by
+  email only. A departure's later instalments are chased by the agency rather than taken from a card,
+  and a traveller's cart holds one currency — the agency's own (decision 17).
 - **F7:** SMS and WhatsApp are logged, not sent.
 - **F8:** the dashboard shows core counts and sales; the top-agent leaderboard and feature flags wait.
 - **F9:** monthly billing only; promotions wait.
@@ -313,23 +319,23 @@ Agent-authored sellable products.
 
 > The epic. Its breakdown is #160–#164 below.
 
-- [ ] Day-by-day itinerary builder.
-- [ ] Inclusions/exclusions.
-- [ ] Price variants by room type, group size and child/infant.
-- [ ] Category and theme tagging.
-- [ ] Draft vs published with validation (title, price, one image, one available date).
-- [ ] Visas as agent-authored listings with a document checklist and manual fulfilment.
+- [x] Day-by-day itinerary builder.
+- [x] Inclusions/exclusions.
+- [x] Price variants by room type, group size and child/infant.
+- [x] Category and theme tagging.
+- [x] Draft vs published with validation (title, price, one image, one available date).
+- [x] Visas as agent-authored listings with a document checklist and manual fulfilment.
 
 #### #160 · Product schema, domain and publish rules
 
 The tables for agent-authored products (tours, packages and visas), and the rules for when one can be published. Part of #56.
 
-- [ ] Tables as in [the plan §2.5](../blob/main/docs/ARCHITECTURE_AND_DELIVERY_PLAN.md): `products`, `product_media`, `product_categories` + `product_category_map`, `tour_itinerary_days`, `product_inclusions`, `product_price_variants`, `visa_details`, `visa_document_requirements`. Each has `agency_id`, the tenant filter, a row-level security policy and grants (ADR-0006)
-- [ ] UNIQUE `(agency_id, slug)` and UNIQUE `(product_id, day_number)`
-- [ ] Money in `*_minor`; price variants by pax type, occupancy and group size
-- [ ] `available_from` / `available_to` on `products`: the "one available date" a tour or package needs before it can be published. Dated departures stay with #57
-- [ ] Publish rules live in the domain: a title, a price, at least one image, and for a tour or package an availability window that has not ended. A visa needs its details and at least one required document
-- [ ] Draft → Published → Archived. "Why can't I publish?" returns **every** problem, not just the first
+- [x] Tables as in [the plan §2.5](../blob/main/docs/ARCHITECTURE_AND_DELIVERY_PLAN.md): `products`, `product_media`, `product_categories` + `product_category_map`, `tour_itinerary_days`, `product_inclusions`, `product_price_variants`, `visa_details`, `visa_document_requirements`. Each has `agency_id`, the tenant filter, a row-level security policy and grants (ADR-0006)
+- [x] UNIQUE `(agency_id, slug)` and UNIQUE `(product_id, day_number)`
+- [x] Money in `*_minor`; price variants by pax type, occupancy and group size
+- [x] `available_from` / `available_to` on `products`: the "one available date" a tour or package needs before it can be published. Dated departures stay with #57
+- [x] Publish rules live in the domain: a title, a price, at least one image, and for a tour or package an availability window that has not ended. A visa needs its details and at least one required document
+- [x] Draft → Published → Archived. "Why can't I publish?" returns **every** problem, not just the first
 
 *Needs first:* the asset pipeline (#120, merged)
 
@@ -337,12 +343,12 @@ The tables for agent-authored products (tours, packages and visas), and the rule
 
 The endpoints the console uses to build, publish and retire products. Part of #56.
 
-- [ ] The endpoints above: `catalog.view` to read, `catalog.edit` to create and change, `catalog.publish` to publish, unpublish and archive
-- [ ] One `PUT` saves the whole product (basics, itinerary, inclusions, prices, media, categories, visa details) in one transaction
-- [ ] Slug generated from the title when omitted and unique per agency. A taken slug is a 409 that suggests a free one
-- [ ] Only the agency's own assets, and only clean-scanned ones, can be attached
-- [ ] Integration tests: tenant isolation, each permission, publish validation, whole-product save
-- [ ] OpenAPI and the generated client updated
+- [x] The endpoints above: `catalog.view` to read, `catalog.edit` to create and change, `catalog.publish` to publish, unpublish and archive
+- [x] One `PUT` saves the whole product (basics, itinerary, inclusions, prices, media, categories, visa details) in one transaction
+- [x] Slug generated from the title when omitted and unique per agency. A taken slug is a 409 that suggests a free one
+- [x] Only the agency's own assets, and only clean-scanned ones, can be attached
+- [x] Integration tests: tenant isolation, each permission, publish validation, whole-product save
+- [x] OpenAPI and the generated client updated
 
 *Needs first:* the schema issue above
 
@@ -350,11 +356,11 @@ The endpoints the console uses to build, publish and retire products. Part of #5
 
 Where an agent builds the tours and packages they sell under their own brand. Part of #56.
 
-- [ ] Products list with type and status filters, and search by title or destination
-- [ ] Editor: basics, a day-by-day itinerary builder (add, reorder, remove days), inclusions and exclusions, price variants, images, and categories and themes
-- [ ] A publish checklist showing what is missing, taken from the server's `publishProblems`
-- [ ] Saving a draft never validates; publishing is a separate, confirmed action
-- [ ] Editing needs `catalog.edit` and publishing needs `catalog.publish`. Without them the controls are not there, rather than disabled
+- [x] Products list with type and status filters, and search by title or destination
+- [x] Editor: basics, a day-by-day itinerary builder (add, reorder, remove days), inclusions and exclusions, price variants, images, and categories and themes
+- [x] A publish checklist showing what is missing, taken from the server's `publishProblems`
+- [x] Saving a draft never validates; publishing is a separate, confirmed action
+- [x] Editing needs `catalog.edit` and publishing needs `catalog.publish`. Without them the controls are not there, rather than disabled
 
 *Needs first:* the API issue above. Built against a stand-in behind a port until then, like search
 
@@ -362,9 +368,9 @@ Where an agent builds the tours and packages they sell under their own brand. Pa
 
 Visas as agent-authored listings with an applicant checklist and manual fulfilment. Part of #56.
 
-- [ ] Visa editor: visa type, entry type, processing time, validity, consular fee and service fee, and the total the customer pays
-- [ ] Applicant document checklist: add, reorder, remove, mark mandatory
-- [ ] Manual fulfilment is plain on the screen: the agent processes the application, and nothing is sent to an embassy
+- [x] Visa editor: visa type, entry type, processing time, validity, consular fee and service fee, and the total the customer pays
+- [x] Applicant document checklist: add, reorder, remove, mark mandatory
+- [x] Manual fulfilment is plain on the screen: the agent processes the application, and nothing is sent to an embassy
 
 *Needs first:* the API issue above
 
@@ -372,9 +378,9 @@ Visas as agent-authored listings with an applicant checklist and manual fulfilme
 
 The pricing screen takes a product ID for a product-scoped rule, because there was no catalog to choose from. Part of #56.
 
-- [ ] A product-scoped rule picks the product by name from the agency's catalog
-- [ ] Only the agency's own products; archived ones are left out
-- [ ] Rules already pointing at a product show its name, not its ID
+- [x] A product-scoped rule picks the product by name from the agency's catalog
+- [x] Only the agency's own products; archived ones are left out
+- [x] Rules already pointing at a product show its name, not its ID
 
 *Needs first:* the API issue above
 
@@ -384,19 +390,19 @@ The pricing screen takes a product ID for a product-scoped rule, because there w
 
 > Mostly built (74819f8): signed direct uploads, content sniffing, the scan → EXIF strip → WebP pipeline, and nothing served until scanned clean. Left: a real virus scanner — without one the pipeline stays switched off.
 
-- [ ] Presigned direct-to-storage upload (files never proxy through the API)
-- [ ] `IBlobStorage` interface so AWS/Azure stays undecided
-- [ ] MIME type validated by **content sniffing**, not the file extension
-- [ ] Size limits enforced server-side
-- [ ] Background worker: virus scan → EXIF strip → resize variants → WebP
-- [ ] `scan_status` gates public serving — nothing unscanned is served
-- [ ] Tenant-scoped: agency A cannot read agency B's assets
+- [x] Presigned direct-to-storage upload (files never proxy through the API) *(signed URLs; with the local adapter the API serves them until an S3-compatible store is chosen — see the decisions)*
+- [x] `IBlobStorage` interface so AWS/Azure stays undecided
+- [x] MIME type validated by **content sniffing**, not the file extension
+- [x] Size limits enforced server-side
+- [x] Background worker: virus scan → EXIF strip → resize variants → WebP
+- [x] `scan_status` gates public serving — nothing unscanned is served
+- [x] Tenant-scoped: agency A cannot read agency B's assets
 
 *Needs first:* #10
 
 ### F4 · Storefront
 
-**M2 · Queued** · 0 of 19 boxes ticked
+**M2 · Done** · 18 of 19 boxes ticked · `feat/M2-storefront`
 
 Every agent gets a branded website: built from templates and blocks in the console, published with rollback, served on their own domain with SSL, showing their catalog to travellers. Nothing on it may mention Trips.
 
@@ -410,13 +416,13 @@ The no-code branded site builder.
 
 **Tables:** `site_templates, sites, site_versions, site_themes, site_pages, site_blocks`
 
-- [ ] Template library.
-- [ ] Logo and colour upload.
-- [ ] Block-based page editing.
-- [ ] About/Contact/Terms.
-- [ ] Staging preview.
-- [ ] Publish with rollback via versioned snapshots.
-- [ ] FRD blocks publishing until a product is published — see open question 11, which may relax this for flight-only agents.
+- [x] Template library.
+- [x] Logo and colour upload.
+- [x] Block-based page editing.
+- [x] About/Contact/Terms.
+- [x] Staging preview.
+- [x] Publish with rollback via versioned snapshots.
+- [x] FRD blocks publishing until a product is published — relaxed per decision 11: one published product **or** flight search switched on. `SomethingToSellRule` is the only place that rule lives.
 
 #### #59 · Custom domains, DNS verification and SSL
 
@@ -424,27 +430,27 @@ Each agent's site on their own domain.
 
 **Tables:** `site_domains, site_domain_checks`
 
-- [ ] Free subdomain provisioning.
-- [ ] Custom domain with TXT/CNAME verification.
-- [ ] Automatic SSL issuance and renewal at T-30 days.
-- [ ] Host-header tenant resolution cached in Redis.
-- [ ] Reserved-hostname denylist to stop subdomain squatting (open question 20).
+- [x] Free subdomain provisioning.
+- [x] Custom domain with TXT/CNAME verification.
+- [x] Automatic SSL issuance and renewal at T-30 days — through a port, with a development adapter; a real ACME adapter follows once hosting is chosen.
+- [x] Host-header tenant resolution cached in Redis. The same cache answers the CRM's `IStorefrontDirectory`, so one domain change clears both.
+- [x] Reserved-hostname denylist to stop subdomain squatting (open question 20).
 
 #### #60 · Public storefront rendering
 
 The Next.js traveller-facing site.
 
-- [ ] Host-based tenant resolution.
-- [ ] Per-site ISR with cache invalidation on publish.
-- [ ] Template rendering from site_versions.
-- [ ] Catalog browse and filter.
-- [ ] Product and departure detail.
-- [ ] SEO metadata, sitemap and structured data.
-- [ ] Nothing on these pages may reference Trips.
+- [x] Host-based tenant resolution — the hostname and nothing else, resolved inside `IPlatformScope` and then read under that tenant.
+- [x] Per-site ISR with cache invalidation on publish. Responses are tagged by site and hostname; publishing asks the storefront to drop those tags.
+- [x] Template rendering from site_versions — hero, product grid, text and contact; an unknown block is skipped rather than fatal.
+- [x] Catalog browse and filter.
+- [x] Product and departure detail. Departure detail landed with F5, which has both the storefront and group departures.
+- [x] SEO metadata, sitemap and structured data.
+- [x] Nothing on these pages may reference Trips.
 
 ### F5 · Customer commerce
 
-**M2 · Queued** · 0 of 6 boxes ticked
+**M2 · Done** · 7 of 7 boxes ticked
 
 Travellers buy on the agent's storefront: a cart mixing flights, buses, tours and visas, guest checkout, card payment, a magic link to manage the booking, and partial failures routed to the agent's resolution queue.
 
@@ -459,17 +465,46 @@ The traveller's buying flow.
 
 **Tables:** `carts, cart_items, customers`
 
-- [ ] Guest checkout (open question 21 — no accounts in MVP).
-- [ ] Mixed multi-line carts.
-- [ ] Departure holds during checkout.
-- [ ] Payment via Paystack.
-- [ ] Magic-link 'manage my booking'.
-- [ ] Partial-failure handling routing to the agent resolution queue.
-- [ ] Refunds to the traveller's card through Paystack, moved here from #43
+- [x] Guest checkout (open question 21 — no accounts in MVP).
+- [x] Mixed multi-line carts.
+- [x] Departure holds during checkout.
+- [x] Payment via Paystack.
+- [x] Magic-link 'manage my booking'.
+- [x] Partial-failure handling routing to the agent resolution queue.
+- [x] Refunds to the traveller's card through Paystack, moved here from #43
+
+**What F5 ended up holding.**
+
+- **One money path, not two.** The platform is merchant of record (decision 2), so a traveller's card
+  payment settles into the agency's wallet exactly as a top-up does, and the booking then holds and
+  captures from that wallet — the same path an agent's own booking takes. There is one place money
+  leaves a wallet, one place it is captured, and one place it goes back.
+- **What a line costs the agency** is the supplier's net rate plus the platform's fee for a flight or
+  a bus, and the platform's fee alone for a tour, a visa or a departure the agency hosts itself: there
+  is no supplier to owe. The markup and the tax stay in the wallet, which is the agency's margin.
+- **A hold per line.** `wallet_holds` learned `order_line_id`, because a mixed cart's lines are
+  confirmed, fail and are refunded one at a time. `WalletRefunds` used to take the order's newest
+  hold, which on a multi-line order gave back some other line's money.
+- **A departure sold on a plan** collects the agency's markup and our fee with the deposit, and defers
+  exactly what the stored schedule defers. That keeps the schedule the traveller's truth to the kobo
+  rather than splitting a margin across instalments by rounding. A departure with no deposit and no
+  instalments is paid for in full at checkout, like anything else in the cart.
+- **Refunds refuse rather than pretend.** A card refund the gateway will not send, or that the
+  agency's wallet cannot cover, refuses the resolution with the reason and raises a P1 — the line
+  stays in the queue instead of being closed as refunded with nothing sent.
+- **The confirmation the pipeline raises** (`BookingConfirmed`) now carries a nullable supplier
+  booking, so an agency's own product gets the same invoice, voucher, email and CRM customer record a
+  flight does.
+- **The departure page is the one F4 could not build**, because group departures were on another
+  branch. It shows the dates on sale, the seats really left, the price for the party in the URL, what
+  is due today and when the rest falls due. What it promises has to match what the checkout charges:
+  a departure with no deposit and no instalments still has a schedule in the domain — one line due at
+  the cutoff — and reading that as deferred would have offered the trip for nothing today. Both sides
+  now apply the same rule, and an integration test holds them together.
 
 ### F6 · Group tours
 
-**M2 · Queued** · 0 of 7 boxes ticked
+**M2 · Done** · branch `feat/M2-departures` · 7 of 7 boxes ticked
 
 Fixed-date departures sold by the seat, with deposits, installment plans, a waitlist and manifests — and a database that makes overselling impossible.
 
@@ -500,19 +535,28 @@ GET  /api/v1/catalog/departures/{id}/waitlist         catalog.view     → Waitl
 
 Fixed-date departures sold by the seat.
 
-**Tables:** `departures, departure_price_tiers, departure_holds, installment_plans, installment_schedule_items, departure_waitlist, pax_manifests`
+**Tables:** `departures, departure_price_tiers, departure_holds, installment_plans, installment_schedule_items, departure_waitlist, pax_manifests`, plus `booking_payment_schedules` and `booking_installments` — the bill one booking was given, snapshotted from the departure's terms on the day, so a later edit cannot move a payment somebody has been told about.
 
-- [ ] Capacity with a DB CHECK preventing oversell.
-- [ ] Tiered pricing per pax count.
-- [ ] Deposit + installment schedules.
-- [ ] Auto status Open → Guaranteed to Run → Nearly Full → Sold Out.
-- [ ] Waitlist with timed offers.
-- [ ] Rooming and pax manifest.
-- [ ] Concurrency test: parallel reservations never oversell.
+- [x] Capacity with a DB CHECK preventing oversell.
+- [x] Tiered pricing per pax count.
+- [x] Deposit + installment schedules.
+- [x] Auto status Open → Guaranteed to Run → Nearly Full → Sold Out.
+- [x] Waitlist with timed offers.
+- [x] Rooming and pax manifest.
+- [x] Concurrency test: parallel reservations never oversell.
+
+Seats move in one atomic `UPDATE` guarded by `ck_departures_no_oversell`, and the status follows them
+on every move (job 9) with a nightly sweep behind it. Job 6 gives back a lapsed hold's seats and
+offers them to the queue; job 10 rolls an unanswered offer on; job 11 sends T-7/T-3/T-1 and overdue
+reminders and tells the agency at T+7 — **no automatic charging**, which waits until after the MVP.
+Cancelling a departure puts every paid booking on the resolution queue as a full refund (decision 12).
+
+One route beyond the contract above: `POST /api/v1/catalog/departures/{id}/waitlist` (`catalog.edit`),
+without which nothing could join a waitlist at all. The storefront needs it too (F5).
 
 ### F7 · CRM
 
-**M2 · Queued** · 0 of 6 boxes ticked
+**M2 · In progress** · branch `feat/M2-crm` · 6 of 6 boxes ticked
 
 Leads from the storefront's trip-request widget, a pipeline from New to Won, quotes with a public accept link, follow-up tasks, and a customer record built from every inquiry, quote and booking.
 
@@ -549,12 +593,33 @@ FRD §2.8 and §2.10.
 
 **Tables:** `customers, leads, lead_stage_history, quotes, quote_items, tasks, communications`
 
-- [ ] Trip-request widget creating leads.
-- [ ] Pipeline New → Quoted → Negotiating → Won → Lost.
-- [ ] Quote builder with itinerary days and a shareable public accept link.
-- [ ] Follow-up tasks with reminders.
-- [ ] Communication timeline.
-- [ ] Customer 360 auto-created from any inquiry, quote or booking.
+- [x] Trip-request widget creating leads. *(the API below; the widget itself is the storefront's, F4)*
+- [x] Pipeline New → Quoted → Negotiating → Won → Lost.
+- [x] Quote builder with itinerary days and a shareable public accept link.
+- [x] Follow-up tasks with reminders.
+- [x] Communication timeline.
+- [x] Customer 360 auto-created from any inquiry, quote or booking.
+
+**The storefront's own routes.** Anonymous, and not in the contract above because the console never
+calls them. The agency is the one whose storefront answers on the host the traveller used, sent as
+`X-Storefront-Host` (the request's own `Host` is used when it is absent); a host nobody answers on
+gets the same 404 as a quote that does not exist. Rate-limited per address under the `Storefront`
+policy. Nothing they return mentions Trips.
+
+```
+POST /api/v1/public/crm/trip-requests           → 202: TripRequestSubmission; opens a New lead, source TripRequestWidget
+GET  /api/v1/public/crm/quotes/{token}          → PublicQuoteResponse; the first read records viewedAt
+POST /api/v1/public/crm/quotes/{token}/accept   → PublicQuoteResponse
+POST /api/v1/public/crm/quotes/{token}/decline  → PublicQuoteResponse: {reason?}
+```
+
+- **TripRequestSubmission:** `name`, `email?`, `phone?` (one of the two), `destination`, `travelFrom?`,
+  `travelTo?`, `adults`, `children`, `budgetMinMinor?`, `budgetMaxMinor?`, `message`. Nothing comes
+  back but a 202: the traveller has no business seeing the lead they made.
+- **PublicQuoteResponse:** `quoteNumber`, `title`, `status`, `validUntil`, `currency`, `items[]`,
+  `itinerary[]`, `notes`, `totalMinor`, `customerName`, `sentAt`, `respondedAt?`, `canRespond`.
+  Accepting or declining moves a New or Quoted lead to Negotiating and puts the customer's own words
+  on the timeline; answering twice is a 409.
 
 ## PR 3 · Milestone 3: running and charging for the platform
 

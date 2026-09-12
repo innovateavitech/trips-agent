@@ -189,10 +189,10 @@ Login and reset responses are deliberately generic to prevent account enumeratio
 
 | Table | Purpose & notable columns |
 |---|---|
-| `products` | `agency_id`, `product_type (tour\|package\|visa)`, `slug`, `title`, `description`, `destination_country/city`, `duration_days`, `status (draft\|published\|archived)`, `base_price_minor`, `hero_asset_id`, `seo jsonb`. UNIQUE`(agency_id, slug)` |
+| `products` | `agency_id`, `product_type (tour\|package\|visa)`, `slug`, `title`, `summary`, `description`, `destination_country/city`, `duration_days`, `status (draft\|published\|archived)`, `published_at`, `currency`, `base_price_minor`, `available_from`/`available_to` (dates: the booking window a tour or package needs before it can be published; dated departures with capacity stay in `departures`), `hero_asset_id`, `version`. UNIQUE`(agency_id, slug)`. `seo jsonb` is not built yet |
 | `product_media` | `asset_id`, `position`, `caption` |
 | `product_categories` / `product_category_map` | `type (category\|theme)` — drives storefront filtering (FRD §2.12 RS-5) |
-| `tour_itinerary_days` | `day_number`, `title`, `description`, `meals_included`, `accommodation`. UNIQUE`(product_id, day_number)` |
+| `tour_itinerary_days` | `day_number`, `title`, `description`, `breakfast_included`/`lunch_included`/`dinner_included`, `accommodation`. UNIQUE`(product_id, day_number)` |
 | `product_inclusions` | `kind (inclusion\|exclusion)`, `text`, `position` |
 | `product_price_variants` | `name` ("Double occupancy"), `pax_type (adult\|child\|infant)`, `occupancy`, `min/max_group_size`, `price_minor` — covers *variants by room type / group size / child / infant* |
 | `visa_details` | 1:1 with a visa product: `visa_type`, `processing_time_days`, `validity_days`, `entry_type`, `consular_fee_minor`, `service_fee_minor` |
@@ -202,8 +202,11 @@ Login and reset responses are deliberately generic to prevent account enumeratio
 | `departure_holds` | `cart_id`, `pax_count`, `expires_at`, `status` — TTL seat holds during checkout; a job releases expiries |
 | `installment_plans` / `installment_schedule_items` | `deposit_percent`; items carry `sequence`, `due_basis (from_booking\|before_departure)`, `due_offset_days`, `percent_of_balance` |
 | `departure_waitlist` | `pax_count`, `status (waiting\|offered\|converted\|expired)`, `offered_at`, `expires_at` — FRD §2.13 RS-6 routes sold-out interest here |
+| `booking_payment_schedules` / `booking_installments` | The bill one booking was given: `pax_count`, `price_per_pax_minor`, the contact to remind, and items carrying `sequence`, `label`, `due_date`, `amount_minor`, `state (pending\|paid\|cancelled)`, `last_reminder_stage`. A snapshot of the departure's terms on the day it was booked, never a view of them — job 11 reminds from it, and job 12's automatic charging waits until after the MVP |
 
-Publish validation (*title, price, ≥1 image, ≥1 available date*) is a domain rule in the application layer, surfaced as a checklist in the UI rather than a DB trigger.
+Every catalog table carries its own `agency_id` and its own `tenant_isolation` policy — the child tables too, rather than relying on being reachable through `product_id` (ADR-0006).
+
+Publish validation is a domain rule (`ProductPublishRules`), surfaced as a checklist in the UI rather than a DB trigger: a title, a price above zero and at least one image; for a tour or package, a booking window that has not ended; for a visa, its details and at least one document on the checklist. Visas are exempt from the window. The API returns every problem at once as `publishProblems`, so the console's checklist is never a second copy of the rules.
 
 ### 2.6 `pricing` — markup, commission, tax
 

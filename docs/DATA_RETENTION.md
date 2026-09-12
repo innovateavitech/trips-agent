@@ -69,6 +69,7 @@ The source of truth is `RetentionCatalogue.Tables` in
 | `orders.order_travellers` | Yes | Row: 7 years. Passport number and expiry: cleared 90 days after the trip | Anonymised | Who travelled belongs to the sale; their passport number does not, once the trip is over |
 | `orders.carts` | Some (guest session token) | 30 days after expiry, if never converted | Purged | A cart that became nothing records nothing. Converted carts stay with their order |
 | `orders.cart_items` | No | With their cart | Purged | Deleted by the cart's `ON DELETE CASCADE` |
+| `orders.booking_access_tokens` | No | With their order | Kept | The links travellers manage their bookings with; only the hash of each secret is stored, so the row identifies nobody |
 
 ### Documents and pricing
 
@@ -79,6 +80,51 @@ The source of truth is `RetentionCatalogue.Tables` in
 | `documents.document_number_formats` | No | At least 7 years | Protected | How each issued number was formatted at the time |
 | `pricing.price_quotes` | No | At least 7 years | Protected | The priced snapshot each order line was placed from |
 | `pricing.markup_rules` | No | At least 7 years | Protected | Explains the markup on every historic order line |
+
+### The agency's catalog
+
+| Table | Personal data | Kept for | Treatment | Why |
+|---|---|---|---|---|
+| `catalog.products` | No | While the agency exists; archived, never deleted | Kept | What the agency sells. Order lines freeze their own title and price, so this is not a financial record |
+| `catalog.product_media` | No | With their product | Kept | Which uploads a product shows; detaching one never deletes the asset |
+| `catalog.product_categories` | No | While in use | Kept | Configuration: the agency's own categories and themes |
+| `catalog.product_category_map` | No | With their product | Kept | Which categories and themes a product carries |
+| `catalog.tour_itinerary_days` | No | With their product | Kept | The itinerary; replaced whenever the product is saved |
+| `catalog.product_inclusions` | No | With their product | Kept | What the price includes and leaves out; replaced whenever the product is saved |
+| `catalog.product_price_variants` | No | With their product | Kept | Current prices only; a quote or order line froze its own copy |
+| `catalog.visa_details` | No | With their product | Kept | What a visa product says about the visa |
+| `catalog.visa_document_requirements` | No | With their product | Kept | The applicant's checklist: a list of documents, not anyone's documents |
+
+### Group departures
+
+| Table | Personal data | Kept for | Treatment | Why |
+|---|---|---|---|---|
+| `catalog.departures` | No | With their product | Kept | A dated run of a tour; order lines freeze their own price, so this is not a financial record |
+| `catalog.departure_price_tiers` | No | With their departure | Kept | Current prices only; a quote or order line froze its own copy |
+| `catalog.installment_plans` | No | With their departure | Kept | How a departure is paid for: terms, not anybody's payments |
+| `catalog.installment_schedule_items` | No | With their plan | Kept | The payments the balance is split into, as offsets; replaced whenever the departure is saved |
+| `catalog.departure_holds` | No | With their cart | Purged | Deleted by the cart's `ON DELETE CASCADE`; a hold on a cart that became nothing is not a record of anything |
+| `catalog.departure_waitlist` | Yes — name, email | While the departure exists | Kept | Somebody asked to be told about a seat. Considered and left alone for the MVP: a candidate for anonymisation once counsel reviews the schedule |
+| `catalog.pax_manifests` | No | With their order line | Kept | Which departure a booked traveller is on, and their room; their own details live on `orders.order_travellers` |
+| `catalog.booking_payment_schedules` | Yes — name, email | 7 years | Protected | What a booking on a departure was billed, and who was billed |
+| `catalog.booking_installments` | No | 7 years | Protected | The payments that schedule was split into, and whether they were paid |
+
+### The agency's CRM
+
+A customer's name, email and phone live on `crm.customers` and nowhere else in the CRM — leads,
+quotes, tasks and messages point at the customer instead of copying the details. That is what makes
+erasing a person (#106) one row anonymised in place rather than a sweep of five tables.
+
+| Table | Personal data | Kept for | Treatment | Why |
+|---|---|---|---|---|
+| `crm.customers` | Yes (name, email, phone) | While the agency exists; erased on request (#106) | Kept | The agency's own customers — the only copy of their contact details in the CRM |
+| `crm.leads` | No | While the agency exists | Kept | What each customer asked for and where it got to; points at the customer rather than copying their details |
+| `crm.lead_stage_history` | No | With their lead | Kept | Every move of every lead, and who made it. Append-only in the database too |
+| `crm.quotes` | No | While the agency exists | Kept | What was quoted and what the customer answered; a sent quote never changes |
+| `crm.quote_items` | No | With their quote | Kept | A quote's priced lines; replaced while it is a draft, final once sent |
+| `crm.quote_itinerary_days` | No | With their quote | Kept | A quote's proposed days; replaced while it is a draft, final once sent |
+| `crm.tasks` | No | While the agency exists | Kept | Follow-up work: a title, a date and what it is about |
+| `crm.communications` | Some (what was said) | With their customer | Kept | Each customer's timeline, so an agent can pick a conversation back up. Append-only in the database too |
 
 ### Supplier bookings
 
@@ -147,6 +193,20 @@ The source of truth is `RetentionCatalogue.Tables` in
 | `notifications.notifications` | Yes (recipient, content) | 365 days, once no longer queued or sending | Purged | Answers "did they get it?" for a year |
 | `notifications.notification_templates` | No | While in use | Kept | Configuration |
 | `notifications.suppressed_email_addresses` | Yes | Indefinitely | Kept | A bounced or complaining address must stay suppressed, or we mail it again |
+
+### Storefront
+
+| Table | Personal data | Kept for | Treatment | Why |
+|---|---|---|---|---|
+| `storefront.site_templates` | No | While offered | Kept | Reference data: the starter websites |
+| `storefront.reserved_hostname_labels` | No | Indefinitely | Kept | Reference data: the hostname denylist and brand list (open question 20) |
+| `storefront.sites` | No | While the agency exists | Kept | The agency's website and its settings |
+| `storefront.site_versions` | Some (agency contact details in snapshots) | While the site exists | Kept | Every staged and published version: rollback needs them, and they record what travellers were shown |
+| `storefront.site_pages` | No | While the site exists | Kept | The draft's pages |
+| `storefront.site_blocks` | No | With their page | Kept | The draft's blocks |
+| `storefront.site_themes` | No | While the site exists | Kept | The site's typography |
+| `storefront.site_domains` | No | While connected | Kept | Hostnames the site answers on; a removed one is deleted with its checks |
+| `storefront.site_domain_checks` | No | With their hostname | Kept | What DNS said on each check — the answer to "why isn't my domain working?" |
 
 ---
 

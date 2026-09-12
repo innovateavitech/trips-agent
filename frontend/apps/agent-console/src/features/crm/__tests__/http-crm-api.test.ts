@@ -56,8 +56,8 @@ describe('reading the CRM API', () => {
       source: 'TripRequestWidget',
       stage: 'Quoted',
     });
-    expect(lead.quotes[0].totalMinor).toBe(97_500_000);
-    expect(lead.history[0].byName).toBe('Website');
+    expect(lead.quotes[0]?.totalMinor).toBe(97_500_000);
+    expect(lead.history[0]?.byName).toBe('Website');
   });
 
   it('turns a quote response into the console’s quote, with its items and days', () => {
@@ -95,7 +95,7 @@ describe('reading the CRM API', () => {
 
     expect(quote.totalMinor).toBe(97_500_000);
     expect(quote.items[0]).toMatchObject({ quantity: 2, unitPriceMinor: 45_000_000 });
-    expect(quote.itinerary[0].dayNumber).toBe(1);
+    expect(quote.itinerary[0]?.dayNumber).toBe(1);
     expect(quote.publicUrl).toBe('https://lekki-horizon.com/q/abc');
   });
 
@@ -150,8 +150,8 @@ describe('reading the CRM API', () => {
       totalBookings: 3,
       openLeadCount: 1,
     });
-    expect(customer.bookings[0].amountMinor).toBe(80_000_000);
-    expect(customer.tasks[0].related.label).toBe('Chiamaka Okonkwo · Dubai');
-    expect(customer.communications[0].channel).toBe('Whatsapp');
+    expect(customer.bookings[0]?.amountMinor).toBe(80_000_000);
+    expect(customer.tasks[0]?.related.label).toBe('Chiamaka Okonkwo · Dubai');
+    expect(customer.communications[0]?.channel).toBe('Whatsapp');
   });
 });

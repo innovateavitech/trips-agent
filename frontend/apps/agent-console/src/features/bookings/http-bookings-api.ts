@@ -4,6 +4,7 @@ import { int64 } from '../../api/int64';
 import type { BookingsApi } from './bookings-api';
 import type {
   BookingDetail,
+  BookingDocument,
   BookingListItem,
   BookingStatus,
   BookingTraveller,
@@ -12,16 +13,36 @@ import type {
 } from './types';
 
 /**
- * The bookings screens against the real orders API (#42, #44).
+ * The bookings screens against the real orders API (#42, #44) and its documents (#46).
  *
- *   listBookings → GET  /api/v1/bookings
- *   getBooking   → GET  /api/v1/bookings/{reference}
- *   resolve      → POST /api/v1/bookings/{reference}/resolution
+ *   listBookings    → GET  /api/v1/bookings
+ *   getBooking      → GET  /api/v1/bookings/{reference}
+ *   resolve         → POST /api/v1/bookings/{reference}/resolution
+ *   listDocuments   → GET  /api/v1/documents?orderReference={reference}
+ *   reissueDocument → POST /api/v1/documents/{documentId}/reissue
  *
  * The server leaves the margin out for anyone without `margin.view`; `useBooking` strips it again.
+ * Each document's download link is signed and short-lived, so the list is asked for again rather
+ * than kept.
  */
 export function createHttpBookingsApi({ api }: { api: ApiClient }): BookingsApi {
   return {
+    async listDocuments(reference) {
+      return (
+        await unwrap(
+          api.GET('/api/v1/documents', { params: { query: { orderReference: reference } } }),
+        )
+      ).map(toDocument);
+    },
+
+    async reissueDocument(documentId) {
+      return toDocument(
+        await unwrap(
+          api.POST('/api/v1/documents/{documentId}/reissue', { params: { path: { documentId } } }),
+        ),
+      );
+    },
+
     async listBookings() {
       return (await unwrap(api.GET('/api/v1/bookings'))).map(toListItem);
     },
@@ -103,6 +124,18 @@ export function toDetail(detail: Schemas['BookingDetailResponse']): BookingDetai
           paidFrom: toPaidFrom(detail.failure.paidFrom),
         }
       : null,
+  };
+}
+
+/** A document as the screens use it: its 64-bit numbers, which JSON may carry as strings, as numbers. */
+export function toDocument(document: Schemas['BookingDocumentResponse']): BookingDocument {
+  return {
+    ...document,
+    issueNumber: int64(document.issueNumber),
+    sizeBytes:
+      document.sizeBytes === null || document.sizeBytes === undefined
+        ? null
+        : int64(document.sizeBytes),
   };
 }
 

@@ -1,44 +1,65 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
+using TripsAgent.Application.Documents;
 using TripsAgent.Application.Orders;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
-using TripsAgent.Domain.Orders;
+using TripsAgent.Domain.Payments;
 
 namespace TripsAgent.Application.Notifications;
 
-/// <summary>Why a booking needs its traveller to act, in words for the traveller.</summary>
-/// <param name="Reason">
-/// A short code for the reason, e.g. <c>price-changed</c>. The same reason for the same order is
-/// emailed once, however many times it is asked for; a different reason is a different email.
-/// </param>
-/// <param name="WhatHappened">One sentence the traveller will read: what went wrong.</param>
-/// <param name="WhatToDo">One sentence: what they need to do about it.</param>
-/// <param name="RespondBy">The deadline. Printed in the agency's own time zone.</param>
-public sealed record BookingAttention(string Reason, string WhatHappened, string WhatToDo, DateTimeOffset RespondBy);
+/// <summary>Money that went back for an order line, as the traveller's refund notice describes it.</summary>
+/// <param name="RefundId">The refund. One notice per refund, however many times it is announced.</param>
+/// <param name="Method">How it went back. Only <see cref="RefundMethod.Gateway"/> reaches the traveller's own card.</param>
+/// <param name="AmountMinor">How much, in minor units. Named to the traveller only for a card refund.</param>
+/// <param name="Currency">ISO 4217, e.g. <c>NGN</c>.</param>
+public sealed record BookingRefund(Guid RefundId, RefundMethod Method, long AmountMinor, string Currency);
 
 /// <summary>
-/// For the checkout saga (#42): the traveller's "booking confirmed" and "booking needs attention" emails.
+/// The traveller's emails about one item of their booking (#42–#45): it is confirmed, it needs
+/// attention, or it was cancelled and its money went back.
 /// </summary>
 /// <remarks>
-/// Both are traveller-facing, so they go out under the agency's brand and never ours (CLAUDE.md
-/// rule 4). Both stage the email in the caller's unit of work — it is sent only if the caller's save
-/// commits — and both are keyed so that a saga step replayed three times emails once.
+/// All three are traveller-facing, so they go out under the agency's brand and never ours (CLAUDE.md
+/// rule 4). Each stages the email in the caller's unit of work — it is sent only if the caller's save
+/// commits — and each is keyed, so an event delivered three times emails once.
+/// <see cref="BookingFollowUps"/> calls them from the booking pipeline's events.
 /// </remarks>
 public interface IBookingEmails
 {
-    /// <summary>Stages "your booking is confirmed" for <paramref name="orderId"/>'s customer.</summary>
-    /// <returns>False when nothing was staged: no email address, the order is not visible, or it was already sent.</returns>
+    /// <summary>Stages "your booking is confirmed" for one confirmed order line.</summary>
+    /// <returns>False when nothing was staged: no email address, the line is not visible, or it was already sent.</returns>
     /// <exception cref="InvalidOperationException">Called acting for no agency and outside any platform scope.</exception>
-    public Task<bool> SendBookingConfirmedAsync(Guid orderId, BookingCustomer customer, CancellationToken cancellationToken = default);
+    public Task<bool> SendBookingConfirmedAsync(Guid orderLineId, BookingCustomer customer, CancellationToken cancellationToken = default);
 
-    /// <summary>Stages "your booking needs your attention" for <paramref name="orderId"/>'s customer.</summary>
-    /// <returns>False when nothing was staged: no email address, the order is not visible, or this reason was already sent.</returns>
+    /// <summary>
+    /// Stages "one item in your booking needs attention" for a line that could not be ticketed and waits
+    /// in the agent's resolution queue (#44).
+    /// </summary>
+    /// <param name="orderLineId">The line.</param>
+    /// <param name="customer">Who to write to.</param>
+    /// <param name="flaggedAt">
+    /// When the line was flagged. The same flag announced again emails once; a line flagged again after
+    /// a later failure is news, and emails again.
+    /// </param>
+    /// <param name="cancellationToken">Cancels the reads.</param>
+    /// <returns>False when nothing was staged: no email address, the line is not visible, or it was already sent.</returns>
     /// <exception cref="InvalidOperationException">Called acting for no agency and outside any platform scope.</exception>
-    public Task<bool> SendBookingNeedsAttentionAsync(
-        Guid orderId,
+    public Task<bool> SendItemNeedsAttentionAsync(
+        Guid orderLineId,
         BookingCustomer customer,
-        BookingAttention attention,
+        DateTimeOffset flaggedAt,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stages "an item in your booking has been cancelled", saying what happens to the money (#43, #44).
+    /// </summary>
+    /// <returns>False when nothing was staged: no email address, the line is not visible, or this refund was already announced.</returns>
+    /// <exception cref="InvalidOperationException">Called acting for no agency and outside any platform scope.</exception>
+    public Task<bool> SendRefundNoticeAsync(
+        Guid orderLineId,
+        BookingCustomer customer,
+        BookingRefund refund,
         CancellationToken cancellationToken = default);
 }
 
@@ -49,142 +70,192 @@ public sealed class BookingEmails(
     ITenantContext tenant,
     IPlatformScope platformScope) : IBookingEmails
 {
-    public async Task<bool> SendBookingConfirmedAsync(Guid orderId, BookingCustomer customer, CancellationToken cancellationToken = default)
+    public async Task<bool> SendBookingConfirmedAsync(Guid orderLineId, BookingCustomer customer, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(customer);
 
-        var booking = await DescribeAsync(orderId, cancellationToken);
+        var item = await DescribeAsync(orderLineId, cancellationToken);
 
-        if (booking is null || string.IsNullOrWhiteSpace(customer.Email))
+        if (item is null || string.IsNullOrWhiteSpace(customer.Email))
         {
             return false;
         }
 
-        return await notifier.QueueEmailAsync(
-            new EmailNotificationRequest(
-                booking.AgencyId,
-                NotificationTemplateCatalog.BookingConfirmed,
-                customer.Email,
-                customer.Name,
-                new Dictionary<string, string>(StringComparer.Ordinal)
-                {
-                    ["bookingReference"] = booking.Reference,
-                    ["itinerarySummary"] = booking.Itinerary,
-                    ["travellerNames"] = booking.TravellerNames ?? customer.Name,
-                    ["departureDate"] = booking.DepartureDate ?? "as shown on your voucher",
-                },
-                DedupeKey: $"{NotificationTemplateCatalog.BookingConfirmed}:{orderId}"),
+        return await QueueAsync(
+            item,
+            NotificationTemplateCatalog.BookingConfirmed,
+            customer.Email,
+            customer.Name,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["bookingReference"] = item.Reference,
+                ["itinerarySummary"] = item.Title,
+                ["travellerNames"] = item.TravellerNames ?? customer.Name,
+                ["departureDate"] = item.DepartureDate ?? "as shown on your voucher",
+            },
+            $"{NotificationTemplateCatalog.BookingConfirmed}:{orderLineId}",
             cancellationToken);
     }
 
-    public async Task<bool> SendBookingNeedsAttentionAsync(
-        Guid orderId,
+    public async Task<bool> SendItemNeedsAttentionAsync(
+        Guid orderLineId,
         BookingCustomer customer,
-        BookingAttention attention,
+        DateTimeOffset flaggedAt,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(customer);
-        ArgumentNullException.ThrowIfNull(attention);
-        ArgumentException.ThrowIfNullOrWhiteSpace(attention.Reason);
 
-        var booking = await DescribeAsync(orderId, cancellationToken);
+        var item = await DescribeAsync(orderLineId, cancellationToken);
 
-        if (booking is null || string.IsNullOrWhiteSpace(customer.Email))
+        if (item is null || string.IsNullOrWhiteSpace(customer.Email))
         {
             return false;
         }
 
-        return await notifier.QueueEmailAsync(
-            new EmailNotificationRequest(
-                booking.AgencyId,
-                NotificationTemplateCatalog.BookingNeedsAttention,
-                customer.Email,
-                customer.Name,
-                new Dictionary<string, string>(StringComparer.Ordinal)
-                {
-                    ["bookingReference"] = booking.Reference,
-                    ["itinerarySummary"] = booking.Itinerary,
-                    ["whatHappened"] = attention.WhatHappened,
-                    ["whatToDo"] = attention.WhatToDo,
-                    ["deadline"] = InAgencyTime(attention.RespondBy, booking.TimeZoneId),
-                },
-                DedupeKey: $"{NotificationTemplateCatalog.BookingNeedsAttention}:{orderId}:{attention.Reason.Trim()}"),
+        // No reason is passed on. The pipeline's is written for the agent — a supplier status code — and
+        // the traveller needs only what it means for them.
+        return await QueueAsync(
+            item,
+            NotificationTemplateCatalog.BookingNeedsAttention,
+            customer.Email,
+            customer.Name,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["bookingReference"] = item.Reference,
+                ["itemTitle"] = item.Title,
+            },
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"{NotificationTemplateCatalog.BookingNeedsAttention}:{orderLineId}:{flaggedAt.UtcTicks}"),
             cancellationToken);
     }
 
-    /// <summary>What the two emails say about the order, read in the caller's own scope.</summary>
-    private async Task<BookingDescription?> DescribeAsync(Guid orderId, CancellationToken cancellationToken)
+    public async Task<bool> SendRefundNoticeAsync(
+        Guid orderLineId,
+        BookingCustomer customer,
+        BookingRefund refund,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(customer);
+        ArgumentNullException.ThrowIfNull(refund);
+
+        var item = await DescribeAsync(orderLineId, cancellationToken);
+
+        if (item is null || string.IsNullOrWhiteSpace(customer.Email))
+        {
+            return false;
+        }
+
+        return await QueueAsync(
+            item,
+            NotificationTemplateCatalog.BookingRefundNotice,
+            customer.Email,
+            customer.Name,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["bookingReference"] = item.Reference,
+                ["itemTitle"] = item.Title,
+                ["refundDetail"] = DescribeRefund(refund),
+            },
+            $"{NotificationTemplateCatalog.BookingRefundNotice}:{refund.RefundId}",
+            cancellationToken);
+    }
+
+    /// <summary>What the refund notice says about the money.</summary>
+    /// <remarks>
+    /// An amount only when it went back to the card the traveller paid with: that is their own money
+    /// coming back. Anything else went back to the agency's wallet, and is what the <i>agency</i> paid —
+    /// its net rate, which a traveller is never shown, and never the price the traveller was quoted.
+    /// </remarks>
+    /// <param name="refund">The money that went back.</param>
+    /// <returns>One or two sentences for the traveller.</returns>
+    public static string DescribeRefund(BookingRefund refund)
+    {
+        ArgumentNullException.ThrowIfNull(refund);
+
+        return refund.Method == RefundMethod.Gateway
+            ? $"{DocumentMoney.Format(refund.AmountMinor, refund.Currency)} has been refunded to the card you paid with. "
+              + "Your bank may take a few working days to show it. Reply to this email if you have any questions."
+            : "If you have already paid for it, reply to this email and we will sort out your refund.";
+    }
+
+    private Task<bool> QueueAsync(
+        ItemDescription item,
+        string templateKey,
+        string email,
+        string name,
+        Dictionary<string, string> variables,
+        string dedupeKey,
+        CancellationToken cancellationToken) =>
+        notifier.QueueEmailAsync(
+            new EmailNotificationRequest(item.AgencyId, templateKey, email, name, variables, DedupeKey: dedupeKey),
+            cancellationToken);
+
+    /// <summary>What the emails say about one order line, read in the caller's own scope.</summary>
+    private async Task<ItemDescription?> DescribeAsync(Guid orderLineId, CancellationToken cancellationToken)
     {
         OrderScope.EnsureScoped(tenant, platformScope);
 
+        var line = await db.OrderLines
+            .AsNoTracking()
+            .FirstOrDefaultAsync(candidate => candidate.Id == orderLineId, cancellationToken);
+
+        if (line is null)
+        {
+            return null;
+        }
+
         var order = await db.Orders
             .AsNoTracking()
-            .Include(o => o.Lines)
-            .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
+            .Where(candidate => candidate.Id == line.OrderId)
+            .Select(candidate => new { candidate.AgencyId, candidate.OrderNumber })
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (order is null)
         {
             return null;
         }
 
-        var timeZoneId = await db.Agencies
-            .AsNoTracking()
-            .Where(agency => agency.Id == order.AgencyId)
-            .Select(agency => agency.Timezone)
-            .FirstAsync(cancellationToken);
-
-        var lineIds = order.Lines.Select(line => line.Id).ToList();
-        var offerIds = order.Lines
-            .Where(line => line.SupplierOfferId is not null)
-            .Select(line => line.SupplierOfferId!.Value)
-            .ToList();
-
         var travellers = await db.OrderTravellers
             .AsNoTracking()
-            .Where(traveller => lineIds.Contains(traveller.OrderLineId))
+            .Where(traveller => traveller.OrderLineId == line.Id)
             .OrderBy(traveller => traveller.Id)
             .Select(traveller => traveller.FirstName + " " + traveller.LastName)
             .ToListAsync(cancellationToken);
 
-        // The first departure across the order, in the local time it was recorded in — the time on
-        // the ticket, not a conversion of it.
-        var flights = await db.FlightSegments
-            .AsNoTracking()
-            .Where(segment => offerIds.Contains(segment.SupplierOfferId))
-            .Select(segment => segment.DepartureAt)
-            .ToListAsync(cancellationToken);
+        // The line's first departure, in the local time it was recorded in — the time on the ticket,
+        // not a conversion of it.
+        DateTimeOffset? departure = null;
 
-        var buses = await db.BusSegments
-            .AsNoTracking()
-            .Where(segment => offerIds.Contains(segment.SupplierOfferId))
-            .Select(segment => segment.DepartureAt)
-            .ToListAsync(cancellationToken);
+        if (line.SupplierOfferId is { } offerId)
+        {
+            var flights = await db.FlightSegments
+                .AsNoTracking()
+                .Where(segment => segment.SupplierOfferId == offerId)
+                .Select(segment => segment.DepartureAt)
+                .ToListAsync(cancellationToken);
 
-        var first = flights.Concat(buses).OrderBy(departure => departure.UtcDateTime).Cast<DateTimeOffset?>().FirstOrDefault();
+            var buses = await db.BusSegments
+                .AsNoTracking()
+                .Where(segment => segment.SupplierOfferId == offerId)
+                .Select(segment => segment.DepartureAt)
+                .ToListAsync(cancellationToken);
 
-        return new BookingDescription(
+            departure = flights.Concat(buses).OrderBy(at => at.UtcDateTime).Cast<DateTimeOffset?>().FirstOrDefault();
+        }
+
+        return new ItemDescription(
             order.AgencyId,
             order.OrderNumber,
-            string.Join("; ", order.Lines.OrderBy(line => line.Id).Select(line => line.TitleSnapshot)),
+            line.TitleSnapshot,
             travellers.Count == 0 ? null : string.Join(", ", travellers.Distinct(StringComparer.Ordinal)),
-            first?.ToString("dddd d MMMM yyyy", CultureInfo.InvariantCulture),
-            timeZoneId);
+            departure?.ToString("dddd d MMMM yyyy", CultureInfo.InvariantCulture));
     }
 
-    /// <summary>"Friday 2 October 2026 at 14:30 (Lagos time)" — the agency's wall clock, said plainly.</summary>
-    private static string InAgencyTime(DateTimeOffset at, string timeZoneId)
-    {
-        var local = TimeZoneInfo.ConvertTime(at, TimeZoneInfo.FindSystemTimeZoneById(timeZoneId));
-        var place = timeZoneId[(timeZoneId.LastIndexOf('/') + 1)..].Replace('_', ' ');
-
-        return $"{local.ToString("dddd d MMMM yyyy 'at' HH:mm", CultureInfo.InvariantCulture)} ({place} time)";
-    }
-
-    private sealed record BookingDescription(
+    private sealed record ItemDescription(
         Guid AgencyId,
         string Reference,
-        string Itinerary,
+        string Title,
         string? TravellerNames,
-        string? DepartureDate,
-        string TimeZoneId);
+        string? DepartureDate);
 }

@@ -2,12 +2,14 @@ using FluentAssertions;
 using TripsAgent.Application.Identity.Registration;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Domain.Notifications;
+using TripsAgent.Domain.Payments;
 
 namespace TripsAgent.UnitTests.Notifications;
 
 /// <summary>
 /// Issue #45's M1 templates, all seven in the versioned catalog — including the two sent at once
-/// because their variable is a live secret — and the pieces that carry the agency's logo and files.
+/// because their variable is a live secret — with the refund notice the pipeline's reversals need, and
+/// the pieces that carry the agency's logo and files.
 /// </summary>
 public class CatalogRenderedEmailTests
 {
@@ -23,6 +25,7 @@ public class CatalogRenderedEmailTests
             NotificationTemplateCatalog.WalletTopUpReceipt,
             NotificationTemplateCatalog.BookingConfirmed,
             NotificationTemplateCatalog.BookingNeedsAttention,
+            NotificationTemplateCatalog.BookingRefundNotice,
         ]);
     }
 
@@ -93,6 +96,47 @@ public class CatalogRenderedEmailTests
     }
 
     [Fact]
+    public void One_item_needing_attention_is_said_plainly_and_asks_nothing_of_the_traveller()
+    {
+        var rendered = RenderForTraveller(
+            NotificationTemplateCatalog.BookingNeedsAttention,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["bookingReference"] = "ORD-2026-000142",
+                ["itemTitle"] = "Lagos (LOS) to Abuja (ABV)",
+            });
+
+        rendered.Subject.Should().Be("One item in your booking needs attention — ORD-2026-000142");
+        Words(rendered.Text).Should()
+            .Contain("needs attention: its ticket could not be issued")
+            .And.Contain("Lagos Travel is looking into it")
+            .And.Contain("You do not need to do anything right now");
+    }
+
+    [Fact]
+    public void A_refund_notice_names_an_amount_only_when_it_went_back_to_the_travellers_card()
+    {
+        var toWallet = BookingEmails.DescribeRefund(new BookingRefund(Guid.CreateVersion7(), RefundMethod.WalletCredited, 110_750, "NGN"));
+        var toCard = BookingEmails.DescribeRefund(new BookingRefund(Guid.CreateVersion7(), RefundMethod.Gateway, 110_750, "NGN"));
+
+        toWallet.Should().NotContain("NGN", "the wallet got back what the agency paid, which is not the traveller's price")
+            .And.Contain("If you have already paid for it");
+        toCard.Should().Contain("NGN 1,107.50 has been refunded to the card you paid with");
+
+        var rendered = RenderForTraveller(
+            NotificationTemplateCatalog.BookingRefundNotice,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["bookingReference"] = "ORD-2026-000142",
+                ["itemTitle"] = "Lagos (LOS) to Abuja (ABV)",
+                ["refundDetail"] = toWallet,
+            });
+
+        rendered.Subject.Should().Be("An item in your booking has been cancelled — ORD-2026-000142");
+        Words(rendered.Text).Should().Contain("could not be ticketed, so it has been cancelled").And.Contain(toWallet);
+    }
+
+    [Fact]
     public void A_notification_keeps_each_attachment_once()
     {
         var invoice = Guid.CreateVersion7();
@@ -134,4 +178,19 @@ public class CatalogRenderedEmailTests
         notification.Attempts.Should().Be(1);
         notification.RecordBounceReport("again").Should().BeFalse();
     }
+
+    /// <summary>Renders a traveller template as Lagos Travel would send it — the renderer refuses one that names us.</summary>
+    private static (string Subject, string Text) RenderForTraveller(string key, Dictionary<string, string> values)
+    {
+        var rendered = NotificationRenderer.Render(
+            NotificationTemplateCatalog.Find(key, NotificationChannel.Email)!.ToTemplate(),
+            new NotificationBrand("Lagos Travel", "#0A7E3B", NotificationRenderer.InlineLogoUrl, "12 Marina, Lagos", null),
+            "Ada",
+            values);
+
+        return (rendered.Subject, rendered.Text);
+    }
+
+    /// <summary>The text with its line breaks and indents folded to single spaces.</summary>
+    private static string Words(string text) => string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 }

@@ -6,13 +6,14 @@ using TripsAgent.Application.Tenancy;
 namespace TripsAgent.Application.Documents;
 
 /// <summary>
-/// For the checkout saga (#42): ask for an order's invoice and vouchers once its lines are confirmed.
+/// Asks for an order's invoice and vouchers once its lines are confirmed (#46).
 /// </summary>
 /// <remarks>
-/// The saga calls this in the same unit of work that confirms the order, then saves. The request
-/// and the confirmation commit together, so there is no confirmed order that never gets its
-/// documents, and no documents for a confirmation that rolled back. Everything slow — numbering,
-/// drawing, storing, emailing — happens afterwards in the Worker, from <c>documents.render</c>.
+/// <c>BookingFollowUps</c> calls this when the pipeline announces <c>BookingConfirmed</c>. That event
+/// exists only if the confirmation committed, so there are no documents for a confirmation that rolled
+/// back; and it is not acknowledged until this request is saved, so there is no confirmed order that
+/// never gets its documents. Everything slow — numbering, drawing, storing, emailing — happens
+/// afterwards in the Worker, from <c>documents.render</c>.
 /// </remarks>
 public interface IBookingDocuments
 {

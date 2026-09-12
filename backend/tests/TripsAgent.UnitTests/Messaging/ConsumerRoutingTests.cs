@@ -1,4 +1,5 @@
 using FluentAssertions;
+using MassTransit;
 using TripsAgent.Application.Messaging;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Infrastructure.Documents;
@@ -38,6 +39,33 @@ public class ConsumerRoutingTests
             .GroupBy(route => route.Consumer)
             .Should().OnlyContain(group => group.Count() == 1);
     }
+
+    [Theory]
+    [InlineData(typeof(BookingConfirmedConsumer), "documents.render")]
+    [InlineData(typeof(BookingNeedsResolutionConsumer), "notifications.email")]
+    [InlineData(typeof(PaymentReversedConsumer), "notifications.email")]
+    public void The_travellers_side_of_each_booking_event_is_consumed_on_one_queue(Type consumer, string queue)
+    {
+        MessagingRegistration.ConsumerRoutes
+            .Where(route => route.Consumer == consumer)
+            .Should().ContainSingle()
+            .Which.Queue.Name.Should().Be(queue);
+    }
+
+    [Fact]
+    public void No_message_type_has_two_consumers()
+    {
+        // Published messages fan out: two consumers of one event, on any two queues, would each get a
+        // copy — a traveller emailed twice, or a ticket's payment captured twice.
+        MessagingRegistration.ConsumerRoutes
+            .SelectMany(route => MessageTypesOf(route.Consumer))
+            .Should().OnlyHaveUniqueItems();
+    }
+
+    private static IEnumerable<Type> MessageTypesOf(Type consumer) =>
+        consumer.GetInterfaces()
+            .Where(contract => contract.IsGenericType && contract.GetGenericTypeDefinition() == typeof(IConsumer<>))
+            .Select(contract => contract.GetGenericArguments()[0]);
 
     // ------------------------------------------------------------------ retries (#45, #46)
 

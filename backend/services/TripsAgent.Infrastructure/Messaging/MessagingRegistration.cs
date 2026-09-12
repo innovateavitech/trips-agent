@@ -43,6 +43,13 @@ public static class MessagingRegistration
         // Both of its message types: an order's documents, and one reissued document (#46).
         (MessageQueue.DocumentsRender, typeof(DocumentRenderConsumer)),
 
+        // The traveller's side of the booking pipeline's events (#42–#46). A confirmation's work is
+        // mostly its documents, so it waits with them; the other two only write an email. One consumer
+        // per event: published messages fan out, so a second on any queue would email twice.
+        (MessageQueue.DocumentsRender, typeof(BookingConfirmedConsumer)),
+        (MessageQueue.NotificationsEmail, typeof(BookingNeedsResolutionConsumer)),
+        (MessageQueue.NotificationsEmail, typeof(PaymentReversedConsumer)),
+
         // Issuing a ticket (#36). The endpoint's retry and RabbitMQ's redelivery are both safe here —
         // a second pass finds the booking already issuing and sends nothing. What is never retried is
         // the supplier call itself (ADR-0003).

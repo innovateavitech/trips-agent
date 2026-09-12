@@ -86,11 +86,20 @@ public static class NotificationTemplateCatalog
     /// <summary>An agency's wallet top-up was credited.</summary>
     public const string WalletTopUpReceipt = "wallet.topup-receipt";
 
-    /// <summary>A traveller's booking is confirmed and ticketed.</summary>
+    /// <summary>One item of a traveller's booking is confirmed and ticketed (#42). Sent once per order line.</summary>
     public const string BookingConfirmed = "booking.confirmed";
 
-    /// <summary>A traveller's booking needs them to do something, or it will be lost.</summary>
+    /// <summary>
+    /// One item of a traveller's booking could not be ticketed and waits in the agent's resolution
+    /// queue (#44). Says so plainly, and asks nothing of the traveller: the agency is the one who acts.
+    /// </summary>
     public const string BookingNeedsAttention = "booking.needs-attention";
+
+    /// <summary>
+    /// An item that could not be ticketed was cancelled and its money went back (#43, #44). Names an
+    /// amount only when it went back to the traveller's own card.
+    /// </summary>
+    public const string BookingRefundNotice = "booking.refund-notice";
 
     /// <summary>An agent's held booking is close to its ticket time limit (#38). Sent at T-60 and T-15 minutes.</summary>
     public const string BookingTimeLimitWarning = "booking.time-limit-warning";
@@ -331,40 +340,69 @@ public static class NotificationTemplateCatalog
                   Reply to this email if anything looks wrong.
                   """),
 
+        // Version 2 (#44): the pipeline's failed line needs the agency, not the traveller, to act —
+        // version 1 asked the traveller to do something by a deadline. Plain and without alarm, and
+        // with no reason: the pipeline's is written for the agent, and it names the supplier.
         TravellerFacing(
             BookingNeedsAttention,
-            version: 1,
-            subject: "Action needed on your booking — {{bookingReference}}",
-            tokens: ["bookingReference", "itinerarySummary", "whatHappened", "whatToDo", "deadline"],
+            version: 2,
+            subject: "One item in your booking needs attention — {{bookingReference}}",
+            tokens: ["bookingReference", "itemTitle"],
             html: """
                   <p>Hello {{recipientName}},</p>
-                  <p>Your booking with {{brandName}} needs your attention.</p>
+                  <p>One item in your booking with {{brandName}} needs attention: its ticket could not
+                     be issued.</p>
                   <table role="presentation" cellpadding="6" cellspacing="0">
                     <tr><td><strong>Reference</strong></td><td>{{bookingReference}}</td></tr>
-                    <tr><td><strong>Trip</strong></td><td>{{itinerarySummary}}</td></tr>
+                    <tr><td><strong>Item</strong></td><td>{{itemTitle}}</td></tr>
                   </table>
-                  <p><strong>What happened:</strong> {{whatHappened}}</p>
-                  <p><strong>What to do:</strong> {{whatToDo}}</p>
-                  <p>Please do this by <strong>{{deadline}}</strong>. After that the airline may
-                     release the seats, and the price is no longer guaranteed.</p>
-                  <p>Reply to this email if you need help.</p>
+                  <p>{{brandName}} is looking into it and will be in touch about what happens next. You
+                     do not need to do anything right now.</p>
+                  <p>Reply to this email if you have any questions.</p>
                   """,
             text: """
                   Hello {{recipientName}},
 
-                  Your booking with {{brandName}} needs your attention.
+                  One item in your booking with {{brandName}} needs attention: its ticket could not be
+                  issued.
 
                   Reference:  {{bookingReference}}
-                  Trip:       {{itinerarySummary}}
+                  Item:       {{itemTitle}}
 
-                  What happened: {{whatHappened}}
+                  {{brandName}} is looking into it and will be in touch about what happens next. You do
+                  not need to do anything right now.
 
-                  What to do:    {{whatToDo}}
+                  Reply to this email if you have any questions.
+                  """),
 
-                  Please do this by {{deadline}}. After that the airline may release the seats, and
-                  the price is no longer guaranteed.
+        // After a reversal (#43) or the agent's refund (#44). What it says about the money is
+        // refundDetail, from BookingEmails.DescribeRefund: an amount only for a card refund, because
+        // money returned to the agency's wallet is what the agency paid, never the traveller's price.
+        TravellerFacing(
+            BookingRefundNotice,
+            version: 1,
+            subject: "An item in your booking has been cancelled — {{bookingReference}}",
+            tokens: ["bookingReference", "itemTitle", "refundDetail"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>One item in your booking with {{brandName}} could not be ticketed, so it has been
+                     cancelled.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>Reference</strong></td><td>{{bookingReference}}</td></tr>
+                    <tr><td><strong>Item</strong></td><td>{{itemTitle}}</td></tr>
+                  </table>
+                  <p>{{refundDetail}}</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
 
-                  Reply to this email if you need help.
+                  One item in your booking with {{brandName}} could not be ticketed, so it has been
+                  cancelled.
+
+                  Reference:  {{bookingReference}}
+                  Item:       {{itemTitle}}
+
+                  {{refundDetail}}
                   """),
 
         // The PDFs themselves travel as attachments (Notification.AttachmentAssetIds), not as a

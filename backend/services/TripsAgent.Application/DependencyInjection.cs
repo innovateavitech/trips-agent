@@ -105,10 +105,12 @@ public static class DependencyInjection
         // reported as spam (#45). Its webhook arrives with whichever provider is chosen.
         services.AddScoped<NotificationDeliveryReports>();
 
-        // For the checkout saga (#42): the traveller's booking emails and the order's documents,
-        // both staged in the saga's own unit of work.
+        // The traveller's side of the booking pipeline (#42–#46): its emails and the order's documents,
+        // staged by BookingFollowUps when the Worker consumes the pipeline's BookingConfirmed,
+        // BookingNeedsResolution and PaymentReversed events.
         services.AddScoped<IBookingEmails, BookingEmails>();
         services.AddScoped<IBookingDocuments, BookingDocuments>();
+        services.AddScoped<BookingFollowUps>();
 
         // Invoices and vouchers in the console (#46): list, reissue and download through signed
         // links. The rendering itself — OrderDocumentService — is registered by AddDocumentRendering,

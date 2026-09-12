@@ -2,7 +2,7 @@ import { createApiClient } from '@trips/api-client';
 import { describe, expect, it } from 'vitest';
 import { createHttpBookingsApi } from '../http-bookings-api';
 
-function fakeServer(respond: (path: string) => Response) {
+function fakeServer(respond: (path: string, url: URL) => Response) {
   const requests: Array<{ method: string; path: string; body: unknown }> = [];
 
   const api = createApiClient({
@@ -10,9 +10,10 @@ function fakeServer(respond: (path: string) => Response) {
     fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = input instanceof Request ? input : new Request(input, init);
       const text = await request.clone().text();
-      const path = new URL(request.url).pathname;
+      const url = new URL(request.url);
+      const path = url.pathname;
       requests.push({ method: request.method, path, body: text ? JSON.parse(text) : undefined });
-      return respond(path);
+      return respond(path, url);
     },
   });
 
@@ -97,5 +98,60 @@ describe('the bookings screens over HTTP', () => {
       body: { action: 'refund' },
     });
     expect(resolved.status).toBe('cancelled');
+  });
+
+  it("lists a booking's documents by its reference, and asks for a reissue by document", async () => {
+    const voucher = {
+      id: '0192d1c4-0000-7000-8000-000000000001',
+      documentType: 'Voucher',
+      documentNumber: 'VCH-2026-000001',
+      issueNumber: '1',
+      status: 'Ready',
+      productType: 'Flight',
+      issuedAt: '2026-09-11T09:05:00Z',
+      supersedesDocumentNumber: null,
+      supersededByDocumentId: null,
+      supersededByDocumentNumber: null,
+      fileName: 'VCH-2026-000001.pdf',
+      sizeBytes: '48213',
+      checksum: 'c0ffee',
+      downloadUrl:
+        '/api/v1/documents/0192d1c4-0000-7000-8000-000000000001/pdf?expires=1&signature=s',
+      downloadExpiresAt: '2026-09-11T10:05:00Z',
+      email: null,
+    };
+    const urls: URL[] = [];
+    const server = fakeServer((path, url) => {
+      urls.push(url);
+      return path.endsWith('/reissue')
+        ? json(
+            { ...voucher, id: 'reissued', issueNumber: 2, status: 'Pending', sizeBytes: null },
+            202,
+          )
+        : json([voucher]);
+    });
+    const bookings = createHttpBookingsApi(server);
+
+    const [listed] = await bookings.listDocuments('ORD-2026-000042');
+    const reissued = await bookings.reissueDocument(voucher.id);
+
+    expect(urls[0]?.pathname).toBe('/api/v1/documents');
+    expect(urls[0]?.searchParams.get('orderReference')).toBe('ORD-2026-000042');
+    expect(listed).toMatchObject({
+      documentNumber: 'VCH-2026-000001',
+      issueNumber: 1,
+      sizeBytes: 48213,
+    });
+    expect(server.requests[1]).toEqual({
+      method: 'POST',
+      path: `/api/v1/documents/${voucher.id}/reissue`,
+      body: undefined,
+    });
+    expect(reissued).toMatchObject({
+      id: 'reissued',
+      issueNumber: 2,
+      status: 'Pending',
+      sizeBytes: null,
+    });
   });
 });

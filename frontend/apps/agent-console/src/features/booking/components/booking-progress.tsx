@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
 import { Alert, Badge, Button, Card, ErrorState, LoadingState, buttonVariants } from '@trips/ui';
 import { describeError } from '../../../api/errors';
+import { useBookingDocuments } from '../../bookings/bookings-api';
+import { currentVoucher, documentHref } from '../../bookings/documents-rules';
+import type { BookingDocument } from '../../bookings/types';
 import { useBookingProgress } from '../booking-api';
 import type { BookingProgress as Progress } from '../types';
 
@@ -11,6 +14,11 @@ import type { BookingProgress as Progress } from '../types';
  */
 export function BookingProgress({ reference, carrier }: { reference: string; carrier: string }) {
   const progress = useBookingProgress(reference);
+
+  // Only once it is ticketed: that is when the Worker starts preparing the voucher (#46).
+  const documents = useBookingDocuments(reference, {
+    enabled: progress.data?.status === 'ticketed',
+  });
 
   if (progress.isPending) {
     return (
@@ -30,17 +38,27 @@ export function BookingProgress({ reference, carrier }: { reference: string; car
     );
   }
 
-  return <BookingProgressCard progress={progress.data} reference={reference} carrier={carrier} />;
+  return (
+    <BookingProgressCard
+      progress={progress.data}
+      reference={reference}
+      carrier={carrier}
+      voucher={currentVoucher(documents.data)}
+    />
+  );
 }
 
 export function BookingProgressCard({
   progress,
   reference,
   carrier,
+  voucher = null,
 }: {
   progress: Progress;
   reference: string;
   carrier: string;
+  /** The voucher to link to, once there is one. It is prepared just after the ticket lands. */
+  voucher?: BookingDocument | null;
 }) {
   if (progress.status === 'failed') {
     return (
@@ -101,15 +119,29 @@ export function BookingProgressCard({
         <Link to={`/bookings/${reference}`} className={buttonVariants({ size: 'sm' })}>
           View booking
         </Link>
-        <Button variant="outline" size="sm" disabled>
-          Voucher
-        </Button>
+        {voucher?.status === 'Ready' && voucher.downloadUrl ? (
+          <a
+            href={documentHref(voucher.downloadUrl)}
+            download={voucher.fileName ?? true}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >
+            Voucher
+          </a>
+        ) : (
+          <Button variant="outline" size="sm" disabled>
+            Preparing voucher…
+          </Button>
+        )}
         <Link to="/search/flights" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
           Book another
         </Link>
       </div>
       <p className="text-xs text-muted-foreground">
-        The voucher in your own branding arrives with the documents service.
+        {voucher?.status === 'Ready'
+          ? 'In your own branding. Your customer has been emailed it, with the invoice.'
+          : 'Your voucher is being prepared in your own branding. It appears here in a moment.'}
       </p>
     </Card>
   );

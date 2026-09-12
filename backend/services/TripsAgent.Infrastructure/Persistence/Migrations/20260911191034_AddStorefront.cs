@@ -737,14 +737,16 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
             // ------------------------------------------------------------------ admin alerts
             //
             // A hostname that looks like a well-known brand is set aside with an alert (open question 20).
-            // LedgerIntegrity joins the list too: PlatformAlerter has written it since the nightly ledger
-            // audit landed, but this constraint was never widened to allow it.
+            // LedgerIntegrity and SupplierBookingError join the list too: PlatformAlerter has written
+            // both since the nightly ledger audit and the booking status poller landed, and neither
+            // widened this constraint — so writing either would have failed the check. This is the last
+            // migration to touch the list, so it is where they belong.
             migrationBuilder.Sql("""
                 ALTER TABLE platform.admin_alerts DROP CONSTRAINT ck_admin_alerts_type;
                 ALTER TABLE platform.admin_alerts ADD CONSTRAINT ck_admin_alerts_type
                     CHECK (type IN ('PendingKyb', 'GatewayError', 'Dispute', 'ReversalRequired',
-                                    'TicketTimeLimitBreach', 'LedgerIntegrity', 'HostnameReview',
-                                    'SiteCertificate'));
+                                    'TicketTimeLimitBreach', 'LedgerIntegrity', 'SupplierBookingError',
+                                    'HostnameReview', 'SiteCertificate'));
                 """);
 
             // ------------------------------------------------------------------ the application role
@@ -815,12 +817,13 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                 ALTER TABLE storefront.site_pages DROP CONSTRAINT IF EXISTS fk_site_pages_version_same_agency;
                 ALTER TABLE storefront.site_versions DROP CONSTRAINT IF EXISTS fk_site_versions_site_same_agency;
 
-                -- LedgerIntegrity stays allowed: dropping it again would only restore the old gap.
+                -- LedgerIntegrity and SupplierBookingError stay allowed: dropping them again would
+                -- only restore the old gap, and the code that writes them is not being rolled back.
                 DELETE FROM platform.admin_alerts WHERE type IN ('HostnameReview', 'SiteCertificate');
                 ALTER TABLE platform.admin_alerts DROP CONSTRAINT ck_admin_alerts_type;
                 ALTER TABLE platform.admin_alerts ADD CONSTRAINT ck_admin_alerts_type
                     CHECK (type IN ('PendingKyb', 'GatewayError', 'Dispute', 'ReversalRequired',
-                                    'TicketTimeLimitBreach', 'LedgerIntegrity'));
+                                    'TicketTimeLimitBreach', 'LedgerIntegrity', 'SupplierBookingError'));
                 """);
 
             migrationBuilder.DropTable(

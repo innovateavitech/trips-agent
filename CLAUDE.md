@@ -131,6 +131,13 @@ Branches: `feat/…` `fix/…` `docs/…` `refactor/…` `test/…` `chore/…`
 
 ---
 
+## How work is planned
+
+**[docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) is the plan.** Work is organised as whole features, in the
+order given there: one feature, one branch, one PR that delivers it end to end — schema, API, jobs,
+screens and tests — and ticks its boxes in the plan. Pick the next feature from the plan, not the next
+issue. Issues are kept as history and for discussion.
+
 ## Issue conventions
 
 Issues are titled **`Module: What it is`** and carry a matching `module:` label — 22 modules from
@@ -259,6 +266,7 @@ Full glossary: [README.md §3](README.md#3-glossary--read-this-first)
 | [README.md](README.md) | The product, personas, glossary, setup, "where do I find X" |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Full git workflow, PR process, recovery from mistakes |
 | [docs/WORKING_WITH_CLAUDE.md](docs/WORKING_WITH_CLAUDE.md) | How developers here work with you: issue → plan → review → PR → reviewer |
+| [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) | **The plan:** every feature still to build, in order, with its acceptance criteria |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | All 70 issues grouped by module, with dependencies and build order |
 | [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) | Tokens, components, and what `check:design` enforces |
 | [docs/ARCHITECTURE_AND_DELIVERY_PLAN.md](docs/ARCHITECTURE_AND_DELIVERY_PLAN.md) | Schema, background jobs, checkout saga, milestones, open questions |

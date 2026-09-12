@@ -85,11 +85,30 @@ public sealed class SmtpEmailSender : IEmailSender
         mime.MessageId = MimeKit.Utils.MimeUtils.GenerateMessageId(DomainOf(fromAddress));
 
         // Both parts, so a client that cannot or will not render HTML still gets a readable email.
-        mime.Body = new BodyBuilder
+        var body = new BodyBuilder
         {
             HtmlBody = message.HtmlBody,
             TextBody = message.TextBody,
-        }.ToMessageBody();
+        };
+
+        foreach (var attachment in message.Attachments ?? [])
+        {
+            var type = ContentType.Parse(attachment.ContentType);
+
+            if (attachment.ContentId is { } contentId)
+            {
+                // Part of the HTML body — the agency's logo — rather than a file to save. The body
+                // refers to it as cid:{contentId}, so the client shows it without fetching anything.
+                var inline = body.LinkedResources.Add(attachment.FileName, attachment.Content, type);
+                inline.ContentId = contentId;
+            }
+            else
+            {
+                body.Attachments.Add(attachment.FileName, attachment.Content, type);
+            }
+        }
+
+        mime.Body = body.ToMessageBody();
 
         using var client = new SmtpClient();
 

@@ -1,12 +1,33 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using TripsAgent.Application.Assets;
 using TripsAgent.Application.Notifications;
+using TripsAgent.Application.Storage;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Notifications;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Infrastructure.Persistence;
 
 namespace TripsAgent.Infrastructure.Notifications;
+
+/// <summary>A notification names a file to attach that is not there to attach. Retrying will not help.</summary>
+internal sealed class NotificationAttachmentMissingException : Exception
+{
+    public NotificationAttachmentMissingException(string message)
+        : base(message)
+    {
+    }
+
+    public NotificationAttachmentMissingException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+
+    public NotificationAttachmentMissingException()
+        : base("An attachment is missing.")
+    {
+    }
+}
 
 /// <summary>What one attempt to send a notification came to.</summary>
 public enum NotificationDispatchOutcome
@@ -75,6 +96,8 @@ public sealed partial class NotificationDispatcher(
     AppDbContext dbContext,
     IEmailSender emailSender,
     IPlatformScope platformScope,
+    IAgencyLogoSource logos,
+    IBlobStorage storage,
     TimeProvider clock,
     ILogger<NotificationDispatcher> logger)
 {
@@ -182,7 +205,7 @@ public sealed partial class NotificationDispatcher(
         EmailMessage message;
         try
         {
-            var brand = await BrandForAsync(notification, template.Audience, cancellationToken);
+            var (brand, logo) = await BrandForAsync(notification, template.Audience, cancellationToken);
             var rendered = NotificationRenderer.Render(
                 template, brand, notification.RecipientName, Notifier.ReadPayload(notification.Payload));
 
@@ -194,7 +217,13 @@ public sealed partial class NotificationDispatcher(
 
                 // A traveller sees the agency's name as the sender, and a reply reaches the agency.
                 FromName: template.Audience == NotificationAudience.Traveller ? brand.Name : null,
-                ReplyTo: brand.ReplyTo);
+                ReplyTo: brand.ReplyTo,
+
+                // The logo travels inside the message, which the header refers to as cid:agency-logo:
+                // a linked image would be fetched from a server whose name gives away who sent it.
+                Attachments: logo is null
+                    ? null
+                    : [new EmailAttachment("logo.png", "image/png", logo.Png, NotificationRenderer.InlineLogoContentId)]);
         }
         catch (NotificationRenderException ex)
         {
@@ -216,9 +245,20 @@ public sealed partial class NotificationDispatcher(
 
         try
         {
-            var receipt = await emailSender.SendAsync(message, cancellationToken);
+            // Read here rather than in the claim, so the claim's row lock is never held while files
+            // are fetched from storage. A failure here is before the send: nothing has gone out.
+            var outgoing = await WithAttachmentsAsync(notification, message, cancellationToken);
+
+            var receipt = await emailSender.SendAsync(outgoing, cancellationToken);
             notification.MarkSent(templateVersion, receipt.ProviderMessageId, clock.GetUtcNow());
             outcome = NotificationDispatchOutcome.Sent;
+        }
+        catch (NotificationAttachmentMissingException ex)
+        {
+            // The file is not there to attach, and retrying will not put it there.
+            notification.RecordFailure(ex.Message, giveUp: true);
+            LogCannotRender(logger, notification.Id, notification.TemplateKey, ex.Message);
+            outcome = NotificationDispatchOutcome.GaveUp;
         }
         catch (EmailRejectedException ex) when (ex.AddressIsUndeliverable)
         {
@@ -325,16 +365,65 @@ public sealed partial class NotificationDispatcher(
     }
 
     /// <summary>
-    /// Whose brand wraps the message. Ours for agency staff; the agency's own, always, for a traveller.
+    /// The notification's stored attachments — an invoice, a voucher — added to the message.
     /// </summary>
-    private async Task<NotificationBrand> BrandForAsync(
+    /// <remarks>
+    /// Only the notification's own agency's files, and only servable ones. The dispatcher reads
+    /// across agencies, so the agency is named in the query rather than left to a filter that the
+    /// platform scope has lifted.
+    /// </remarks>
+    /// <exception cref="NotificationAttachmentMissingException">An attachment is not such a file.</exception>
+    private async Task<EmailMessage> WithAttachmentsAsync(
+        Notification notification,
+        EmailMessage message,
+        CancellationToken cancellationToken)
+    {
+        if (notification.AttachmentAssetIds.Count == 0)
+        {
+            return message;
+        }
+
+        var ids = notification.AttachmentAssetIds.ToList();
+
+        var assets = await dbContext.Assets
+            .AsNoTracking()
+            .Where(asset => ids.Contains(asset.Id) && asset.AgencyId == notification.AgencyId)
+            .ToListAsync(cancellationToken);
+
+        var attachments = new List<EmailAttachment>(message.Attachments ?? []);
+
+        foreach (var id in ids)
+        {
+            var asset = assets.FirstOrDefault(a => a.Id == id);
+
+            if (asset is not { IsServable: true, ContentType: { } contentType })
+            {
+                throw new NotificationAttachmentMissingException(
+                    $"Attachment {id} is not a servable file belonging to agency {notification.AgencyId}.");
+            }
+
+            await using var content = await storage.OpenReadAsync(asset.StorageKey, cancellationToken);
+            using var buffer = new MemoryStream();
+            await content.CopyToAsync(buffer, cancellationToken);
+
+            attachments.Add(new EmailAttachment(asset.FileName, contentType, buffer.ToArray()));
+        }
+
+        return message with { Attachments = attachments };
+    }
+
+    /// <summary>
+    /// Whose brand wraps the message — ours for agency staff, the agency's own, always, for a
+    /// traveller — and the agency's logo to send inside it, when it has one.
+    /// </summary>
+    private async Task<(NotificationBrand Brand, AgencyLogo? Logo)> BrandForAsync(
         Notification notification,
         NotificationAudience audience,
         CancellationToken cancellationToken)
     {
         if (audience == NotificationAudience.AgencyStaff)
         {
-            return NotificationBrand.Platform;
+            return (NotificationBrand.Platform, null);
         }
 
         var agency = await dbContext.Agencies
@@ -354,15 +443,17 @@ public sealed partial class NotificationDispatcher(
             .Select(u => u.Email)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return new NotificationBrand(
+        // Null when there is no servable logo, or it cannot be read: the header shows the name instead.
+        var logo = await logos.LoadAsync(notification.AgencyId, cancellationToken);
+
+        var brand = new NotificationBrand(
             agency.TradingName ?? agency.LegalName,
             branding?.PrimaryColor ?? AgencyBranding.DefaultPrimaryColor,
-
-            // Logos are asset ids until the upload pipeline (#18) gives them a public URL. Until
-            // then the header shows the agency's name as text, which the renderer handles.
-            LogoUrl: null,
+            LogoUrl: logo is null ? null : NotificationRenderer.InlineLogoUrl,
             Contact: branding?.ContactAddress,
             ReplyTo: owner);
+
+        return (brand, logo);
     }
 
     private Task<bool> IsSuppressedAsync(string address, CancellationToken cancellationToken) =>

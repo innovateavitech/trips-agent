@@ -198,7 +198,13 @@ public sealed class AssetUploadEndToEndTests : IAsyncLifetime, IDisposable
     {
         var limits = await _api.GetFromJsonAsync<AssetUploadLimitsResponse>(new Uri("/api/v1/assets/limits", UriKind.Relative));
 
-        limits!.Purposes.Select(p => p.Purpose).Should().BeEquivalentTo(Enum.GetNames<Domain.Assets.AssetPurpose>());
+        // Every purpose somebody may upload under. A generated document is rendered by the platform
+        // itself (#46) and is the one purpose that skips the scan, so it has no upload limits to offer.
+        limits!.Purposes.Select(p => p.Purpose).Should().BeEquivalentTo(
+            Enum.GetValues<Domain.Assets.AssetPurpose>()
+                .Where(Domain.Assets.AssetRules.IsUploadable)
+                .Select(purpose => purpose.ToString()));
+        limits.Purposes.Should().NotContain(p => p.Purpose == nameof(Domain.Assets.AssetPurpose.GeneratedDocument));
         limits.Purposes.Single(p => p.Purpose == "AgencyLogo").AllowedContentTypes.Should().NotContain(MediaTypes.Pdf);
     }
 

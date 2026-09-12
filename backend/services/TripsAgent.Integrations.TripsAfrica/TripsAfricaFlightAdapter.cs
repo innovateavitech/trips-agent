@@ -6,15 +6,19 @@ using TripsAgent.Domain.Suppliers;
 namespace TripsAgent.Integrations.TripsAfrica;
 
 /// <summary>
-/// Trips Africa flights: international and domestic search (#33) and price confirmation (#35).
+/// Trips Africa flights: international and domestic search (#33), price confirmation (#35), ticket
+/// issue (#36) and status polling (#37).
 /// </summary>
 /// <remarks>
 /// <para>
-/// Issuing (#36), status polling (#37) and fare rules arrive with their own issues and throw
-/// <see cref="NotImplementedException"/> until then — honestly unbuilt, rather than quietly doing
-/// nothing. Cancellation throws <see cref="SupplierOperationNotSupportedException"/> for good: Trips
-/// Africa documents no flight cancellation, and a cancel that did nothing would refund a ticket that
-/// still flies.
+/// Issue and status are the same for flights and buses — one endpoint, one answer — so both live in
+/// <see cref="TripsAfricaTicketing"/>, where the issue call is sent once and never again (ADR-0003).
+/// </para>
+/// <para>
+/// Fare rules are not built yet and throw <see cref="NotImplementedException"/> — honestly unbuilt,
+/// rather than quietly doing nothing. Cancellation throws <see cref="SupplierOperationNotSupportedException"/>
+/// for good: Trips Africa documents no flight cancellation, and a cancel that did nothing would refund a
+/// ticket that still flies.
 /// </para>
 /// </remarks>
 public sealed partial class TripsAfricaFlightAdapter : ISupplierAdapter
@@ -26,6 +30,7 @@ public sealed partial class TripsAfricaFlightAdapter : ISupplierAdapter
 
     private readonly TripsAfricaSearchRunner _searcher;
     private readonly TripsAfricaBookingHttp _booking;
+    private readonly TripsAfricaTicketing _ticketing;
     private readonly TripsAfricaCredentials _credentials;
     private readonly TripsAfricaSupplier _supplier;
     private readonly TripsAfricaOptions _options;
@@ -34,6 +39,7 @@ public sealed partial class TripsAfricaFlightAdapter : ISupplierAdapter
     public TripsAfricaFlightAdapter(
         TripsAfricaSearchRunner searcher,
         TripsAfricaBookingHttp booking,
+        TripsAfricaTicketing ticketing,
         TripsAfricaCredentials credentials,
         TripsAfricaSupplier supplier,
         TripsAfricaOptions options,
@@ -41,6 +47,7 @@ public sealed partial class TripsAfricaFlightAdapter : ISupplierAdapter
     {
         _searcher = searcher;
         _booking = booking;
+        _ticketing = ticketing;
         _credentials = credentials;
         _supplier = supplier;
         _options = options;
@@ -134,17 +141,18 @@ public sealed partial class TripsAfricaFlightAdapter : ISupplierAdapter
             TripsAfricaMapping.MapConfirmations(response.Body, credentials.MerchantKey));
     }
 
+    /// <summary>Sent once, never retried — see <see cref="TripsAfricaTicketing"/> and ADR-0003.</summary>
     public Task<SupplierIssueResult> IssueAsync(
         SupplierCallContext context,
         SupplierIssueRequest request,
         CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException("Trips Africa ticket issue is built in #36.");
+        _ticketing.IssueAsync(SupplierProductType.Flight, context, request, cancellationToken);
 
     public Task<SupplierStatusResult> GetStatusAsync(
         SupplierCallContext context,
         SupplierStatusQuery query,
         CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException("Trips Africa booking status polling is built in #37.");
+        _ticketing.GetStatusAsync(SupplierProductType.Flight, context, query, cancellationToken);
 
     public Task<SupplierFareRules> GetRulesAsync(
         SupplierCallContext context,

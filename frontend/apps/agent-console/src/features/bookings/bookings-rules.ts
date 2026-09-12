@@ -1,4 +1,5 @@
 import { formatMoneyShort } from '@trips/utils';
+import { AGENCY_TIME_ZONE } from '../dashboard/booking-display';
 import type {
   BookingDetail,
   BookingFilters,
@@ -6,6 +7,39 @@ import type {
   BookingStatus,
   ResolutionAction,
 } from './types';
+
+const lagosDayFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone: AGENCY_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/**
+ * The calendar day an instant falls on in Lagos, as `YYYY-MM-DD` — the day an
+ * agent means when they pick a date. A flight at 23:30 UTC on the 1st leaves on
+ * the 2nd in Lagos, and that is the day it has to be found under.
+ */
+export function lagosDay(iso: string): string {
+  return lagosDayFormat.format(new Date(iso));
+}
+
+/** Words for a date range that cannot match anything, or `null` when it is fine. */
+export function dateRangeProblem(filters: Pick<BookingFilters, 'from' | 'to'>): string | null {
+  return filters.from && filters.to && filters.to < filters.from
+    ? 'Choose a "to" date on or after the "from" date.'
+    : null;
+}
+
+function withinDates(booking: BookingListItem, filters: BookingFilters): boolean {
+  if (!filters.from && !filters.to) return true;
+
+  // `YYYY-MM-DD` strings compare correctly as text, and both ends are inclusive.
+  const day = lagosDay(filters.dateField === 'booked' ? booking.bookedAt : booking.departsAt);
+  if (filters.from && day < filters.from) return false;
+  if (filters.to && day > filters.to) return false;
+  return true;
+}
 
 /**
  * Everything the bookings screens decide, as plain functions — tested without
@@ -31,6 +65,7 @@ export function filterBookings(
   return bookings.filter((booking) => {
     if (filters.status !== 'all' && booking.status !== filters.status) return false;
     if (filters.product !== 'all' && booking.product !== filters.product) return false;
+    if (!withinDates(booking, filters)) return false;
     if (!wanted) return true;
 
     return [

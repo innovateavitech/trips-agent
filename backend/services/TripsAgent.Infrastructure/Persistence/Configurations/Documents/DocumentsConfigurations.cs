@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Documents;
+using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Tenancy;
 
 namespace TripsAgent.Infrastructure.Persistence.Configurations.Documents;
@@ -16,6 +18,9 @@ public static class DocumentsSchema
 
     /// <summary>Room for the longest <see cref="DocumentType"/> name.</summary>
     public const int DocumentTypeMaxLength = 30;
+
+    /// <summary>Room for a template key such as <c>voucher.group-departure</c>.</summary>
+    public const int TemplateKeyMaxLength = 60;
 }
 
 /// <summary>Maps <see cref="DocumentNumberFormat"/> to <c>documents.document_number_formats</c>.</summary>
@@ -120,6 +125,35 @@ public sealed class GeneratedDocumentConfiguration : IEntityTypeConfiguration<Ge
         builder.ToTable("generated_documents", DocumentsSchema.Name, table =>
         {
             table.HasCheckConstraint("ck_generated_documents_sequence_number_positive", "sequence_number >= 1");
+
+            table.HasCheckConstraint(
+                "ck_generated_documents_status",
+                "status IN ('Pending', 'Ready', 'Failed')");
+
+            // A first issue replaces nothing, and every later issue replaces exactly one document.
+            table.HasCheckConstraint(
+                "ck_generated_documents_issue_chain",
+                "issue_number >= 1 AND (issue_number = 1) = (supersedes_document_id IS NULL)");
+
+            // Ready means a file exists, and a file exists only once it is ready. Every operand is
+            // IS NOT NULL or COALESCE, never a bare comparison: a CHECK passes when its expression
+            // is NULL, so one NULL column would otherwise let a Ready row with no file through.
+            table.HasCheckConstraint(
+                "ck_generated_documents_ready_has_file",
+                "(status = 'Ready') = (asset_id IS NOT NULL AND checksum IS NOT NULL AND COALESCE(size_bytes, 0) > 0 "
+                + "AND rendered_at IS NOT NULL AND template_key IS NOT NULL AND template_version IS NOT NULL)");
+
+            table.HasCheckConstraint(
+                "ck_generated_documents_checksum_shape",
+                "checksum IS NULL OR checksum ~ '^[0-9a-f]{64}$'");
+
+            // A voucher issued for an order is for one of its lines; nothing else names a line.
+            table.HasCheckConstraint(
+                "ck_generated_documents_line_fits_type",
+                "(document_type = 'Voucher' AND (order_id IS NULL OR order_line_id IS NOT NULL)) "
+                + "OR (document_type <> 'Voucher' AND order_line_id IS NULL)");
+
+            table.HasCheckConstraint("ck_generated_documents_render_attempts", "render_attempts >= 0");
         });
 
         builder.HasKey(document => document.Id);
@@ -134,10 +168,70 @@ public sealed class GeneratedDocumentConfiguration : IEntityTypeConfiguration<Ge
             .HasMaxLength(DocumentsSchema.DocumentNumberMaxLength)
             .IsRequired();
 
+        // Defaults only for rows that existed before #46, which were numbered but never rendered.
+        builder.Property(document => document.IssueNumber).HasDefaultValue(1).IsRequired();
+
+        builder.Property(document => document.Status)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .HasDefaultValue(DocumentStatus.Pending)
+            .IsRequired();
+
+        builder.Property(document => document.RecipientName).HasMaxLength(GeneratedDocument.MaxRecipientNameLength);
+        builder.Property(document => document.RecipientEmail).HasMaxLength(GeneratedDocument.MaxRecipientEmailLength);
+        builder.Property(document => document.TemplateKey).HasMaxLength(DocumentsSchema.TemplateKeyMaxLength);
+        builder.Property(document => document.Checksum).HasMaxLength(64);
+        builder.Property(document => document.LastRenderError).HasMaxLength(GeneratedDocument.MaxErrorLength);
+
+        builder.Ignore(document => document.IsReady);
+        builder.Ignore(document => document.FileName);
+
         builder.HasOne<Agency>()
             .WithMany()
             .HasForeignKey(document => document.AgencyId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Restrict throughout: an issued document is a tax record, and nothing it points at may be
+        // deleted out from under it.
+        builder.HasOne<Order>()
+            .WithMany()
+            .HasForeignKey(document => document.OrderId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<OrderLine>()
+            .WithMany()
+            .HasForeignKey(document => document.OrderLineId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Asset>()
+            .WithMany()
+            .HasForeignKey(document => document.AssetId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<GeneratedDocument>()
+            .WithMany()
+            .HasForeignKey(document => document.SupersedesDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // A document is superseded at most once. Two people pressing "reissue" at the same moment
+        // get one new issue between them, and the second a conflict — never a fork in the chain.
+        builder.HasIndex(document => document.SupersedesDocumentId)
+            .IsUnique()
+            .HasFilter("supersedes_document_id IS NOT NULL")
+            .HasDatabaseName("ix_generated_documents_supersedes_document_id");
+
+        // One first issue per order and type — per line, for a voucher — so asking for an order's
+        // documents twice issues nothing new. NULLS NOT DISTINCT, or every invoice (whose line is
+        // NULL) would count as different from every other and the guard would guard nothing.
+        builder.HasIndex(document => new { document.OrderId, document.OrderLineId, document.DocumentType })
+            .IsUnique()
+            .AreNullsDistinct(false)
+            .HasFilter("issue_number = 1 AND order_id IS NOT NULL")
+            .HasDatabaseName("ix_generated_documents_first_issue");
+
+        // An order's documents, for the booking screen. Leads with agency_id like every tenant index.
+        builder.HasIndex(document => new { document.AgencyId, document.OrderId })
+            .HasDatabaseName("ix_generated_documents_agency_id_order_id");
 
         // The printed number is unique within an agency and document type. Two agencies may both
         // have an INV-000001; one agency may never have two.

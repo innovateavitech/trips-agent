@@ -20,15 +20,21 @@ public enum AdminAlertType
     LedgerIntegrity = 6,
 
     /// <summary>
+    /// The supplier answered a status query about a booking awaiting its ticket with an error. The
+    /// money is still held and nothing has been reversed; a person has to find out what happened.
+    /// </summary>
+    SupplierBookingError = 7,
+
+    /// <summary>
     /// A website address that looks like a well-known brand, set aside until someone reviews it
     /// (open question 20). It serves nothing until it is cleared.
     /// </summary>
-    HostnameReview = 7,
+    HostnameReview = 8,
 
     /// <summary>
     /// An agency's own website address could not get a certificate, or is about to lose the one it has.
     /// </summary>
-    SiteCertificate = 8,
+    SiteCertificate = 9,
 }
 
 /// <summary>How quickly somebody needs to look.</summary>

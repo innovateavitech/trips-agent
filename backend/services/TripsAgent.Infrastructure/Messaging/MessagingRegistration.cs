@@ -2,6 +2,8 @@ using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Messaging;
+using TripsAgent.Domain.Documents;
+using TripsAgent.Infrastructure.Documents;
 using TripsAgent.Infrastructure.Notifications;
 using TripsAgent.Infrastructure.Storefront;
 
@@ -38,6 +40,26 @@ public static class MessagingRegistration
     public static IReadOnlyList<(MessageQueue Queue, Type Consumer)> ConsumerRoutes { get; } =
     [
         (MessageQueue.NotificationsEmail, typeof(NotificationQueuedConsumer)),
+
+        // Both of its message types: an order's documents, and one reissued document (#46).
+        (MessageQueue.DocumentsRender, typeof(DocumentRenderConsumer)),
+
+        // The traveller's side of the booking pipeline's events (#42–#46). A confirmation's work is
+        // mostly its documents, so it waits with them; the other two only write an email. One consumer
+        // per event: published messages fan out, so a second on any queue would email twice.
+        (MessageQueue.DocumentsRender, typeof(BookingConfirmedConsumer)),
+        (MessageQueue.NotificationsEmail, typeof(BookingNeedsResolutionConsumer)),
+        (MessageQueue.NotificationsEmail, typeof(PaymentReversedConsumer)),
+
+        // Issuing a ticket (#36). The endpoint's retry and RabbitMQ's redelivery are both safe here —
+        // a second pass finds the booking already issuing and sends nothing. What is never retried is
+        // the supplier call itself (ADR-0003).
+        (MessageQueue.BookingSaga, typeof(Suppliers.IssueSupplierTicketConsumer)),
+
+        // The checkout's next steps (#42, #43): a ticket captures the payment; a reversal gives it back.
+        // Both are safe to redeliver — each does its work once per order line.
+        (MessageQueue.BookingSaga, typeof(Checkout.BookingTicketedConsumer)),
+        (MessageQueue.PaymentsReversal, typeof(Checkout.PaymentReversalRequiredConsumer)),
 
         // Both storefront events land on the same queue and the same consumer: a publish and a
         // hostname change make the same caches wrong, and neither is urgent enough for its own queue.
@@ -120,6 +142,9 @@ public static class MessagingRegistration
                     ?? new MessageRetryOptions();
 
         retry.Validate();
+
+        // A consumer that escalates on its last attempt needs to know which attempt is the last.
+        services.AddSingleton(retry);
 
         services.AddMassTransit(bus =>
         {
@@ -215,12 +240,25 @@ public static class MessagingRegistration
     /// <summary>
     /// Retries per queue. Notifications give up after <see cref="NotificationDispatcher.MaxAttempts"/>
     /// attempts in total — the first delivery plus four retries — so the broker dead-letters a
-    /// message at the same moment the dispatcher marks its row failed.
+    /// message at the same moment the dispatcher marks its row failed. Documents do the same with
+    /// <see cref="GeneratedDocument.MaxRenderAttempts"/>.
     /// </summary>
-    private static int RetryLimitFor(MessageQueue queue, MessageRetryOptions retry) =>
-        queue == MessageQueue.NotificationsEmail
-            ? Math.Min(retry.RetryLimit, NotificationDispatcher.MaxAttempts - 1)
-            : retry.RetryLimit;
+    /// <remarks>
+    /// Pinned to those limits rather than capped by <c>Messaging:RetryLimit</c>. With a lower setting
+    /// the broker would give up first and dead-letter a message whose row still says "queued" — and
+    /// nothing ever looks at a queued row again.
+    /// </remarks>
+    public static int RetryLimitFor(MessageQueue queue, MessageRetryOptions retry)
+    {
+        ArgumentNullException.ThrowIfNull(retry);
+
+        if (queue == MessageQueue.NotificationsEmail)
+        {
+            return NotificationDispatcher.MaxAttempts - 1;
+        }
+
+        return queue == MessageQueue.DocumentsRender ? GeneratedDocument.MaxRenderAttempts - 1 : retry.RetryLimit;
+    }
 
     /// <summary>
     /// Per-queue concurrency. One switch, so "how parallel is this queue" has a single answer you

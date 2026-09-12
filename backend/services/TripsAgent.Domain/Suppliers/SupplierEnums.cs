@@ -56,7 +56,11 @@ public enum SupplierBookingStatus
     /// <summary>The issue call has been sent. Never sent twice — see ADR-0003.</summary>
     Issuing = 4,
 
-    /// <summary>The issue call timed out or its answer was lost. Resolved by polling, never by re-issuing.</summary>
+    /// <summary>
+    /// The issue call did not settle the outcome: it timed out, its answer was lost, the supplier
+    /// refused it, or answered with a code the status query must confirm. Resolved by polling, never
+    /// by re-issuing.
+    /// </summary>
     IssueOutcomeUnknown = 5,
 
     /// <summary>The supplier accepted the issue request but has not finished ticketing.</summary>

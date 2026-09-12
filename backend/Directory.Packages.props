@@ -109,6 +109,14 @@
     <PackageVersion Include="MailKit" Version="4.17.0" />
   </ItemGroup>
 
+  <!-- Invoices and vouchers (#46), the PDF library named in the delivery plan's stack table.
+       Licensing is tiered by the licensee's annual revenue: the Community licence is free below
+       USD 1M, and a paid Professional or Enterprise licence is needed above it. Which one applies
+       is a business decision, so it is configuration — Documents:QuestPdfLicense — not code. -->
+  <ItemGroup Label="PDF documents">
+    <PackageVersion Include="QuestPDF" Version="2026.8.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Testing">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
@@ -121,6 +129,10 @@
     <!-- Unit tests run real SaveChanges calls against in-memory SQLite, so interceptors can be
          tested without Docker. Never referenced by production code. -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
+    <!-- Reads the text back out of a rendered invoice or voucher, so a test asserts on what the
+         traveller would actually see — the agency's name, the number, no Trips — rather than on
+         the model that went in. Apache-2.0. Tests only. -->
+    <PackageVersion Include="PdfPig" Version="0.1.16" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.12" />
   </ItemGroup>

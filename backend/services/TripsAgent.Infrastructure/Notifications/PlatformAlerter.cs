@@ -140,6 +140,8 @@ public sealed partial class PlatformAlerter : IPlatformAlerter
     private static AdminAlertType TypeOf(string source) => source switch
     {
         "LedgerIntegrityAudit" => AdminAlertType.LedgerIntegrity,
+        Application.Suppliers.SupplierBookingStatusPoller.AlertSource => AdminAlertType.SupplierBookingError,
+        Application.Suppliers.SupplierBookingStatusPoller.TimeLimitAlertSource => AdminAlertType.TicketTimeLimitBreach,
         Application.Storefront.CertificateSweep.AlertSource => AdminAlertType.SiteCertificate,
         _ => AdminAlertType.GatewayError,
     };

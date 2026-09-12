@@ -161,6 +161,9 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <summary>Every attempt to take money, successful or not.</summary>
     public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
 
+    /// <summary>Money given back for an order line. One per line; append-only.</summary>
+    public DbSet<Refund> Refunds => Set<Refund>();
+
     /// <summary>Gateway deliveries, recorded so each is processed exactly once.</summary>
     public DbSet<PaymentWebhookEvent> PaymentWebhookEvents => Set<PaymentWebhookEvent>();
 

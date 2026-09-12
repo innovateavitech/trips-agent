@@ -17,6 +17,16 @@ public enum OrderStatus
     Refunded = 7,
 }
 
+/// <summary>How an order was paid, which decides where a refund goes.</summary>
+public enum OrderPaymentMethod
+{
+    /// <summary>From the agency's prepaid wallet: held at payment, taken only once ticketed.</summary>
+    Wallet = 1,
+
+    /// <summary>On a card, through the payment gateway.</summary>
+    Card = 2,
+}
+
 /// <summary>Who bought: the traveller on a storefront, or an agent booking on their behalf.</summary>
 public enum BuyerType
 {

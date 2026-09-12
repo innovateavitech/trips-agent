@@ -67,6 +67,11 @@ public static class DependencyInjection
         // the OLTP tables.
         services.AddScoped<IAnalyticsRollup, AnalyticsRollup>();
 
+        // The dashboards on top of them. The agency's own reads under the tenant filter; the
+        // platform's opens a scope with a reason, like every cross-tenant read.
+        services.AddScoped<AgencyAnalyticsService>();
+        services.AddScoped<PlatformAnalyticsService>();
+
         services.AddScoped<DocumentIssuer>();
 
         // Records what was sold, at the price the quote froze. The saga (#42) takes it from there.

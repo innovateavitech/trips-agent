@@ -3,6 +3,7 @@ using System.Text;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using TripsAgent.Api.Analytics;
 using TripsAgent.Api.Assets;
 using TripsAgent.Api.Authorization;
 using TripsAgent.Api.Bookings;
@@ -186,11 +187,13 @@ app.MapKybReviewEndpoints();
 app.MapAgencyAdminEndpoints();
 app.MapPlatformUserEndpoints();
 app.MapOperationsDashboardEndpoints();
+app.MapPlatformAnalyticsEndpoints();
 app.MapAuditLogEndpoints();
 app.MapWalletEndpoints();
 app.MapPricingEndpoints();
 app.MapSearchEndpoints();
 app.MapBookingEndpoints();
+app.MapAnalyticsEndpoints();
 
 app.MapAssetEndpoints();
 

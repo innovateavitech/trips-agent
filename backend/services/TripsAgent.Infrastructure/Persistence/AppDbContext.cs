@@ -17,6 +17,7 @@ using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
+using TripsAgent.Domain.Tenancy.SubAgents;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence.Interceptors;
 
@@ -133,6 +134,15 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<LoginAttempt> LoginAttempts => Set<LoginAttempt>();
 
     public DbSet<UserInvitation> UserInvitations => Set<UserInvitation>();
+
+    /// <summary>What each sub-agent is allowed to sell. No rows means nothing. Feature F10.</summary>
+    public DbSet<SubAgentScope> SubAgentScopes => Set<SubAgentScope>();
+
+    /// <summary>Permissions a principal has taken away from a sub-agent. Deny only. Feature F10.</summary>
+    public DbSet<PermissionOverride> PermissionOverrides => Set<PermissionOverride>();
+
+    /// <summary>The hard cap on what each sub-agent may spend against its principal. Feature F10.</summary>
+    public DbSet<WalletAllowance> WalletAllowances => Set<WalletAllowance>();
 
     /// <summary>One row per attempt an agency makes at proving it is a real business.</summary>
     public DbSet<KybSubmission> KybSubmissions => Set<KybSubmission>();
@@ -366,6 +376,38 @@ public class AppDbContext : DbContext, IAppDbContext
             modelBuilder.Entity(clrType)
                 .HasQueryFilter(Expression.Lambda(predicate, entity));
         }
+
+        // ---------------------------------------------------------------- the sub-agent network
+        //
+        // These three tables are written by the principal and read by both sides, so each row
+        // carries two agencies: agency_id is the principal that owns it, sub_agency_id the
+        // sub-agent it is about. The loop above has already given them the plain "agency_id is
+        // me" filter; these replace it with "…or it is about me".
+        //
+        // It is a *read* widening only. Writing is still agency_id = me, enforced twice over: the
+        // tenant stamping interceptor refuses to save a row belonging to another agency, and the
+        // row-level security policies' WITH CHECK clauses say the same thing at the database. A
+        // sub-agent can therefore read the scopes, the denied permissions and the allowance that
+        // apply to it — it has to, to show them — and can change none of them.
+        //
+        // Chosen over IPlatformScope.Enter for the principal's side of the same reads: this is
+        // ordinary business between two agencies that are already related, not a platform-admin
+        // action, and logging every "list my sub-agents" as a cross-tenant read would bury the
+        // handful of reads that genuinely are. The precedent is Agency's own filter below.
+        modelBuilder.Entity<SubAgentScope>().HasQueryFilter(scope =>
+            AllowCrossTenantAccess
+            || scope.AgencyId == CurrentAgencyId
+            || scope.SubAgencyId == CurrentAgencyId);
+
+        modelBuilder.Entity<PermissionOverride>().HasQueryFilter(entry =>
+            AllowCrossTenantAccess
+            || entry.AgencyId == CurrentAgencyId
+            || entry.SubAgencyId == CurrentAgencyId);
+
+        modelBuilder.Entity<WalletAllowance>().HasQueryFilter(allowance =>
+            AllowCrossTenantAccess
+            || allowance.AgencyId == CurrentAgencyId
+            || allowance.SubAgencyId == CurrentAgencyId);
 
         // An agency sees itself and, if it is a principal, its own sub-agents. Depth is capped at
         // 2, so "parent is me" is the whole subtree below me.

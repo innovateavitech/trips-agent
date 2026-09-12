@@ -162,35 +162,12 @@ export function availableActions(status: AgencyStatus): AgencyAction[] {
   }
 }
 
-/** The shortest reason the API will accept — AgencyLifecycleService.MinReasonLength. */
-export const MIN_REASON_LENGTH = 10;
-
-/** The longest, matching the audit log's reason column. */
-export const MAX_REASON_LENGTH = 1000;
-
 /**
- * Checks a reason before it is sent.
- *
- * The same rule as the server's, checked here so somebody who typed three words is told at once
- * rather than after a round trip. The server checks it again — this is courtesy, not safety.
+ * The reason rule, which now lives in `lib/reason.ts` because the back-office user screens demand
+ * one too and there must only be one definition of what counts as an answer. Re-exported here so
+ * the agency screens keep importing it from the rules file they already read.
  */
-export function validateReason(reason: string): string | undefined {
-  const trimmed = reason.trim();
-
-  if (trimmed.length === 0) {
-    return 'Say why. It is recorded against your name in the audit log.';
-  }
-
-  if (trimmed.length < MIN_REASON_LENGTH) {
-    return `Give at least ${MIN_REASON_LENGTH} characters — enough that it still makes sense in a year.`;
-  }
-
-  if (trimmed.length > MAX_REASON_LENGTH) {
-    return `Keep it under ${MAX_REASON_LENGTH} characters.`;
-  }
-
-  return undefined;
-}
+export { MAX_REASON_LENGTH, MIN_REASON_LENGTH, validateReason } from '../../lib/reason';
 
 /** Whether this account may edit an agency's details at all. */
 export function canEdit(permissions: string[]): boolean {

@@ -1,10 +1,24 @@
+import type { ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { cn } from '@trips/ui';
 import { BrandMark } from '../components/brand-mark';
-import { QueueIcon } from '../components/icons';
+import {
+  BuildingIcon,
+  DashboardIcon,
+  HistoryIcon,
+  PeopleIcon,
+  QueueIcon,
+} from '../components/icons';
 import { useAuth } from '../features/auth/auth-context';
 import { useKybQueue } from '../features/kyb-review/kyb-review-queries';
-import { KYB_REVIEW_PERMISSION, hasPermission } from '../lib/auth/claims';
+import {
+  AGENCY_VIEW_PERMISSION,
+  AUDIT_VIEW_PERMISSION,
+  KYB_REVIEW_PERMISSION,
+  PLATFORM_REPORT_PERMISSION,
+  PLATFORM_USER_PERMISSION,
+  hasPermission,
+} from '../lib/auth/claims';
 import { UserMenu } from './user-menu';
 
 /**
@@ -49,21 +63,71 @@ export function AppShell() {
   );
 }
 
+/**
+ * The sidebar, in the order the work happens: the numbers, then the customers, then the queue
+ * waiting on somebody, then the record of what was done, then the accounts that did it.
+ *
+ * Only screens this account can actually open are listed. A sidebar full of entries that answer
+ * "you cannot open this" teaches staff to ignore the sidebar — and a Support account holds
+ * `agency.view` alone, so for them this is a list of one.
+ */
+const NAV: { to: string; label: string; permission: string; icon: ReactNode }[] = [
+  {
+    to: '/dashboard',
+    label: 'Dashboard',
+    permission: PLATFORM_REPORT_PERMISSION,
+    icon: <DashboardIcon />,
+  },
+  {
+    to: '/agencies',
+    label: 'Agencies',
+    permission: AGENCY_VIEW_PERMISSION,
+    icon: <BuildingIcon />,
+  },
+  { to: '/audit', label: 'Audit log', permission: AUDIT_VIEW_PERMISSION, icon: <HistoryIcon /> },
+  {
+    to: '/users',
+    label: 'Back-office users',
+    permission: PLATFORM_USER_PERMISSION,
+    icon: <PeopleIcon />,
+  },
+];
+
 function NavItems() {
   const { session } = useAuth();
   if (!session) return null;
 
-  return hasPermission(session.claims, KYB_REVIEW_PERMISSION) ? <KybNavItem /> : null;
-}
-
-/** Its own component so the queue is only fetched for accounts allowed to read it. */
-function KybNavItem() {
-  const queue = useKybQueue();
-  const waiting = queue.data?.length ?? 0;
+  const { claims } = session;
 
   return (
+    <>
+      {NAV.filter((item) => hasPermission(claims, item.permission)).map((item) => (
+        <NavItem key={item.to} to={item.to} icon={item.icon}>
+          {item.label}
+        </NavItem>
+      ))}
+
+      {/* Its own entry rather than a row in the list above, because it carries a count and so
+          has to fetch the queue — which only an account allowed to read it should do. */}
+      {hasPermission(claims, KYB_REVIEW_PERMISSION) ? <KybNavItem /> : null}
+    </>
+  );
+}
+
+function NavItem({
+  to,
+  icon,
+  children,
+  badge,
+}: {
+  to: string;
+  icon: ReactNode;
+  children: ReactNode;
+  badge?: ReactNode;
+}) {
+  return (
     <NavLink
-      to="/kyb"
+      to={to}
       className={({ isActive }) =>
         cn(
           'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors',
@@ -73,14 +137,32 @@ function KybNavItem() {
         )
       }
     >
-      <QueueIcon />
-      <span className="flex-1 whitespace-nowrap">KYB review</span>
-      {waiting > 0 ? (
-        <span className="rounded-full bg-primary px-1.5 text-xs font-medium tabular-nums text-primary-foreground">
-          {waiting}
-          <span className="sr-only"> waiting</span>
-        </span>
-      ) : null}
+      {icon}
+      <span className="flex-1 whitespace-nowrap">{children}</span>
+      {badge}
     </NavLink>
+  );
+}
+
+/** Its own component so the queue is only fetched for accounts allowed to read it. */
+function KybNavItem() {
+  const queue = useKybQueue();
+  const waiting = queue.data?.length ?? 0;
+
+  return (
+    <NavItem
+      to="/kyb"
+      icon={<QueueIcon />}
+      badge={
+        waiting > 0 ? (
+          <span className="rounded-full bg-primary px-1.5 text-xs font-medium tabular-nums text-primary-foreground">
+            {waiting}
+            <span className="sr-only"> waiting</span>
+          </span>
+        ) : null
+      }
+    >
+      KYB review
+    </NavItem>
   );
 }

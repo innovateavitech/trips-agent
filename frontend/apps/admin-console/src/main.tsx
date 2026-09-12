@@ -1,7 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient } from '@tanstack/react-query';
-import { App } from './App';
+import { App, type ConsoleApis } from './App';
+import { createHttpAgenciesApi } from './features/agencies';
+import { createHttpAuditApi } from './features/audit';
+import { createHttpBackOfficeApi } from './features/back-office';
+import { createHttpDashboardApi } from './features/dashboard';
 import { createHttpKybReviewApi } from './features/kyb-review';
 import { createApiClient } from './lib/api/client';
 import { ApiError } from './lib/api/problem';
@@ -14,7 +18,14 @@ import './index.css';
  */
 const store = createSessionStore(browserSessionStorage());
 const client = createApiClient({ store });
-const kybReviewApi = createHttpKybReviewApi(client);
+
+const apis: ConsoleApis = {
+  agencies: createHttpAgenciesApi(client),
+  audit: createHttpAuditApi(client),
+  backOffice: createHttpBackOfficeApi(client),
+  dashboard: createHttpDashboardApi(client),
+  kybReview: createHttpKybReviewApi(client),
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,6 +49,6 @@ if (!root) throw new Error('Root element not found');
 
 createRoot(root).render(
   <StrictMode>
-    <App client={client} store={store} kybReviewApi={kybReviewApi} queryClient={queryClient} />
+    <App client={client} store={store} apis={apis} queryClient={queryClient} />
   </StrictMode>,
 );

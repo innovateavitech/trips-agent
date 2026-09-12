@@ -12,7 +12,7 @@ import { mockAuthApi } from './auth/mock/mock-auth-api';
 import { httpCatalogApi, mockCatalogApi } from './features/catalog';
 import { mockCrmApi } from './features/crm';
 import { mockDashboardApi } from './features/dashboard';
-import { mockDeparturesApi } from './features/departures';
+import { httpDeparturesApi, mockDeparturesApi } from './features/departures';
 import { mockSearchApi } from './features/search';
 import { createHttpBookingFlowApi, mockBookingFlowApi } from './features/booking';
 import { createHttpBookingsApi, mockBookingsApi } from './features/bookings';
@@ -30,7 +30,7 @@ import './index.css';
  *   bookingFlow  real `/api/v1/bookings` (#42); the stand-in with `VITE_AUTH_MODE=mock`
  *   bookings     real `/api/v1/bookings` (#42, #44); the stand-in with `VITE_AUTH_MODE=mock`
  *   catalog    real `/api/v1/catalog`; the stand-in only in demo mode
- *   departures mock until the departures API exists (build plan F6)
+ *   departures real `/api/v1/catalog`; the stand-in only in demo mode
  *   crm        mock until the CRM API exists (build plan F7)
  */
 const adapters: AppAdapters = {
@@ -41,7 +41,7 @@ const adapters: AppAdapters = {
   bookingFlow: AUTH_MODE === 'mock' ? mockBookingFlowApi : createHttpBookingFlowApi({ api }),
   bookings: AUTH_MODE === 'mock' ? mockBookingsApi : createHttpBookingsApi({ api }),
   catalog: AUTH_MODE === 'mock' ? mockCatalogApi : httpCatalogApi,
-  departures: mockDeparturesApi,
+  departures: AUTH_MODE === 'mock' ? mockDeparturesApi : httpDeparturesApi,
   crm: mockCrmApi,
 };
 

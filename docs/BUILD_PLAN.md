@@ -20,7 +20,7 @@ Where each part of the system is designed — tables, jobs, the money path — i
 |---|---|---|
 | **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (in progress); F2 Notifications and documents (in progress) | 9 of 72 |
 | **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog (in progress); F4 Storefront (queued); F5 Customer commerce (queued); F6 Group tours (queued); F7 CRM (queued) | 0 of 74 |
-| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (queued); F9 Subscriptions and billing (queued); F10 Sub-agent network (queued); F11 Analytics and reporting (queued); F12 Payouts, disputes and reconciliation (queued); F13 Loyalty and reviews (queued (flag only)) | 0 of 42 |
+| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (queued); F10 Sub-agent network (queued); F11 Analytics and reporting (queued); F12 Payouts, disputes and reconciliation (queued); F13 Loyalty and reviews (queued (flag only)) | 5 of 42 |
 | **PR 4** · Launch readiness | F14 Security and launch readiness (queued) | 0 of 50 |
 
 
@@ -39,9 +39,14 @@ The first place to look when picking this up again. Update it whenever a branch 
 | `feat/M2-storefront` | 2 | F4: the site builder with versioned publish and rollback is committed; domains and the public storefront still to come (#58-#60) | in progress, not pushed |
 | `feat/M2-crm` | 2 | F7 backend (#62), on top of the console branch | just started, not pushed |
 | — | 2 | F5 customer commerce (#61) and the F6 group tours backend (#57) | not started: F5 needs F1 and F4, F6 needs F3 |
-| — | 3, 4 | F8–F14 | not started |
+| `feat/M3-admin-console` | 3 | **The first piece of PR 3.** F8: back-office roles and the agency lifecycle rules, the agency directory, profile and lifecycle actions with data export, the operations dashboard, the audit viewer and back-office users, and all five console screens | pushed, done |
+| — | 3, 4 | F9–F14 | not started |
 
-**Next:** PR 1 is open from `feat/M1-notifications-documents`. When it merges, assemble PR 2: merge the catalog, storefront, CRM, group tours and commerce branches into one, regenerate the API client, run every gate, tick F3-F7 here, and open it with `Closes` for each finished issue.
+**Next:** F8 is done on `feat/M3-admin-console`, the first piece of PR 3 — the rest of Milestone 3 is
+assembled on top of it. One thing waits on PR 2: `StorefrontAvailability` needs calling from
+`PublicSiteResolver` once the storefront lands, which is the site-serving half of decision 14.
+
+PR 1 is open from `feat/M1-notifications-documents`. When it merges, assemble PR 2: merge the catalog, storefront, CRM, group tours and commerce branches into one, regenerate the API client, run every gate, tick F3-F7 here, and open it with `Closes` for each finished issue.
 
 ## Decisions for the MVP
 
@@ -88,6 +93,8 @@ Decided during the build:
 - **Refunds:** to the wallet for console bookings; refunds to a traveller's card come with F5.
 - **Resolving a failed booking:** "retry" means booking again from search; escalating slow resolutions waits until after the MVP.
 - **To check on Trips Africa staging:** a bus booking with no PNR is polled with the flight status endpoint, which their documentation does not cover for buses.
+- **The agency export** is JSON rather than CSV: an agency is a tree — profile, staff, wallet, ledger, orders and their lines — and flattening it to one table would lose the shape somebody receiving it needs.
+- **The admin console's landing page** follows the account's permissions rather than being fixed. A Support account holds `agency.view` and nothing else, so a fixed home page sent them to a refusal at every sign-in.
 
 ## What the MVP leaves out
 
@@ -564,7 +571,7 @@ FRD §2.8 and §2.10.
 
 ### F8 · Admin console
 
-**M3 · Queued** · 0 of 6 boxes ticked
+**M3 · Done** · branch `feat/M3-admin-console` · 5 of 6 boxes ticked
 
 How Trips runs the platform: agent search and profiles, verify, suspend and terminate with an audit trail, back-office roles, and an operations dashboard.
 
@@ -578,12 +585,28 @@ FRD §2.15 — how we operate the platform.
 
 **Tables:** `admin_alerts, disputes`
 
-- [ ] Agent list with search and filters.
-- [ ] Agent profile view and edit with mandatory reason and audit.
-- [ ] Verify, suspend and terminate with data export.
-- [ ] Back-office users with role-scoped permissions (Super Admin, Support, Operations, Finance).
-- [ ] Dashboard with metrics no more than 10 minutes stale, operational alerts and a top-agent leaderboard.
-- [ ] Open question 14: what happens to travellers with forward bookings when an agent is suspended.
+- [x] Agent list with search and filters.
+- [x] Agent profile view and edit with mandatory reason and audit.
+- [x] Verify, suspend and terminate with data export.
+- [x] Back-office users with role-scoped permissions (Super Admin, Support, Operations, Finance).
+- [ ] Dashboard with metrics no more than 10 minutes stale, operational alerts and a top-agent leaderboard. *Metrics and alerts done; the leaderboard waits, per "what the MVP leaves out".*
+- [x] Open question 14: what happens to travellers with forward bookings when an agent is suspended.
+
+**What landed.** Four back-office roles rather than two — Support reads and changes nothing, and
+suspending, terminating and exporting are Super Admin only. `user_roles.agency_id` is nullable now,
+so a platform grant belongs to no agency and is invisible to every one of them; cross-agency reads
+go through `IPlatformScope.Enter(reason)` and nothing calls `IgnoreQueryFilters`. Row-level security
+reached `platform.audit_logs`, which had only the EF filter in front of it. Terminating exports the
+agency as JSON — profile, staff, wallet, ledger, orders and lines, and no secrets — and the export
+is itself audited. The console carries the dashboard, the directory and profile, the suspend and
+terminate dialogs, the audit viewer and back-office user management.
+
+**Decision 14, as built.** `AgencyAccess` is the single place the rule lives. Checkout asks it
+before confirming a price or placing an order, so a suspended agency takes no new bookings while
+everything it already sold stands. The traveller's magic-link document route is deliberately not
+gated — they keep their invoice and voucher. `StorefrontAvailability` answers the site-serving
+half and is ready for `PublicSiteResolver`, which lives on the F4 branch: **wire it in there when
+PR 2 merges**, since there is no host resolution on this branch to call it from.
 
 ### F9 · Subscriptions and billing
 

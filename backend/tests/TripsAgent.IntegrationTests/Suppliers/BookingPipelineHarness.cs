@@ -19,6 +19,7 @@ using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Security;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Application.Tenancy.SubAgents;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Identity;
@@ -502,6 +503,14 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         services.AddScoped<PlaceOrderHandler>();
         services.AddScoped<PriceConfirmationService>();
         services.AddScoped<LedgerAccounts>();
+
+        // The sub-agent network's two gates on the booking path (feature F10). Every agency in
+        // these tests is a principal, so both are no-ops here — which is the point: a principal's
+        // checkout must be exactly what it was before the network existed.
+        services.AddScoped<SubAgentScopeService>();
+        services.AddScoped<SubAgentSpending>();
+        services.AddScoped<IAllowanceReservations, PostgresAllowanceReservations>();
+
         services.AddScoped<WalletRefunds>();
         services.AddScoped<CheckoutService>();
         services.AddScoped<CheckoutCompletion>();

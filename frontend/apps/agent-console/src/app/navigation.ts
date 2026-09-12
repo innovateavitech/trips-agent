@@ -4,6 +4,7 @@ import {
   LifeBuoy,
   Plane,
   ShieldCheck,
+  Globe,
   SlidersHorizontal,
   Ticket,
   Wallet,
@@ -61,6 +62,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Agency',
     items: [
+      { label: 'Your website', to: '/website', icon: Globe }, // #58, #59
       { label: 'Business verification', to: '/verification', icon: ShieldCheck }, // #50
     ],
   },

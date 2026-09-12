@@ -1335,6 +1335,262 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/trips/{productSlug}/departures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListPublicDepartures"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/departures/{departureId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPublicDeparture"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/cart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/cart/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddCartItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/cart/items/{cartItemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["RemoveCartItem"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BeginCheckout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/checkout/{reference}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCheckoutStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/bookings/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenBookingByLink"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/departures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDepartures"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/departures/{departureId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDeparture"];
+        put: operations["SaveDeparture"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{productId}/departures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateDeparture"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/departures/{departureId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CloseDeparture"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/departures/{departureId}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReopenDeparture"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/departures/{departureId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CancelDeparture"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/departures/{departureId}/manifest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDepartureManifest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/departures/{departureId}/waitlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDepartureWaitlist"];
+        put?: never;
+        post: operations["JoinDepartureWaitlist"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/documents": {
         parameters: {
             query?: never;
@@ -1371,6 +1627,29 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AddCartItemRequest: {
+            /** Format: uuid */
+            productId?: null | string;
+            /** Format: uuid */
+            departureId?: null | string;
+            /** Format: uuid */
+            offerId?: null | string;
+            /**
+             * Format: int32
+             * @default 1
+             */
+            adults: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            children: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            infants: number | string;
+        };
         AddSiteDomainRequest: {
             hostname: string;
         };
@@ -1426,6 +1705,22 @@ export interface components {
             maxSizeBytes: number | string;
             /** Format: date-time */
             expiresAt: string;
+        };
+        BeginCheckoutRequest: {
+            contact: components["schemas"]["CheckoutContactRequest"];
+            lines: components["schemas"]["CheckoutLineRequest"][];
+            returnUrl?: null | string;
+        };
+        BeginCheckoutResponse: {
+            reference: string;
+            authorizationUrl: string;
+            /** Format: int64 */
+            amountDueMinor: number | string;
+            /** Format: int64 */
+            totalMinor: number | string;
+            currency: string;
+            /** Format: date-time */
+            payBy: string;
         };
         BookingDetailResponse: {
             reference: string;
@@ -1489,6 +1784,27 @@ export interface components {
             /** Format: int64 */
             atRiskMinor: number | string;
             paidFrom: string;
+        };
+        BookingInstalmentResponse: {
+            /** Format: int32 */
+            sequence: number | string;
+            label: string;
+            /** Format: date */
+            dueDate: string;
+            /** Format: int64 */
+            amountMinor: number | string;
+            status: string;
+        };
+        BookingLineResponse: {
+            /** Format: uuid */
+            id: string;
+            itemType: string;
+            title: string;
+            status: string;
+            statusDetail: null | string;
+            /** Format: int64 */
+            priceMinor: number | string;
+            reference: null | string;
         };
         BookingListItemResponse: {
             reference: string;
@@ -1583,6 +1899,38 @@ export interface components {
             availableSeats: number | string;
             seatNumbers: string[];
         };
+        CartItemResponse: {
+            /** Format: uuid */
+            id: string;
+            itemType: string;
+            title: string;
+            /** Format: int32 */
+            adults: number | string;
+            /** Format: int32 */
+            children: number | string;
+            /** Format: int32 */
+            infants: number | string;
+            /** Format: int64 */
+            priceMinor: number | string;
+            currency: string;
+            /** Format: uuid */
+            productId: null | string;
+            /** Format: uuid */
+            departureId: null | string;
+            /** Format: date-time */
+            holdExpiresAt: null | string;
+        };
+        CartResponse: {
+            /** Format: uuid */
+            id: string;
+            sessionToken: string;
+            currency: string;
+            items: components["schemas"]["CartItemResponse"][];
+            /** Format: int64 */
+            totalMinor: number | string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         CategoryRequest: {
             name: string;
             type: string;
@@ -1592,6 +1940,39 @@ export interface components {
             id: string;
             name: string;
             type: string;
+        };
+        CheckoutContactRequest: {
+            name: string;
+            email: string;
+            phone?: null | string;
+        };
+        CheckoutLineRequest: {
+            /** Format: uuid */
+            cartItemId: string;
+            travellers: components["schemas"]["CheckoutTravellerRequest"][];
+        };
+        CheckoutStatusResponse: {
+            reference: string;
+            status: string;
+            /** Format: int64 */
+            amountDueMinor: number | string;
+            currency: string;
+            manageUrl: null | string;
+        };
+        CheckoutTravellerRequest: {
+            type: string;
+            firstName: string;
+            lastName: string;
+            title?: null | string;
+            /** Format: date */
+            birthDate?: null | string;
+            gender?: null | string;
+            email?: null | string;
+            phone?: null | string;
+            passportNumber?: null | string;
+            /** Format: date */
+            passportExpiry?: null | string;
+            nationality?: null | string;
         };
         CommunicationRequest: {
             channel: string;
@@ -1696,6 +2077,80 @@ export interface components {
         DeclineQuoteRequest: {
             reason: null | string;
         };
+        DeparturePaymentResponse: {
+            /** Format: int32 */
+            sequence: number | string;
+            label: string;
+            /** Format: date */
+            dueDate: string;
+            /** Format: int64 */
+            amountMinor: number | string;
+        };
+        DeparturePriceBandResponse: {
+            /** Format: int32 */
+            minPax: number | string;
+            /** Format: int32 */
+            maxPax: null | number | string;
+            /** Format: int64 */
+            pricePerPaxMinor: number | string;
+        };
+        DepartureRequest: {
+            /** Format: date */
+            departureDate: string;
+            isGroupDeparture: boolean;
+            /** Format: int32 */
+            minPax: number | string;
+            /** Format: int32 */
+            capacityTotal: number | string;
+            /** Format: int32 */
+            cutoffDaysBefore: number | string;
+            depositType: string;
+            /** Format: int32 */
+            depositPercentBasisPoints: null | number | string;
+            /** Format: int64 */
+            depositAmountMinor: null | number | string;
+            priceTiers: components["schemas"]["PriceTierRequest"][];
+            installments: components["schemas"]["InstallmentRequest"][];
+            /** Format: int32 */
+            version: number | string;
+        };
+        DepartureResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            productId: string;
+            productTitle: string;
+            currency: string;
+            /** Format: date */
+            departureDate: string;
+            isGroupDeparture: boolean;
+            /** Format: int32 */
+            minPax: number | string;
+            /** Format: int32 */
+            capacityTotal: number | string;
+            /** Format: int32 */
+            cutoffDaysBefore: number | string;
+            depositType: string;
+            /** Format: int32 */
+            depositPercentBasisPoints: null | number | string;
+            /** Format: int64 */
+            depositAmountMinor: null | number | string;
+            priceTiers: components["schemas"]["PriceTierResponse"][];
+            installments: components["schemas"]["InstallmentResponse"][];
+            status: string;
+            /** Format: int32 */
+            capacityReserved: number | string;
+            /** Format: int32 */
+            capacityConfirmed: number | string;
+            /** Format: int32 */
+            seatsLeft: number | string;
+            /** Format: int32 */
+            waitlistCount: number | string;
+            /** Format: date-time */
+            cutoffAt: string;
+            /** Format: int32 */
+            version: number | string;
+        };
         EmailVerifiedResponse: {
             message: string;
         };
@@ -1799,6 +2254,24 @@ export interface components {
             effectiveTo: null | string;
             summary: string;
         };
+        InstallmentRequest: {
+            /** Format: int32 */
+            sequence: number | string;
+            dueBasis: string;
+            /** Format: int32 */
+            dueOffsetDays: number | string;
+            /** Format: int32 */
+            percentOfBalanceBasisPoints: number | string;
+        };
+        InstallmentResponse: {
+            /** Format: int32 */
+            sequence: number | string;
+            dueBasis: string;
+            /** Format: int32 */
+            dueOffsetDays: number | string;
+            /** Format: int32 */
+            percentOfBalanceBasisPoints: number | string;
+        };
         ItineraryDayRequest: {
             /** Format: int32 */
             dayNumber: number | string;
@@ -1814,6 +2287,12 @@ export interface components {
             description: string;
             meals: string[];
             accommodation: string;
+        };
+        JoinWaitlistRequest: {
+            name: string;
+            email: string;
+            /** Format: int32 */
+            paxCount: number | string;
         };
         KybDocumentResponse: {
             /** Format: uuid */
@@ -1974,6 +2453,37 @@ export interface components {
         LoginRequest: {
             email: string;
             password: string;
+        };
+        ManageBookingDocumentResponse: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            number: string;
+            downloadUrl: string;
+        };
+        ManageBookingResponse: {
+            reference: string;
+            status: string;
+            agencyName: string;
+            agencyEmail: null | string;
+            agencyPhone: null | string;
+            /** Format: date-time */
+            placedAt: string;
+            currency: string;
+            /** Format: int64 */
+            totalMinor: number | string;
+            /** Format: int64 */
+            paidMinor: number | string;
+            lines: components["schemas"]["BookingLineResponse"][];
+            instalments: components["schemas"]["BookingInstalmentResponse"][];
+            documents: components["schemas"]["ManageBookingDocumentResponse"][];
+        };
+        ManifestEntryResponse: {
+            orderReference: string;
+            travellerName: string;
+            paxType: string;
+            room: null | string;
+            status: string;
         };
         MarkupRuleRequest: {
             scope: string;
@@ -2141,6 +2651,22 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        PriceTierRequest: {
+            /** Format: int32 */
+            minPax: number | string;
+            /** Format: int32 */
+            maxPax: null | number | string;
+            /** Format: int64 */
+            pricePerPaxMinor: number | string;
+        };
+        PriceTierResponse: {
+            /** Format: int32 */
+            minPax: number | string;
+            /** Format: int32 */
+            maxPax: null | number | string;
+            /** Format: int64 */
+            pricePerPaxMinor: number | string;
+        };
         PriceVariantRequest: {
             name: string;
             paxType: string;
@@ -2302,6 +2828,31 @@ export interface components {
             pageSize: number | string;
             filters: components["schemas"]["PublicCatalogFilters"];
         };
+        PublicDepartureResponse: {
+            /** Format: uuid */
+            id: string;
+            productSlug: string;
+            productTitle: string;
+            /** Format: date */
+            departureDate: string;
+            status: string;
+            isGroupDeparture: boolean;
+            /** Format: int32 */
+            minPax: number | string;
+            /** Format: int32 */
+            seatsLeft: number | string;
+            currency: string;
+            /** Format: int64 */
+            pricePerPaxMinor: number | string;
+            /** Format: int64 */
+            totalMinor: number | string;
+            /** Format: int64 */
+            dueNowMinor: number | string;
+            /** Format: date-time */
+            bookByAt: string;
+            priceBands: components["schemas"]["DeparturePriceBandResponse"][];
+            payments: components["schemas"]["DeparturePaymentResponse"][];
+        };
         PublicInclusion: {
             kind: string;
             text: string;
@@ -2330,6 +2881,8 @@ export interface components {
             caption: string;
         };
         PublicProductResponse: {
+            /** Format: uuid */
+            id: string;
             slug: string;
             productType: string;
             title: string;
@@ -2929,6 +3482,20 @@ export interface components {
         VisaDocumentResponse: {
             label: string;
             isMandatory: boolean;
+        };
+        WaitlistEntryResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: int32 */
+            paxCount: number | string;
+            status: string;
+            /** Format: date-time */
+            joinedAt: string;
+            /** Format: date-time */
+            offeredAt: null | string;
+            /** Format: date-time */
+            expiresAt: null | string;
         };
         WalletBalanceResponse: {
             /** Format: int64 */
@@ -6248,6 +6815,695 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListPublicDepartures: {
+        parameters: {
+            query?: {
+                adults?: number | string;
+                children?: number | string;
+                infants?: number | string;
+            };
+            header?: never;
+            path: {
+                productSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicDepartureResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetPublicDeparture: {
+        parameters: {
+            query?: {
+                adults?: number | string;
+                children?: number | string;
+                infants?: number | string;
+            };
+            header?: never;
+            path: {
+                departureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicDepartureResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetCart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CartResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AddCartItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddCartItemRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CartResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    RemoveCartItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cartItemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CartResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    BeginCheckout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BeginCheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BeginCheckoutResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetCheckoutStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reference: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckoutStatusResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    OpenBookingByLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManageBookingResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListDepartures: {
+        parameters: {
+            query?: {
+                productId?: string;
+                from?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartureResponse"][];
+                };
+            };
+        };
+    };
+    GetDeparture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                departureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartureResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SaveDeparture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                departureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepartureRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartureResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateDeparture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepartureRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartureResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CloseDeparture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                departureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartureResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ReopenDeparture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                departureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartureResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CancelDeparture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                departureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartureResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetDepartureManifest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                departureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManifestEntryResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetDepartureWaitlist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                departureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistEntryResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    JoinDepartureWaitlist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                departureId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JoinWaitlistRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitlistEntryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
         };

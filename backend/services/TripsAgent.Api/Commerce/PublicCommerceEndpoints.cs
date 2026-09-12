@@ -47,12 +47,55 @@ public static class PublicCommerceEndpoints
             .AllowAnonymous()
             .RequireRateLimitPolicy(RateLimitPolicyNames.Storefront);
 
+        MapDepartures(group);
         MapCart(group);
         MapCheckout(group);
         MapBookings(group);
 
         return app;
     }
+
+    private static void MapDepartures(RouteGroupBuilder group)
+    {
+        // The dated departures on one trip. Priced for the party asked about, because a departure's
+        // price bands are per head and depend on how many people are going.
+        group.MapGet("/trips/{productSlug}/departures", async (
+                string productSlug,
+                HttpContext http,
+                PublicDepartureQueries departures,
+                int? adults,
+                int? children,
+                int? infants,
+                CancellationToken cancellationToken) =>
+                ToResult(await departures.ForProductAsync(
+                    HostOf(http), productSlug, PartyOf(adults, children, infants), cancellationToken)))
+            .WithName("ListPublicDepartures")
+            .Produces<IReadOnlyList<PublicDepartureResponse>>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/departures/{departureId:guid}", async (
+                Guid departureId,
+                HttpContext http,
+                PublicDepartureQueries departures,
+                int? adults,
+                int? children,
+                int? infants,
+                CancellationToken cancellationToken) =>
+                ToResult(await departures.FindAsync(
+                    HostOf(http), departureId, PartyOf(adults, children, infants), cancellationToken)))
+            .WithName("GetPublicDeparture")
+            .Produces<PublicDepartureResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+    }
+
+    /// <summary>Who is travelling, from the query string. One adult when nobody said.</summary>
+    /// <remarks>
+    /// Clamped rather than refused: a party size in a URL is something a traveller can type, and a
+    /// negative one should quietly become the smallest sensible party rather than a 422 on a page
+    /// they are only browsing. Checkout validates the real thing.
+    /// </remarks>
+    private static PartySize PartyOf(int? adults, int? children, int? infants) =>
+        new(Math.Clamp(adults ?? 1, 1, 20), Math.Clamp(children ?? 0, 0, 20), Math.Clamp(infants ?? 0, 0, 20));
 
     private static void MapCart(RouteGroupBuilder group)
     {

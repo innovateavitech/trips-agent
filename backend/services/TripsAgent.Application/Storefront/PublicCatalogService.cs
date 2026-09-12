@@ -140,6 +140,9 @@ public sealed class PublicCatalogService
             cancellationToken);
 
         return new PublicProductResponse(
+            // The id a traveller adds to their cart with. Not a secret: it names one published
+            // product of this agency's, which the page they are reading already shows them.
+            product.Id,
             product.Slug,
             product.ProductType.ToString(),
             product.Title,

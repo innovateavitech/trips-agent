@@ -141,7 +141,7 @@ public sealed class ManageBookingQueries
                     item.State.ToString()))
                 .ToList(),
             documents
-                .Select(document => new BookingDocumentResponse(
+                .Select(document => new ManageBookingDocumentResponse(
                     document.Id,
                     document.DocumentType.ToString(),
                     document.DocumentNumber,

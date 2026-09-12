@@ -134,8 +134,16 @@ public sealed record BookingInstalmentResponse(
     long AmountMinor,
     string Status);
 
-/// <summary>A document the traveller can download, by a signed link that needs no account.</summary>
-public sealed record BookingDocumentResponse(Guid Id, string Kind, string Number, string DownloadUrl);
+/// <summary>
+/// A document the traveller can download, by a signed link that needs no account.
+/// </summary>
+/// <remarks>
+/// Named apart from the agency-facing <c>BookingDocumentResponse</c> in
+/// <c>TripsAgent.Contracts.Documents</c> on purpose. The two are different shapes, and the OpenAPI
+/// document keys schemas by type name alone: two records sharing a name silently collapse into one,
+/// and the generated TypeScript then describes the wrong one. C# namespaces do not save us here.
+/// </remarks>
+public sealed record ManageBookingDocumentResponse(Guid Id, string Kind, string Number, string DownloadUrl);
 
 /// <summary>
 /// A booking, as its traveller sees it behind their link.
@@ -157,7 +165,7 @@ public sealed record ManageBookingResponse(
     long PaidMinor,
     IReadOnlyList<BookingLineResponse> Lines,
     IReadOnlyList<BookingInstalmentResponse> Instalments,
-    IReadOnlyList<BookingDocumentResponse> Documents);
+    IReadOnlyList<ManageBookingDocumentResponse> Documents);
 
 /// <summary>Where a payment has got to, for the page the gateway returns the traveller to.</summary>
 /// <param name="Status"><c>pending</c>, <c>paid</c> or <c>failed</c>.</param>
@@ -168,3 +176,40 @@ public sealed record CheckoutStatusResponse(
     long AmountDueMinor,
     string Currency,
     string? ManageUrl);
+
+/// <summary>One price band on a departure: what a party of this size pays a head.</summary>
+/// <param name="MaxPax">The largest party in this band. Null for the last one, which is open-ended.</param>
+public sealed record DeparturePriceBandResponse(int MinPax, int? MaxPax, long PricePerPaxMinor);
+
+/// <summary>One payment on the plan a departure is sold under, before anybody has booked it.</summary>
+/// <param name="Label">"Deposit", "Balance", "Payment 2" — what the traveller will see on their bill.</param>
+/// <param name="DueDate">When it is owed, for a booking made today.</param>
+public sealed record DeparturePaymentResponse(int Sequence, string Label, DateOnly DueDate, long AmountMinor);
+
+/// <summary>
+/// A dated departure as a traveller sees it on the agency's site.
+/// </summary>
+/// <param name="Status">
+/// <c>Open</c>, <c>Guaranteed</c>, <c>NearlyFull</c>, <c>SoldOut</c>, <c>Closed</c> or <c>Cancelled</c>.
+/// </param>
+/// <param name="SeatsLeft">How many seats are really left, held ones counted as gone.</param>
+/// <param name="PricePerPaxMinor">The price for the party size asked about, a head.</param>
+/// <param name="TotalMinor">What that party pays in all.</param>
+/// <param name="DueNowMinor">What they pay today: the deposit, or the whole thing where there is none.</param>
+/// <param name="BookByAt">The cutoff. Nothing can be booked on this departure after it.</param>
+public sealed record PublicDepartureResponse(
+    Guid Id,
+    string ProductSlug,
+    string ProductTitle,
+    DateOnly DepartureDate,
+    string Status,
+    bool IsGroupDeparture,
+    int MinPax,
+    int SeatsLeft,
+    string Currency,
+    long PricePerPaxMinor,
+    long TotalMinor,
+    long DueNowMinor,
+    DateTimeOffset BookByAt,
+    IReadOnlyList<DeparturePriceBandResponse> PriceBands,
+    IReadOnlyList<DeparturePaymentResponse> Payments);

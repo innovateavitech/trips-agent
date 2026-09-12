@@ -86,6 +86,7 @@ public sealed record PublicCatalogFilters(
 /// </param>
 /// <param name="Images">The gallery, cover first. Each is a signed link to a scanned, processed image.</param>
 public sealed record PublicProductResponse(
+    Guid Id,
     string Slug,
     string ProductType,
     string Title,

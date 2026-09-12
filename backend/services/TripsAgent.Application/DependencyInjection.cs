@@ -95,6 +95,7 @@ public static class DependencyInjection
         services.AddScoped<Checkout.CheckoutCompletion>();
         services.AddScoped<Checkout.CheckoutSweeper>();
         services.AddScoped<Checkout.WalletRefunds>();
+        services.AddScoped<Checkout.OrderRefunds>();
         services.AddScoped<Checkout.PaymentReversalService>();
         services.AddScoped<Checkout.ResolutionService>();
         services.AddScoped<Checkout.BookingQueries>();

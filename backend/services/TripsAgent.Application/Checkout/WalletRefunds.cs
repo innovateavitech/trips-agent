@@ -8,6 +8,12 @@ using TripsAgent.Domain.Payments;
 
 namespace TripsAgent.Application.Checkout;
 
+/// <summary>What undoing a line's cost came to.</summary>
+/// <param name="Amount">What was held or taken, and has now gone back.</param>
+/// <param name="WasCaptured">True when the money had really left the wallet and had to be credited back.</param>
+/// <param name="LedgerTransactionGroupId">The reversing entries, when there were any to write.</param>
+public sealed record UndoneCost(Money Amount, bool WasCaptured, Guid? LedgerTransactionGroupId);
+
 /// <summary>
 /// Gives an order line's money back to the agency's wallet — whichever state it is in.
 /// </summary>
@@ -55,10 +61,58 @@ public sealed class WalletRefunds
         ArgumentNullException.ThrowIfNull(order);
         ArgumentNullException.ThrowIfNull(line);
 
+        var undone = await UndoCostAsync(order, line, now, cancellationToken);
+
+        if (undone is null)
+        {
+            return null;
+        }
+
+        var refund = undone.WasCaptured
+            ? Refund.Record(
+                order.AgencyId, order.Id, line.Id, reason, RefundMethod.WalletCredited, undone.Amount, order.Currency, now,
+                line.SupplierBookingId, supplierStatusPollId, undone.LedgerTransactionGroupId, refundedByUserId,
+                "Credited back to the wallet, with reversing ledger entries.")
+            : Refund.Record(
+                order.AgencyId, order.Id, line.Id, reason, RefundMethod.WalletHoldReleased, undone.Amount, order.Currency, now,
+                line.SupplierBookingId, supplierStatusPollId, refundedByUserId: refundedByUserId,
+                note: "Released the wallet hold: the money was never taken.");
+
+        _db.Refunds.Add(refund);
+        return refund;
+    }
+
+    /// <summary>
+    /// Undoes what a line cost the agency — the hold released, or the capture reversed — and records
+    /// no <see cref="Refund"/>.
+    /// </summary>
+    /// <remarks>
+    /// The half of <see cref="ReturnAsync"/> that is the same whoever the money is going back to. A
+    /// booking a traveller paid for by card has two sides to undo: what it cost the agency, which is
+    /// this, and what the traveller paid, which goes back through the gateway
+    /// (<c>OrderRefunds</c>). Both belong to one <see cref="Refund"/> row, so this writes none.
+    /// </remarks>
+    /// <returns>What was undone, or null when no wallet money was ever held or taken for the line.</returns>
+    public async Task<UndoneCost?> UndoCostAsync(
+        Order order,
+        OrderLine line,
+        DateTimeOffset now,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+        ArgumentNullException.ThrowIfNull(line);
+
+        // This line's own hold first. A storefront order holds money per line, so taking the order's
+        // newest hold — as this once did, when an order had exactly one line — would give back some
+        // other line's money.
         var hold = await _db.WalletHolds
-            .Where(candidate => candidate.OrderId == order.Id)
-            .OrderByDescending(candidate => candidate.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+                       .Where(candidate => candidate.OrderLineId == line.Id)
+                       .OrderByDescending(candidate => candidate.CreatedAt)
+                       .FirstOrDefaultAsync(cancellationToken)
+                   ?? await _db.WalletHolds
+                       .Where(candidate => candidate.OrderId == order.Id && candidate.OrderLineId == null)
+                       .OrderByDescending(candidate => candidate.CreatedAt)
+                       .FirstOrDefaultAsync(cancellationToken);
 
         if (hold is null || hold.Status == WalletHoldStatus.Released)
         {
@@ -68,29 +122,15 @@ public sealed class WalletRefunds
         var wallet = await _db.Wallets.SingleAsync(candidate => candidate.Id == hold.WalletId, cancellationToken);
         var amount = hold.AmountMinor;
 
-        Refund refund;
-
         if (hold.Status == WalletHoldStatus.Held)
         {
             wallet.ReleaseHold(hold, now);
-
-            refund = Refund.Record(
-                order.AgencyId, order.Id, line.Id, reason, RefundMethod.WalletHoldReleased, amount, order.Currency, now,
-                line.SupplierBookingId, supplierStatusPollId, refundedByUserId: refundedByUserId,
-                note: "Released the wallet hold: the money was never taken.");
-        }
-        else
-        {
-            var groupId = await ReverseCaptureAsync(order, line, wallet, amount, now, cancellationToken);
-
-            refund = Refund.Record(
-                order.AgencyId, order.Id, line.Id, reason, RefundMethod.WalletCredited, amount, order.Currency, now,
-                line.SupplierBookingId, supplierStatusPollId, groupId, refundedByUserId,
-                "Credited back to the wallet, with reversing ledger entries.");
+            return new UndoneCost(amount, WasCaptured: false, null);
         }
 
-        _db.Refunds.Add(refund);
-        return refund;
+        var groupId = await ReverseCaptureAsync(order, line, wallet, amount, now, cancellationToken);
+
+        return new UndoneCost(amount, WasCaptured: true, groupId);
     }
 
     /// <summary>The capture, run backwards — every entry of it, so the books balance to the kobo.</summary>

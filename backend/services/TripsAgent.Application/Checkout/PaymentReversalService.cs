@@ -54,7 +54,7 @@ public sealed partial class PaymentReversalService
 
     private readonly IAppDbContext _db;
     private readonly ITransactionRunner _transactions;
-    private readonly WalletRefunds _refunds;
+    private readonly OrderRefunds _refunds;
     private readonly IPlatformScope _platformScope;
     private readonly IOutbox _outbox;
     private readonly IPlatformAlerter _alerter;
@@ -65,7 +65,7 @@ public sealed partial class PaymentReversalService
     public PaymentReversalService(
         IAppDbContext db,
         ITransactionRunner transactions,
-        WalletRefunds refunds,
+        OrderRefunds refunds,
         IPlatformScope platformScope,
         IOutbox outbox,
         IPlatformAlerter alerter,
@@ -160,7 +160,8 @@ public sealed partial class PaymentReversalService
         // Open until the save: giving back money that had been taken posts to the platform's own ledger
         // accounts, which row-level security lets only a platform scope write. Everything above was read
         // by id, under the agency's own filter.
-        using var scope = _platformScope.Enter("payment reversal — gives a booking's money back through the wallet and, when taken, the ledger");
+        using var scope = _platformScope.Enter(
+            "payment reversal — gives a booking's money back to wherever it was paid from, through the ledger");
 
         var refund = await _refunds.ReturnAsync(
             order, line, RefundReason.SupplierReversal, now, supplierStatusPollId: evidence!.Id, cancellationToken: cancellationToken);
@@ -169,7 +170,11 @@ public sealed partial class PaymentReversalService
             order,
             line,
             $"The supplier reported status {request.SupplierStatusCode}: no ticket was issued. "
-            + (refund is null ? "No wallet payment was found to give back." : "The money for it has gone back to the wallet."),
+            + (refund is null
+                ? "No payment was found to give back."
+                : refund.Method == RefundMethod.Gateway
+                    ? "The money for it has gone back to the card it was paid from."
+                    : "The money for it has gone back to the wallet."),
             now,
             _outbox);
 

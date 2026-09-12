@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   Plane,
+  ReceiptText,
   ShieldCheck,
   SlidersHorizontal,
   Ticket,
@@ -56,6 +57,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Wallet', to: '/wallet', icon: Wallet }, // #51
       { label: 'Pricing rules', to: '/pricing', icon: SlidersHorizontal }, // #55
+      { label: 'Billing', to: '/billing', icon: ReceiptText }, // issues 64, 65
     ],
   },
   {

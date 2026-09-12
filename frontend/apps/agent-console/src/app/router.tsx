@@ -7,6 +7,7 @@ import { bookingRoutes } from '../features/booking/routes';
 import { bookingsRoutes } from '../features/bookings/routes';
 import { DashboardPage } from '../features/dashboard';
 import { onboardingRoutes } from '../features/onboarding/routes';
+import { billingRoutes } from '../features/billing';
 import { pricingRoutes } from '../features/pricing/routes';
 import { searchRoutes } from '../features/search/routes';
 import { walletRoutes } from '../features/wallet';
@@ -60,6 +61,7 @@ export const appRoutes: RouteObject[] = [
               ...bookingsRoutes,
               ...walletRoutes,
               ...pricingRoutes,
+              ...billingRoutes,
               ...onboardingRoutes,
               { path: '*', element: <NotFoundPage /> },
             ],

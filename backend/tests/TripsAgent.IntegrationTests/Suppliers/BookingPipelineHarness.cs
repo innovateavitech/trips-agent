@@ -124,6 +124,11 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
             await setup.Database.MigrateAsync();
 
             var agency = Agency.RegisterPrincipal("Lagos Travel Limited", "lagos-travel", "NG", "NGN", "Africa/Lagos");
+
+            // Verified, because checkout refuses a new booking from an agency that may not sell
+            // (build-plan decision 14) — and because an agency with a funded wallet has been
+            // through KYB by definition: approval is what opens the wallet.
+            agency.MarkVerified(clock.GetUtcNow());
             var supplier = Supplier.Register(TripsAfricaOptions.SupplierCode, "Trips Africa", SupplierKind.Multi, stub.BaseAddress.ToString());
             setup.Agencies.Add(agency);
             // What the document numbering reads for an agency's order numbers, as registration creates it.

@@ -32,16 +32,23 @@ export function homePathFor(claims: StaffClaims | null | undefined): string {
 }
 
 /**
- * The page to return to after sign-in, or the home page when `from` is not safe to follow.
+ * The page to return to after sign-in, or this account's home page when `from` is not safe to
+ * follow.
  *
  * Only paths inside this app are followed. `//evil.example` is a *protocol-relative* URL — it
  * starts with a slash but leaves the site — and `/\evil.example` is treated the same way by some
  * browsers. Following either would turn the sign-in page into an open redirect that sends a
  * freshly signed-in staff member wherever an attacker's link pointed.
+ *
+ * `claims` only chooses the fallback; it never widens what `from` is allowed to be. Somebody
+ * signing in cold lands on the screen their role is for rather than on a fixed page they may not
+ * be able to open.
  */
-export function safeRedirect(from: unknown): string {
-  if (typeof from !== 'string') return HOME_PATH;
-  if (!from.startsWith('/') || from.startsWith('//') || from.startsWith('/\\')) return HOME_PATH;
-  if (from === '/sign-in' || from.startsWith('/sign-in?')) return HOME_PATH;
+export function safeRedirect(from: unknown, claims?: StaffClaims | null): string {
+  const home = homePathFor(claims);
+
+  if (typeof from !== 'string') return home;
+  if (!from.startsWith('/') || from.startsWith('//') || from.startsWith('/\\')) return home;
+  if (from === '/sign-in' || from.startsWith('/sign-in?')) return home;
   return from;
 }

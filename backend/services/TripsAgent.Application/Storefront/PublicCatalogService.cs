@@ -81,7 +81,7 @@ public sealed class PublicCatalogService
 
         var total = await filtered.CountAsync(cancellationToken);
 
-        var products = await filtered
+        var products = await Narrow(PublishedCards(), query, categoryNames)
             .OrderByDescending(product => product.PublishedAt)
             .ThenBy(product => product.Id)
             .Skip((page - 1) * pageSize)
@@ -122,6 +122,7 @@ public sealed class PublicCatalogService
             .Include(candidate => candidate.Inclusions)
             .Include(candidate => candidate.PriceVariants)
             .Include(candidate => candidate.Visa)
+            .ThenInclude(visa => visa!.Documents)
             .FirstOrDefaultAsync(candidate => candidate.Slug == normalised, cancellationToken);
 
         if (product is null)
@@ -210,7 +211,7 @@ public sealed class PublicCatalogService
         ArgumentNullException.ThrowIfNull(grid);
 
         var limit = Math.Clamp(grid.Limit, 1, MaxPageSize);
-        var query = Published();
+        var query = PublishedCards();
 
         if (Enum.TryParse<ProductType>(grid.ProductType, ignoreCase: true, out var productType))
         {
@@ -259,6 +260,23 @@ public sealed class PublicCatalogService
     private IQueryable<Product> Published() =>
         _db.Products.AsNoTracking().Where(product => product.Status == ProductStatus.Published);
 
+    /// <summary>
+    /// Published products with the three collections a card is built from.
+    /// </summary>
+    /// <remarks>
+    /// Without these the card still renders, wrongly and silently: an unloaded
+    /// <see cref="Product.PriceVariants"/> looks like a product with no variants, so "from" falls
+    /// back to the base price and quotes the traveller more than the cheapest thing they can buy;
+    /// an unloaded <see cref="Product.Media"/> loses the cover of any product with no hero image.
+    /// Counting and filtering run on <see cref="Published"/> instead, where the joins would only
+    /// make the query bigger.
+    /// </remarks>
+    private IQueryable<Product> PublishedCards() =>
+        Published()
+            .Include(product => product.PriceVariants)
+            .Include(product => product.Categories)
+            .Include(product => product.Media);
+
     /// <remarks>
     /// <c>ToLower()</c> and <c>Contains</c> rather than <c>string.Equals(…, StringComparison)</c>:
     /// this is an expression tree the database runs, and EF Core cannot translate the comparison
@@ -300,14 +318,26 @@ public sealed class PublicCatalogService
                 product.Categories.Any(link => categoryIds.Contains(link.CategoryId)));
         }
 
+        // Both bounds are read against the "from" price — the one on the card — rather than against
+        // the base price behind it. A traveller who caps their budget at the number they can see must
+        // get back the product showing that number, and one who sets a floor must not be shown a
+        // product that is cheaper than it in its cheapest variant.
         if (query.MinPriceMinor is { } min)
         {
-            products = products.Where(product => product.BasePriceMinor >= new Domain.Common.Money(min));
+            var floor = new Domain.Common.Money(min);
+
+            products = products.Where(product =>
+                product.BasePriceMinor >= floor
+                && !product.PriceVariants.Any(variant => variant.PriceMinor < floor));
         }
 
         if (query.MaxPriceMinor is { } max)
         {
-            products = products.Where(product => product.BasePriceMinor <= new Domain.Common.Money(max));
+            var ceiling = new Domain.Common.Money(max);
+
+            products = products.Where(product =>
+                product.BasePriceMinor <= ceiling
+                || product.PriceVariants.Any(variant => variant.PriceMinor <= ceiling));
         }
 
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -340,7 +370,8 @@ public sealed class PublicCatalogService
                 product.ProductType,
                 product.DestinationCity,
                 product.DestinationCountry,
-                Price = product.BasePriceMinor,
+                product.BasePriceMinor,
+                VariantPrices = product.PriceVariants.Select(variant => variant.PriceMinor).ToList(),
             })
             .ToListAsync(cancellationToken);
 
@@ -374,8 +405,12 @@ public sealed class PublicCatalogService
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
                 .ToList(),
-            facts.Min(fact => fact.Price.AmountMinor),
-            facts.Max(fact => fact.Price.AmountMinor));
+            // The range of the prices on the cards, so the ends of a price filter line up with the
+            // numbers a traveller can see and with what the filter above matches on. Worked out here
+            // rather than in the query: the database can return a product's prices, but folding the
+            // base price in among them is not something it translates.
+            facts.Min(fact => FromPriceMinor(fact.BasePriceMinor, fact.VariantPrices)),
+            facts.Max(fact => FromPriceMinor(fact.BasePriceMinor, fact.VariantPrices)));
     }
 
     private async Task<IReadOnlyDictionary<Guid, string>> CategoryNamesAsync(CancellationToken cancellationToken) =>
@@ -415,11 +450,13 @@ public sealed class PublicCatalogService
     /// Shown as "from", so it must never be higher than something the traveller can actually buy.
     /// </summary>
     private static long FromPriceMinor(Product product) =>
-        product.PriceVariants.Count == 0
-            ? product.BasePriceMinor.AmountMinor
-            : Math.Min(
-                product.BasePriceMinor.AmountMinor,
-                product.PriceVariants.Min(variant => variant.PriceMinor.AmountMinor));
+        FromPriceMinor(product.BasePriceMinor, product.PriceVariants.Select(variant => variant.PriceMinor).ToList());
+
+    /// <inheritdoc cref="FromPriceMinor(Product)"/>
+    private static long FromPriceMinor(Domain.Common.Money basePrice, List<Domain.Common.Money> variantPrices) =>
+        variantPrices.Count == 0
+            ? basePrice.AmountMinor
+            : Math.Min(basePrice.AmountMinor, variantPrices.Min(price => price.AmountMinor));
 
     /// <summary>The cover image, else the first one in the gallery.</summary>
     private static Guid? CoverAssetId(Product product) =>

@@ -4,6 +4,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 using TripsAgent.Application.Storefront;
 using TripsAgent.Contracts.Storefront;
 using TripsAgent.Domain.Assets;
@@ -12,7 +13,9 @@ using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Storefront;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Storefront;
 using TripsAgent.IntegrationTests.Persistence;
+using TripsAgent.IntegrationTests.Pricing;
 
 namespace TripsAgent.IntegrationTests.Storefront;
 
@@ -26,7 +29,7 @@ namespace TripsAgent.IntegrationTests.Storefront;
 /// checks it can never see the other's products.
 /// </remarks>
 [Collection(PostgresCollection.Name)]
-public sealed class PublicStorefrontEndpointTests : IAsyncLifetime, IDisposable
+public sealed class PublicStorefrontEndpointTests : IClassFixture<RedisFixture>, IAsyncLifetime, IDisposable
 {
     private const string SitePath = "/api/v1/public/storefront/site";
     private const string CatalogPath = "/api/v1/public/storefront/catalog";
@@ -41,13 +44,18 @@ public sealed class PublicStorefrontEndpointTests : IAsyncLifetime, IDisposable
     private static readonly DateTimeOffset Now = new(2026, 9, 12, 9, 0, 0, TimeSpan.Zero);
 
     private readonly PostgresFixture _postgres;
+    private readonly RedisFixture _redis;
 
     private (string Key, string Value)[] _overrides = [];
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _api = null!;
     private string _database = string.Empty;
 
-    public PublicStorefrontEndpointTests(PostgresFixture postgres) => _postgres = postgres;
+    public PublicStorefrontEndpointTests(PostgresFixture postgres, RedisFixture redis)
+    {
+        _postgres = postgres;
+        _redis = redis;
+    }
 
     public async Task InitializeAsync()
     {
@@ -90,12 +98,19 @@ public sealed class PublicStorefrontEndpointTests : IAsyncLifetime, IDisposable
         [
             ("ConnectionStrings__Postgres", _postgres.ConnectionStringFor(_database, asApplicationRole: true)),
             ("ConnectionStrings__PostgresAdmin", _postgres.ConnectionStringFor(_database, asApplicationRole: false)),
+            ("ConnectionStrings__Redis", _redis.ConnectionString),
         ];
 
         foreach (var (key, value) in _overrides)
         {
             Environment.SetEnvironmentVariable(key, value);
         }
+
+        // The host cache is keyed by hostname alone, because in production a hostname belongs to one
+        // agency and to one database. Here every test rebuilds the same hostnames in a database of its
+        // own, so the map from the test before is retired first — the same generation bump a domain
+        // change performs, rather than a flush the production code has no equivalent of.
+        await _redis.Connection.GetDatabase().StringIncrementAsync(RedisStorefrontHostCache.GenerationKey);
 
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(host => host.UseEnvironment("Development"));
         _api = _factory.CreateClient();
@@ -240,7 +255,7 @@ public sealed class PublicStorefrontEndpointTests : IAsyncLifetime, IDisposable
         var catalog = await GetCatalogAsync(LagosHost);
 
         catalog.Filters.ProductTypes.Should().BeEquivalentTo("Tour", "Visa");
-        catalog.Filters.Destinations.Should().BeEquivalentTo("Kano", "the visa has no city, so it adds nothing to browse by");
+        catalog.Filters.Destinations.Should().BeEquivalentTo(["Kano"], "the visa has no city, so it adds nothing to browse by");
         catalog.Filters.Categories.Should().BeEquivalentTo("Cultural");
         catalog.Filters.MinPriceMinor.Should().BeLessThanOrEqualTo(catalog.Filters.MaxPriceMinor!.Value);
     }

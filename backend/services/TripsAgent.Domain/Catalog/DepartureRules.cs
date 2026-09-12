@@ -167,33 +167,33 @@ public static class DepartureRules
         switch (terms.DepositType)
         {
             case DepositType.Percent:
-            {
-                var share = terms.DepositPercentBasisPoints ?? 0;
-
-                if (share <= 0 || share > FullBasisPoints)
                 {
-                    problems.Add(new ProductProblem("deposit", "More than 0%, and at most 100%."));
-                }
+                    var share = terms.DepositPercentBasisPoints ?? 0;
 
-                break;
-            }
+                    if (share <= 0 || share > FullBasisPoints)
+                    {
+                        problems.Add(new ProductProblem("deposit", "More than 0%, and at most 100%."));
+                    }
+
+                    break;
+                }
 
             case DepositType.Fixed:
-            {
-                var amount = terms.DepositAmountMinor ?? Money.Zero;
-                var lowest = LowestPrice(terms.PriceTiers);
-
-                if (amount.AmountMinor <= 0)
                 {
-                    problems.Add(new ProductProblem("deposit", "Set the deposit amount."));
-                }
-                else if (lowest is { } cheapest && amount > cheapest)
-                {
-                    problems.Add(new ProductProblem("deposit", "More than the price of a seat."));
-                }
+                    var amount = terms.DepositAmountMinor ?? Money.Zero;
+                    var lowest = LowestPrice(terms.PriceTiers);
 
-                break;
-            }
+                    if (amount.AmountMinor <= 0)
+                    {
+                        problems.Add(new ProductProblem("deposit", "Set the deposit amount."));
+                    }
+                    else if (lowest is { } cheapest && amount > cheapest)
+                    {
+                        problems.Add(new ProductProblem("deposit", "More than the price of a seat."));
+                    }
+
+                    break;
+                }
 
             case DepositType.None:
                 break;

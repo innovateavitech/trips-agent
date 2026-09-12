@@ -142,7 +142,18 @@ public sealed class AuditLogQueryService
 
         if (query.AgencyId is { } agencyId)
         {
-            entries = entries.Where(entry => entry.AgencyId == agencyId);
+            // Two ways a row belongs to an agency, and the viewer wants both.
+            //
+            // Rows the agency's own staff wrote carry its agency_id. Rows a Trips admin wrote
+            // about it do not: the interceptor takes agency_id from the actor's own agency, and a
+            // back-office admin has none. That is deliberate, and it is what keeps the reason for
+            // a suspension out of the suspended agency's reach — so the second clause matches on
+            // the subject of the action rather than widening agency_id.
+            var subject = agencyId.ToString();
+
+            entries = entries.Where(entry =>
+                entry.AgencyId == agencyId
+                || (entry.EntityType == nameof(Domain.Tenancy.Agency) && entry.EntityId == subject));
         }
 
         if (query.ActorUserId is { } actorId)

@@ -165,12 +165,22 @@ public sealed class OperationsDashboardService
             Total(rows.Select(row => row.TotalPlatformFeeMinor)));
     }
 
-    /// <summary>Open alerts, most urgent first and oldest within that — the order the index serves.</summary>
+    /// <summary>
+    /// Open alerts, most urgent first and oldest within that.
+    /// </summary>
+    /// <remarks>
+    /// Ordered by an explicit rank, not by the column. Severity is stored as its name so the
+    /// table outlives the enum, and sorting that column puts Critical before Info before
+    /// Warning — alphabetical order, which is exactly backwards for the two that matter.
+    /// </remarks>
     private async Task<List<AdminAlertResponse>> AlertsAsync(CancellationToken cancellationToken)
     {
         var alerts = await _db.AdminAlerts.AsNoTracking()
             .Where(alert => alert.Status != AdminAlertStatus.Resolved)
-            .OrderByDescending(alert => alert.Severity)
+            .OrderBy(alert =>
+                alert.Severity == AdminAlertSeverity.Critical ? 0
+                : alert.Severity == AdminAlertSeverity.Warning ? 1
+                : 2)
             .ThenBy(alert => alert.CreatedAt)
             .Take(AlertLimit)
             .Select(alert => new

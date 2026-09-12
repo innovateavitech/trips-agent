@@ -92,6 +92,24 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                    AND ur.agency_id IS NOT NULL;
                 """);
 
+            // ------------------------------------------------------ the alert types that had no row
+            //
+            // ck_admin_alerts_type still listed the five types that existed when the table was
+            // created. Two more were added to AdminAlertType since — LedgerIntegrity, raised by
+            // the nightly books audit, and SupplierBookingError, raised by the status poller when
+            // the supplier answers about a booking whose money is held — and inserting either was
+            // refused by this constraint. Both are alerts about money that nobody was being told
+            // about, which is the opposite of what an alert is for. The dashboard reads this
+            // table, so it is fixed here.
+            migrationBuilder.Sql("""
+                ALTER TABLE platform.admin_alerts DROP CONSTRAINT IF EXISTS ck_admin_alerts_type;
+
+                ALTER TABLE platform.admin_alerts
+                    ADD CONSTRAINT ck_admin_alerts_type
+                        CHECK (type IN ('PendingKyb', 'GatewayError', 'Dispute', 'ReversalRequired',
+                                        'TicketTimeLimitBreach', 'LedgerIntegrity', 'SupplierBookingError'));
+                """);
+
             // -------------------------------------------------- row-level security on the audit log
             //
             // platform.audit_logs had no policy: its only protection was the EF query filter, and
@@ -141,6 +159,13 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql("""
+                ALTER TABLE platform.admin_alerts DROP CONSTRAINT IF EXISTS ck_admin_alerts_type;
+
+                ALTER TABLE platform.admin_alerts
+                    ADD CONSTRAINT ck_admin_alerts_type
+                        CHECK (type IN ('PendingKyb', 'GatewayError', 'Dispute',
+                                        'ReversalRequired', 'TicketTimeLimitBreach'));
+
                 DROP POLICY IF EXISTS append_only_write ON platform.audit_logs;
                 DROP POLICY IF EXISTS tenant_isolation_read ON platform.audit_logs;
                 ALTER TABLE platform.audit_logs NO FORCE ROW LEVEL SECURITY;

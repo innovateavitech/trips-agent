@@ -9,6 +9,7 @@ import { DashboardPage } from '../features/dashboard';
 import { onboardingRoutes } from '../features/onboarding/routes';
 import { pricingRoutes } from '../features/pricing/routes';
 import { searchRoutes } from '../features/search/routes';
+import { subAgentRoutes } from '../features/subagents';
 import { walletRoutes } from '../features/wallet';
 import { AppShell } from '../shell/app-shell';
 import { PublicLayout } from '../shell/public-layout';
@@ -29,6 +30,7 @@ import { NotFoundPage, RouteErrorPage } from '../shell/route-error-page';
  *    /bookings[/:id]        (#54)       /resolution    (#54)
  *    /wallet/…              (#51)       /pricing       (#55)
  *    /verification          (#50)
+ *    /sub-agents[/:id]      (issue 63)  /network       (issue 63)
  *
  * Each feature owns its `routes.tsx` and hands over an array; this file only
  * decides which group it joins. To add a screen, add it to the feature's array
@@ -61,6 +63,7 @@ export const appRoutes: RouteObject[] = [
               ...walletRoutes,
               ...pricingRoutes,
               ...onboardingRoutes,
+              ...subAgentRoutes,
               { path: '*', element: <NotFoundPage /> },
             ],
           },

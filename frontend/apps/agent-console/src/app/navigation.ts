@@ -1,11 +1,13 @@
 import {
   Bus,
+  Network,
   LayoutDashboard,
   LifeBuoy,
   Plane,
   ShieldCheck,
   SlidersHorizontal,
   Ticket,
+  Users,
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
@@ -56,6 +58,13 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Wallet', to: '/wallet', icon: Wallet }, // #51
       { label: 'Pricing rules', to: '/pricing', icon: SlidersHorizontal }, // #55
+    ],
+  },
+  {
+    label: 'Network',
+    items: [
+      { label: 'Sub-agents', to: '/sub-agents', icon: Users }, // issue 63
+      { label: 'Network performance', to: '/network', icon: Network }, // issue 63
     ],
   },
   {

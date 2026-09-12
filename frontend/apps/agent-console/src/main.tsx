@@ -13,6 +13,7 @@ import { mockDashboardApi } from './features/dashboard';
 import { mockSearchApi } from './features/search';
 import { createHttpBookingFlowApi, mockBookingFlowApi } from './features/booking';
 import { createHttpBookingsApi, mockBookingsApi } from './features/bookings';
+import { createHttpSubAgentsApi, mockSubAgentsApi } from './features/subagents';
 import { mockWalletApi } from './features/wallet';
 import './index.css';
 
@@ -26,6 +27,7 @@ import './index.css';
  *   search     mock until the supplier search endpoints exist (#33, #34)
  *   bookingFlow  real `/api/v1/bookings` (#42); the stand-in with `VITE_AUTH_MODE=mock`
  *   bookings     real `/api/v1/bookings` (#42, #44); the stand-in with `VITE_AUTH_MODE=mock`
+ *   subAgents    real `/api/v1/sub-agents` (issue 63); the stand-in with `VITE_AUTH_MODE=mock`
  */
 const adapters: AppAdapters = {
   auth: AUTH_MODE === 'mock' ? mockAuthApi : createHttpAuthApi({ api, publicApi }),
@@ -34,6 +36,7 @@ const adapters: AppAdapters = {
   search: mockSearchApi,
   bookingFlow: AUTH_MODE === 'mock' ? mockBookingFlowApi : createHttpBookingFlowApi({ api }),
   bookings: AUTH_MODE === 'mock' ? mockBookingsApi : createHttpBookingsApi({ api }),
+  subAgents: AUTH_MODE === 'mock' ? mockSubAgentsApi : createHttpSubAgentsApi({ api }),
 };
 
 const queryClient = createQueryClient();

@@ -255,3 +255,105 @@ export async function respondToQuote(
 export async function getSitemap(): Promise<Sitemap | null> {
   return get<Sitemap>('/sitemap', await requestHostname());
 }
+
+// ---------------------------------------------------------------------------- the buying flow
+
+export type Cart = Schemas['CartResponse'];
+export type CartItem = Schemas['CartItemResponse'];
+export type AddToCart = Schemas['AddCartItemRequest'];
+export type BeginCheckout = Schemas['BeginCheckoutRequest'];
+export type CheckoutStarted = Schemas['BeginCheckoutResponse'];
+export type CheckoutStatus = Schemas['CheckoutStatusResponse'];
+export type Booking = Schemas['ManageBookingResponse'];
+export type Departure = Schemas['PublicDepartureResponse'];
+
+/** What a commerce call came to: what it returned, and what to say when it did not work. */
+export interface StoreCall<T> {
+  ok: boolean;
+  status: number;
+  data: T | null;
+  /** The agency-facing title and detail of a refusal, so a page can say what really happened. */
+  problem?: { title?: string; detail?: string; errors?: Record<string, string[]> };
+}
+
+/**
+ * The traveller's cart, checkout and booking endpoints (build plan F5).
+ *
+ * Same two rules as everything else here: the agency comes from the hostname the traveller used, and
+ * nothing is cached — a cart is one browser's, and a checkout is a write.
+ *
+ * The cart's session token travels in `X-Cart-Session`. It is kept in an http-only cookie rather
+ * than in the page, because it is the whole of a guest's identity (there are no traveller accounts)
+ * and a script on the page has no business reading it.
+ */
+export async function commerce<T>(
+  path: string,
+  init: {
+    method: 'GET' | 'POST' | 'DELETE';
+    body?: unknown;
+    sessionToken?: string;
+  },
+): Promise<StoreCall<T>> {
+  const hostname = await requestHostname();
+
+  const requestHeaders: Record<string, string> = {
+    'X-Storefront-Host': hostname,
+    Accept: 'application/json',
+  };
+
+  if (init.sessionToken) {
+    requestHeaders['X-Cart-Session'] = init.sessionToken;
+  }
+
+  if (init.body !== undefined) {
+    requestHeaders['Content-Type'] = 'application/json';
+  }
+
+  const response = await fetch(`${apiBaseUrl()}/api/v1/public${path}`, {
+    method: init.method,
+    headers: requestHeaders,
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+    cache: 'no-store',
+  });
+
+  const payload = response.headers.get('content-type')?.includes('json')
+    ? await response.json()
+    : null;
+
+  return response.ok
+    ? { ok: true, status: response.status, data: payload as T }
+    : {
+        ok: false,
+        status: response.status,
+        data: null,
+        problem: (payload ?? undefined) as StoreCall<T>['problem'],
+      };
+}
+
+/** The dated departures on one trip, priced for this party. */
+export async function getDepartures(
+  productSlug: string,
+  party: { adults: number; children: number; infants: number },
+): Promise<Departure[]> {
+  const search = new URLSearchParams({
+    adults: String(party.adults),
+    children: String(party.children),
+    infants: String(party.infants),
+  });
+
+  const { data } = await commerce<Departure[]>(
+    `/trips/${encodeURIComponent(productSlug)}/departures?${search.toString()}`,
+    { method: 'GET' },
+  );
+
+  return data ?? [];
+}
+
+/** One booking, by the secret in the traveller's link. */
+export async function getBooking(token: string): Promise<Booking | null> {
+  const { data } = await commerce<Booking>(`/bookings/${encodeURIComponent(token)}`, {
+    method: 'GET',
+  });
+
+  return data;
+}

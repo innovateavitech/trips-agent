@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { formatMoney, formatMoneyShort, int64 } from '@trips/utils';
-import { getProduct, getSite, type Product } from '../../../lib/api';
+import { getDepartures, getProduct, getSite, type Product } from '../../../lib/api';
+import { AddToCartForm } from '../../../components/add-to-cart-form';
 import { PlainText } from '../../../components/plain-text';
 
 /**
@@ -59,6 +60,11 @@ export default async function ProductPage({ params }: Props) {
 
   const cover = product.images[0];
   const place = [product.destinationCity, product.destinationCountry].filter(Boolean).join(', ');
+
+  // A trip with dated departures is bought by the seat, on its own page. Asked for the smallest
+  // party, because all this decides is which of the two ways to buy the page offers.
+  const hasDepartures =
+    (await getDepartures(slug, { adults: 1, children: 0, infants: 0 })).length > 0;
 
   return (
     <article className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
@@ -227,16 +233,43 @@ export default async function ProductPage({ params }: Props) {
         </Section>
       )}
 
-      <Section title="Interested?">
-        <p className="text-sm text-muted-foreground">
-          Get in touch and we will hold your place and answer any questions.
+      <Section title="Book this trip">
+        {/*
+          A tour with dated departures is bought by the seat, on its own page: which date, how many
+          people, and what is due today all depend on each other. Anything else goes straight in the
+          cart at the price shown above (build plan F5).
+        */}
+        {hasDepartures ? (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Choose a date and how many of you are going.
+            </p>
+            <Link
+              href={`/tours/${product.slug}/departures`}
+              className="mt-4 inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              See departure dates
+            </Link>
+          </>
+        ) : (
+          <>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Add it to your cart, and tell us who is travelling at checkout.
+            </p>
+            <AddToCartForm productId={product.id} party={{ adults: 1, children: 0, infants: 0 }} />
+          </>
+        )}
+
+        <p className="mt-6 text-sm text-muted-foreground">
+          Would you rather talk it through first?{' '}
+          <Link
+            href={`/enquire?destination=${encodeURIComponent(product.destinationCity || product.title)}`}
+            className="font-medium text-primary underline underline-offset-4 hover:text-primary-hover"
+          >
+            Send us an enquiry
+          </Link>
+          .
         </p>
-        <Link
-          href={`/enquire?destination=${encodeURIComponent(product.destinationCity || product.title)}`}
-          className="mt-4 inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          Enquire about this trip
-        </Link>
       </Section>
     </article>
   );

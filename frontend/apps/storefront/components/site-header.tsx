@@ -1,6 +1,7 @@
 import { int64 } from '@trips/utils';
 import Link from 'next/link';
 import type { Site } from '../lib/api';
+import { cartCount } from '../lib/cart';
 
 /**
  * The top of every page: the agency's logo or name, and their navigation.
@@ -8,8 +9,10 @@ import type { Site } from '../lib/api';
  * Nothing here names the platform (CLAUDE.md rule 4). The traveller is on their travel agent's
  * website, and as far as this page is concerned that is the only company that exists.
  */
-export function SiteHeader({ site }: { site: Site }) {
+export async function SiteHeader({ site }: { site: Site }) {
   const logoUrl = site.theme.logoAssetId ? site.images[site.theme.logoAssetId] : undefined;
+
+  const inCart = await cartCount();
 
   const navigation = site.content.pages
     .filter((page) => page.showInNav)
@@ -43,6 +46,19 @@ export function SiteHeader({ site }: { site: Site }) {
               </Link>
             ))}
           </nav>
+        )}
+
+        {/*
+          The cart, only once there is something in it. An empty cart link on every page of a shop
+          nobody has chosen anything from is a link to an empty page.
+        */}
+        {inCart > 0 && (
+          <Link
+            href="/cart"
+            className="ml-auto text-sm font-medium text-foreground underline underline-offset-4 transition-colors hover:text-primary"
+          >
+            Cart ({inCart})
+          </Link>
         )}
       </div>
     </header>

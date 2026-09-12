@@ -181,6 +181,11 @@ public interface IAppDbContext
     public DbSet<SupplierStatusPoll> SupplierStatusPolls { get; }
 
     /// <summary>
+    /// Every HTTP call made to a supplier. The supplier-performance aggregate is built from it.
+    /// </summary>
+    public DbSet<SupplierApiCall> SupplierApiCalls { get; }
+
+    /// <summary>
     /// What this context is about to write.
     /// </summary>
     /// <remarks>

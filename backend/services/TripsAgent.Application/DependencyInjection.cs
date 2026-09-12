@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Analytics;
 using TripsAgent.Application.Assets;
 using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity.Authentication;
@@ -60,6 +61,11 @@ public static class DependencyInjection
         services.AddScoped<IPaymentWebhookProcessor>(sp => sp.GetRequiredService<PaymentWebhookHandler>());
 
         services.AddScoped<ILedgerIntegrityAudit, LedgerIntegrityAudit>();
+
+        // The analytics read models (#67). Hangfire resolves the rollup by interface when the
+        // incremental and nightly jobs run; the dashboards read what it leaves behind and never
+        // the OLTP tables.
+        services.AddScoped<IAnalyticsRollup, AnalyticsRollup>();
 
         services.AddScoped<DocumentIssuer>();
 

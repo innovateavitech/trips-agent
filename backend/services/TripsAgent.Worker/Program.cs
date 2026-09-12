@@ -2,6 +2,7 @@ using Hangfire;
 using TripsAgent.Application;
 using TripsAgent.Documents;
 using TripsAgent.Infrastructure;
+using TripsAgent.Infrastructure.Analytics;
 using TripsAgent.Infrastructure.Assets;
 using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Messaging;
@@ -109,5 +110,10 @@ TicketTimeLimitMonitorSchedule.Register(recurringJobs);
 // The checkout's one unwatched wait: paid for, but the issue message never ran (#42). Sending it again
 // is safe — the issuer sends the supplier nothing for a booking that is already issuing.
 TripsAgent.Infrastructure.Checkout.CheckoutSweepSchedule.Register(recurringJobs);
+
+// The analytics read models (#67). Every five minutes the days whose source rows changed are
+// rebuilt; every night the whole window is rebuilt from source, whatever the watermark says.
+// Nothing here is authoritative — it is all derived from orders and thrown away on the next run.
+AnalyticsRollupSchedule.Register(recurringJobs);
 
 await host.RunAsync();

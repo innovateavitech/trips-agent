@@ -142,6 +142,7 @@ public sealed partial class PlatformAlerter : IPlatformAlerter
         "LedgerIntegrityAudit" => AdminAlertType.LedgerIntegrity,
         Application.Suppliers.SupplierBookingStatusPoller.AlertSource => AdminAlertType.SupplierBookingError,
         Application.Suppliers.SupplierBookingStatusPoller.TimeLimitAlertSource => AdminAlertType.TicketTimeLimitBreach,
+        Application.Storefront.CertificateSweep.AlertSource => AdminAlertType.SiteCertificate,
         _ => AdminAlertType.GatewayError,
     };
 

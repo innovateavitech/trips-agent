@@ -107,10 +107,9 @@ public sealed partial class CheckoutService
     private readonly IAppDbContext _db;
     private readonly ITransactionRunner _transactions;
     private readonly ITenantContext _tenant;
-    private readonly ISupplierAdapterRegistry _adapters;
+    private readonly SupplierFareConfirmation _fares;
     private readonly PricingService _pricing;
     private readonly PlaceOrderHandler _placeOrder;
-    private readonly PriceConfirmationService _priceConfirmation;
     private readonly ISupplierBookingLocks _bookingLocks;
     private readonly IOutbox _outbox;
     private readonly IUniqueViolationDetector _uniqueViolations;
@@ -121,10 +120,9 @@ public sealed partial class CheckoutService
         IAppDbContext db,
         ITransactionRunner transactions,
         ITenantContext tenant,
-        ISupplierAdapterRegistry adapters,
+        SupplierFareConfirmation fares,
         PricingService pricing,
         PlaceOrderHandler placeOrder,
-        PriceConfirmationService priceConfirmation,
         ISupplierBookingLocks bookingLocks,
         IOutbox outbox,
         IUniqueViolationDetector uniqueViolations,
@@ -134,10 +132,9 @@ public sealed partial class CheckoutService
         _db = db;
         _transactions = transactions;
         _tenant = tenant;
-        _adapters = adapters;
+        _fares = fares;
         _pricing = pricing;
         _placeOrder = placeOrder;
-        _priceConfirmation = priceConfirmation;
         _bookingLocks = bookingLocks;
         _outbox = outbox;
         _uniqueViolations = uniqueViolations;
@@ -163,35 +160,17 @@ public sealed partial class CheckoutService
         var agencyId = RequireAgency();
         RequireTravellers(travellers);
 
-        var offer = await _db.SupplierOffers.AsNoTracking().SingleOrDefaultAsync(candidate => candidate.Id == offerId, cancellationToken)
-            ?? throw new CheckoutRefusedException(
-                CheckoutRefusal.NotFound,
-                "We could not find that fare.",
-                "Fares from a search are kept for a few minutes only. Search again and choose one.");
-
-        var supplierSessionId = await _db.SearchSessions.AsNoTracking()
-            .Where(session => session.Id == offer.SearchSessionId)
-            .Select(session => session.SupplierSessionId)
-            .SingleAsync(cancellationToken);
-
-        var supplierCode = await _db.Suppliers.AsNoTracking()
-            .Where(supplier => supplier.Id == offer.SupplierId)
-            .Select(supplier => supplier.Code)
-            .SingleAsync(cancellationToken);
-
-        var adapter = _adapters.Resolve(supplierCode, offer.ProductType);
-        var subject = new PricingSubject(PricedTypeOf(offer.ProductType), offer.Currency, supplierCode: supplierCode);
-        var searched = await _pricing.PriceAsync(subject, offer.TotalFareMinor, cancellationToken);
+        var fare = await _fares.LoadAsync(offerId, cancellationToken);
+        var searched = await _pricing.PriceAsync(fare.Subject, fare.Offer.TotalFareMinor, cancellationToken);
 
         // Q3: the wallet first. A short wallet fails here, before any supplier call.
         var provisionalHoldId = await PlaceProvisionalHoldAsync(
-            offer.Currency, searched.NetAmountMinor + searched.PlatformFeeMinor, cancellationToken);
+            fare.Offer.Currency, searched.NetAmountMinor + searched.PlatformFeeMinor, cancellationToken);
 
         try
         {
             return await ConfirmHeldAsync(
-                agencyId, offer, supplierSessionId, supplierCode, adapter, subject, searched.GrossAmountMinor,
-                travellers, provisionalHoldId, correlationId, cancellationToken);
+                agencyId, fare, searched.GrossAmountMinor, travellers, provisionalHoldId, correlationId, cancellationToken);
         }
         catch
         {
@@ -203,50 +182,23 @@ public sealed partial class CheckoutService
 
     private async Task<CheckoutPriceConfirmation> ConfirmHeldAsync(
         Guid agencyId,
-        SupplierOffer offer,
-        string supplierSessionId,
-        string supplierCode,
-        ISupplierAdapter adapter,
-        PricingSubject subject,
+        SupplierFare fare,
         Money searchedSell,
         IReadOnlyList<CheckoutTraveller> travellers,
         Guid provisionalHoldId,
         string? correlationId,
         CancellationToken cancellationToken)
     {
-        SupplierPriceConfirmation confirmation;
+        var offer = fare.Offer;
+        var subject = fare.Subject;
 
-        try
-        {
-            // Holds the fare with the supplier. Sent once: asking twice would hold it twice.
-            confirmation = await adapter.ConfirmPriceAsync(
-                new SupplierCallContext(agencyId, SupplierBookingId: null, correlationId),
-                new SupplierPriceConfirmationRequest(
-                    offer.ProductType,
-                    supplierSessionId,
-                    offer.OfferRef,
-                    offer.Reference,
-                    travellers.Select(ToPassenger).ToList()),
-                cancellationToken);
-        }
-        catch (SupplierRequestRejectedException)
-        {
-            throw new CheckoutRefusedException(
-                CheckoutRefusal.Conflict,
-                "The supplier no longer offers this fare.",
-                "Nothing was booked or charged. Search again for a fresh fare.");
-        }
-        catch (SupplierCallOutcomeUnknownException)
-        {
-            throw new CheckoutRefusedException(
-                CheckoutRefusal.SupplierFailed,
-                "The supplier did not confirm the price in time.",
-                "Nothing was booked or charged. Try again in a moment.");
-        }
+        var confirmed = await _fares.ConfirmAsync(
+            agencyId, fare, travellers.Select(ToPassenger).ToList(), correlationId, cancellationToken);
 
-        var ticketTimeLimit = await VerifyAsync(agencyId, supplierCode, confirmation, cancellationToken);
-        var confirmedNet = new Money(confirmation.Lines.Sum(line => line.NewPrice.AmountMinor));
-        var title = await TitleAsync(offer.Id, offer.ProductType, cancellationToken);
+        var confirmation = confirmed.Confirmation;
+        var ticketTimeLimit = confirmed.TicketTimeLimit;
+        var confirmedNet = confirmed.NetMinor;
+        var title = confirmed.Title;
 
         var (reference, sell) = await WithWalletRetryAsync(() => _transactions.RunAsync(
             async token =>
@@ -509,84 +461,6 @@ public sealed partial class CheckoutService
 
     // ------------------------------------------------------------------------------ helpers
 
-    /// <summary>
-    /// Every element of the confirmation must verify on its own (#35), and there must be a deadline.
-    /// </summary>
-    private async Task<DateTimeOffset> VerifyAsync(
-        Guid agencyId,
-        string supplierCode,
-        SupplierPriceConfirmation confirmation,
-        CancellationToken cancellationToken)
-    {
-        if (confirmation.Lines.Count == 0)
-        {
-            throw new CheckoutRefusedException(
-                CheckoutRefusal.SupplierFailed,
-                "The supplier's confirmation was empty.",
-                "Nothing was booked or charged. Search again.");
-        }
-
-        if (confirmation.Lines.Any(line => !SupplierBookingConfirmation.HashesMatch(line.HashExpected, line.HashReceived)))
-        {
-            await _priceConfirmation.RaiseIntegrityAlertAsync(agencyId, supplierBookingId: null, supplierCode, confirmation.Lines, cancellationToken);
-
-            throw new CheckoutRefusedException(
-                CheckoutRefusal.SupplierFailed,
-                "The supplier's price could not be verified.",
-                "Nothing was booked or charged, and the fare has been reported. Search again for another.");
-        }
-
-        var limit = confirmation.Lines.Min(line => line.TicketTimeLimit)
-            ?? throw new CheckoutRefusedException(
-                CheckoutRefusal.SupplierFailed,
-                "The supplier did not say how long it will hold the fare.",
-                "Nothing was booked or charged. Search again.");
-
-        if (limit <= _clock.GetUtcNow())
-        {
-            throw new CheckoutRefusedException(
-                CheckoutRefusal.Gone,
-                "The supplier's hold on this fare has already ended.",
-                "Nothing was booked or charged. Search again.");
-        }
-
-        return limit;
-    }
-
-    /// <summary>What the line reads as, for a traveller and an agent: the route and who flies or drives it.</summary>
-    private async Task<string> TitleAsync(Guid offerId, SupplierProductType product, CancellationToken cancellationToken)
-    {
-        if (product == SupplierProductType.Bus)
-        {
-            var bus = await _db.BusSegments.AsNoTracking()
-                .Where(segment => segment.SupplierOfferId == offerId)
-                .OrderBy(segment => segment.DepartureAt)
-                .Select(segment => new { segment.OperatorName, segment.DepartureTerminalId, segment.ArrivalTerminalId })
-                .FirstOrDefaultAsync(cancellationToken);
-
-            return bus is null
-                ? "Bus trip"
-                : $"{bus.OperatorName}, terminal {bus.DepartureTerminalId} → {bus.ArrivalTerminalId}";
-        }
-
-        var segments = await _db.FlightSegments.AsNoTracking()
-            .Where(segment => segment.SupplierOfferId == offerId)
-            .OrderBy(segment => segment.LegIndex)
-            .ThenBy(segment => segment.SegmentIndex)
-            .Select(segment => new { segment.LegIndex, segment.OriginIata, segment.DestinationIata, segment.FlightNumber })
-            .ToListAsync(cancellationToken);
-
-        if (segments.Count == 0)
-        {
-            return "Flight";
-        }
-
-        var outbound = segments.Where(segment => segment.LegIndex == segments[0].LegIndex).ToList();
-        var returns = segments.Any(segment => segment.LegIndex != segments[0].LegIndex);
-
-        return $"{outbound[0].OriginIata} {(returns ? "⇄" : "→")} {outbound[^1].DestinationIata}, {outbound[0].FlightNumber}";
-    }
-
     private static string PaxBreakdown(IReadOnlyList<CheckoutTraveller> travellers) =>
         JsonSerializer.Serialize(new Dictionary<string, int>(StringComparer.Ordinal)
         {
@@ -629,9 +503,6 @@ public sealed partial class CheckoutService
             traveller.PassportNumber,
             traveller.PassportExpiry,
             traveller.Nationality?.Trim().ToUpperInvariant());
-
-    private static PricedProductType PricedTypeOf(SupplierProductType product) =>
-        product == SupplierProductType.Bus ? PricedProductType.Bus : PricedProductType.Flight;
 
     private static void RequireTravellers(IReadOnlyList<CheckoutTraveller> travellers)
     {

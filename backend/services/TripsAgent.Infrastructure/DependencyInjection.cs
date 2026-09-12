@@ -11,9 +11,11 @@ using TripsAgent.Application.Payments;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Security;
 using TripsAgent.Application.Storage;
+using TripsAgent.Application.Storefront;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
+using TripsAgent.Infrastructure.Commerce;
 using TripsAgent.Infrastructure.Concurrency;
 using TripsAgent.Infrastructure.Documents;
 using TripsAgent.Infrastructure.Identity;
@@ -26,6 +28,7 @@ using TripsAgent.Infrastructure.Retention;
 using TripsAgent.Infrastructure.Search;
 using TripsAgent.Infrastructure.Security;
 using TripsAgent.Infrastructure.Storage;
+using TripsAgent.Infrastructure.Storefront;
 using TripsAgent.Infrastructure.Suppliers;
 using TripsAgent.Infrastructure.Tenancy;
 
@@ -119,6 +122,12 @@ public static class DependencyInjection
         // The supplier's side of an order — its PNR and ticket numbers — for vouchers (#46).
         services.AddScoped<ISupplierBookingReader, SupplierBookingReader>();
 
+        // Which agency a storefront host name belongs to, and where an agency's own site lives —
+        // what the CRM's public endpoints resolve a traveller's request by, and what a quote's link
+        // is built from. Now the real lookup, against the agency's verified domains (issue 59); it
+        // shares the storefront's host cache, so one domain change clears both.
+        services.AddScoped<IStorefrontDirectory, SiteDomainDirectory>();
+
         // Alerting: logs, the back-office queue and email. Scoped because it writes an
         // admin_alerts row through the request's DbContext.
         services.AddSingleton(ReadAlertOptions(configuration));
@@ -162,6 +171,10 @@ public static class DependencyInjection
         // configuration here for the same reason the password-reset link above is.
         services.AddSingleton(new TripsAgent.Application.Payments.TopUpCallbackUrl(
             configuration["Console:TopUpCallbackUrl"] ?? "https://localhost:5173/wallet/top-up/complete"));
+
+        // The timings of the traveller's buying flow: how long a cart lives, how long they have to
+        // pay, and how long their booking link works for (build plan F5).
+        services.AddCommerce(configuration);
 
         services.AddSingleton(ReadJwtOptions(configuration));
         services.AddSingleton<IAccessTokenIssuer>(sp => new JwtAccessTokenIssuer(
@@ -232,6 +245,9 @@ public static class DependencyInjection
 
         // The retention schedule's purge job (issue #105). Run by the Worker, dry run by default.
         services.AddDataRetention(configuration);
+
+        // The website builder's settings and the row lock publishing takes (issues 58–60).
+        services.AddStorefront(configuration);
 
         return services;
     }

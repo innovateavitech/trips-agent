@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Domain.Assets;
+using TripsAgent.Domain.Catalog;
+using TripsAgent.Domain.Crm;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Notifications;
@@ -8,6 +10,7 @@ using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Pricing;
+using TripsAgent.Domain.Storefront;
 using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
@@ -105,6 +108,39 @@ public interface IAppDbContext
     /// <summary>The WebP renditions of image assets.</summary>
     public DbSet<AssetVariant> AssetVariants { get; }
 
+    /// <summary>
+    /// Each agency's own tours, packages and visas. Load one with its children to change it: a save
+    /// replaces the whole product, and the rows it is made of are reached through it.
+    /// </summary>
+    public DbSet<Product> Products { get; }
+
+    /// <summary>Each agency's own categories and themes.</summary>
+    public DbSet<ProductCategory> ProductCategories { get; }
+
+    /// <summary>
+    /// Dated runs of a tour or package, sold by the seat. Load one with its tiers and its
+    /// installment plan to change it: a save replaces the whole departure.
+    /// </summary>
+    public DbSet<Departure> Departures { get; }
+
+    /// <summary>Seats held for a cart during checkout. Released by job 6 when they time out.</summary>
+    public DbSet<DepartureHold> DepartureHolds { get; }
+
+    /// <summary>Who is waiting for a seat on a full departure, and in what order.</summary>
+    public DbSet<DepartureWaitlistEntry> DepartureWaitlist { get; }
+
+    /// <summary>Who is on a departure, and which room they are in.</summary>
+    public DbSet<PaxManifestEntry> PaxManifests { get; }
+
+    /// <summary>
+    /// What one booking on a departure pays, and when: the departure's terms snapshotted on the day
+    /// it was booked. One per order line.
+    /// </summary>
+    public DbSet<BookingPaymentSchedule> BookingPaymentSchedules { get; }
+
+    /// <summary>The payments a schedule is split into. Read by job 11 to send reminders.</summary>
+    public DbSet<BookingInstallment> BookingInstallments { get; }
+
     /// <summary>Every message sent to anyone, and what happened to it. Tenant-scoped.</summary>
     public DbSet<Notification> Notifications { get; }
 
@@ -113,6 +149,36 @@ public interface IAppDbContext
 
     /// <summary>Addresses that bounced permanently. Platform-wide.</summary>
     public DbSet<SuppressedEmailAddress> SuppressedEmailAddresses { get; }
+
+    /// <summary>Starter websites. Platform reference data: every agency reads them, none writes them.</summary>
+    public DbSet<SiteTemplate> SiteTemplates { get; }
+
+    /// <summary>Hostname labels refused, or set aside for review (open question 20). Platform reference data.</summary>
+    public DbSet<ReservedHostnameLabel> ReservedHostnameLabels { get; }
+
+    /// <summary>Each agency's website. One per agency.</summary>
+    public DbSet<Site> Sites { get; }
+
+    /// <summary>The draft and every frozen version of each site.</summary>
+    public DbSet<SiteVersion> SiteVersions { get; }
+
+    /// <summary>The draft's pages.</summary>
+    public DbSet<SitePage> SitePages { get; }
+
+    /// <summary>The blocks on those pages.</summary>
+    public DbSet<SiteBlock> SiteBlocks { get; }
+
+    /// <summary>Each site's typography. The logo and colours are the agency's branding.</summary>
+    public DbSet<SiteTheme> SiteThemes { get; }
+
+    /// <summary>
+    /// Every hostname a site answers on. Tenant-scoped like everything else; the one read across
+    /// agencies — Host header to agency — is <c>HostResolver</c>'s, inside an audited platform scope.
+    /// </summary>
+    public DbSet<SiteDomain> SiteDomains { get; }
+
+    /// <summary>Every DNS lookup made for a hostname. Append-only.</summary>
+    public DbSet<SiteDomainCheck> SiteDomainChecks { get; }
 
     /// <summary>
     /// Each agency's markup rules. Never edited in place — see <see cref="MarkupRule"/> — so the rule
@@ -141,6 +207,9 @@ public interface IAppDbContext
     /// <summary>What is in those carts.</summary>
     public DbSet<CartItem> CartItems { get; }
 
+    /// <summary>The traveller's "manage my booking" links (build plan F5, decision 21).</summary>
+    public DbSet<BookingAccessToken> BookingAccessTokens { get; }
+
     /// <summary>The aggregators we buy from. Platform reference data: not tenant-scoped.</summary>
     public DbSet<Supplier> Suppliers { get; }
 
@@ -168,6 +237,27 @@ public interface IAppDbContext
     /// Append-only — a trigger refuses UPDATE and DELETE, even to the owner.
     /// </summary>
     public DbSet<SupplierStatusPoll> SupplierStatusPolls { get; }
+
+    /// <summary>
+    /// Each agency's own customers. Personal data: the name, email and phone live here and nowhere
+    /// else in the CRM, so erasing a person is one row anonymised in place.
+    /// </summary>
+    public DbSet<Customer> Customers { get; }
+
+    /// <summary>Inquiries, and where each has got to in the pipeline.</summary>
+    public DbSet<Lead> Leads { get; }
+
+    /// <summary>Every move of every lead. Append-only — the grants withhold UPDATE and DELETE.</summary>
+    public DbSet<LeadStageChange> LeadStageHistory { get; }
+
+    /// <summary>Quotes. Load one with its items and days to change it: a save replaces them all.</summary>
+    public DbSet<Quote> Quotes { get; }
+
+    /// <summary>Follow-up tasks about leads, quotes and customers.</summary>
+    public DbSet<FollowUpTask> FollowUpTasks { get; }
+
+    /// <summary>Each customer's timeline of messages and notes. Append-only for the application role.</summary>
+    public DbSet<Communication> Communications { get; }
 
     /// <summary>
     /// What this context is about to write.

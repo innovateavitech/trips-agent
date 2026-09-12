@@ -7,9 +7,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using StackExchange.Redis;
+using TripsAgent.Application.Catalog;
 using TripsAgent.Application.Checkout;
+using TripsAgent.Application.Commerce;
 using TripsAgent.Application.Concurrency;
+using TripsAgent.Application.Crm;
 using TripsAgent.Application.Documents;
+using TripsAgent.Application.Identity;
 using TripsAgent.Application.Messaging;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Orders;
@@ -17,9 +21,11 @@ using TripsAgent.Application.Payments;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Security;
+using TripsAgent.Application.Storefront;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Auditing;
+using TripsAgent.Domain.Catalog;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Orders;
@@ -30,6 +36,7 @@ using TripsAgent.Domain.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
 using TripsAgent.Infrastructure.Concurrency;
 using TripsAgent.Infrastructure.Documents;
+using TripsAgent.Infrastructure.Identity;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Pricing;
@@ -37,6 +44,7 @@ using TripsAgent.Infrastructure.Security;
 using TripsAgent.Infrastructure.Suppliers;
 using TripsAgent.Infrastructure.Tenancy;
 using TripsAgent.Integrations.TripsAfrica;
+using TripsAgent.IntegrationTests.Commerce;
 using TripsAgent.IntegrationTests.Identity;
 using TripsAgent.IntegrationTests.Persistence;
 
@@ -73,7 +81,8 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         TripsAfricaStub stub,
         ServiceProvider services,
         RecordingAlerter alerts,
-        Guid ownerUserId)
+        Guid ownerUserId,
+        FakePaymentGateway gateway)
     {
         _postgres = postgres;
         OwnerUserId = ownerUserId;
@@ -85,6 +94,7 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         Clock = clock;
         Stub = stub;
         Alerts = alerts;
+        Gateway = gateway;
     }
 
     public string Database { get; }
@@ -101,6 +111,9 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
     public TripsAfricaStub Stub { get; }
 
     public RecordingAlerter Alerts { get; }
+
+    /// <summary>The payment gateway, faked. No test may reach a real card network.</summary>
+    public FakePaymentGateway Gateway { get; }
 
     /// <summary>The agency's owner: who pays and decides in these tests, and who its emails go to.</summary>
     public Guid OwnerUserId { get; }
@@ -147,9 +160,11 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         }
 
         var alerts = new RecordingAlerter();
-        var services = Compose(postgres, database, clock, stub, redis, alerts, issueTimeoutSeconds);
+        var gateway = new FakePaymentGateway();
+        var services = Compose(postgres, database, clock, stub, redis, alerts, issueTimeoutSeconds, agencyId, gateway);
 
-        return new BookingPipelineHarness(postgres, database, agencyId, supplierId, walletId, clock, stub, services, alerts, ownerUserId);
+        return new BookingPipelineHarness(
+            postgres, database, agencyId, supplierId, walletId, clock, stub, services, alerts, ownerUserId, gateway);
     }
 
     /// <summary>
@@ -433,7 +448,9 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         TripsAfricaStub stub,
         IConnectionMultiplexer? redis,
         RecordingAlerter alerts,
-        int issueTimeoutSeconds)
+        int issueTimeoutSeconds,
+        Guid agencyId,
+        FakePaymentGateway gateway)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -498,12 +515,39 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         services.AddScoped<PriceConfirmationService>();
         services.AddScoped<LedgerAccounts>();
         services.AddScoped<WalletRefunds>();
+        services.AddScoped<OrderRefunds>();
+        services.AddScoped<SupplierLineTitles>();
+        services.AddScoped<SupplierFareConfirmation>();
         services.AddScoped<CheckoutService>();
         services.AddScoped<CheckoutCompletion>();
         services.AddScoped<CheckoutSweeper>();
         services.AddScoped<PaymentReversalService>();
         services.AddScoped<ResolutionService>();
         services.AddScoped<BookingQueries>();
+
+        // The traveller's buying flow on a storefront (build plan F5), as AddApplication wires it —
+        // with the gateway faked, because no test may reach a real card network.
+        services.AddSingleton<IPaymentGateway>(gateway);
+        services.AddSingleton(new CommerceOptions());
+        services.AddSingleton(new CheckoutReturnUrl(null));
+        services.AddSingleton(new TripsAgent.Application.Storefront.StorefrontOptions());
+        services.AddSingleton<ITokenHasher>(new HmacTokenHasher(RandomNumberGenerator.GetBytes(32)));
+        services.AddScoped<DocumentLinks>();
+        services.AddScoped<IStorefrontDirectory>(_ => new FixedStorefrontDirectory(agencyId));
+        services.AddScoped<DepartureWaitlistService>();
+        services.AddScoped<DepartureSeats>();
+        services.AddScoped<DepartureInstallments>();
+        services.AddScoped<CustomerDirectory>();
+        services.AddScoped<WalletTopUpService>();
+        services.AddScoped<StorefrontTenant>();
+        services.AddScoped<CartPricing>();
+        services.AddScoped<CartService>();
+        services.AddScoped<BookingAccessLinks>();
+        services.AddScoped<AgencyLineFulfilment>();
+        services.AddScoped<CustomerOrderPayments>();
+        services.AddScoped<StorefrontCheckoutService>();
+        services.AddScoped<ManageBookingQueries>();
+        services.AddScoped<PublicDepartureQueries>();
 
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }

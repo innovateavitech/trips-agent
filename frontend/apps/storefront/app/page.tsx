@@ -1,16 +1,22 @@
-import { formatMoney } from '@trips/utils';
+import { getGridsFor, getSite } from '../lib/api';
+import { BlockList } from '../components/blocks/blocks';
+import { SiteNotice } from '../components/site-notice';
 
-export default function Home() {
-  return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-4 p-8">
-      <h1 className="text-3xl font-semibold tracking-tight text-foreground">Storefront</h1>
-      <p className="text-muted-foreground">
-        Scaffold only. This becomes each agent&apos;s branded, server-rendered site — see issue #60
-        in docs/BACKLOG.md.
-      </p>
-      <p className="text-sm text-foreground">
-        Example fare: <span className="font-medium">{formatMoney(84451900, 'NGN')}</span>
-      </p>
-    </main>
-  );
+/** The agency's home page: the blocks of the home page in their published version. */
+export default async function Home() {
+  const site = await getSite();
+
+  if (!site) {
+    return null;
+  }
+
+  const page = site.content.pages.find((candidate) => candidate.slug === 'home');
+
+  if (!page) {
+    return <SiteNotice site={site} />;
+  }
+
+  const grids = await getGridsFor(site.siteId, page);
+
+  return <BlockList blocks={page.blocks} site={site} gridProducts={grids} />;
 }

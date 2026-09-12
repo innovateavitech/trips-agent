@@ -1,5 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Assets;
+using TripsAgent.Application.Catalog;
+using TripsAgent.Application.Commerce;
+using TripsAgent.Application.Crm;
 using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
@@ -8,6 +11,7 @@ using TripsAgent.Application.Orders;
 using TripsAgent.Application.Payments;
 using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Search;
+using TripsAgent.Application.Storefront;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy.Kyb;
 
@@ -82,10 +86,16 @@ public static class DependencyInjection
         // The checkout (#42): confirm and pay, capture on the ticket, and sweep up lost issue messages.
         // Reversals (#43) and the agent's resolution queue (#44) give money back through one path.
         services.AddScoped<LedgerAccounts>();
+
+        // Confirming a searched fare with the supplier, shared by the console's checkout and the
+        // storefront's so the hash gate and the deadline check cannot drift apart.
+        services.AddScoped<Checkout.SupplierLineTitles>();
+        services.AddScoped<Checkout.SupplierFareConfirmation>();
         services.AddScoped<Checkout.CheckoutService>();
         services.AddScoped<Checkout.CheckoutCompletion>();
         services.AddScoped<Checkout.CheckoutSweeper>();
         services.AddScoped<Checkout.WalletRefunds>();
+        services.AddScoped<Checkout.OrderRefunds>();
         services.AddScoped<Checkout.PaymentReversalService>();
         services.AddScoped<Checkout.ResolutionService>();
         services.AddScoped<Checkout.BookingQueries>();
@@ -97,6 +107,67 @@ public static class DependencyInjection
         services.AddScoped<CompleteAssetUploadHandler>();
         services.AddScoped<GetAssetHandler>();
         services.AddScoped<AssetDelivery>();
+
+        // The agent-authored catalog: tours, packages and visas, and their categories (#160, #161).
+        services.AddScoped<ProductCatalogService>();
+        services.AddScoped<ProductCategoryService>();
+
+        // Group departures (#57): the agent's dated runs, the seats they are sold by, the queue for
+        // the ones that sell out, and the jobs that keep all three honest (plan §3 jobs 6, 9, 10, 11).
+        services.AddScoped<DepartureService>();
+        services.AddScoped<DepartureSeats>();
+        services.AddScoped<DepartureWaitlistService>();
+        services.AddScoped<DepartureHoldExpiry>();
+        services.AddScoped<DepartureStatusSweep>();
+        services.AddScoped<DepartureInstallments>();
+        services.AddScoped<InstallmentReminders>();
+
+        // The website builder: editing the draft, and staging, publishing and rolling back versions.
+        services.AddScoped<SiteQueries>();
+        services.AddScoped<SiteBuilderService>();
+        services.AddScoped<SiteVersionService>();
+        services.AddScoped<SitePreviewTokens>();
+
+        // The website's addresses: connecting and checking the agency's own domains, the two sweeps the
+        // Worker runs on a clock, and the platform's review queue for brand-like addresses.
+        services.AddScoped<DomainVerifier>();
+        services.AddScoped<SiteDomainService>();
+        services.AddScoped<DomainVerificationSweep>();
+        services.AddScoped<CertificateSweep>();
+        services.AddScoped<HostnameReviewService>();
+
+        // The traveller-facing side: resolving the hostname to an agency, and reading that agency's
+        // published site and catalog. Anonymous, and read-only.
+        services.AddScoped<PublicSiteResolver>();
+        services.AddScoped<PublicSiteService>();
+        services.AddScoped<PublicCatalogService>();
+
+        // The CRM: leads, quotes, customers, tasks and the timeline (#62), and the storefront's own
+        // anonymous side of it. CrmContext and CrmReader are shared by all of them.
+        services.AddScoped<CrmContext>();
+        services.AddScoped<CrmReader>();
+        services.AddScoped<CustomerDirectory>();
+        services.AddScoped<LeadService>();
+        services.AddScoped<QuoteService>();
+        services.AddScoped<CustomerService>();
+        services.AddScoped<FollowUpService>();
+        services.AddScoped<StorefrontCrmService>();
+        services.AddScoped<CustomerBookingRecorder>();
+        services.AddScoped<TaskReminders>();
+        services.AddScoped<IQuoteEmails, QuoteEmails>();
+
+        // The traveller's buying flow on an agency's storefront (build plan F5): the cart, guest
+        // checkout, the card payment that funds it, and the link that manages the booking after.
+        services.AddScoped<StorefrontTenant>();
+        services.AddScoped<CartPricing>();
+        services.AddScoped<CartService>();
+        services.AddScoped<BookingAccessLinks>();
+        services.AddScoped<StorefrontCheckoutService>();
+        services.AddScoped<AgencyLineFulfilment>();
+        services.AddScoped<CustomerOrderPayments>();
+        services.AddScoped<IOrderPaymentSettlement>(sp => sp.GetRequiredService<CustomerOrderPayments>());
+        services.AddScoped<ManageBookingQueries>();
+        services.AddScoped<PublicDepartureQueries>();
 
         // Stages notifications in the caller's unit of work; the Worker sends them.
         services.AddScoped<INotifier, Notifier>();

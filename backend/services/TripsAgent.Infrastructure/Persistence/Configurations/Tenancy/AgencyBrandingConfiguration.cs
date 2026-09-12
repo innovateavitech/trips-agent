@@ -44,6 +44,15 @@ public sealed class AgencyBrandingConfiguration : IEntityTypeConfiguration<Agenc
         builder.Property(branding => branding.ContactAddress)
             .HasMaxLength(500);
 
+        builder.Property(branding => branding.ContactEmail)
+            .HasMaxLength(254);
+
+        builder.Property(branding => branding.ContactPhone)
+            .HasMaxLength(32);
+
+        builder.Property(branding => branding.WhatsAppNumber)
+            .HasMaxLength(32);
+
         builder.Property(branding => branding.SocialLinks)
             .HasColumnType("jsonb")
             .IsRequired();

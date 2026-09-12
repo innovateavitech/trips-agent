@@ -5,6 +5,7 @@ using TripsAgent.Application.Messaging;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Infrastructure.Documents;
 using TripsAgent.Infrastructure.Notifications;
+using TripsAgent.Infrastructure.Storefront;
 
 namespace TripsAgent.Infrastructure.Messaging;
 
@@ -59,6 +60,10 @@ public static class MessagingRegistration
         // Both are safe to redeliver — each does its work once per order line.
         (MessageQueue.BookingSaga, typeof(Checkout.BookingTicketedConsumer)),
         (MessageQueue.PaymentsReversal, typeof(Checkout.PaymentReversalRequiredConsumer)),
+
+        // Both storefront events land on the same queue and the same consumer: a publish and a
+        // hostname change make the same caches wrong, and neither is urgent enough for its own queue.
+        (MessageQueue.DomainsProvision, typeof(StorefrontCacheConsumer)),
     ];
 
     /// <summary>Registers a publish-only bus. Use this in the API.</summary>

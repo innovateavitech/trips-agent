@@ -3,6 +3,8 @@
 # =============================================================================
 #
 #    docker compose up -d       start all five
+#    docker compose --profile scanner up -d clamav
+#                               also start the virus scanner (about 1 GB of RAM)
 #    docker compose ps          check health
 #    docker compose logs -f     watch output
 #    docker compose down        stop, keeping your data
@@ -156,6 +158,35 @@ services:
       timeout: 5s
       retries: 6
       start_period: 5s
+
+  # ---------------------------------------------------------------------------
+  #  ClamAV — the virus scanner behind the asset pipeline (issue #18)
+  # ---------------------------------------------------------------------------
+  #  Opt-in, because it is the heaviest thing here: clamd holds its signature
+  #  database in memory, about 1 GB. Start it when working on uploads, then set
+  #  Assets__VirusScanner=ClamAv for the Worker (see .env.example):
+  #
+  #    docker compose --profile scanner up -d clamav
+  #
+  #  The -debian image, because clamav/clamav is published for amd64 only and
+  #  will not start on an Apple-silicon laptop. freshclam is off: the image
+  #  ships with signatures, which is plenty for scanning your own test uploads.
+  #  Anything facing real traffic must run freshclam so signatures stay current.
+  clamav:
+    image: clamav/clamav-debian:1.4
+    container_name: trips-clamav
+    profiles: ["scanner"]
+    restart: unless-stopped
+    environment:
+      CLAMAV_NO_FRESHCLAMD: "true"
+    ports:
+      - "${CLAMAV_PORT:-3310}:3310"                        # clamd
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
 
 # -----------------------------------------------------------------------------
 #  Named volumes — `docker compose down -v` removes all of these.

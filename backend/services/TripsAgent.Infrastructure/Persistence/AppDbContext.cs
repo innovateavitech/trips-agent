@@ -6,7 +6,9 @@ using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Auditing;
+using TripsAgent.Domain.Catalog;
 using TripsAgent.Domain.Common;
+using TripsAgent.Domain.Crm;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Notifications;
@@ -14,6 +16,7 @@ using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Pricing;
+using TripsAgent.Domain.Storefront;
 using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
@@ -202,6 +205,9 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <inheritdoc />
     public DbSet<CartItem> CartItems => Set<CartItem>();
 
+    /// <summary>The traveller's "manage my booking" links (build plan F5, decision 21).</summary>
+    public DbSet<BookingAccessToken> BookingAccessTokens => Set<BookingAccessToken>();
+
     /// <summary>The aggregators we buy flights and bus seats from. Platform reference data, not tenant-scoped.</summary>
     public DbSet<Supplier> Suppliers => Set<Supplier>();
 
@@ -241,6 +247,45 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <summary>The WebP renditions of image assets.</summary>
     public DbSet<AssetVariant> AssetVariants => Set<AssetVariant>();
 
+    /// <inheritdoc />
+    public DbSet<Product> Products => Set<Product>();
+
+    /// <inheritdoc />
+    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
+
+    /// <summary>A product's gallery rows. Written only through <see cref="Product"/>.</summary>
+    public DbSet<ProductMedia> ProductMedia => Set<ProductMedia>();
+
+    /// <summary>A product's itinerary days. Written only through <see cref="Product"/>.</summary>
+    public DbSet<TourItineraryDay> TourItineraryDays => Set<TourItineraryDay>();
+
+    /// <inheritdoc />
+    public DbSet<Departure> Departures => Set<Departure>();
+
+    /// <summary>A departure's price ladder. Written only through <see cref="Departure"/>.</summary>
+    public DbSet<DeparturePriceTier> DeparturePriceTiers => Set<DeparturePriceTier>();
+
+    /// <summary>A departure's installment terms. Written only through <see cref="Departure"/>.</summary>
+    public DbSet<InstallmentPlan> InstallmentPlans => Set<InstallmentPlan>();
+
+    /// <summary>The payments a plan is split into. Written only through <see cref="InstallmentPlan"/>.</summary>
+    public DbSet<InstallmentScheduleItem> InstallmentScheduleItems => Set<InstallmentScheduleItem>();
+
+    /// <inheritdoc />
+    public DbSet<DepartureHold> DepartureHolds => Set<DepartureHold>();
+
+    /// <inheritdoc />
+    public DbSet<DepartureWaitlistEntry> DepartureWaitlist => Set<DepartureWaitlistEntry>();
+
+    /// <inheritdoc />
+    public DbSet<PaxManifestEntry> PaxManifests => Set<PaxManifestEntry>();
+
+    /// <inheritdoc />
+    public DbSet<BookingPaymentSchedule> BookingPaymentSchedules => Set<BookingPaymentSchedule>();
+
+    /// <inheritdoc />
+    public DbSet<BookingInstallment> BookingInstallments => Set<BookingInstallment>();
+
     /// <summary>Every notification queued, and what happened to it. Tenant-scoped.</summary>
     public DbSet<Notification> Notifications => Set<Notification>();
 
@@ -249,6 +294,57 @@ public class AppDbContext : DbContext, IAppDbContext
 
     /// <summary>Addresses we no longer send to. Platform-wide.</summary>
     public DbSet<SuppressedEmailAddress> SuppressedEmailAddresses => Set<SuppressedEmailAddress>();
+
+    /// <summary>Starter websites. Platform reference data, not tenant-scoped.</summary>
+    public DbSet<SiteTemplate> SiteTemplates => Set<SiteTemplate>();
+
+    /// <summary>Hostname labels refused or set aside for review. Platform reference data.</summary>
+    public DbSet<ReservedHostnameLabel> ReservedHostnameLabels => Set<ReservedHostnameLabel>();
+
+    /// <inheritdoc />
+    public DbSet<Site> Sites => Set<Site>();
+
+    /// <inheritdoc />
+    public DbSet<SiteVersion> SiteVersions => Set<SiteVersion>();
+
+    /// <inheritdoc />
+    public DbSet<SitePage> SitePages => Set<SitePage>();
+
+    /// <inheritdoc />
+    public DbSet<SiteBlock> SiteBlocks => Set<SiteBlock>();
+
+    /// <inheritdoc />
+    public DbSet<SiteTheme> SiteThemes => Set<SiteTheme>();
+
+    /// <inheritdoc />
+    public DbSet<SiteDomain> SiteDomains => Set<SiteDomain>();
+
+    /// <inheritdoc />
+    public DbSet<SiteDomainCheck> SiteDomainChecks => Set<SiteDomainCheck>();
+
+    /// <inheritdoc />
+    public DbSet<Customer> Customers => Set<Customer>();
+
+    /// <inheritdoc />
+    public DbSet<Lead> Leads => Set<Lead>();
+
+    /// <inheritdoc />
+    public DbSet<LeadStageChange> LeadStageHistory => Set<LeadStageChange>();
+
+    /// <inheritdoc />
+    public DbSet<Quote> Quotes => Set<Quote>();
+
+    /// <summary>A quote's priced lines. Written only through <see cref="Quote"/>.</summary>
+    public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
+
+    /// <summary>A quote's proposed days. Written only through <see cref="Quote"/>.</summary>
+    public DbSet<QuoteItineraryDay> QuoteItineraryDays => Set<QuoteItineraryDay>();
+
+    /// <inheritdoc />
+    public DbSet<FollowUpTask> FollowUpTasks => Set<FollowUpTask>();
+
+    /// <inheritdoc />
+    public DbSet<Communication> Communications => Set<Communication>();
 
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.

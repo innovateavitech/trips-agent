@@ -12,6 +12,11 @@
          would be ceremony a small team pays for on every feature. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
 
+    <!-- AsSplitQuery, for loading a product with all six of its child tables without multiplying
+         them together in one join. Relational EF Core, still no database provider: Npgsql stays
+         in Infrastructure. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+
     <!-- IHttpClientFactory: AddSupplierHttpClient lives here so an integration project, which
          references only Application, gets the audit handler by construction. -->
     <PackageReference Include="Microsoft.Extensions.Http" />

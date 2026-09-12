@@ -146,6 +146,13 @@ public sealed class WalletHoldConfiguration : IEntityTypeConfiguration<WalletHol
         builder.HasIndex(hold => new { hold.AgencyId, hold.Status })
             .HasDatabaseName("ix_wallet_holds_agency_id_status");
 
+        // The money held for one line of a multi-line order (build plan F5): captured or released on
+        // its own when that line is confirmed, fails or is refunded. Partial, because a console
+        // booking's hold names only its order.
+        builder.HasIndex(hold => hold.OrderLineId)
+            .HasFilter("order_line_id IS NOT NULL")
+            .HasDatabaseName("ix_wallet_holds_order_line_id");
+
         // The sweeper reads held rows past their deadline, so it wants the deadline indexed.
         builder.HasIndex(hold => new { hold.Status, hold.ExpiresAt })
             .HasDatabaseName("ix_wallet_holds_status_expires_at");
@@ -222,6 +229,14 @@ public sealed class PaymentTransactionConfiguration : IEntityTypeConfiguration<P
         builder.HasIndex(payment => payment.Reference)
             .IsUnique()
             .HasDatabaseName("ix_payment_transactions_reference");
+
+        // The order a traveller's card payment is for (build plan F5). No foreign key, deliberately:
+        // an order is placed in one transaction and the payment attempt in another, and the payments
+        // schema is not the place to make orders undeleteable. Partial, because only order payments
+        // name one.
+        builder.HasIndex(payment => payment.OrderId)
+            .HasFilter("order_id IS NOT NULL")
+            .HasDatabaseName("ix_payment_transactions_order_id");
 
         // How a webhook finds its payment, and how the console lists an agency's attempts.
         builder.HasIndex(payment => new { payment.AgencyId, payment.CreatedAt })

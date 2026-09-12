@@ -244,6 +244,114 @@ public sealed class PaystackGateway : IPaymentGateway
     /// Computed over the body exactly as received. Deserialising and re-serialising first would
     /// change whitespace and key order, and the signature would never match.
     /// </remarks>
+    /// <summary>
+    /// Asks Paystack to send money back to the card a payment came from.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>POST /refund</c>, naming the original transaction by our own reference. Paystack decides
+    /// where the money goes from its record of the charge, so no card detail is sent or needed —
+    /// which is the whole point of never having had one (decision 18).
+    /// </para>
+    /// <para>
+    /// <b>Refunding twice is refused by Paystack, not by us</b>, and that refusal comes back as
+    /// <see cref="GatewayRefundOutcome.AlreadyRefunded"/> rather than as an error: a redelivered
+    /// message must find the refund already made and move on, not raise an alarm.
+    /// </para>
+    /// <para>
+    /// A 5xx, a timeout or rate limiting is an <i>unknown</i> outcome and throws
+    /// <see cref="PaymentGatewayUnavailableException"/>, so the caller retries rather than recording
+    /// a refund nobody confirmed. That is the same discipline as the ticket-issue rule in ADR-0003,
+    /// for the same reason: money that may or may not have moved is not money that did not move.
+    /// </para>
+    /// </remarks>
+    public async Task<GatewayRefund> RefundAsync(
+        string reference,
+        Money amount,
+        string reason,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reference);
+
+        if (amount.AmountMinor <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), amount.AmountMinor, "A refund must be positive.");
+        }
+
+        // Minor units again — kobo for NGN — and as a string for the same reason initialise sends
+        // one: that is the type Paystack documents.
+        var request = new
+        {
+            transaction = reference,
+            amount = amount.AmountMinor.ToString(CultureInfo.InvariantCulture),
+            merchant_note = Clip(reason),
+        };
+
+        HttpResponseMessage response;
+
+        try
+        {
+            response = await _http.PostAsJsonAsync("/refund", request, Json, cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new PaymentGatewayUnavailableException($"Paystack could not be reached to refund {reference}.", ex);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // HttpClient reports its own timeout as a cancellation. Only the caller's token
+            // cancelling means "stop"; this means "Paystack was too slow".
+            throw new PaymentGatewayUnavailableException($"Paystack did not answer in time when refunding {reference}.", ex);
+        }
+
+        using (response)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                var status = (int)response.StatusCode;
+                var message = await MessageFrom(response, cancellationToken);
+
+                if (status >= 500 || response.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests)
+                {
+                    throw new PaymentGatewayUnavailableException(
+                        $"Paystack answered HTTP {status} when asked to refund {reference}: {message}");
+                }
+
+                // Paystack says so in the message rather than in a code of its own.
+                if (message.Contains("already", StringComparison.OrdinalIgnoreCase)
+                    && message.Contains("refund", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new GatewayRefund(GatewayRefundOutcome.AlreadyRefunded, message, null, null);
+                }
+
+                return new GatewayRefund(GatewayRefundOutcome.Refused, $"HTTP {status}", null, message);
+            }
+
+            PaystackResponse<RefundData>? body;
+
+            try
+            {
+                body = await response.Content.ReadFromJsonAsync<PaystackResponse<RefundData>>(Json, cancellationToken);
+            }
+            catch (JsonException ex)
+            {
+                throw new PaymentGatewayException($"Paystack's refund response for {reference} could not be read.", ex);
+            }
+
+            if (body is null || !body.Status || body.Data is null)
+            {
+                return new GatewayRefund(
+                    GatewayRefundOutcome.Refused, "refused", null, body?.Message ?? "(no message)");
+            }
+
+            return new GatewayRefund(
+                GatewayRefundOutcome.Accepted,
+                body.Data.Status ?? "pending",
+                body.Data.Id?.ToString(CultureInfo.InvariantCulture),
+                null);
+        }
+    }
+
     public bool IsValidSignature(string payload, string? signature)
     {
         if (string.IsNullOrWhiteSpace(signature) || string.IsNullOrEmpty(_options.SecretKey))
@@ -281,7 +389,15 @@ public sealed class PaystackGateway : IPaymentGateway
         }
     }
 
+    /// <summary>How long a merchant note may be. Paystack truncates; this says so out loud.</summary>
+    private static string Clip(string reason) => reason.Length <= 200 ? reason : reason[..200];
+
     private sealed record PaystackResponse<T>(bool Status, string? Message, T? Data);
+
+    /// <summary>What we read off an accepted refund: its id, for reconciliation, and its status.</summary>
+    private sealed record RefundData(
+        [property: JsonPropertyName("id")] long? Id,
+        [property: JsonPropertyName("status")] string? Status);
 
     private sealed record InitializeData(
         [property: JsonPropertyName("authorization_url")] string AuthorizationUrl,

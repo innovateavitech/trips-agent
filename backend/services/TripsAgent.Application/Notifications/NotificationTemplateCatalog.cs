@@ -107,6 +107,37 @@ public static class NotificationTemplateCatalog
     /// <summary>An agent's held booking passed its ticket time limit before it was issued (#38).</summary>
     public const string BookingExpired = "booking.expired";
 
+    /// <summary>
+    /// A seat freed up on a departure somebody is waiting for (build plan F6, plan §3 job 10). The
+    /// offer has a deadline; when it passes, job 10 rolls it on to the next person.
+    /// </summary>
+    public const string DepartureWaitlistOffer = "departure.waitlist-offer";
+
+    /// <summary>An installment on a departure booking falls due soon, or is overdue (plan §3 job 11).</summary>
+    /// <remarks>No card is ever charged from a reminder — the MVP leaves automatic charging out.</remarks>
+    public const string DepartureInstallmentReminder = "departure.installment-reminder";
+
+    /// <summary>An installment is past its grace period, so the agency has to chase it (job 11).</summary>
+    public const string DepartureInstallmentOverdue = "departure.installment-overdue";
+
+    /// <summary>A departure the traveller has a seat on was called off (build plan decision 12).</summary>
+    public const string DepartureCancelled = "departure.cancelled";
+
+    /// <summary>
+    /// The link a traveller manages their own booking with, sent once their payment has gone through
+    /// (build plan F5, decision 21 — there are no traveller accounts to sign in to).
+    /// </summary>
+    public const string BookingManageLink = "booking.manage-link";
+
+    /// <summary>
+    /// A quote the agency has sent to one of its own customers (#62). The customer's link to it is the
+    /// whole point of the email, and it goes to the agency's own storefront — never to ours.
+    /// </summary>
+    public const string CrmQuoteSent = "crm.quote-sent";
+
+    /// <summary>A follow-up task that has fallen due, to the person at the agency who owns it (#62).</summary>
+    public const string CrmTaskDue = "crm.task-due";
+
     // ------------------------------------------------------------------ brand tokens
 
     /// <summary>Whose mail this appears to be: the agency's trading name, or <see cref="ProductName"/>.</summary>
@@ -303,6 +334,28 @@ public static class NotificationTemplateCatalog
                   it still needs them.
                   """),
 
+        AgencyFacing(
+            CrmTaskDue,
+            version: 1,
+            subject: "Follow-up due: {{taskTitle}}",
+            tokens: ["taskTitle", "customerName", "dueAt"],
+            html: """
+                  <p>A follow-up you are looking after was due at {{dueAt}}.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>To do</strong></td><td>{{taskTitle}}</td></tr>
+                    <tr><td><strong>Customer</strong></td><td>{{customerName}}</td></tr>
+                  </table>
+                  <p>Open your tasks in the console to mark it done, or move it if it can wait.</p>
+                  """,
+            text: """
+                  A follow-up you are looking after was due at {{dueAt}}.
+
+                      To do:    {{taskTitle}}
+                      Customer: {{customerName}}
+
+                  Open your tasks in the console to mark it done, or move it if it can wait.
+                  """),
+
         // ------------------------------------------------------------------ traveller-facing
         // Everything below goes to the agency's own customer. It says the agency's name and
         // nothing else: a traveller who learns Trips exists has learned their agent's supplier,
@@ -458,6 +511,202 @@ public static class NotificationTemplateCatalog
                   before. Please use this one from now on.
 
                   Reply to this email if anything on it looks wrong.
+                  """),
+
+        // ------------------------------------------------------------- group departures (F6)
+        //
+        // The offer names its deadline in the agency's own words for a date, and asks the traveller
+        // to reply rather than sending them to a link: there is no traveller account to log into,
+        // and every URL we could print today would be on our own domain.
+        TravellerFacing(
+            DepartureWaitlistOffer,
+            version: 1,
+            subject: "A seat has come up on {{departureTitle}}",
+            tokens: ["departureTitle", "departureDate", "paxCount", "offerExpiresAt"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>A seat has come up on <strong>{{departureTitle}}</strong>, leaving
+                     {{departureDate}}, and you are next on the list.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>Travellers</strong></td><td>{{paxCount}}</td></tr>
+                    <tr><td><strong>Held until</strong></td><td>{{offerExpiresAt}}</td></tr>
+                  </table>
+                  <p>Reply to this email to take it. After {{offerExpiresAt}} the seat goes to the
+                     next person waiting.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  A seat has come up on {{departureTitle}}, leaving {{departureDate}}, and you are
+                  next on the list.
+
+                  Travellers:  {{paxCount}}
+                  Held until:  {{offerExpiresAt}}
+
+                  Reply to this email to take it. After {{offerExpiresAt}} the seat goes to the next
+                  person waiting.
+                  """),
+
+        TravellerFacing(
+            DepartureInstallmentReminder,
+            version: 1,
+            subject: "{{amountDue}} is due on {{dueDate}} — {{bookingReference}}",
+            tokens: ["bookingReference", "departureTitle", "paymentLabel", "amountDue", "dueDate"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Your next payment for <strong>{{departureTitle}}</strong> is due.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>Reference</strong></td><td>{{bookingReference}}</td></tr>
+                    <tr><td><strong>Payment</strong></td><td>{{paymentLabel}}</td></tr>
+                    <tr><td><strong>Amount</strong></td><td>{{amountDue}}</td></tr>
+                    <tr><td><strong>Due</strong></td><td>{{dueDate}}</td></tr>
+                  </table>
+                  <p>Reply to this email to arrange it. Nothing is charged automatically.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Your next payment for {{departureTitle}} is due.
+
+                  Reference:  {{bookingReference}}
+                  Payment:    {{paymentLabel}}
+                  Amount:     {{amountDue}}
+                  Due:        {{dueDate}}
+
+                  Reply to this email to arrange it. Nothing is charged automatically.
+                  """),
+
+        TravellerFacing(
+            DepartureCancelled,
+            version: 1,
+            subject: "{{departureTitle}} on {{departureDate}} has been cancelled",
+            tokens: ["bookingReference", "departureTitle", "departureDate"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>{{brandName}} has had to cancel <strong>{{departureTitle}}</strong>, which was
+                     leaving {{departureDate}}.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>Reference</strong></td><td>{{bookingReference}}</td></tr>
+                  </table>
+                  <p>Everything you have paid for it is being refunded in full. Reply to this email
+                     if you would like help finding another date.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  {{brandName}} has had to cancel {{departureTitle}}, which was leaving
+                  {{departureDate}}.
+
+                  Reference:  {{bookingReference}}
+
+                  Everything you have paid for it is being refunded in full. Reply to this email if
+                  you would like help finding another date.
+                  """),
+
+        // Agency-facing: the agent is the one who chases an overdue installment. Decision 13 — a
+        // booking is never cancelled automatically for it.
+        AgencyFacing(
+            DepartureInstallmentOverdue,
+            version: 1,
+            subject: "Overdue payment on {{bookingReference}} — {{amountDue}}",
+            tokens: ["bookingReference", "departureTitle", "travellerName", "paymentLabel", "amountDue", "dueDate", "daysOverdue"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>A payment on one of your group departure bookings is {{daysOverdue}} days
+                     overdue. Nothing has been cancelled — it is yours to chase.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>Reference</strong></td><td>{{bookingReference}}</td></tr>
+                    <tr><td><strong>Departure</strong></td><td>{{departureTitle}}</td></tr>
+                    <tr><td><strong>Traveller</strong></td><td>{{travellerName}}</td></tr>
+                    <tr><td><strong>Payment</strong></td><td>{{paymentLabel}}</td></tr>
+                    <tr><td><strong>Amount</strong></td><td>{{amountDue}}</td></tr>
+                    <tr><td><strong>Was due</strong></td><td>{{dueDate}}</td></tr>
+                  </table>
+                  <p>Suggested action: call the traveller, and either take the payment or release
+                     the seat so somebody on the waitlist can have it.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  A payment on one of your group departure bookings is {{daysOverdue}} days overdue.
+                  Nothing has been cancelled - it is yours to chase.
+
+                  Reference:   {{bookingReference}}
+                  Departure:   {{departureTitle}}
+                  Traveller:   {{travellerName}}
+                  Payment:     {{paymentLabel}}
+                  Amount:      {{amountDue}}
+                  Was due:     {{dueDate}}
+
+                  Suggested action: call the traveller, and either take the payment or release the
+                  seat so somebody on the waitlist can have it.
+                  """),
+
+        // The traveller's own way back into their booking. It goes to the agency's own site, and the
+        // email says the agency's name: a traveller has no idea a platform is involved, and this is
+        // one of the places it would be easiest to give that away (CLAUDE.md rule 4).
+        TravellerFacing(
+            BookingManageLink,
+            version: 1,
+            subject: "Manage your booking with {{brandName}} — {{bookingReference}}",
+            tokens: ["bookingReference", "manageUrl"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Thank you — your payment has gone through, and we are confirming the details now.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>Reference</strong></td><td>{{bookingReference}}</td></tr>
+                  </table>
+                  <p>You can see your booking, and download your documents as they are ready, here:</p>
+                  <p><a href="{{manageUrl}}">Manage your booking</a></p>
+                  <p>Keep this link — it is how you get back in, and there is no password to remember.
+                     Reply to this email if anything looks wrong.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Thank you - your payment has gone through, and we are confirming the details now.
+
+                      Reference: {{bookingReference}}
+
+                  You can see your booking, and download your documents as they are ready, here:
+
+                      {{manageUrl}}
+
+                  Keep this link - it is how you get back in, and there is no password to remember.
+                  Reply to this email if anything looks wrong.
+                  """),
+
+        TravellerFacing(
+            CrmQuoteSent,
+            version: 1,
+            subject: "Your quote from {{brandName}} — {{quoteNumber}}",
+            tokens: ["quoteNumber", "quoteTitle", "quoteTotal", "validUntil", "quoteUrl"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Here is your quote for {{quoteTitle}}.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>Quote</strong></td><td>{{quoteNumber}}</td></tr>
+                    <tr><td><strong>Total</strong></td><td>{{quoteTotal}}</td></tr>
+                    <tr><td><strong>Valid until</strong></td><td>{{validUntil}}</td></tr>
+                  </table>
+                  <p>Open it to see the full itinerary, and to accept or decline it:</p>
+                  <p><a href="{{quoteUrl}}">View your quote</a></p>
+                  <p>Reply to this email if you would like anything changed.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Here is your quote for {{quoteTitle}}.
+
+                      Quote:       {{quoteNumber}}
+                      Total:       {{quoteTotal}}
+                      Valid until: {{validUntil}}
+
+                  Open it to see the full itinerary, and to accept or decline it:
+
+                      {{quoteUrl}}
+
+                  Reply to this email if you would like anything changed.
                   """),
     ];
 

@@ -143,7 +143,7 @@ public sealed partial class InstallmentReminders
     /// The reminder a payment <paramref name="daysLate"/> days past its due date is owed. Negative
     /// days are days still to go. Null when it is further out than the first reminder.
     /// </summary>
-    internal static InstallmentReminderStage? StageFor(int daysLate)
+    public static InstallmentReminderStage? StageFor(int daysLate)
     {
         if (daysLate > 0)
         {

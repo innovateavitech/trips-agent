@@ -41,6 +41,15 @@ public sealed class CatalogSchemaTests
         "catalog.product_price_variants",
         "catalog.visa_details",
         "catalog.visa_document_requirements",
+        "catalog.departures",
+        "catalog.departure_price_tiers",
+        "catalog.installment_plans",
+        "catalog.installment_schedule_items",
+        "catalog.departure_holds",
+        "catalog.departure_waitlist",
+        "catalog.pax_manifests",
+        "catalog.booking_payment_schedules",
+        "catalog.booking_installments",
     ];
 
     private readonly PostgresFixture _postgres;

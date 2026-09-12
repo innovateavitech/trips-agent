@@ -157,6 +157,29 @@ public sealed class Order : Entity, IAuditableEntity, ITenantScoped
         UpdatedAt = now;
     }
 
+    /// <summary>
+    /// Records which of the agency's customers made this booking. The CRM does it when the booking is
+    /// recorded against the customer (FRD §2.8 RS-1). Once set it stays: a booking never moves from
+    /// one customer to another.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The order already belongs to a different customer.</exception>
+    public void LinkCustomer(Guid customerId)
+    {
+        ArgumentOutOfRangeException.ThrowIfEqual(customerId, Guid.Empty);
+
+        if (CustomerId == customerId)
+        {
+            return;
+        }
+
+        if (CustomerId is not null)
+        {
+            throw new InvalidOperationException($"Order {OrderNumber} already belongs to customer {CustomerId}.");
+        }
+
+        CustomerId = customerId;
+    }
+
     private static Money Sum(IReadOnlyCollection<OrderLine> lines, Func<OrderLine, Money> pick)
     {
         var total = default(Money);

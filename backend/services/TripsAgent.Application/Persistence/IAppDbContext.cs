@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Catalog;
+using TripsAgent.Domain.Crm;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Notifications;
@@ -160,6 +161,27 @@ public interface IAppDbContext
     public DbSet<FlightSegment> FlightSegments { get; }
 
     public DbSet<BusSegment> BusSegments { get; }
+
+    /// <summary>
+    /// Each agency's own customers. Personal data: the name, email and phone live here and nowhere
+    /// else in the CRM, so erasing a person is one row anonymised in place.
+    /// </summary>
+    public DbSet<Customer> Customers { get; }
+
+    /// <summary>Inquiries, and where each has got to in the pipeline.</summary>
+    public DbSet<Lead> Leads { get; }
+
+    /// <summary>Every move of every lead. Append-only — the grants withhold UPDATE and DELETE.</summary>
+    public DbSet<LeadStageChange> LeadStageHistory { get; }
+
+    /// <summary>Quotes. Load one with its items and days to change it: a save replaces them all.</summary>
+    public DbSet<Quote> Quotes { get; }
+
+    /// <summary>Follow-up tasks about leads, quotes and customers.</summary>
+    public DbSet<FollowUpTask> FollowUpTasks { get; }
+
+    /// <summary>Each customer's timeline of messages and notes. Append-only for the application role.</summary>
+    public DbSet<Communication> Communications { get; }
 
     /// <summary>
     /// What this context is about to write.

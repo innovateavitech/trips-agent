@@ -165,8 +165,9 @@ public static partial class DatabaseSeeder
     }
 
     /// <summary>
-    /// Creates the four accounts the milestone asks for: a Trips super admin, an owner at a
-    /// verified agency, an owner at its sub-agent, and an owner at an agency still awaiting KYB.
+    /// Creates one account per role worth demonstrating: the four Trips back-office roles, an
+    /// owner at a verified agency, an owner at its sub-agent, and an owner at an agency still
+    /// awaiting KYB.
     /// </summary>
     private static void SeedUsers(
         AppDbContext dbContext,
@@ -187,6 +188,14 @@ public static partial class DatabaseSeeder
         var operationsAdmin = User.ForPlatform(
             IdentitySeedData.OperationsAdminEmail, passwordHash, "Chidi", "Balogun");
 
+        // One account per back-office role, so the console's role-scoped screens can actually be
+        // seen behaving differently — Support is refused what Operations is allowed.
+        var supportAdmin = User.ForPlatform(
+            IdentitySeedData.SupportAdminEmail, passwordHash, "Zainab", "Suleiman");
+
+        var financeAdmin = User.ForPlatform(
+            IdentitySeedData.FinanceAdminEmail, passwordHash, "Tunde", "Afolabi");
+
         var verifiedAgentOwner = User.ForAgency(
             principal.Id, IdentitySeedData.VerifiedAgentEmail, passwordHash, "Ngozi", "Adeyemi");
 
@@ -198,19 +207,25 @@ public static partial class DatabaseSeeder
 
         // Everyone except the pending owner has confirmed their address. Leaving that one
         // unverified is the point: it is the state the onboarding screens have to handle.
-        foreach (var user in new[] { superAdmin, operationsAdmin, verifiedAgentOwner, subAgentOwner })
+        var platformStaff = new[] { superAdmin, operationsAdmin, supportAdmin, financeAdmin };
+
+        foreach (var user in platformStaff.Concat([verifiedAgentOwner, subAgentOwner]))
         {
             user.MarkEmailVerified(now);
         }
 
         dbContext.Users.AddRange(
-            superAdmin, operationsAdmin, verifiedAgentOwner, subAgentOwner, pendingAgentOwner);
+            [.. platformStaff, verifiedAgentOwner, subAgentOwner, pendingAgentOwner]);
 
-        // Platform staff hold their role against no agency of their own, so their grant is
-        // recorded against the agency they are acting on — here, the demo principal.
+        // Platform staff belong to no agency, and now neither do their grants: a platform grant
+        // carries a null agency_id, which row-level security makes visible only inside a platform
+        // scope. It used to be recorded against the demo principal, which read in the audit trail
+        // as though Trips' own admins worked at Lagos Travel.
         dbContext.UserRoles.AddRange(
-            UserRole.Grant(superAdmin.Id, roles[Role.SystemRoles.SuperAdmin], principal.Id),
-            UserRole.Grant(operationsAdmin.Id, roles[Role.SystemRoles.OperationsAdmin], principal.Id),
+            UserRole.GrantPlatform(superAdmin.Id, roles[Role.SystemRoles.SuperAdmin]),
+            UserRole.GrantPlatform(operationsAdmin.Id, roles[Role.SystemRoles.OperationsAdmin]),
+            UserRole.GrantPlatform(supportAdmin.Id, roles[Role.SystemRoles.SupportAdmin]),
+            UserRole.GrantPlatform(financeAdmin.Id, roles[Role.SystemRoles.FinanceAdmin]),
             UserRole.Grant(verifiedAgentOwner.Id, roles[Role.SystemRoles.Owner], principal.Id),
             UserRole.Grant(subAgentOwner.Id, roles[Role.SystemRoles.Owner], subAgent.Id),
             UserRole.Grant(pendingAgentOwner.Id, roles[Role.SystemRoles.Owner], pendingAgency.Id));

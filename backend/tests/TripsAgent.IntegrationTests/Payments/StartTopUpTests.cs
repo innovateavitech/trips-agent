@@ -246,11 +246,11 @@ public class StartTopUpTests
                 break;
             case AgencyStatus.Suspended:
                 agency.MarkVerified(now);
-                agency.Suspend();
+                agency.Suspend("Test.", now);
                 break;
             case AgencyStatus.Terminated:
                 agency.MarkVerified(now);
-                agency.Terminate();
+                agency.Terminate("Test.", now);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(status), status, "Unhandled agency status.");

@@ -389,6 +389,12 @@ public class AppDbContext : DbContext, IAppDbContext
         modelBuilder.Entity<UserInvitation>().HasQueryFilter(invitation =>
             AllowCrossTenantAccess || invitation.AgencyId == CurrentAgencyId);
 
+        // A role grant carries a nullable agency for the same reason a user does: null is a Trips
+        // back-office grant, and no agency may ever see one. Unlike Role above, there is no
+        // "visible to everybody" case here — a platform grant is read only inside a platform scope.
+        modelBuilder.Entity<UserRole>().HasQueryFilter(userRole =>
+            AllowCrossTenantAccess || userRole.AgencyId == CurrentAgencyId);
+
         // Credentials are reached through their user, so they follow that user's agency. Written
         // as a subquery rather than a join so the filter composes with any query EF builds.
         modelBuilder.Entity<RefreshToken>().HasQueryFilter(token =>

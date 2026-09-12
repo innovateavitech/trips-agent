@@ -243,8 +243,8 @@ public class WalletFundingPolicyTests
         {
             case AgencyStatus.Verified: agency.MarkVerified(DateTimeOffset.UtcNow); break;
             case AgencyStatus.Rejected: agency.MarkRejected(); break;
-            case AgencyStatus.Suspended: agency.Suspend(); break;
-            case AgencyStatus.Terminated: agency.Terminate(); break;
+            case AgencyStatus.Suspended: agency.Suspend("Test.", DateTimeOffset.UtcNow); break;
+            case AgencyStatus.Terminated: agency.Terminate("Test.", DateTimeOffset.UtcNow); break;
             default: break;
         }
 

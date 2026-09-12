@@ -176,6 +176,17 @@ public sealed partial class Agency : Entity, IAuditableEntity, IAuditLogged
     /// <summary>Set when the onboarding wizard is finished; null while it is in progress.</summary>
     public DateTimeOffset? OnboardingCompletedAt { get; private set; }
 
+    /// <summary>When an admin last suspended, reinstated or terminated this agency.</summary>
+    /// <remarks>
+    /// The audit log is the record of record; this pair is a copy kept on the row because every
+    /// screen that shows a suspended agency has to say since when and why, and reading the audit
+    /// log's monthly partitions for one banner is the wrong shape of query.
+    /// </remarks>
+    public DateTimeOffset? StatusChangedAt { get; private set; }
+
+    /// <summary>The reason given for that change. Never shown to a traveller.</summary>
+    public string? StatusReason { get; private set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
@@ -205,11 +216,68 @@ public sealed partial class Agency : Entity, IAuditableEntity, IAuditLogged
     /// <summary>Puts the account back into review — used when a rejected agency resubmits.</summary>
     public void MarkPendingVerification() => Status = AgencyStatus.PendingVerification;
 
-    /// <summary>Suspends the account. This also takes the storefront offline (FRD §2.15 RS-3).</summary>
-    public void Suspend() => Status = AgencyStatus.Suspended;
+    /// <summary>
+    /// Suspends the account, with the reason whoever did it gave.
+    /// </summary>
+    /// <remarks>
+    /// Decision 14 of the build plan says what suspension means, and it is deliberately narrow:
+    /// existing bookings stand, travellers keep the documents their magic link serves, and
+    /// support goes on servicing them. What stops is selling — no new bookings, and the
+    /// storefront goes offline (FRD §2.15 RS-3). <see cref="AgencyAccess"/> is where those two
+    /// rules actually live, so nothing has to re-derive them from the status.
+    /// </remarks>
+    /// <param name="reason">Why, in the admin's words. Shown on the profile and written to the audit log.</param>
+    /// <param name="at">When, from the injected clock.</param>
+    public void Suspend(string reason, DateTimeOffset at)
+    {
+        Status = AgencyStatus.Suspended;
+        RecordStatusChange(reason, at);
+    }
+
+    /// <summary>
+    /// Lifts a suspension and puts the agency back where it was.
+    /// </summary>
+    /// <remarks>
+    /// Back to <see cref="AgencyStatus.Verified"/> only if KYB had been approved — an agency
+    /// suspended before it was ever verified goes back to waiting for a decision, not past it.
+    /// </remarks>
+    public void Reinstate(string reason, DateTimeOffset at)
+    {
+        if (Status != AgencyStatus.Suspended)
+        {
+            throw new InvalidOperationException(
+                $"Only a suspended agency can be reinstated, and '{Slug}' is {Status}.");
+        }
+
+        Status = VerifiedAt is null ? AgencyStatus.PendingVerification : AgencyStatus.Verified;
+        RecordStatusChange(reason, at);
+    }
 
     /// <summary>Ends the relationship for good. The row stays for the audit trail.</summary>
-    public void Terminate() => Status = AgencyStatus.Terminated;
+    public void Terminate(string reason, DateTimeOffset at)
+    {
+        Status = AgencyStatus.Terminated;
+        RecordStatusChange(reason, at);
+    }
+
+    /// <summary>Corrects the business details KYB verified, or the trading details around them.</summary>
+    /// <remarks>
+    /// The slug is not here on purpose. It is in storefront URLs and in links travellers already
+    /// hold, so changing it is a migration rather than an edit, and no MVP screen offers it.
+    /// </remarks>
+    public void UpdateProfile(
+        string legalName,
+        string? tradingName,
+        string? taxId,
+        string timezone,
+        int vatRateBasisPoints)
+    {
+        LegalName = Require(legalName, nameof(legalName));
+        TradingName = string.IsNullOrWhiteSpace(tradingName) ? null : tradingName.Trim();
+        Timezone = Require(timezone, nameof(timezone));
+        SetTaxId(taxId);
+        SetVatRate(vatRateBasisPoints);
+    }
 
     /// <summary>Records that the onboarding wizard was completed.</summary>
     public void CompleteOnboarding(DateTimeOffset at) => OnboardingCompletedAt ??= at;
@@ -228,6 +296,13 @@ public sealed partial class Agency : Entity, IAuditableEntity, IAuditLogged
     /// Existing quotes keep the rate they were priced at, whatever happens here.
     /// </remarks>
     public void SetVatRate(int basisPoints) => VatRateBasisPoints = ValidateVatRate(basisPoints);
+
+    /// <summary>Records who-cares-not, but when and why, for the screens that have to explain the status.</summary>
+    private void RecordStatusChange(string reason, DateTimeOffset at)
+    {
+        StatusReason = Require(reason, nameof(reason));
+        StatusChangedAt = at;
+    }
 
     private static string Require(string value, string parameterName)
     {

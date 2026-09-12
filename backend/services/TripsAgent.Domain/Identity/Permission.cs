@@ -80,8 +80,21 @@ public static class PermissionCodes
     /// <summary>Approve or reject an agency's KYB submission. Trips staff only.</summary>
     public const string KybReview = "kyb.review";
 
+    /// <summary>Read the agency directory and one agency's profile. Every back-office role holds it.</summary>
+    public const string AgencyView = "agency.view";
+
     public const string AgencyManage = "agency.manage";
     public const string AgencySuspend = "agency.suspend";
+
+    /// <summary>End an agency's relationship with Trips for good. Deliberately not bundled with suspend.</summary>
+    public const string AgencyTerminate = "agency.terminate";
+
+    /// <summary>Export everything one agency owns. The most concentrated read in the system.</summary>
+    public const string AgencyExport = "agency.export";
+
+    /// <summary>Read the platform audit trail — who did what to whom, and why.</summary>
+    public const string AuditView = "audit.view";
+
     public const string PlatformReportView = "platform.report.view";
     public const string SubscriptionManage = "subscription.manage";
     public const string PlatformUserManage = "platform.user.manage";
@@ -137,8 +150,12 @@ public static class PermissionCodes
         (ReportExport, Categories.Reports, "Export a report"),
 
         (KybReview, Categories.Platform, "Approve or reject an agency's KYB submission"),
+        (AgencyView, Categories.Platform, "See the agency directory and an agency's profile"),
         (AgencyManage, Categories.Platform, "Create and edit agencies"),
-        (AgencySuspend, Categories.Platform, "Suspend or terminate an agency"),
+        (AgencySuspend, Categories.Platform, "Suspend an agency, or put a suspended one back"),
+        (AgencyTerminate, Categories.Platform, "End an agency's relationship with Trips for good"),
+        (AgencyExport, Categories.Platform, "Export everything one agency owns"),
+        (AuditView, Categories.Platform, "Read the platform audit trail"),
         (PlatformReportView, Categories.Platform, "See platform-wide reporting across agencies"),
         (SubscriptionManage, Categories.Platform, "Manage subscription tiers and pricing"),
         (PlatformUserManage, Categories.Platform, "Manage Trips back-office users"),
@@ -148,8 +165,12 @@ public static class PermissionCodes
     public static IReadOnlyList<string> PlatformOnly { get; } =
     [
         KybReview,
+        AgencyView,
         AgencyManage,
         AgencySuspend,
+        AgencyTerminate,
+        AgencyExport,
+        AuditView,
         PlatformReportView,
         SubscriptionManage,
         PlatformUserManage,

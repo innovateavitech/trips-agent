@@ -34,6 +34,16 @@ public sealed class Role : Entity, IAuditableEntity
 
         /// <summary>Trips staff who review KYB and support agencies.</summary>
         public const string OperationsAdmin = "Operations Admin";
+
+        /// <summary>Trips staff who answer agencies' questions. Reads, never writes.</summary>
+        public const string SupportAdmin = "Support Admin";
+
+        /// <summary>Trips staff who look after the money: reporting, subscriptions, the audit trail.</summary>
+        public const string FinanceAdmin = "Finance Admin";
+
+        /// <summary>The four back-office roles, in the order the console lists them.</summary>
+        public static IReadOnlyList<string> Platform { get; } =
+            [SuperAdmin, OperationsAdmin, SupportAdmin, FinanceAdmin];
     }
 
     private Role()
@@ -111,12 +121,13 @@ public sealed class RolePermission
 /// principal and one of its sub-agents with different access in each — an owner in their own
 /// business, an agent in a branch they help out with.
 /// </remarks>
-public sealed class UserRole : Entity, IAuditableEntity, ITenantScoped
+public sealed class UserRole : Entity, IAuditableEntity
 {
     private UserRole()
     {
     }
 
+    /// <summary>Grants a role to somebody who works at <paramref name="agencyId"/>.</summary>
     public static UserRole Grant(Guid userId, Guid roleId, Guid agencyId)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(agencyId, Guid.Empty);
@@ -124,11 +135,26 @@ public sealed class UserRole : Entity, IAuditableEntity, ITenantScoped
         return new UserRole { UserId = userId, RoleId = roleId, AgencyId = agencyId };
     }
 
+    /// <summary>
+    /// Grants a platform role to Trips back-office staff, who belong to no agency.
+    /// </summary>
+    /// <remarks>
+    /// The grant carries a null agency, which is what makes it a platform grant: row-level
+    /// security only ever matches <c>agency_id = current_agency</c>, so a null row is invisible
+    /// to every agency and readable only inside <c>IPlatformScope</c>. Before this existed the
+    /// seeder recorded platform staff against whichever agency happened to be first, which is
+    /// both misleading in the audit trail and impossible on a freshly installed database with no
+    /// agencies in it yet.
+    /// </remarks>
+    public static UserRole GrantPlatform(Guid userId, Guid roleId) =>
+        new() { UserId = userId, RoleId = roleId, AgencyId = null };
+
     public Guid UserId { get; private set; }
 
     public Guid RoleId { get; private set; }
 
-    public Guid AgencyId { get; private set; }
+    /// <summary>The agency this grant applies in, or null for a Trips back-office grant.</summary>
+    public Guid? AgencyId { get; private set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 

@@ -4,10 +4,12 @@ import { cn } from '@trips/ui';
 import { BrandMark } from '../components/brand-mark';
 import {
   BuildingIcon,
+  CardIcon,
   DashboardIcon,
   HistoryIcon,
   PeopleIcon,
   QueueIcon,
+  TagIcon,
 } from '../components/icons';
 import { useAuth } from '../features/auth/auth-context';
 import { useKybQueue } from '../features/kyb-review/kyb-review-queries';
@@ -17,6 +19,7 @@ import {
   KYB_REVIEW_PERMISSION,
   PLATFORM_REPORT_PERMISSION,
   PLATFORM_USER_PERMISSION,
+  SUBSCRIPTION_PERMISSION,
   hasPermission,
 } from '../lib/auth/claims';
 import { UserMenu } from './user-menu';
@@ -83,6 +86,13 @@ const NAV: { to: string; label: string; permission: string; icon: ReactNode }[] 
     label: 'Agencies',
     permission: AGENCY_VIEW_PERMISSION,
     icon: <BuildingIcon />,
+  },
+  { to: '/plans', label: 'Plans', permission: SUBSCRIPTION_PERMISSION, icon: <TagIcon /> },
+  {
+    to: '/subscribers',
+    label: 'Subscribers',
+    permission: SUBSCRIPTION_PERMISSION,
+    icon: <CardIcon />,
   },
   { to: '/audit', label: 'Audit log', permission: AUDIT_VIEW_PERMISSION, icon: <HistoryIcon /> },
   {

@@ -140,6 +140,26 @@ export function PeopleIcon(props: IconProps) {
   );
 }
 
+/** Plans: a price tag. */
+export function TagIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3 12.5V4a1 1 0 0 1 1-1h8.5a1 1 0 0 1 .7.3l7.5 7.5a1 1 0 0 1 0 1.4l-8.5 8.5a1 1 0 0 1-1.4 0L3.3 13.2a1 1 0 0 1-.3-.7Z" />
+      <path d="M7.5 7.5h.01" />
+    </Icon>
+  );
+}
+
+/** Subscribers: a card on file. */
+export function CardIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="2.5" y="5" width="19" height="14" rx="2" />
+      <path d="M2.5 10h19M6 15h4" />
+    </Icon>
+  );
+}
+
 /** The audit trail: a list with a clock on it. */
 export function HistoryIcon(props: IconProps) {
   return (

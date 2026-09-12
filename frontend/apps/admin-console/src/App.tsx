@@ -8,6 +8,7 @@ import { RequireStaff } from './features/auth/guards';
 import { SignInPage } from './features/auth/sign-in-page';
 import { AgenciesApiProvider, agencyRoutes, type AgenciesApi } from './features/agencies';
 import { AuditApiProvider, auditRoutes, type AuditApi } from './features/audit';
+import { BillingApiProvider, billingRoutes, type BillingApi } from './features/billing';
 import {
   BackOfficeApiProvider,
   backOfficeRoutes,
@@ -43,6 +44,7 @@ const router = createBrowserRouter([
       ...agencyRoutes,
       ...kybReviewRoutes,
       ...auditRoutes,
+      ...billingRoutes,
       ...backOfficeRoutes,
       { path: '*', element: <NotFoundPage /> },
     ],
@@ -59,6 +61,7 @@ export interface ConsoleApis {
   agencies: AgenciesApi;
   audit: AuditApi;
   backOffice: BackOfficeApi;
+  billing: BillingApi;
   dashboard: DashboardApi;
   kybReview: KybReviewApi;
 }
@@ -80,11 +83,13 @@ export function App({
         <AgenciesApiProvider value={apis.agencies}>
           <AuditApiProvider value={apis.audit}>
             <BackOfficeApiProvider value={apis.backOffice}>
-              <DashboardApiProvider value={apis.dashboard}>
-                <KybReviewApiProvider value={apis.kybReview}>
-                  <RouterProvider router={router} />
-                </KybReviewApiProvider>
-              </DashboardApiProvider>
+              <BillingApiProvider value={apis.billing}>
+                <DashboardApiProvider value={apis.dashboard}>
+                  <KybReviewApiProvider value={apis.kybReview}>
+                    <RouterProvider router={router} />
+                  </KybReviewApiProvider>
+                </DashboardApiProvider>
+              </BillingApiProvider>
             </BackOfficeApiProvider>
           </AuditApiProvider>
         </AgenciesApiProvider>

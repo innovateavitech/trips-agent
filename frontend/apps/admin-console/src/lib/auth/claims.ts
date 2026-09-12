@@ -51,6 +51,9 @@ export const AUDIT_VIEW_PERMISSION = 'audit.view';
 export const PLATFORM_REPORT_PERMISSION = 'platform.report.view';
 export const PLATFORM_USER_PERMISSION = 'platform.user.manage';
 
+/** Setting what Trips charges: a Super Admin and Finance. Not Operations, not Support. */
+export const SUBSCRIPTION_PERMISSION = 'subscription.manage';
+
 /**
  * Decodes the claims in a JWT, or returns `null` when the token is not one we can read.
  *

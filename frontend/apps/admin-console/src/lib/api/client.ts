@@ -25,6 +25,12 @@ export interface ApiClient {
   post<T = void>(path: string, body?: unknown): Promise<T>;
   put<T = void>(path: string, body?: unknown): Promise<T>;
   /**
+   * DELETE. Rare on purpose: almost nothing in the back office is deleted, and the one thing that
+   * is — an unpublished subscription tier nobody was ever on — is refused by the server the moment
+   * it has ever been published or subscribed to.
+   */
+  del<T = void>(path: string): Promise<T>;
+  /**
    * Fetches a file the API serves as an attachment, and returns its text and the name the API
    * asked for it to be saved as.
    *
@@ -192,6 +198,7 @@ export function createApiClient({
     get: <T>(path: string) => request<T>('GET', path),
     post: <T = void>(path: string, body?: unknown) => request<T>('POST', path, body),
     put: <T = void>(path: string, body?: unknown) => request<T>('PUT', path, body),
+    del: <T = void>(path: string) => request<T>('DELETE', path),
     download: requestFile,
 
     async signIn(email, password) {

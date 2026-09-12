@@ -5,6 +5,7 @@ import { App, type ConsoleApis } from './App';
 import { createHttpAgenciesApi } from './features/agencies';
 import { createHttpAuditApi } from './features/audit';
 import { createHttpBackOfficeApi } from './features/back-office';
+import { createHttpBillingApi } from './features/billing';
 import { createHttpDashboardApi } from './features/dashboard';
 import { createHttpKybReviewApi } from './features/kyb-review';
 import { createApiClient } from './lib/api/client';
@@ -23,6 +24,7 @@ const apis: ConsoleApis = {
   agencies: createHttpAgenciesApi(client),
   audit: createHttpAuditApi(client),
   backOffice: createHttpBackOfficeApi(client),
+  billing: createHttpBillingApi(client),
   dashboard: createHttpDashboardApi(client),
   kybReview: createHttpKybReviewApi(client),
 };

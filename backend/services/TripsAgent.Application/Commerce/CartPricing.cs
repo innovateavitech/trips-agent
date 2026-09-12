@@ -36,9 +36,16 @@ public readonly record struct PartySize(int Adults, int Children, int Infants)
         {
             var counts = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
 
-            return counts is null
-                ? new PartySize(1, 0, 0)
-                : new PartySize(Read(counts, "adults"), Read(counts, "children"), Read(counts, "infants"));
+            if (counts is null)
+            {
+                return new PartySize(1, 0, 0);
+            }
+
+            var party = new PartySize(Read(counts, "adults"), Read(counts, "children"), Read(counts, "infants"));
+
+            // A party of nobody is not a party. A row whose counts are missing, zero or nonsense
+            // describes the smallest thing that can be sold rather than crashing the page it is on.
+            return party.Total == 0 ? new PartySize(1, 0, 0) : party;
         }
         catch (JsonException)
         {

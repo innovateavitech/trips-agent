@@ -122,7 +122,7 @@ public sealed class BookingAccessLinks
     }
 
     /// <summary>True for something shaped like a secret, so a malformed one never reaches the database.</summary>
-    internal static bool LooksLikeSecret(string? secret) =>
+    public static bool LooksLikeSecret(string? secret) =>
         secret is { Length: 43 }
         && secret.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_');
 }

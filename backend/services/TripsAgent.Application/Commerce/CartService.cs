@@ -230,11 +230,11 @@ public sealed class CartService
     }
 
     /// <summary>256 random bits, URL-safe: unguessable, and it names nothing about the traveller.</summary>
-    internal static string NewSessionToken() =>
+    public static string NewSessionToken() =>
         Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
     /// <summary>True for something shaped like a token, so a malformed one never reaches the database.</summary>
-    internal static bool LooksLikeToken(string? token) =>
+    public static bool LooksLikeToken(string? token) =>
         token is { Length: SessionTokenLength }
         && token.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_');
 

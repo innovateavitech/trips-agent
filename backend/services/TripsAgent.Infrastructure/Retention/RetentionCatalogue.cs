@@ -130,6 +130,9 @@ public static partial class RetentionCatalogue
         new("orders.cart_items", RetentionTreatment.Purged,
             "With their cart", "Deleted by the cart's ON DELETE CASCADE.",
             PurgedWith: "orders.carts"),
+        new("orders.booking_access_tokens", RetentionTreatment.Kept, "With their order",
+            "The links travellers manage their bookings with. Only the hash of each secret is stored, so the row "
+            + "identifies nobody; it is kept because it is the evidence of what a traveller was sent."),
 
         // ---------------------------------------------------------------- documents and pricing
         new("documents.generated_documents", RetentionTreatment.Protected, SevenYears,

@@ -69,6 +69,7 @@ The source of truth is `RetentionCatalogue.Tables` in
 | `orders.order_travellers` | Yes | Row: 7 years. Passport number and expiry: cleared 90 days after the trip | Anonymised | Who travelled belongs to the sale; their passport number does not, once the trip is over |
 | `orders.carts` | Some (guest session token) | 30 days after expiry, if never converted | Purged | A cart that became nothing records nothing. Converted carts stay with their order |
 | `orders.cart_items` | No | With their cart | Purged | Deleted by the cart's `ON DELETE CASCADE` |
+| `orders.booking_access_tokens` | No | With their order | Kept | The links travellers manage their bookings with; only the hash of each secret is stored, so the row identifies nobody |
 
 ### Documents and pricing
 

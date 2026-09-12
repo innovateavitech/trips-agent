@@ -65,7 +65,7 @@ public enum CustomerPaymentOutcome
 /// <c>Order.PaidAt</c>.
 /// </para>
 /// </remarks>
-public sealed partial class CustomerOrderPayments
+public sealed partial class CustomerOrderPayments : IOrderPaymentSettlement
 {
     private const int MaxAttempts = 3;
 
@@ -106,6 +106,10 @@ public sealed partial class CustomerOrderPayments
         _clock = clock;
         _logger = logger;
     }
+
+    /// <inheritdoc />
+    async Task<bool> IOrderPaymentSettlement.SettleAsync(string reference, CancellationToken cancellationToken) =>
+        await SettleAsync(reference, cancellationToken) == CustomerPaymentOutcome.StillPending;
 
     /// <summary>
     /// Asks the gateway what happened to one order payment, and acts on the answer.

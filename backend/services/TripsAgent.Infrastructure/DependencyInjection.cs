@@ -15,6 +15,7 @@ using TripsAgent.Application.Storefront;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
+using TripsAgent.Infrastructure.Commerce;
 using TripsAgent.Infrastructure.Concurrency;
 using TripsAgent.Infrastructure.Documents;
 using TripsAgent.Infrastructure.Identity;
@@ -170,6 +171,10 @@ public static class DependencyInjection
         // configuration here for the same reason the password-reset link above is.
         services.AddSingleton(new TripsAgent.Application.Payments.TopUpCallbackUrl(
             configuration["Console:TopUpCallbackUrl"] ?? "https://localhost:5173/wallet/top-up/complete"));
+
+        // The timings of the traveller's buying flow: how long a cart lives, how long they have to
+        // pay, and how long their booking link works for (build plan F5).
+        services.AddCommerce(configuration);
 
         services.AddSingleton(ReadJwtOptions(configuration));
         services.AddSingleton<IAccessTokenIssuer>(sp => new JwtAccessTokenIssuer(

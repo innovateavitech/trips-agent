@@ -164,6 +164,7 @@ public static class DependencyInjection
         services.AddScoped<StorefrontCheckoutService>();
         services.AddScoped<AgencyLineFulfilment>();
         services.AddScoped<CustomerOrderPayments>();
+        services.AddScoped<IOrderPaymentSettlement>(sp => sp.GetRequiredService<CustomerOrderPayments>());
         services.AddScoped<ManageBookingQueries>();
 
         // Stages notifications in the caller's unit of work; the Worker sends them.

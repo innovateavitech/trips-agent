@@ -134,6 +134,12 @@ public static class SchedulingRegistration
         // client becomes available. Both hosts get it: the API enqueues, the Worker executes.
         services.AddScoped<IWebhookDispatcher, HangfireWebhookDispatcher>();
         services.AddScoped<PaymentWebhookDrainJob>();
+
+        // The booking pipeline's recurring jobs (#37, #38). Both are safe to overlap and to run on many
+        // Workers: each claims its bookings with SKIP LOCKED.
+        services.AddScoped<Suppliers.SupplierBookingStatusPollJob>();
+        services.AddScoped<Suppliers.TicketTimeLimitMonitorJob>();
+        services.AddScoped<Checkout.CheckoutSweepJob>();
         services.AddScoped<IAssetPipelineDispatcher, HangfireAssetPipelineDispatcher>();
 
         return services;

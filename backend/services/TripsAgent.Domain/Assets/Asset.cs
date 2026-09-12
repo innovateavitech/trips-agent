@@ -17,6 +17,12 @@ public enum AssetPurpose
 
     /// <summary>A file attached to a record — a supplier invoice, a signed form.</summary>
     Attachment = 4,
+
+    /// <summary>
+    /// An invoice or voucher the platform rendered itself (#46). Never uploaded, so never scanned —
+    /// see <see cref="Asset.RecordGenerated"/>. Nothing can be uploaded under this purpose.
+    /// </summary>
+    GeneratedDocument = 5,
 }
 
 /// <summary>Where an asset is in its life.</summary>
@@ -59,6 +65,18 @@ public enum AssetScanStatus
     /// from <see cref="Clean"/>: "we did not manage to check" is not "we checked and it was fine".
     /// </summary>
     Unscannable = 4,
+
+    /// <summary>
+    /// Nothing was uploaded, so there is nothing to scan: the platform wrote these bytes itself,
+    /// from its own records. Only ever set on a <see cref="AssetPurpose.GeneratedDocument"/>, and a
+    /// CHECK constraint holds the database to the same rule — so an uploaded file can never reach
+    /// this state and skip the scanner.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not <see cref="Clean"/>. "We made it" is a different claim from "we scanned it
+    /// and it was fine", and the row should say which one it is making.
+    /// </remarks>
+    NotRequired = 5,
 }
 
 /// <summary>A rendition of an image asset.</summary>
@@ -120,6 +138,14 @@ public sealed class Asset : Entity, IAuditableEntity, ITenantScoped, IAuditLogge
     {
         ArgumentOutOfRangeException.ThrowIfEqual(agencyId, Guid.Empty);
 
+        if (purpose == AssetPurpose.GeneratedDocument)
+        {
+            // The one purpose that skips the scanner. Letting an upload claim it would let any
+            // file skip the scanner too.
+            throw new ArgumentException(
+                "Generated documents are rendered by the platform; nothing can be uploaded as one.", nameof(purpose));
+        }
+
         var asset = new Asset
         {
             AgencyId = agencyId,
@@ -133,6 +159,68 @@ public sealed class Asset : Entity, IAuditableEntity, ITenantScoped, IAuditLogge
         asset.StorageKey = AssetRules.UploadKey(agencyId, asset.Id);
 
         return asset;
+    }
+
+    /// <summary>
+    /// Records a file the platform rendered itself — an invoice or a voucher — which is servable
+    /// from the moment it exists.
+    /// </summary>
+    /// <param name="agencyId">The agency whose document it is.</param>
+    /// <param name="fileName">What a download calls it, e.g. <c>INV-2026-000042.pdf</c>.</param>
+    /// <param name="storageKey">Where the bytes were stored. Generated from ids, never from a name.</param>
+    /// <param name="contentType">What the bytes are — a PDF.</param>
+    /// <param name="sizeBytes">How many bytes were stored.</param>
+    /// <param name="checksum">SHA-256 of the stored bytes, as storage computed it while writing.</param>
+    /// <param name="at">When it was stored.</param>
+    /// <remarks>
+    /// <para>
+    /// Skips the pipeline on purpose, and this is the only path that can. The pipeline exists to
+    /// check bytes a stranger sent us; these came out of our own renderer, from our own records,
+    /// and were written straight to a key no upload URL was ever issued for. Scanning them would
+    /// check nothing — and with no production scanner chosen yet, it would leave every invoice
+    /// unservable.
+    /// </para>
+    /// <para>
+    /// It says so rather than pretending: <see cref="AssetScanStatus.NotRequired"/>, not
+    /// <see cref="AssetScanStatus.Clean"/>, and the database refuses that status on any other purpose.
+    /// </para>
+    /// </remarks>
+    public static Asset RecordGenerated(
+        Guid agencyId,
+        string fileName,
+        string storageKey,
+        string contentType,
+        long sizeBytes,
+        string checksum,
+        DateTimeOffset at)
+    {
+        ArgumentOutOfRangeException.ThrowIfEqual(agencyId, Guid.Empty);
+        ArgumentException.ThrowIfNullOrWhiteSpace(storageKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(checksum);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(sizeBytes);
+
+        if (!AssetRules.IsAllowedSize(AssetPurpose.GeneratedDocument, sizeBytes))
+        {
+            throw new ArgumentOutOfRangeException(nameof(sizeBytes), sizeBytes, "A generated document cannot be that large.");
+        }
+
+        return new Asset
+        {
+            AgencyId = agencyId,
+            Purpose = AssetPurpose.GeneratedDocument,
+            FileName = SafeFileName(fileName),
+            StorageKey = storageKey,
+            ContentType = contentType,
+            SizeBytes = sizeBytes,
+            Checksum = checksum,
+            Status = AssetStatus.Ready,
+            ScanStatus = AssetScanStatus.NotRequired,
+            ProcessedAt = at,
+
+            // Nothing was uploaded; the window closed the moment it opened.
+            UploadExpiresAt = at,
+        };
     }
 
     public Guid AgencyId { get; private set; }
@@ -198,14 +286,18 @@ public sealed class Asset : Entity, IAuditableEntity, ITenantScoped, IAuditLogge
     public DateTimeOffset UpdatedAt { get; set; }
 
     /// <summary>
-    /// True only when the file has been scanned clean and fully processed.
+    /// True only when the file has been scanned clean and fully processed — or is a document the
+    /// platform rendered itself, which had nothing to scan.
     /// </summary>
     /// <remarks>
     /// The acceptance criterion in issue #18, as one expression. Both halves matter: Ready without
     /// Clean would serve a file the scanner rejected, and Clean without Ready would serve an image
-    /// whose variants do not exist yet.
+    /// whose variants do not exist yet. The generated-document exception names both its purpose and
+    /// its status, so neither alone is enough to be served unscanned.
     /// </remarks>
-    public bool IsServable => Status == AssetStatus.Ready && ScanStatus == AssetScanStatus.Clean;
+    public bool IsServable => Status == AssetStatus.Ready
+        && (ScanStatus == AssetScanStatus.Clean
+            || (ScanStatus == AssetScanStatus.NotRequired && Purpose == AssetPurpose.GeneratedDocument));
 
     /// <summary>Whether the pipeline should render variants for this file.</summary>
     public bool IsImage => ContentType is not null && AssetRules.IsImage(ContentType);

@@ -1,5 +1,6 @@
 using Hangfire;
 using TripsAgent.Application;
+using TripsAgent.Documents;
 using TripsAgent.Infrastructure;
 using TripsAgent.Infrastructure.Assets;
 using TripsAgent.Infrastructure.Auditing;
@@ -48,6 +49,11 @@ builder.Services.AddJobProcessing(builder.Configuration);
 // job here keeps running. See AssetPipelineStatus.
 builder.Services.AddAssetProcessing(builder.Configuration, builder.Environment);
 
+// Invoices and vouchers (issue #46), drawn with QuestPDF from documents.render. Here and only here:
+// the API numbers a reissue and queues it, but never renders. Documents__QuestPdfLicense names the
+// licence the business holds; see DocumentRenderingRegistration.
+builder.Services.AddDocumentRendering(builder.Configuration);
+
 // Graceful shutdown, the host half. On SIGTERM — which is what Docker, Kubernetes and systemd all
 // send first — the host gives every hosted service this long to stop before killing the process.
 //
@@ -93,5 +99,15 @@ DataRetentionSchedule.Register(recurringJobs);
 // Expires uploads that never arrived and re-enqueues processing that was lost. The complete step
 // enqueues each asset directly, so like the webhook drain this normally finds nothing.
 AssetSweepSchedule.Register(recurringJobs);
+
+// The booking pipeline's clockwork. The status poller is the only way a booking's outcome is ever
+// learned — Trips Africa has no webhooks — and the only thing that asks for a payment to be reversed
+// (#37). The time limit monitor warns agents before a held fare lapses, and lapses it after (#38).
+SupplierBookingStatusPollSchedule.Register(recurringJobs);
+TicketTimeLimitMonitorSchedule.Register(recurringJobs);
+
+// The checkout's one unwatched wait: paid for, but the issue message never ran (#42). Sending it again
+// is safe — the issuer sends the supplier nothing for a booking that is already issuing.
+TripsAgent.Infrastructure.Checkout.CheckoutSweepSchedule.Register(recurringJobs);
 
 await host.RunAsync();

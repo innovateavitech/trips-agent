@@ -3,6 +3,8 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { formatMoneyShort } from '@trips/utils';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { API_BASE_URL } from '../../../api/config';
+import type { BookingDocument } from '../../bookings/types';
 import { BookingProgressCard } from '../components/booking-progress';
 import { PriceChangeDialog } from '../components/price-change-dialog';
 
@@ -59,13 +61,61 @@ describe('BookingProgressCard', () => {
   function renderCard(
     status: 'awaiting_ticket' | 'ticketed' | 'failed',
     pnr: string | null = null,
+    voucher: BookingDocument | null = null,
   ) {
     render(
       <MemoryRouter>
-        <BookingProgressCard progress={{ status, pnr }} reference="TRP-ABC123" carrier="Ibom Air" />
+        <BookingProgressCard
+          progress={{ status, pnr }}
+          reference="TRP-ABC123"
+          carrier="Ibom Air"
+          voucher={voucher}
+        />
       </MemoryRouter>,
     );
   }
+
+  function voucher(patch: Partial<BookingDocument>): BookingDocument {
+    return {
+      id: '0192d3a4-0000-7000-8000-000000000007',
+      documentType: 'Voucher',
+      documentNumber: 'VCH-2026-000007',
+      issueNumber: 1,
+      status: 'Ready',
+      productType: 'Flight',
+      issuedAt: '2026-10-01T10:00:00Z',
+      supersedesDocumentNumber: null,
+      supersededByDocumentId: null,
+      supersededByDocumentNumber: null,
+      fileName: 'VCH-2026-000007.pdf',
+      sizeBytes: 48_000,
+      checksum: null,
+      downloadUrl:
+        '/api/v1/documents/0192d3a4-0000-7000-8000-000000000007/pdf?expires=1&signature=s',
+      downloadExpiresAt: '2026-10-01T11:00:00Z',
+      email: null,
+      ...patch,
+    };
+  }
+
+  it('links to the voucher once it is ready', () => {
+    renderCard('ticketed', 'QX7K2P', voucher({}));
+
+    const link = screen.getByRole('link', { name: 'Voucher' });
+    expect(link.getAttribute('href')).toBe(
+      `${API_BASE_URL}/api/v1/documents/0192d3a4-0000-7000-8000-000000000007/pdf?expires=1&signature=s`,
+    );
+    expect(link.getAttribute('download')).toBe('VCH-2026-000007.pdf');
+  });
+
+  it('says the voucher is being prepared until it is', () => {
+    renderCard('ticketed', 'QX7K2P', voucher({ status: 'Pending', downloadUrl: null }));
+
+    expect(screen.queryByRole('link', { name: 'Voucher' })).toBeNull();
+    expect(
+      (screen.getByRole('button', { name: 'Preparing voucher…' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
 
   it('says the airline is still confirming, and never "booking confirmed", while the ticket is pending', () => {
     renderCard('awaiting_ticket');

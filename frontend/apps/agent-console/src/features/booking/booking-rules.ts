@@ -149,7 +149,8 @@ export function validateTraveller(
 }
 
 export function priceChanged(confirmation: PriceConfirmation): boolean {
-  return confirmation.sellMinor !== confirmation.searchedSellMinor;
+  // Only a rise needs the agent to accept it again; a fall passes straight through (decision Q9).
+  return confirmation.sellMinor > confirmation.searchedSellMinor;
 }
 
 /** Undefined while the balance is still loading: "not yet known" is not "not enough". */

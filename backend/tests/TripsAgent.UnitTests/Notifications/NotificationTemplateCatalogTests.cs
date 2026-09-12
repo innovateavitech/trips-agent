@@ -33,6 +33,7 @@ public class NotificationTemplateCatalogTests
             NotificationTemplateCatalog.WalletTopUpReceipt,
             NotificationTemplateCatalog.BookingConfirmed,
             NotificationTemplateCatalog.BookingNeedsAttention,
+            NotificationTemplateCatalog.BookingRefundNotice,
         ]);
     }
 

@@ -446,8 +446,23 @@ public sealed class KybReviewTests : IDisposable
                     .ToListAsync();
             }
 
+            // KYB mail is agency-facing, so no logo is ever read; the storage is only there because
+            // the dispatcher needs somewhere to read attachments and logos from.
+            var storage = new TripsAgent.Infrastructure.Storage.LocalFileBlobStorage(
+                new TripsAgent.Infrastructure.Storage.LocalBlobStorageOptions
+                {
+                    RootPath = Path.Combine(Path.GetTempPath(), "tripsagent-kyb-tests"),
+                });
+
             var dispatcher = new NotificationDispatcher(
-                worker, new CapturingEmailSender(Sent), tenancy.Scope, Clock, NullLogger<NotificationDispatcher>.Instance);
+                worker,
+                new CapturingEmailSender(Sent),
+                tenancy.Scope,
+                new TripsAgent.Infrastructure.Assets.AgencyLogoSource(
+                    worker, storage, NullLogger<TripsAgent.Infrastructure.Assets.AgencyLogoSource>.Instance),
+                storage,
+                Clock,
+                NullLogger<NotificationDispatcher>.Instance);
 
             foreach (var id in queued)
             {

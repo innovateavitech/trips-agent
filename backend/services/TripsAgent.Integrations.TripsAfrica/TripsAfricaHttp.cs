@@ -7,7 +7,8 @@ using TripsAgent.Domain.Suppliers;
 namespace TripsAgent.Integrations.TripsAfrica;
 
 /// <summary>One answer from Trips Africa: its status and its body, as text.</summary>
-public sealed record TripsAfricaResponse(HttpStatusCode StatusCode, string Body)
+/// <param name="AuditedCallId">The <c>supplier_api_calls</c> row the audit handler wrote for it, when there is one.</param>
+public sealed record TripsAfricaResponse(HttpStatusCode StatusCode, string Body, Guid? AuditedCallId = null)
 {
     public bool IsSuccess => (int)StatusCode is >= 200 and < 300;
 
@@ -25,9 +26,10 @@ public sealed record TripsAfricaResponse(HttpStatusCode StatusCode, string Body)
 /// for search alone — the one call that is a pure read.
 /// </para>
 /// <para>
-/// Two clients, because they need two timeouts: a search attempt gives up after twenty seconds (#33),
-/// while a booking call waits a minute, since a slow issue call abandoned early becomes an unknown
-/// outcome to poll for (ADR-0003).
+/// Three clients, because they need three timeouts: a search attempt gives up after twenty seconds
+/// (#33); confirm and status wait a minute; and the ticket-issue call waits forty-five seconds (#36) on
+/// a client of its own, so its timeout is set apart from every other call's. A slow issue call
+/// abandoned early becomes an unknown outcome to poll for, never one to send again (ADR-0003).
 /// </para>
 /// </remarks>
 public abstract class TripsAfricaHttp
@@ -60,7 +62,7 @@ public abstract class TripsAfricaHttp
         using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        return new TripsAfricaResponse(response.StatusCode, body);
+        return new TripsAfricaResponse(response.StatusCode, body, request.AuditedCallId());
     }
 
     /// <summary>
@@ -95,5 +97,12 @@ public abstract class TripsAfricaHttp
 /// <summary>Searches, twenty seconds an attempt.</summary>
 public sealed class TripsAfricaSearchHttp(HttpClient http) : TripsAfricaHttp(http);
 
-/// <summary>Confirm, issue, status: a minute, and never retried.</summary>
+/// <summary>Confirm and status: a minute, and never retried.</summary>
 public sealed class TripsAfricaBookingHttp(HttpClient http) : TripsAfricaHttp(http);
+
+/// <summary>
+/// The ticket-issue call alone: forty-five seconds, and never retried — no retry handler can be put on
+/// it. Its own client so its timeout is set apart from every other call's.
+/// See docs/adr/0003-never-retry-ticket-issuance.md.
+/// </summary>
+public sealed class TripsAfricaIssueHttp(HttpClient http) : TripsAfricaHttp(http);

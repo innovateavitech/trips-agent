@@ -68,6 +68,30 @@ public class SmtpEmailSenderTests
         receipt.ProviderMessageId.Should().NotBeNullOrEmpty();
     }
 
+    [Fact]
+    public async Task A_pdf_travels_as_an_attachment_and_the_logo_inside_the_body()
+    {
+        await using var relay = new FakeRelay("250 2.1.5 OK");
+
+        await Sender(relay).SendAsync(Message() with
+        {
+            Attachments =
+            [
+                new EmailAttachment("INV-2026-000001.pdf", "application/pdf", "%PDF-1.7 test"u8.ToArray()),
+                new EmailAttachment("logo.png", "image/png", [0x89, 0x50, 0x4E, 0x47], ContentId: "agency-logo"),
+            ],
+        });
+
+        var raw = await relay.Message;
+
+        // The PDF is a file to keep; the logo is part of the HTML, referred to as cid:agency-logo.
+        raw.Should().ContainEquivalentOf("multipart/mixed")
+            .And.ContainEquivalentOf("multipart/related")
+            .And.ContainEquivalentOf("filename=INV-2026-000001.pdf")
+            .And.ContainEquivalentOf("application/pdf")
+            .And.ContainEquivalentOf("Content-Id: <agency-logo>");
+    }
+
     private static async Task<EmailRejectedException> SendExpectingRejectionAsync(string relayReply)
     {
         await using var relay = new FakeRelay(relayReply);
@@ -92,6 +116,10 @@ public class SmtpEmailSenderTests
         private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
         private readonly string _recipientReply;
         private readonly Task _serving;
+        private readonly TaskCompletionSource<string> _message = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>The raw message as the relay received it, once a DATA command has finished.</summary>
+        public Task<string> Message => _message.Task;
 
         public FakeRelay(string recipientReply)
         {
@@ -142,10 +170,14 @@ public class SmtpEmailSenderTests
 
                     case "DATA":
                         await writer.WriteLineAsync("354 End data with <CR><LF>.<CR><LF>");
+                        var data = new StringBuilder();
                         while (await reader.ReadLineAsync() is { } body && body != ".")
                         {
+                            data.AppendLine(body);
                         }
 
+                        // Before the reply, so the message is in hand by the time the sender returns.
+                        _message.TrySetResult(data.ToString());
                         await writer.WriteLineAsync("250 2.0.0 Queued");
                         break;
 

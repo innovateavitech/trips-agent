@@ -28,6 +28,10 @@ public sealed record NotificationQueued(Guid NotificationId);
 /// agency queues it once.
 /// </param>
 /// <param name="RecipientUserId">The recipient's user account, when they have one.</param>
+/// <param name="AttachmentAssetIds">
+/// Stored files to attach, by asset id — an invoice, a voucher. They must be the same agency's and
+/// servable; the dispatcher reads them when it sends, not when this is queued.
+/// </param>
 public sealed record EmailNotificationRequest(
     Guid AgencyId,
     string TemplateKey,
@@ -35,7 +39,8 @@ public sealed record EmailNotificationRequest(
     string RecipientName,
     IReadOnlyDictionary<string, string> Values,
     string DedupeKey,
-    Guid? RecipientUserId = null);
+    Guid? RecipientUserId = null,
+    IReadOnlyList<Guid>? AttachmentAssetIds = null);
 
 /// <summary>
 /// Queues notifications inside the caller's own unit of work.
@@ -110,7 +115,8 @@ public sealed class Notifier : INotifier
             request.RecipientName,
             JsonSerializer.Serialize(request.Values, PayloadJson),
             request.DedupeKey,
-            request.RecipientUserId);
+            request.RecipientUserId,
+            request.AttachmentAssetIds);
 
         _db.Notifications.Add(notification);
         _outbox.Enqueue(new NotificationQueued(notification.Id), request.AgencyId);

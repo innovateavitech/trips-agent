@@ -24,6 +24,9 @@ public static class AssetEndpoints
 
         group.MapGet("/limits", () => Results.Ok(new AssetUploadLimitsResponse(
                 Enum.GetValues<AssetPurpose>()
+
+                    // Generated documents are rendered by the platform, so they have no upload limits to show.
+                    .Where(AssetRules.IsUploadable)
                     .Select(purpose => new AssetPurposeLimitsResponse(
                         purpose.ToString(),
                         AssetRules.MaxSizeBytes(purpose),
@@ -41,12 +44,13 @@ public static class AssetEndpoints
                 // IsDefined as well as TryParse: TryParse accepts any number, so "7" would parse
                 // into a purpose that does not exist.
                 if (!Enum.TryParse<AssetPurpose>(request.Purpose, ignoreCase: true, out var purpose)
-                    || !Enum.IsDefined(purpose))
+                    || !AssetRules.IsUploadable(purpose))
                 {
                     return Results.Problem(
                         statusCode: StatusCodes.Status400BadRequest,
                         title: "Say what the file is for.",
-                        detail: $"purpose must be one of: {string.Join(", ", Enum.GetNames<AssetPurpose>())}.");
+                        detail: "purpose must be one of: "
+                                + $"{string.Join(", ", Enum.GetValues<AssetPurpose>().Where(AssetRules.IsUploadable))}.");
                 }
 
                 var outcome = await handler.HandleAsync(

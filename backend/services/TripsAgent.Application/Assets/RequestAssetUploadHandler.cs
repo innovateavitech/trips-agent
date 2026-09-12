@@ -65,7 +65,9 @@ public sealed class RequestAssetUploadHandler
             throw new InvalidOperationException("An upload needs a resolved tenant; this endpoint requires authentication.");
         }
 
-        if (!Enum.IsDefined(purpose))
+        // IsUploadable rather than IsDefined: a generated document is a real purpose, but one only
+        // the platform's own renderer may create — it is the purpose that skips the virus scan.
+        if (!AssetRules.IsUploadable(purpose))
         {
             return new RequestAssetUploadOutcome.Rejected("Say what the file is for.");
         }

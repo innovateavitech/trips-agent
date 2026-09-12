@@ -28,10 +28,18 @@ public sealed class AssetConfiguration : IEntityTypeConfiguration<Asset>
                 $"size_bytes >= 0 AND size_bytes <= {AssetRules.AbsoluteMaxSizeBytes.ToString(CultureInfo.InvariantCulture)}");
 
             // Issue #18, held by the database as well as by AssetDelivery: a row cannot be Ready
-            // unless its scan came back Clean, however it was written.
+            // unless its scan came back Clean, however it was written — or unless it is a document
+            // the platform rendered itself (#46), which had nothing to scan.
             table.HasCheckConstraint(
                 "ck_assets_ready_only_when_clean",
-                "status <> 'Ready' OR scan_status = 'Clean'");
+                "status <> 'Ready' OR scan_status = 'Clean' "
+                + "OR (scan_status = 'NotRequired' AND purpose = 'GeneratedDocument')");
+
+            // The exception above is only safe while the two go together, both ways: a generated
+            // document is never scanned, and nothing else may ever claim it did not need to be.
+            table.HasCheckConstraint(
+                "ck_assets_only_generated_documents_skip_the_scan",
+                "(purpose = 'GeneratedDocument') = (scan_status = 'NotRequired')");
 
             table.HasCheckConstraint(
                 "ck_assets_dimensions",

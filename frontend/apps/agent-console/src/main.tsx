@@ -14,8 +14,8 @@ import { mockCrmApi } from './features/crm';
 import { mockDashboardApi } from './features/dashboard';
 import { mockDeparturesApi } from './features/departures';
 import { mockSearchApi } from './features/search';
-import { mockBookingFlowApi } from './features/booking';
-import { mockBookingsApi } from './features/bookings';
+import { createHttpBookingFlowApi, mockBookingFlowApi } from './features/booking';
+import { createHttpBookingsApi, mockBookingsApi } from './features/bookings';
 import { mockWalletApi } from './features/wallet';
 import './index.css';
 
@@ -27,19 +27,19 @@ import './index.css';
  *   wallet     mock until the statement endpoints exist (#26 shipped top-ups)
  *   dashboard  mock until the orders endpoints exist (#41, #42)
  *   search     mock until the supplier search endpoints exist (#33, #34)
- *   bookingFlow  mock until the checkout saga exists (#42)
- *   bookings     mock until the orders endpoints exist (#42, #44)
- *   catalog    real `/api/v1/catalog`; the stand-in only in demo mode
- *   departures mock until the departures API exists (build plan F6)
- *   crm        mock until the CRM API exists (build plan F7)
+ *   bookingFlow  real `/api/v1/bookings` (#42); the stand-in with `VITE_AUTH_MODE=mock`
+ *   bookings     real `/api/v1/bookings` (#42, #44); the stand-in with `VITE_AUTH_MODE=mock`
+ *   catalog      real `/api/v1/catalog`; the stand-in with `VITE_AUTH_MODE=mock`
+ *   departures   mock until the departures API exists (build plan F6)
+ *   crm          mock until the CRM API exists (build plan F7)
  */
 const adapters: AppAdapters = {
   auth: AUTH_MODE === 'mock' ? mockAuthApi : createHttpAuthApi({ api, publicApi }),
   wallet: mockWalletApi,
   dashboard: mockDashboardApi,
   search: mockSearchApi,
-  bookingFlow: mockBookingFlowApi,
-  bookings: mockBookingsApi,
+  bookingFlow: AUTH_MODE === 'mock' ? mockBookingFlowApi : createHttpBookingFlowApi({ api }),
+  bookings: AUTH_MODE === 'mock' ? mockBookingsApi : createHttpBookingsApi({ api }),
   catalog: AUTH_MODE === 'mock' ? mockCatalogApi : httpCatalogApi,
   departures: mockDeparturesApi,
   crm: mockCrmApi,

@@ -50,6 +50,22 @@ public static class DependencyInjection
         services.AddScoped<AuditLogQueryService>();
         services.AddScoped<PlatformUserService>();
 
+        // The sub-agent network (feature F10, issue 63).
+        services.AddScoped<Tenancy.SubAgents.SubAgentNetworkService>();
+        services.AddScoped<Tenancy.SubAgents.SubAgentScopeService>();
+        services.AddScoped<Tenancy.SubAgents.SubAgentPermissionService>();
+        services.AddScoped<Tenancy.SubAgents.SubAgentAllowanceService>();
+        services.AddScoped<Tenancy.SubAgents.SubAgentNetworkReport>();
+        services.AddScoped<Tenancy.SubAgents.AcceptInvitationHandler>();
+        services.AddScoped<Tenancy.SubAgents.IAllowanceResetJob, Tenancy.SubAgents.AllowanceResetJob>();
+
+        // How many sub-agents an agency may have is a subscription entitlement, and subscriptions
+        // are feature F9. Until that lands this answers yes to everything; replacing it is this
+        // one line. See ISubAgentEntitlement.
+        services.AddSingleton<
+            Tenancy.SubAgents.ISubAgentEntitlement,
+            Tenancy.SubAgents.UnlimitedSubAgentEntitlement>();
+
         services.AddScoped<WalletTopUpService>();
         services.AddScoped<StartTopUpHandler>();
         services.AddScoped<VerifyTopUpHandler>();

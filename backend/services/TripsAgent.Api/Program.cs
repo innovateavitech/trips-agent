@@ -192,6 +192,11 @@ app.MapPricingEndpoints();
 app.MapSearchEndpoints();
 app.MapBookingEndpoints();
 
+// The sub-agent network (feature F10, issue 63): a principal's agents, what each may sell and see,
+// what each may spend, and the network's consolidated figures. The invitation routes in it are
+// anonymous, because whoever holds the link has no account yet.
+app.MapSubAgentEndpoints();
+
 app.MapAssetEndpoints();
 
 // A booking's invoices and vouchers (#46). The two download routes are anonymous and signed: a PDF

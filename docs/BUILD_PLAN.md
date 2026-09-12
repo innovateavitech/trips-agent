@@ -34,15 +34,17 @@ The first place to look when picking this up again. Update it whenever a branch 
 |---|---|---|---|
 | `feat/M1-ticket-issuance` | 1 | F1: ticket issuance, the status poller, the time-limit monitor, the checkout saga, payment reversals and the resolution backend (#36-#38, #42-#44); the booking screens on the real API | pushed, merged into the PR 1 branch |
 | `feat/M1-notifications-documents` | 1 | **The PR 1 branch:** F1 merged in, plus F2 - notifications (#45), branded invoice and voucher PDFs (#46), the traveller's emails wired to the pipeline's events, and documents with download and reissue in the booking screens | pushed, PR open |
-| `feat/M2-catalog-api` | 2 | F3 backend: catalog schema, publish rules and product API (#160 and #161, all criteria met); ClamAV scanning (#18); the Package pricing type | pushed, done |
-| `feat/M2-catalog-screens` | 2 | Console: catalog list and editor and the pricing product picker (#162–#164); group departure screens (F6); CRM screens (F7), all against stand-ins; the catalog backend merged in, with the real catalog adapter next | pushed |
-| `feat/M2-storefront` | 2 | F4 whole (#58-#60): the site builder with versioned publish and rollback, custom domains with DNS verification and certificates, the public host-resolved API, the Next.js traveller site, and the console's website and web-address screens. The CRM branch is merged in, and the real host directory replaces its placeholder | pushed, done |
-| `feat/M2-crm` | 2 | F7 backend (#62), on top of the console branch | just started, not pushed |
+| `feat/M2-catalog-api` | 2 | F3 backend: catalog schema, publish rules, product API (#160, #161), ClamAV scanning (#18), the Package pricing type | merged into the PR 2 branch |
+| `feat/M2-catalog-screens` | 2 | Console: catalog list and editor, the pricing product picker (#162-#164), group departure and CRM screens, catalog on the real API | merged into the PR 2 branch |
+| `feat/M2-storefront` | 2 | F4: site builder, custom domains and certificates, the public host-resolved API and the Next.js site (#58-#60) | merged into the PR 2 branch |
+| `feat/M2-crm` | 2 | F7: leads, quotes, tasks, timeline, customer 360, the public trip-request and quote endpoints (#62) | merged into the PR 2 branch |
 | `feat/M2-departures` | 2 | F6 (#57) whole: the departures schema and API, seat holds and the no-oversell CHECK, status from the seats, the waitlist with timed offers, installment schedules and reminders, decision 12's refunds, and the console on the real API | pushed |
 | `feat/M2-commerce` | 2 | F5 whole (#61): the cart, guest checkout, card payment through the gateway, the magic link to manage a booking, partial failures routed to the resolution queue and refunds to a traveller's card. The storefront and CRM branches are merged in, so it also holds the storefront's cart, checkout and departure pages — the departure detail page F4 could not build without group departures | pushed, done |
-| — | 3, 4 | F8–F14 | not started |
+| `feat/M3-admin-console` | 3 | F8: agency directory, lifecycle with reasons and audit, back-office roles, operations dashboard (#66) | pushed |
+| `feat/M3-billing` | 3 | F9: tiers, entitlements, recurring billing and dunning (#64, #65) | agent working |
+| — | 3, 4 | F10-F14 | not started |
 
-**Next:** PR 1 is open from `feat/M1-notifications-documents`. When it merges, assemble PR 2: merge the catalog, storefront, CRM, group tours and commerce branches into one, regenerate the API client, run every gate, tick F3-F7 here, and open it with `Closes` for each finished issue. `feat/M2-commerce` already carries the storefront and CRM merges, so it is the branch to merge the others into.
+**Next:** PR 2 is open from `feat/M2-commerce`. When it merges, re-check decision 14's storefront half (the admin console's `StorefrontAvailability` belongs in `PublicSiteResolver`), then assemble PR 3 from the admin console and billing branches, with sub-agents, analytics, payouts and the loyalty flag still to build. `feat/M2-commerce` already carries the storefront and CRM merges, so it is the branch to merge the others into.
 
 ## Decisions for the MVP
 
@@ -317,23 +319,23 @@ Agent-authored sellable products.
 
 > The epic. Its breakdown is #160–#164 below.
 
-- [ ] Day-by-day itinerary builder.
-- [ ] Inclusions/exclusions.
-- [ ] Price variants by room type, group size and child/infant.
-- [ ] Category and theme tagging.
-- [ ] Draft vs published with validation (title, price, one image, one available date).
-- [ ] Visas as agent-authored listings with a document checklist and manual fulfilment.
+- [x] Day-by-day itinerary builder.
+- [x] Inclusions/exclusions.
+- [x] Price variants by room type, group size and child/infant.
+- [x] Category and theme tagging.
+- [x] Draft vs published with validation (title, price, one image, one available date).
+- [x] Visas as agent-authored listings with a document checklist and manual fulfilment.
 
 #### #160 · Product schema, domain and publish rules
 
 The tables for agent-authored products (tours, packages and visas), and the rules for when one can be published. Part of #56.
 
-- [ ] Tables as in [the plan §2.5](../blob/main/docs/ARCHITECTURE_AND_DELIVERY_PLAN.md): `products`, `product_media`, `product_categories` + `product_category_map`, `tour_itinerary_days`, `product_inclusions`, `product_price_variants`, `visa_details`, `visa_document_requirements`. Each has `agency_id`, the tenant filter, a row-level security policy and grants (ADR-0006)
-- [ ] UNIQUE `(agency_id, slug)` and UNIQUE `(product_id, day_number)`
-- [ ] Money in `*_minor`; price variants by pax type, occupancy and group size
-- [ ] `available_from` / `available_to` on `products`: the "one available date" a tour or package needs before it can be published. Dated departures stay with #57
-- [ ] Publish rules live in the domain: a title, a price, at least one image, and for a tour or package an availability window that has not ended. A visa needs its details and at least one required document
-- [ ] Draft → Published → Archived. "Why can't I publish?" returns **every** problem, not just the first
+- [x] Tables as in [the plan §2.5](../blob/main/docs/ARCHITECTURE_AND_DELIVERY_PLAN.md): `products`, `product_media`, `product_categories` + `product_category_map`, `tour_itinerary_days`, `product_inclusions`, `product_price_variants`, `visa_details`, `visa_document_requirements`. Each has `agency_id`, the tenant filter, a row-level security policy and grants (ADR-0006)
+- [x] UNIQUE `(agency_id, slug)` and UNIQUE `(product_id, day_number)`
+- [x] Money in `*_minor`; price variants by pax type, occupancy and group size
+- [x] `available_from` / `available_to` on `products`: the "one available date" a tour or package needs before it can be published. Dated departures stay with #57
+- [x] Publish rules live in the domain: a title, a price, at least one image, and for a tour or package an availability window that has not ended. A visa needs its details and at least one required document
+- [x] Draft → Published → Archived. "Why can't I publish?" returns **every** problem, not just the first
 
 *Needs first:* the asset pipeline (#120, merged)
 
@@ -341,12 +343,12 @@ The tables for agent-authored products (tours, packages and visas), and the rule
 
 The endpoints the console uses to build, publish and retire products. Part of #56.
 
-- [ ] The endpoints above: `catalog.view` to read, `catalog.edit` to create and change, `catalog.publish` to publish, unpublish and archive
-- [ ] One `PUT` saves the whole product (basics, itinerary, inclusions, prices, media, categories, visa details) in one transaction
-- [ ] Slug generated from the title when omitted and unique per agency. A taken slug is a 409 that suggests a free one
-- [ ] Only the agency's own assets, and only clean-scanned ones, can be attached
-- [ ] Integration tests: tenant isolation, each permission, publish validation, whole-product save
-- [ ] OpenAPI and the generated client updated
+- [x] The endpoints above: `catalog.view` to read, `catalog.edit` to create and change, `catalog.publish` to publish, unpublish and archive
+- [x] One `PUT` saves the whole product (basics, itinerary, inclusions, prices, media, categories, visa details) in one transaction
+- [x] Slug generated from the title when omitted and unique per agency. A taken slug is a 409 that suggests a free one
+- [x] Only the agency's own assets, and only clean-scanned ones, can be attached
+- [x] Integration tests: tenant isolation, each permission, publish validation, whole-product save
+- [x] OpenAPI and the generated client updated
 
 *Needs first:* the schema issue above
 
@@ -354,11 +356,11 @@ The endpoints the console uses to build, publish and retire products. Part of #5
 
 Where an agent builds the tours and packages they sell under their own brand. Part of #56.
 
-- [ ] Products list with type and status filters, and search by title or destination
-- [ ] Editor: basics, a day-by-day itinerary builder (add, reorder, remove days), inclusions and exclusions, price variants, images, and categories and themes
-- [ ] A publish checklist showing what is missing, taken from the server's `publishProblems`
-- [ ] Saving a draft never validates; publishing is a separate, confirmed action
-- [ ] Editing needs `catalog.edit` and publishing needs `catalog.publish`. Without them the controls are not there, rather than disabled
+- [x] Products list with type and status filters, and search by title or destination
+- [x] Editor: basics, a day-by-day itinerary builder (add, reorder, remove days), inclusions and exclusions, price variants, images, and categories and themes
+- [x] A publish checklist showing what is missing, taken from the server's `publishProblems`
+- [x] Saving a draft never validates; publishing is a separate, confirmed action
+- [x] Editing needs `catalog.edit` and publishing needs `catalog.publish`. Without them the controls are not there, rather than disabled
 
 *Needs first:* the API issue above. Built against a stand-in behind a port until then, like search
 
@@ -366,9 +368,9 @@ Where an agent builds the tours and packages they sell under their own brand. Pa
 
 Visas as agent-authored listings with an applicant checklist and manual fulfilment. Part of #56.
 
-- [ ] Visa editor: visa type, entry type, processing time, validity, consular fee and service fee, and the total the customer pays
-- [ ] Applicant document checklist: add, reorder, remove, mark mandatory
-- [ ] Manual fulfilment is plain on the screen: the agent processes the application, and nothing is sent to an embassy
+- [x] Visa editor: visa type, entry type, processing time, validity, consular fee and service fee, and the total the customer pays
+- [x] Applicant document checklist: add, reorder, remove, mark mandatory
+- [x] Manual fulfilment is plain on the screen: the agent processes the application, and nothing is sent to an embassy
 
 *Needs first:* the API issue above
 
@@ -376,9 +378,9 @@ Visas as agent-authored listings with an applicant checklist and manual fulfilme
 
 The pricing screen takes a product ID for a product-scoped rule, because there was no catalog to choose from. Part of #56.
 
-- [ ] A product-scoped rule picks the product by name from the agency's catalog
-- [ ] Only the agency's own products; archived ones are left out
-- [ ] Rules already pointing at a product show its name, not its ID
+- [x] A product-scoped rule picks the product by name from the agency's catalog
+- [x] Only the agency's own products; archived ones are left out
+- [x] Rules already pointing at a product show its name, not its ID
 
 *Needs first:* the API issue above
 
@@ -388,13 +390,13 @@ The pricing screen takes a product ID for a product-scoped rule, because there w
 
 > Mostly built (74819f8): signed direct uploads, content sniffing, the scan → EXIF strip → WebP pipeline, and nothing served until scanned clean. Left: a real virus scanner — without one the pipeline stays switched off.
 
-- [ ] Presigned direct-to-storage upload (files never proxy through the API)
-- [ ] `IBlobStorage` interface so AWS/Azure stays undecided
-- [ ] MIME type validated by **content sniffing**, not the file extension
-- [ ] Size limits enforced server-side
-- [ ] Background worker: virus scan → EXIF strip → resize variants → WebP
-- [ ] `scan_status` gates public serving — nothing unscanned is served
-- [ ] Tenant-scoped: agency A cannot read agency B's assets
+- [x] Presigned direct-to-storage upload (files never proxy through the API) *(signed URLs; with the local adapter the API serves them until an S3-compatible store is chosen — see the decisions)*
+- [x] `IBlobStorage` interface so AWS/Azure stays undecided
+- [x] MIME type validated by **content sniffing**, not the file extension
+- [x] Size limits enforced server-side
+- [x] Background worker: virus scan → EXIF strip → resize variants → WebP
+- [x] `scan_status` gates public serving — nothing unscanned is served
+- [x] Tenant-scoped: agency A cannot read agency B's assets
 
 *Needs first:* #10
 

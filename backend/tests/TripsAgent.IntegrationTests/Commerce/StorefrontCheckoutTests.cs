@@ -36,7 +36,7 @@ public sealed class StorefrontCheckoutTests : IAsyncLifetime
     private const string Host = FixedStorefrontDirectory.Host;
 
     /// <summary>₦150,000 a head, as the agent typed it on the product.</summary>
-    private static readonly Money TourPrice = Money.FromMajor(150_000);
+    private static readonly Money TourPrice = StorefrontSeed.TourPrice;
 
     private readonly PostgresFixture _postgres;
     private TripsAfricaStub _stub = null!;
@@ -461,72 +461,12 @@ public sealed class StorefrontCheckoutTests : IAsyncLifetime
         departure.Seats.SeatsLeft.Should().Be(expected);
     }
 
-    /// <summary>A published tour at ₦150,000 a head, which is what a traveller can put in a cart.</summary>
-    private static async Task<Guid> SeedTourAsync(BookingPipelineHarness harness)
-    {
-        var now = harness.Clock.GetUtcNow();
-        var today = DateOnly.FromDateTime(now.UtcDateTime);
-        await using var db = harness.AsAgency();
+    private static Task<Guid> SeedTourAsync(BookingPipelineHarness harness) =>
+        StorefrontSeed.TourAsync(harness);
 
-        // A published product needs an image, so the storefront has something to show.
-        var image = Asset.Reserve(harness.AgencyId, AssetPurpose.ProductMedia, "kilimanjaro.jpg", now.AddMinutes(15));
-        image.RecordUpload("image/jpeg", 250_000);
-        image.TryBeginProcessing(now);
-        image.RecordCleanScan(now);
-        image.MarkReady(1_600, 1_067, now);
-        db.Assets.Add(image);
-        await db.SaveChangesAsync();
-
-        var product = Product.CreateDraft(
-            harness.AgencyId,
-            new ProductContent
-            {
-                ProductType = ProductType.Tour,
-                Title = "Kilimanjaro, seven days",
-                Summary = "Machame route, seven days, small group.",
-                Description = "Seven days on the Machame route, with a night in Moshi either side.",
-                Currency = "NGN",
-                BasePriceMinor = TourPrice,
-                AvailableFrom = today.AddDays(10),
-                HeroAssetId = image.Id,
-                Media = [new ProductMediaContent(image.Id, "Uhuru Peak at dawn")],
-            },
-            "kilimanjaro-seven-days");
-
-        product.TryPublish(now, today, out var problems)
-            .Should().BeTrue("the seeded tour has everything a published product needs: {0}", problems);
-
-        db.Products.Add(product);
-        await db.SaveChangesAsync();
-
-        return product.Id;
-    }
-
-    /// <summary>A dated group departure on that tour: ten seats, ₦150,000 a head.</summary>
-    private static async Task<Guid> SeedDepartureAsync(
+    private static Task<Guid> SeedDepartureAsync(
         BookingPipelineHarness harness,
         Guid productId,
-        int depositPercentBasisPoints = 0)
-    {
-        var now = harness.Clock.GetUtcNow();
-        await using var db = harness.AsAgency();
-
-        var terms = new DepartureTerms
-        {
-            DepartureDate = DateOnly.FromDateTime(now.UtcDateTime).AddDays(180),
-            IsGroupDeparture = true,
-            MinPax = 4,
-            CapacityTotal = 10,
-            CutoffDaysBefore = 14,
-            DepositType = depositPercentBasisPoints > 0 ? DepositType.Percent : DepositType.None,
-            DepositPercentBasisPoints = depositPercentBasisPoints > 0 ? depositPercentBasisPoints : null,
-            PriceTiers = [new PriceTierTerms(1, null, TourPrice)],
-        };
-
-        var departure = Departure.Create(harness.AgencyId, productId, terms, now.AddDays(166), now);
-        db.Departures.Add(departure);
-        await db.SaveChangesAsync();
-
-        return departure.Id;
-    }
+        int depositPercentBasisPoints = 0) =>
+        StorefrontSeed.DepartureAsync(harness, productId, depositPercentBasisPoints);
 }

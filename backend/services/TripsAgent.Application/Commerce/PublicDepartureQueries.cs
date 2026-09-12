@@ -154,10 +154,22 @@ public sealed class PublicDepartureQueries
         var sell = await _pricing.PriceAsync(subject, netPerPax * pax, cancellationToken);
 
         var today = DateOnly.FromDateTime(_clock.GetUtcNow().UtcDateTime);
-        var payments = DeparturePaymentPlan.Build(terms, today, pax, netPerPax);
+
+        // Only a departure the agent actually sells on a plan has one. One with no deposit and no
+        // instalments has a schedule in the domain — a single line due at the cutoff — but that is
+        // when the agency would chase an agent's customer for it, not when a card is charged: a
+        // traveller buying it here pays for it there and then, like any other product. So there is
+        // no plan to show and nothing is put off, which is exactly what checkout does.
+        var soldOnAPlan = terms.DepositType != DepositType.None || terms.Installments.Count > 0;
+
+        var payments = soldOnAPlan
+            ? DeparturePaymentPlan.Build(terms, today, pax, netPerPax)
+            : [];
 
         // What is really payable today: everything the plan does not put off, plus the whole of the
-        // agency's margin — which is what checkout will ask for. See StorefrontCheckoutService.
+        // agency's margin, which checkout collects with the deposit. This has to match
+        // StorefrontCheckoutService.AmountDueNowAsync to the kobo — a page promising "nothing today"
+        // over a checkout that charges in full is the worst thing this page could say.
         var deferred = payments.Where(payment => !payment.DueOnBooking).Sum(payment => payment.AmountMinor.AmountMinor);
         var dueNow = sell.GrossAmountMinor.AmountMinor - deferred;
 

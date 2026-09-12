@@ -547,6 +547,7 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         services.AddScoped<CustomerOrderPayments>();
         services.AddScoped<StorefrontCheckoutService>();
         services.AddScoped<ManageBookingQueries>();
+        services.AddScoped<PublicDepartureQueries>();
 
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }

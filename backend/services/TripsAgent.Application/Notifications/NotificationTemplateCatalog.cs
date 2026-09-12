@@ -59,6 +59,24 @@ public static class NotificationTemplateCatalog
 
     // ------------------------------------------------------------------ keys
 
+    /// <summary>
+    /// The code that proves a new account owns its email address. Rendered from here but sent at
+    /// once by <c>VerificationCodeIssuer</c>, never queued: a queued row would hold the live code.
+    /// </summary>
+    public const string IdentityVerifyEmail = "identity.verify-email";
+
+    /// <summary>
+    /// The link that resets a password. Sent at once by <c>ForgotPasswordHandler</c>, never queued,
+    /// for the same reason: a queued row would hold a working link.
+    /// </summary>
+    public const string IdentityPasswordReset = "identity.password-reset";
+
+    /// <summary>A traveller's invoice and vouchers, attached as PDFs (#46).</summary>
+    public const string DocumentsIssued = "documents.issued";
+
+    /// <summary>A corrected invoice or voucher that replaces one the traveller already has (#46).</summary>
+    public const string DocumentsReissued = "documents.reissued";
+
     /// <summary>An agency's KYB submission was approved.</summary>
     public const string KybApproved = "kyb.approved";
 
@@ -68,11 +86,26 @@ public static class NotificationTemplateCatalog
     /// <summary>An agency's wallet top-up was credited.</summary>
     public const string WalletTopUpReceipt = "wallet.topup-receipt";
 
-    /// <summary>A traveller's booking is confirmed and ticketed.</summary>
+    /// <summary>One item of a traveller's booking is confirmed and ticketed (#42). Sent once per order line.</summary>
     public const string BookingConfirmed = "booking.confirmed";
 
-    /// <summary>A traveller's booking needs them to do something, or it will be lost.</summary>
+    /// <summary>
+    /// One item of a traveller's booking could not be ticketed and waits in the agent's resolution
+    /// queue (#44). Says so plainly, and asks nothing of the traveller: the agency is the one who acts.
+    /// </summary>
     public const string BookingNeedsAttention = "booking.needs-attention";
+
+    /// <summary>
+    /// An item that could not be ticketed was cancelled and its money went back (#43, #44). Names an
+    /// amount only when it went back to the traveller's own card.
+    /// </summary>
+    public const string BookingRefundNotice = "booking.refund-notice";
+
+    /// <summary>An agent's held booking is close to its ticket time limit (#38). Sent at T-60 and T-15 minutes.</summary>
+    public const string BookingTimeLimitWarning = "booking.time-limit-warning";
+
+    /// <summary>An agent's held booking passed its ticket time limit before it was issued (#38).</summary>
+    public const string BookingExpired = "booking.expired";
 
     // ------------------------------------------------------------------ brand tokens
 
@@ -104,6 +137,60 @@ public static class NotificationTemplateCatalog
     /// <summary>Every template version this build knows about.</summary>
     public static readonly IReadOnlyList<NotificationTemplateDefinition> All =
     [
+        // Rendered from here like everything else, so the wording is versioned and reviewed in the
+        // same place — but sent synchronously and never queued. See the key constants.
+        AgencyFacing(
+            IdentityVerifyEmail,
+            version: 1,
+            subject: "{{code}} is your {{brandName}} verification code",
+            tokens: ["code", "minutes"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Use this code to verify your email address and finish setting up your
+                     {{brandName}} account:</p>
+                  <p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{code}}</p>
+                  <p>The code expires in {{minutes}} minutes and can be used once.</p>
+                  <p>If you did not try to create an account, you can ignore this email — nothing
+                     will happen without the code.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Use this code to verify your email address and finish setting up your {{brandName}} account:
+
+                      {{code}}
+
+                  The code expires in {{minutes}} minutes and can be used once.
+
+                  If you did not try to create an account, you can ignore this email — nothing will happen without the code.
+                  """),
+
+        AgencyFacing(
+            IdentityPasswordReset,
+            version: 1,
+            subject: "Reset your {{brandName}} password",
+            tokens: ["resetUrl", "minutes"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Use this link to choose a new password:</p>
+                  <p><a href="{{resetUrl}}">Reset your password</a></p>
+                  <p>The link works once and expires in {{minutes}} minutes.</p>
+                  <p>If you did not ask for this, you can ignore this email — your password has
+                     not changed, and nobody can change it without this link.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Use this link to choose a new password:
+
+                      {{resetUrl}}
+
+                  The link works once and expires in {{minutes}} minutes.
+
+                  If you did not ask for this, you can ignore this email — your password has not
+                  changed, and nobody can change it without this link.
+                  """),
+
         AgencyFacing(
             KybApproved,
             version: 1,
@@ -166,6 +253,56 @@ public static class NotificationTemplateCatalog
                   You can see the full statement in your console.
                   """),
 
+        // The ticket time limit (#38). To the agent, not the traveller: the agent is the one who can
+        // still act — finish the booking, or rebook and refund — and whether and how to tell their own
+        // customer is theirs to decide.
+        AgencyFacing(
+            BookingTimeLimitWarning,
+            version: 1,
+            subject: "{{minutesLeft}} minutes left to ticket {{bookingReference}}",
+            tokens: ["bookingReference", "itinerarySummary", "minutesLeft", "deadline"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>The fare held for <strong>{{bookingReference}}</strong> ({{itinerarySummary}}) must be
+                     ticketed by <strong>{{deadline}}</strong> — about {{minutesLeft}} minutes from now.</p>
+                  <p>After that the airline or operator releases the seats and the price is no longer
+                     guaranteed. Open the booking in your {{brandName}} console to finish it.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  The fare held for {{bookingReference}} ({{itinerarySummary}}) must be ticketed by
+                  {{deadline}} — about {{minutesLeft}} minutes from now.
+
+                  After that the airline or operator releases the seats and the price is no longer
+                  guaranteed. Open the booking in your {{brandName}} console to finish it.
+                  """),
+
+        AgencyFacing(
+            BookingExpired,
+            version: 1,
+            subject: "{{bookingReference}} expired before it was ticketed",
+            tokens: ["bookingReference", "itinerarySummary", "deadline"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>The fare held for <strong>{{bookingReference}}</strong> ({{itinerarySummary}}) was not
+                     ticketed by its time limit, {{deadline}}, and the supplier has released it. No ticket
+                     was issued.</p>
+                  <p>It is waiting in your resolution queue, where you can rebook it or refund your
+                     customer. Funds held in your wallet for the order are released once nothing else on
+                     it still needs them.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  The fare held for {{bookingReference}} ({{itinerarySummary}}) was not ticketed by its
+                  time limit, {{deadline}}, and the supplier has released it. No ticket was issued.
+
+                  It is waiting in your resolution queue, where you can rebook it or refund your
+                  customer. Funds held in your wallet for the order are released once nothing else on
+                  it still needs them.
+                  """),
+
         // ------------------------------------------------------------------ traveller-facing
         // Everything below goes to the agency's own customer. It says the agency's name and
         // nothing else: a traveller who learns Trips exists has learned their agent's supplier,
@@ -203,40 +340,124 @@ public static class NotificationTemplateCatalog
                   Reply to this email if anything looks wrong.
                   """),
 
+        // Version 2 (#44): the pipeline's failed line needs the agency, not the traveller, to act —
+        // version 1 asked the traveller to do something by a deadline. Plain and without alarm, and
+        // with no reason: the pipeline's is written for the agent, and it names the supplier.
         TravellerFacing(
             BookingNeedsAttention,
-            version: 1,
-            subject: "Action needed on your booking — {{bookingReference}}",
-            tokens: ["bookingReference", "itinerarySummary", "whatHappened", "whatToDo", "deadline"],
+            version: 2,
+            subject: "One item in your booking needs attention — {{bookingReference}}",
+            tokens: ["bookingReference", "itemTitle"],
             html: """
                   <p>Hello {{recipientName}},</p>
-                  <p>Your booking with {{brandName}} needs your attention.</p>
+                  <p>One item in your booking with {{brandName}} needs attention: its ticket could not
+                     be issued.</p>
                   <table role="presentation" cellpadding="6" cellspacing="0">
                     <tr><td><strong>Reference</strong></td><td>{{bookingReference}}</td></tr>
-                    <tr><td><strong>Trip</strong></td><td>{{itinerarySummary}}</td></tr>
+                    <tr><td><strong>Item</strong></td><td>{{itemTitle}}</td></tr>
                   </table>
-                  <p><strong>What happened:</strong> {{whatHappened}}</p>
-                  <p><strong>What to do:</strong> {{whatToDo}}</p>
-                  <p>Please do this by <strong>{{deadline}}</strong>. After that the airline may
-                     release the seats, and the price is no longer guaranteed.</p>
-                  <p>Reply to this email if you need help.</p>
+                  <p>{{brandName}} is looking into it and will be in touch about what happens next. You
+                     do not need to do anything right now.</p>
+                  <p>Reply to this email if you have any questions.</p>
                   """,
             text: """
                   Hello {{recipientName}},
 
-                  Your booking with {{brandName}} needs your attention.
+                  One item in your booking with {{brandName}} needs attention: its ticket could not be
+                  issued.
 
                   Reference:  {{bookingReference}}
-                  Trip:       {{itinerarySummary}}
+                  Item:       {{itemTitle}}
 
-                  What happened: {{whatHappened}}
+                  {{brandName}} is looking into it and will be in touch about what happens next. You do
+                  not need to do anything right now.
 
-                  What to do:    {{whatToDo}}
+                  Reply to this email if you have any questions.
+                  """),
 
-                  Please do this by {{deadline}}. After that the airline may release the seats, and
-                  the price is no longer guaranteed.
+        // After a reversal (#43) or the agent's refund (#44). What it says about the money is
+        // refundDetail, from BookingEmails.DescribeRefund: an amount only for a card refund, because
+        // money returned to the agency's wallet is what the agency paid, never the traveller's price.
+        TravellerFacing(
+            BookingRefundNotice,
+            version: 1,
+            subject: "An item in your booking has been cancelled — {{bookingReference}}",
+            tokens: ["bookingReference", "itemTitle", "refundDetail"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>One item in your booking with {{brandName}} could not be ticketed, so it has been
+                     cancelled.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>Reference</strong></td><td>{{bookingReference}}</td></tr>
+                    <tr><td><strong>Item</strong></td><td>{{itemTitle}}</td></tr>
+                  </table>
+                  <p>{{refundDetail}}</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
 
-                  Reply to this email if you need help.
+                  One item in your booking with {{brandName}} could not be ticketed, so it has been
+                  cancelled.
+
+                  Reference:  {{bookingReference}}
+                  Item:       {{itemTitle}}
+
+                  {{refundDetail}}
+                  """),
+
+        // The PDFs themselves travel as attachments (Notification.AttachmentAssetIds), not as a
+        // link: every link we could put here today would be on our own domain.
+        TravellerFacing(
+            DocumentsIssued,
+            version: 1,
+            subject: "Your booking documents — {{bookingReference}}",
+            tokens: ["bookingReference", "itinerarySummary", "documentList"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Here are your documents from {{brandName}} for booking
+                     <strong>{{bookingReference}}</strong> ({{itinerarySummary}}).</p>
+                  <p>They are attached to this email as PDF files: {{documentList}}.</p>
+                  <p>Keep the voucher where you can find it on the day — it is what you show at
+                     check-in or at the terminal.</p>
+                  <p>Reply to this email if anything on them looks wrong.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Here are your documents from {{brandName}} for booking {{bookingReference}}
+                  ({{itinerarySummary}}).
+
+                  They are attached to this email as PDF files: {{documentList}}.
+
+                  Keep the voucher where you can find it on the day — it is what you show at
+                  check-in or at the terminal.
+
+                  Reply to this email if anything on them looks wrong.
+                  """),
+
+        TravellerFacing(
+            DocumentsReissued,
+            version: 1,
+            subject: "Updated {{documentList}} — {{bookingReference}}",
+            tokens: ["bookingReference", "itinerarySummary", "documentList"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>{{brandName}} has issued an updated {{documentList}} for booking
+                     <strong>{{bookingReference}}</strong> ({{itinerarySummary}}).</p>
+                  <p>It is attached to this email as a PDF, and it replaces the copy you were sent
+                     before. Please use this one from now on.</p>
+                  <p>Reply to this email if anything on it looks wrong.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  {{brandName}} has issued an updated {{documentList}} for booking
+                  {{bookingReference}} ({{itinerarySummary}}).
+
+                  It is attached to this email as a PDF, and it replaces the copy you were sent
+                  before. Please use this one from now on.
+
+                  Reply to this email if anything on it looks wrong.
                   """),
     ];
 

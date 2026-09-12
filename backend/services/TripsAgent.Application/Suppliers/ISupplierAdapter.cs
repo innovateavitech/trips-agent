@@ -305,6 +305,12 @@ public sealed record SupplierStatusQuery(
 public sealed record SupplierTicket(string PassengerLastName, string? PassengerFirstName, string TicketNumber);
 
 /// <summary>What a status query learned. Stored as a <c>supplier_status_polls</c> row by the poller.</summary>
+/// <param name="Status">
+/// The adapter's reading of the supplier's code in our terms: <c>Ticketed</c>, <c>TicketPending</c>, or
+/// <c>Failed</c>/<c>Cancelled</c> for a code after which no ticket will come. Null for anything else —
+/// an error the supplier reported — which the poller puts in front of a person rather than acting on.
+/// </param>
+/// <param name="SupplierApiCallId">The audited call behind the answer, when one was recorded.</param>
 public sealed record SupplierStatusResult(
     SupplierPollOutcome Outcome,
     int? HttpStatusCode,
@@ -312,7 +318,8 @@ public sealed record SupplierStatusResult(
     SupplierBookingStatus? Status,
     string? Pnr,
     IReadOnlyList<SupplierTicket> Tickets,
-    string? Message = null);
+    string? Message = null,
+    Guid? SupplierApiCallId = null);
 
 /// <summary>Identifies an offer whose rules are wanted.</summary>
 public sealed record SupplierRulesQuery(

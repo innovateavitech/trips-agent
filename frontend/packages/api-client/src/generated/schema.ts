@@ -503,6 +503,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bookings/price-confirmations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ConfirmBookingPrice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListBookings"];
+        put?: never;
+        post: operations["PlaceBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{reference}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetBooking"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{reference}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetBookingProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{reference}/resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResolveBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assets/limits": {
         parameters: {
             query?: never;
@@ -567,6 +647,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListBookingDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/{documentId}/reissue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReissueBookingDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -624,6 +736,138 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        BookingDetailResponse: {
+            reference: string;
+            leadTraveller: string;
+            /** Format: int32 */
+            travellerCount: number | string;
+            product: string;
+            origin: string;
+            destination: string;
+            carrier: string;
+            /** Format: date-time */
+            departsAt: string;
+            status: string;
+            /** Format: int64 */
+            sellMinor: number | string;
+            currency: string;
+            /** Format: date-time */
+            ticketTimeLimit: null | string;
+            pnr: null | string;
+            /** Format: date-time */
+            bookedAt: string;
+            paidFrom: string;
+            travellers: components["schemas"]["BookingTravellerResponse"][];
+            segments: components["schemas"]["BookingSegmentResponse"][];
+            price: components["schemas"]["BookingPriceResponse"];
+            timeline: components["schemas"]["BookingTimelineEntryResponse"][];
+            failure: null | components["schemas"]["BookingFailureResponse"];
+        };
+        BookingDocumentEmailResponse: {
+            recipient: string;
+            status: string;
+            /** Format: date-time */
+            sentAt: null | string;
+        };
+        BookingDocumentResponse: {
+            /** Format: uuid */
+            id: string;
+            documentType: string;
+            documentNumber: string;
+            /** Format: int32 */
+            issueNumber: number | string;
+            status: string;
+            productType: null | string;
+            /** Format: date-time */
+            issuedAt: string;
+            supersedesDocumentNumber: null | string;
+            /** Format: uuid */
+            supersededByDocumentId: null | string;
+            supersededByDocumentNumber: null | string;
+            fileName: null | string;
+            /** Format: int64 */
+            sizeBytes: null | number | string;
+            checksum: null | string;
+            downloadUrl: null | string;
+            /** Format: date-time */
+            downloadExpiresAt: null | string;
+            email: null | components["schemas"]["BookingDocumentEmailResponse"];
+        };
+        BookingFailureResponse: {
+            reason: string;
+            /** Format: int64 */
+            atRiskMinor: number | string;
+            paidFrom: string;
+        };
+        BookingListItemResponse: {
+            reference: string;
+            leadTraveller: string;
+            /** Format: int32 */
+            travellerCount: number | string;
+            product: string;
+            origin: string;
+            destination: string;
+            carrier: string;
+            /** Format: date-time */
+            departsAt: string;
+            status: string;
+            /** Format: int64 */
+            sellMinor: number | string;
+            currency: string;
+            /** Format: date-time */
+            ticketTimeLimit: null | string;
+            pnr: null | string;
+            /** Format: date-time */
+            bookedAt: string;
+        };
+        BookingMarginResponse: {
+            /** Format: int64 */
+            netMinor: number | string;
+            /** Format: int64 */
+            markupMinor: number | string;
+        };
+        BookingPriceResponse: {
+            /** Format: int64 */
+            sellMinor: number | string;
+            margin: null | components["schemas"]["BookingMarginResponse"];
+        };
+        BookingProgressResponse: {
+            status: string;
+            pnr: null | string;
+        };
+        BookingSegmentResponse: {
+            carrier: string;
+            origin: string;
+            destination: string;
+            departsAt: string;
+            arrivesAt: null | string;
+        };
+        BookingTimelineEntryResponse: {
+            /** Format: date-time */
+            at: string;
+            status: string;
+            note: string;
+        };
+        BookingTravellerRequest: {
+            type: string;
+            title: null | string;
+            firstName: string;
+            lastName: string;
+            /** Format: date */
+            dateOfBirth: null | string;
+            gender: null | string;
+            email: null | string;
+            phone: null | string;
+            passportNumber: null | string;
+            /** Format: date */
+            passportExpiry: null | string;
+            nationality: null | string;
+        };
+        BookingTravellerResponse: {
+            type: string;
+            name: string;
+            ticketNumber: null | string;
+        };
         BusSearchRequest: {
             tripType: string;
             departureTerminalId: string;
@@ -647,6 +891,11 @@ export interface components {
             /** Format: int32 */
             availableSeats: number | string;
             seatNumbers: string[];
+        };
+        ConfirmPriceRequest: {
+            /** Format: uuid */
+            offerId: string;
+            travellers: components["schemas"]["BookingTravellerRequest"][];
         };
         CurrentUserResponse: {
             /** Format: uuid */
@@ -876,6 +1125,26 @@ export interface components {
             sellMinor: number | string;
             margin: null | components["schemas"]["OfferMarginResponse"];
         };
+        PlaceBookingRequest: {
+            reference: string;
+            payment: string;
+            /** Format: int64 */
+            acceptedSellMinor: number | string;
+            idempotencyKey: string;
+        };
+        PlacedBookingResponse: {
+            reference: string;
+        };
+        PriceConfirmationResponse: {
+            reference: string;
+            /** Format: int64 */
+            sellMinor: number | string;
+            /** Format: int64 */
+            searchedSellMinor: number | string;
+            currency: string;
+            /** Format: date-time */
+            ticketTimeLimit: string;
+        };
         PricePreviewRequest: {
             productType: string;
             /** Format: uuid */
@@ -1001,6 +1270,9 @@ export interface components {
         ResetPasswordRequest: {
             token: string;
             newPassword: string;
+        };
+        ResolveBookingRequest: {
+            action: string;
         };
         SearchLegRequest: {
             origin: string;
@@ -1948,6 +2220,288 @@ export interface operations {
             };
         };
     };
+    ConfirmBookingPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmPriceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceConfirmationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Gone */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListBookings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingListItemResponse"][];
+                };
+            };
+        };
+    };
+    PlaceBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceBookingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacedBookingResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Gone */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reference: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDetailResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetBookingProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reference: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingProgressResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ResolveBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reference: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveBookingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDetailResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     GetAssetUploadLimits: {
         parameters: {
             query?: never;
@@ -2072,6 +2626,86 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListBookingDocuments: {
+        parameters: {
+            query?: {
+                orderReference?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDocumentResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ReissueBookingDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDocumentResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

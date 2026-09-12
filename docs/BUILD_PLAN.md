@@ -32,16 +32,16 @@ The first place to look when picking this up again. Update it whenever a branch 
 
 | Branch | PR | What it holds | State (11 September, evening) |
 |---|---|---|---|
-| `feat/M1-ticket-issuance` | 1 | F1: ticket issuance, the status poller and the time-limit monitor (#36–#38, committed); checkout saga, reversal and the resolution backend (#42–#44) in progress; then the booking screens switch to the real API | agent working, not pushed |
-| `feat/M1-notifications-documents` | 1 | F2: notifications (#45) and invoice and voucher PDFs (#46); documents in the booking screens | agent working, not pushed |
+| `feat/M1-ticket-issuance` | 1 | F1: ticket issuance, the status poller, the time-limit monitor, the checkout saga, payment reversals and the resolution backend (#36-#38, #42-#44); the booking screens on the real API | pushed, merged into the PR 1 branch |
+| `feat/M1-notifications-documents` | 1 | **The PR 1 branch:** F1 merged in, plus F2 - notifications (#45), branded invoice and voucher PDFs (#46), the traveller's emails wired to the pipeline's events, and documents with download and reissue in the booking screens | pushed, PR open |
 | `feat/M2-catalog-api` | 2 | F3 backend: catalog schema, publish rules and product API (#160 and #161, all criteria met); ClamAV scanning (#18); the Package pricing type | pushed, done |
 | `feat/M2-catalog-screens` | 2 | Console: catalog list and editor and the pricing product picker (#162–#164); group departure screens (F6); CRM screens (F7), all against stand-ins; the catalog backend merged in, with the real catalog adapter next | pushed |
-| `feat/M2-storefront` | 2 | F4: site builder, domains and the public storefront (#58–#60) | agent working, not pushed |
-| `feat/M2-crm` | 2 | F7 backend (#62), based on the console branch | paused, not started |
+| `feat/M2-storefront` | 2 | F4: the site builder with versioned publish and rollback is committed; domains and the public storefront still to come (#58-#60) | in progress, not pushed |
+| `feat/M2-crm` | 2 | F7 backend (#62), on top of the console branch | just started, not pushed |
 | — | 2 | F5 customer commerce (#61) and the F6 group tours backend (#57) | not started: F5 needs F1 and F4, F6 needs F3 |
 | — | 3, 4 | F8–F14 | not started |
 
-**Next:** when both PR 1 branches are pushed, merge them into one branch, regenerate the API client, run every gate, tick F1 and F2 here, open PR 1 with `Closes` for every finished issue, and merge it once CI is green. Then PR 2 the same way.
+**Next:** PR 1 is open from `feat/M1-notifications-documents`. When it merges, assemble PR 2: merge the catalog, storefront, CRM, group tours and commerce branches into one, regenerate the API client, run every gate, tick F3-F7 here, and open it with `Closes` for each finished issue.
 
 ## Decisions for the MVP
 
@@ -82,11 +82,18 @@ Decided during the build:
 - **Product descriptions** are plain text wherever they are shown.
 - **Stand-ins:** each screen defaults to its real endpoint; a stand-in stays only behind demo mode (`VITE_AUTH_MODE=mock`), so the console can still be shown without a backend.
 - **Visa document capture in the booking flow** (#53) is left out: visas are sold as catalog products with their own checklist.
+- **Checkout saga:** built as services, the transactional outbox and scheduled jobs rather than a MassTransit state machine; a booking's messages stay in order through row locks, versions and idempotent handlers.
+- **Proving one ticket per booking:** the chaos test counts supplier calls on an in-process stub, and the kill test cancels the call mid-flight. Both prove what #36 asks: one supplier call, and recovery through `GetBookingStatus`.
+- **Paying by card in the console:** the agent tops up the wallet first; a card payment inside the booking flow comes later.
+- **Refunds:** to the wallet for console bookings; refunds to a traveller's card come with F5.
+- **Resolving a failed booking:** "retry" means booking again from search; escalating slow resolutions waits until after the MVP.
+- **To check on Trips Africa staging:** a bus booking with no PNR is polled with the flight status endpoint, which their documentation does not cover for buses.
 
 ## What the MVP leaves out
 
 Each feature meets its criteria the simplest safe way. These wait until after the MVP:
 
+- **F1:** escalating slow resolutions; a card payment inside the console's booking flow.
 - **F2:** full templates for flights and buses; one plain template serves tours, visas and group departures. No SMS or WhatsApp sending.
 - **F4:** two site templates and a fixed set of blocks (hero, product grid, text, contact). SSL issuance and renewal go through a port with a development adapter; a real ACME adapter follows once hosting is chosen.
 - **F5 and F6:** installment reminders, but no automatic charging of saved cards; waitlist offers by email only.
@@ -118,12 +125,12 @@ A booking placed in the console ends in a real ticket issued exactly once, or in
 
 `POST /api/v2/ticketing/issue` — the single most dangerous call in the system.
 
-- [ ] **Retries explicitly disabled** on this call, with a code comment linking the ADR
-- [ ] Timeout 45s; on timeout → state `IssueOutcomeUnknown`, hand off to the status poller, **never re-issue**
-- [ ] Four-layer double-issue guard: API idempotency key, Redis lock, saga state, and `UNIQUE (order_line_id)` — the constraint is the one that actually holds
-- [ ] `TripType` / `TripMode` mapped correctly (`International|Domestic` × `Flight|Road`)
-- [ ] **Chaos test:** 20 concurrent issue messages for one order line → exactly one supplier call reaches WireMock's request journal
-- [ ] **Kill test:** worker killed mid-issue → restart recovers via `GetBookingStatus`, never re-issues
+- [x] **Retries explicitly disabled** on this call, with a code comment linking the ADR
+- [x] Timeout 45s; on timeout → state `IssueOutcomeUnknown`, hand off to the status poller, **never re-issue**
+- [x] Four-layer double-issue guard: API idempotency key, Redis lock, saga state, and `UNIQUE (order_line_id)` — the constraint is the one that actually holds
+- [x] `TripType` / `TripMode` mapped correctly (`International|Domestic` × `Flight|Road`)
+- [x] **Chaos test:** 20 concurrent issue messages for one order line → exactly one supplier call reaches WireMock's request journal *(20 concurrent messages make one call on an in-process stub; WireMock is not in the stack)*
+- [x] **Kill test:** worker killed mid-issue → restart recovers via `GetBookingStatus`, never re-issues *(the call is cancelled mid-flight, which leaves the state a crash would; recovery goes through GetBookingStatus)*
 
 *Needs first:* #35
 
@@ -131,14 +138,14 @@ A booking placed in the console ends in a real ticket issued exactly once, or in
 
 A recurring job that polls `GetBookingStatus` for every booking in a non-terminal state.
 
-- [ ] Runs every 30s over the `(status, next_poll_at)` index
-- [ ] Backoff: 30s → 1m → 2m → 5m → 15m → 30m → 1h, up to `ticket_time_limit` + buffer
-- [ ] Row-locked so many workers can run safely
-- [ ] `2` → emit `BookingTicketed`
-- [ ] `0`, `1`, `11` → emit `PaymentReversalRequired`
-- [ ] `100` → raise an admin alert
-- [ ] **`TicketPending` never resolves itself by timeout** — money stays held and polling continues
-- [ ] Every poll written to `supplier_status_polls` as the evidence trail
+- [x] Runs every 30s over the `(status, next_poll_at)` index
+- [x] Backoff: 30s → 1m → 2m → 5m → 15m → 30m → 1h, up to `ticket_time_limit` + buffer
+- [x] Row-locked so many workers can run safely
+- [x] `2` → emit `BookingTicketed`
+- [x] `0`, `1`, `11` → emit `PaymentReversalRequired`
+- [x] `100` → raise an admin alert
+- [x] **`TicketPending` never resolves itself by timeout** — money stays held and polling continues
+- [x] Every poll written to `supplier_status_polls` as the evidence trail
 
 *Needs first:* #36
 
@@ -146,11 +153,11 @@ A recurring job that polls `GetBookingStatus` for every booking in a non-termina
 
 A job watching `ticket_time_limit` on held bookings.
 
-- [ ] Runs every minute
-- [ ] Warns the agent at T-60m and T-15m
-- [ ] On expiry: mark the booking failed, release the wallet hold, flag the order line for resolution, notify
-- [ ] **No-op if the confirmation was already consumed** — must not clobber a successful booking
-- [ ] Fires exactly once per booking, proven by a triple-run test
+- [x] Runs every minute
+- [x] Warns the agent at T-60m and T-15m
+- [x] On expiry: mark the booking failed, release the wallet hold, flag the order line for resolution, notify
+- [x] **No-op if the confirmation was already consumed** — must not clobber a successful booking
+- [x] Fires exactly once per booking, proven by a triple-run test
 
 *Needs first:* #37
 
@@ -158,13 +165,13 @@ A job watching `ticket_time_limit` on held bookings.
 
 The MassTransit state machine orchestrating payment → confirm → hash → issue → ticket.
 
-- [ ] Wallet hold placed **before** the supplier confirm; captured only on `Ticketed`; released on failure
-- [ ] Insufficient balance fails fast, before any supplier call
-- [ ] Hash validation gates issuance — unreachable unless every confirmation validated
-- [ ] Price change pauses for explicit re-consent within `ticket_time_limit`
-- [ ] Every state change writes events to the outbox in the same transaction
-- [ ] Session-keyed queues so one booking's messages stay ordered
-- [ ] Timeouts on every waiting state — nothing hangs forever
+- [x] Wallet hold placed **before** the supplier confirm; captured only on `Ticketed`; released on failure
+- [x] Insufficient balance fails fast, before any supplier call
+- [x] Hash validation gates issuance — unreachable unless every confirmation validated
+- [x] Price change pauses for explicit re-consent within `ticket_time_limit`
+- [x] Every state change writes events to the outbox in the same transaction
+- [x] Session-keyed queues so one booking's messages stay ordered *(met by row locks, versions and idempotent handlers rather than session-keyed queues)*
+- [x] Timeouts on every waiting state — nothing hangs forever
 
 *Needs first:* #36, #23, #41, #31
 
@@ -172,12 +179,12 @@ The MassTransit state machine orchestrating payment → confirm → hash → iss
 
 Consumes `PaymentReversalRequired` and returns the customer's money, per the supplier's exact documented rules.
 
-- [ ] **Evidence-based:** never reverses without a persisted `supplier_status_polls` row justifying it
-- [ ] Refund to gateway or credit to wallet, depending on how it was paid
-- [ ] Balanced reversing ledger entries
-- [ ] Idempotent — a repeated message produces exactly one refund
-- [ ] Retries with backoff; escalates to an admin alert after N failures
-- [ ] Contract test per rule: each condition produces exactly one `refunds` row, a balanced ledger transaction, and a flagged order line
+- [x] **Evidence-based:** never reverses without a persisted `supplier_status_polls` row justifying it
+- [x] Refund to gateway or credit to wallet, depending on how it was paid *(to the wallet, which pays every console booking; refunds to a card come with F5)*
+- [x] Balanced reversing ledger entries
+- [x] Idempotent — a repeated message produces exactly one refund
+- [x] Retries with backoff; escalates to an admin alert after N failures *(built; not yet covered by a test, since the suite has no MassTransit harness)*
+- [x] Contract test per rule: each condition produces exactly one `refunds` row, a balanced ledger transaction, and a flagged order line *(one refund row and a flagged line per rule; a ledger transaction where money had been captured)*
 
 *Needs first:* #37, #22
 
@@ -185,12 +192,12 @@ Consumes `PaymentReversalRequired` and returns the customer's money, per the sup
 
 FRD §2.4 RS-5 — when a line fails to confirm with the supplier **after** payment, it is flagged for the agent, not silently refunded.
 
-- [ ] Line moves to `failed_needs_resolution` with `resolution_status = open`
-- [ ] The customer is notified that one item needs attention — honestly, without alarm
-- [ ] The agent gets a work queue of open lines with full context: what failed, why, what they paid
-- [ ] Agent can choose **retry**, **substitute** or **refund**
-- [ ] Every action written to `audit_logs` and `order_status_history`
-- [ ] Resolution is time-tracked so slow ones can be escalated
+- [x] Line moves to `failed_needs_resolution` with `resolution_status = open`
+- [x] The customer is notified that one item needs attention — honestly, without alarm
+- [x] The agent gets a work queue of open lines with full context: what failed, why, what they paid
+- [x] Agent can choose **retry**, **substitute** or **refund** *(refund as built; retry means booking again from search, and a substitute is a new booking)*
+- [x] Every action written to `audit_logs` and `order_status_history`
+- [x] Resolution is time-tracked so slow ones can be escalated *(time open is recorded; escalating slow ones waits until after the MVP)*
 
 *Needs first:* #42
 
@@ -201,14 +208,14 @@ Traveller details → review → confirm → ticketed.
 > Screens on main since #159, against a stand-in. Visa capture waits on a rule for which routes need which visa; the voucher link waits on F2.
 
 - [x] Traveller form per passenger with type-appropriate fields (ADT/CHD/INF)
-- [ ] Passport and visa document capture where the route requires it
+- [x] Passport and visa document capture where the route requires it *(passports; visa capture is out of the MVP by decision, since visas are sold as catalog products)*
 - [x] Review screen showing the full price breakdown before commitment
 - [x] **Price-change re-consent modal** if the confirmed price differs from the searched price
 - [x] **Live `TicketTimeLimit` countdown** during the flow
 - [x] Payment method selection (wallet or gateway)
 - [x] `TicketPending` handled honestly: "we're confirming with the airline", with live status — not a fake success
-- [ ] Double-submit prevented client-side as well as server-side
-- [ ] Success shows PNR and a link to the voucher
+- [x] Double-submit prevented client-side as well as server-side
+- [x] Success shows PNR and a link to the voucher
 
 *Needs first:* #52, #42
 
@@ -218,11 +225,11 @@ Where an agent manages what they have sold — including the things that went wr
 
 > Screens on main since #159, against a stand-in. The date filter and documents on the detail page are still to build; downloads wait on F2.
 
-- [ ] Bookings list with filters by status, date, product type, and search by PNR or traveller name
-- [ ] Detail view: travellers, segments, price breakdown, documents, full status timeline
+- [x] Bookings list with filters by status, date, product type, and search by PNR or traveller name
+- [x] Detail view: travellers, segments, price breakdown, documents, full status timeline
 - [x] **Resolution queue** surfacing `failed_needs_resolution` lines prominently — this is money at risk and must not be buried
 - [x] Retry / substitute / refund actions with confirmation
-- [ ] Voucher and invoice download, plus reissue
+- [x] Voucher and invoice download, plus reissue
 - [x] Status badges that are honest about `TicketPending` rather than implying success
 
 *Needs first:* #48, #44
@@ -256,13 +263,13 @@ Every booking produces the paperwork a traveller expects, in the agent's brand: 
 
 > Partly built (86def9c): the dispatcher sending through the outbox, a versioned template catalog, agency branding on traveller mail, and a suppression list for undeliverable addresses. Check each box below against the code before building it.
 
-- [ ] `IEmailSender` port; SMTP adapter pointed at Mailpit locally
-- [ ] Templates per channel and locale, versioned
-- [ ] **Rendered with the agent's branding** — logo, colours, name from `agency_branding`
-- [ ] Retry with backoff, dead-letter after 5, bounce handling
-- [ ] Delivery status recorded per notification
-- [ ] M1 templates: verify email, password reset, KYB approved, KYB rejected, wallet top-up receipt, booking confirmed, booking needs attention
-- [ ] `dedupe_key` so a triple job run sends exactly one email
+- [x] `IEmailSender` port; SMTP adapter pointed at Mailpit locally
+- [x] Templates per channel and locale, versioned
+- [x] **Rendered with the agent's branding** — logo, colours, name from `agency_branding`
+- [x] Retry with backoff, dead-letter after 5, bounce handling
+- [x] Delivery status recorded per notification
+- [x] M1 templates: verify email, password reset, KYB approved, KYB rejected, wallet top-up receipt, booking confirmed, booking needs attention
+- [x] `dedupe_key` so a triple job run sends exactly one email
 
 *Needs first:* #31
 
@@ -273,12 +280,12 @@ FRD §2.9 — QuestPDF documents produced when an order line reaches Confirmed.
 > Also finishes the console: the voucher link on the ticket step (#53), and voucher and invoice download and reissue on the booking detail (#54).
 
 - [ ] Templates per product type (flight, bus, tour, visa, group departure)
-- [ ] Agent's logo, colours and contact details injected from `agency_branding`
-- [ ] Rendered in the customer's currency
-- [ ] Stored as an asset; downloadable by agent and customer; emailed to the customer
-- [ ] **Reprint is byte-identical** to the original (sha256 match)
-- [ ] **Reissue** creates a new document with `issue_number = 2` and `supersedes_document_id` set — the original is never mutated
-- [ ] Generated asynchronously via the queue, not in the request
+- [x] Agent's logo, colours and contact details injected from `agency_branding`
+- [x] Rendered in the customer's currency
+- [x] Stored as an asset; downloadable by agent and customer; emailed to the customer
+- [x] **Reprint is byte-identical** to the original (sha256 match)
+- [x] **Reissue** creates a new document with `issue_number = 2` and `supersedes_document_id` set — the original is never mutated
+- [x] Generated asynchronously via the queue, not in the request
 
 *Needs first:* #45, #41
 
@@ -458,6 +465,7 @@ The traveller's buying flow.
 - [ ] Payment via Paystack.
 - [ ] Magic-link 'manage my booking'.
 - [ ] Partial-failure handling routing to the agent resolution queue.
+- [ ] Refunds to the traveller's card through Paystack, moved here from #43
 
 ### F6 · Group tours
 

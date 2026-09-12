@@ -2,12 +2,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useContext } from 'react';
 import { useCurrentUser } from '../../auth/auth-provider';
 import { canViewMargin } from '../search/search-rules';
-import type { BookingDetail, BookingListItem, ResolutionAction } from './types';
+import { isPreparing } from './documents-rules';
+import type { BookingDetail, BookingDocument, BookingListItem, ResolutionAction } from './types';
 
 /**
  * Everything the bookings screens need from the server — the same
  * port-and-adapter shape as `WalletApi` and `SearchApi`. `main.tsx` puts the
  * stand-in in `mock/` behind it until the orders endpoints (#42, #44) exist.
+ *
+ * The two document methods already have real endpoints (#46), and take and
+ * return exactly their shapes: an HTTP adapter passes them straight through.
  */
 export interface BookingsApi {
   listBookings(): Promise<BookingListItem[]>;
@@ -19,6 +23,19 @@ export interface BookingsApi {
     reference: string,
     action: Exclude<ResolutionAction, 'substitute'>,
   ): Promise<BookingDetail>;
+
+  /**
+   * The booking's invoices and vouchers, each with a signed download link once
+   * its PDF is ready. `GET /api/v1/documents?orderReference={reference}`.
+   */
+  listDocuments(reference: string): Promise<BookingDocument[]>;
+
+  /**
+   * Replaces a document with a new issue under a new number, and emails the
+   * customer the new copy; the original is kept exactly as it was.
+   * `POST /api/v1/documents/{documentId}/reissue`.
+   */
+  reissueDocument(documentId: string): Promise<BookingDocument>;
 }
 
 const BookingsApiContext = createContext<BookingsApi | null>(null);
@@ -37,7 +54,43 @@ export const bookingsKeys = {
   list: (agencyId: string) => [...bookingsKeys.all, 'list', agencyId] as const,
   detail: (agencyId: string, reference: string) =>
     [...bookingsKeys.all, 'detail', agencyId, reference] as const,
+  documents: (agencyId: string, reference: string) =>
+    [...bookingsKeys.all, 'documents', agencyId, reference] as const,
 };
+
+/**
+ * A booking's documents. Asked for again every few seconds while any is being
+ * prepared — the Worker renders them just after the ticket lands — and not at
+ * all once they are ready.
+ */
+export function useBookingDocuments(reference: string, { enabled = true } = {}) {
+  const api = useBookingsApi();
+  const user = useCurrentUser();
+
+  return useQuery({
+    queryKey: bookingsKeys.documents(user.agency?.id ?? 'none', reference),
+    queryFn: () => api.listDocuments(reference),
+    enabled,
+    refetchInterval: (query) => (isPreparing(query.state.data) ? 3_000 : false),
+    refetchIntervalInBackground: true,
+  });
+}
+
+export function useReissueDocument(reference: string) {
+  const api = useBookingsApi();
+  const user = useCurrentUser();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (documentId: string) => api.reissueDocument(documentId),
+    onSuccess: () => {
+      // The list now holds the new issue, still being prepared, and shows the old one as replaced.
+      void queryClient.invalidateQueries({
+        queryKey: bookingsKeys.documents(user.agency?.id ?? 'none', reference),
+      });
+    },
+  });
+}
 
 export function useBookings() {
   const api = useBookingsApi();

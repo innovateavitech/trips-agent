@@ -142,7 +142,9 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_assets_dimensions", "(width IS NULL OR width > 0) AND (height IS NULL OR height > 0)");
 
-                            t.HasCheckConstraint("ck_assets_ready_only_when_clean", "status <> 'Ready' OR scan_status = 'Clean'");
+                            t.HasCheckConstraint("ck_assets_only_generated_documents_skip_the_scan", "(purpose = 'GeneratedDocument') = (scan_status = 'NotRequired')");
+
+                            t.HasCheckConstraint("ck_assets_ready_only_when_clean", "status <> 'Ready' OR scan_status = 'Clean' OR (scan_status = 'NotRequired' AND purpose = 'GeneratedDocument')");
 
                             t.HasCheckConstraint("ck_assets_size_bytes", "size_bytes >= 0 AND size_bytes <= 20971520");
                         });
@@ -419,6 +421,15 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("agency_id");
 
+                    b.Property<Guid?>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<string>("Checksum")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("checksum");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -435,9 +446,50 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("document_type");
 
+                    b.Property<Guid?>("EmailNotificationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("email_notification_id");
+
+                    b.Property<int>("IssueNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("issue_number");
+
                     b.Property<DateTimeOffset>("IssuedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("issued_at");
+
+                    b.Property<string>("LastRenderError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_render_error");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<Guid?>("OrderLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_line_id");
+
+                    b.Property<string>("RecipientEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("recipient_email");
+
+                    b.Property<string>("RecipientName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("recipient_name");
+
+                    b.Property<int>("RenderAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("render_attempts");
+
+                    b.Property<DateTimeOffset?>("RenderedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("rendered_at");
 
                     b.Property<long>("SequenceNumber")
                         .HasColumnType("bigint")
@@ -447,6 +499,31 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("sequence_year");
 
+                    b.Property<long?>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Pending")
+                        .HasColumnName("status");
+
+                    b.Property<Guid?>("SupersedesDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supersedes_document_id");
+
+                    b.Property<string>("TemplateKey")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("template_key");
+
+                    b.Property<int?>("TemplateVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("template_version");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -454,9 +531,30 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_generated_documents");
 
+                    b.HasIndex("AssetId")
+                        .HasDatabaseName("ix_generated_documents_asset_id");
+
+                    b.HasIndex("OrderLineId")
+                        .HasDatabaseName("ix_generated_documents_order_line_id");
+
+                    b.HasIndex("SupersedesDocumentId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_generated_documents_supersedes_document_id")
+                        .HasFilter("supersedes_document_id IS NOT NULL");
+
+                    b.HasIndex("AgencyId", "OrderId")
+                        .HasDatabaseName("ix_generated_documents_agency_id_order_id");
+
                     b.HasIndex("AgencyId", "DocumentType", "DocumentNumber")
                         .IsUnique()
                         .HasDatabaseName("ix_generated_documents_agency_id_document_type_document_number");
+
+                    b.HasIndex("OrderId", "OrderLineId", "DocumentType")
+                        .IsUnique()
+                        .HasDatabaseName("ix_generated_documents_first_issue")
+                        .HasFilter("issue_number = 1 AND order_id IS NOT NULL");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("OrderId", "OrderLineId", "DocumentType"), false);
 
                     b.HasIndex("AgencyId", "DocumentType", "SequenceYear", "SequenceNumber")
                         .IsUnique()
@@ -464,7 +562,19 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
 
                     b.ToTable("generated_documents", "documents", t =>
                         {
+                            t.HasCheckConstraint("ck_generated_documents_checksum_shape", "checksum IS NULL OR checksum ~ '^[0-9a-f]{64}$'");
+
+                            t.HasCheckConstraint("ck_generated_documents_issue_chain", "issue_number >= 1 AND (issue_number = 1) = (supersedes_document_id IS NULL)");
+
+                            t.HasCheckConstraint("ck_generated_documents_line_fits_type", "(document_type = 'Voucher' AND (order_id IS NULL OR order_line_id IS NOT NULL)) OR (document_type <> 'Voucher' AND order_line_id IS NULL)");
+
+                            t.HasCheckConstraint("ck_generated_documents_ready_has_file", "(status = 'Ready') = (asset_id IS NOT NULL AND checksum IS NOT NULL AND COALESCE(size_bytes, 0) > 0 AND rendered_at IS NOT NULL AND template_key IS NOT NULL AND template_version IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_generated_documents_render_attempts", "render_attempts >= 0");
+
                             t.HasCheckConstraint("ck_generated_documents_sequence_number_positive", "sequence_number >= 1");
+
+                            t.HasCheckConstraint("ck_generated_documents_status", "status IN ('Pending', 'Ready', 'Failed')");
                         });
                 });
 
@@ -983,6 +1093,11 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("agency_id");
 
+                    b.PrimitiveCollection<Guid[]>("AttachmentAssetIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("attachment_asset_ids");
+
                     b.Property<int>("Attempts")
                         .HasColumnType("integer")
                         .HasColumnName("attempts");
@@ -1388,6 +1503,20 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(40)")
                         .HasColumnName("order_number");
 
+                    b.Property<DateTimeOffset?>("PaidAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("paid_at");
+
+                    b.Property<string>("PaidFrom")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("paid_from");
+
+                    b.Property<string>("PaymentIdempotencyKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("payment_idempotency_key");
+
                     b.Property<DateTimeOffset?>("PlacedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("placed_at");
@@ -1428,6 +1557,11 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.HasIndex("AgencyId", "OrderNumber")
                         .IsUnique()
                         .HasDatabaseName("ix_orders_agency_id_order_number");
+
+                    b.HasIndex("AgencyId", "PaymentIdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_orders_agency_id_payment_idempotency_key")
+                        .HasFilter("payment_idempotency_key IS NOT NULL");
 
                     b.HasIndex("AgencyId", "Status")
                         .HasDatabaseName("ix_orders_agency_id_status");
@@ -1513,6 +1647,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("ProductId")
                         .HasColumnType("uuid")
                         .HasColumnName("product_id");
+
+                    b.Property<DateTimeOffset?>("ResolutionOpenedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolution_opened_at");
 
                     b.Property<string>("ResolutionStatus")
                         .HasMaxLength(30)
@@ -2082,6 +2220,95 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_reconciliation_exceptions_status_severity_detected_at");
 
                     b.ToTable("reconciliation_exceptions", "payments");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Payments.Refund", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_minor");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<Guid?>("LedgerTransactionGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ledger_transaction_group_id");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("method");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<Guid>("OrderLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_line_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset>("RefundedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("refunded_at");
+
+                    b.Property<Guid?>("RefundedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("refunded_by_user_id");
+
+                    b.Property<Guid?>("SupplierBookingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_booking_id");
+
+                    b.Property<Guid?>("SupplierStatusPollId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_status_poll_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_refunds");
+
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("ix_refunds_order_id");
+
+                    b.HasIndex("OrderLineId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_refunds_order_line_id");
+
+                    b.HasIndex("SupplierBookingId")
+                        .HasDatabaseName("ix_refunds_supplier_booking_id");
+
+                    b.HasIndex("SupplierStatusPollId")
+                        .HasDatabaseName("ix_refunds_supplier_status_poll_id");
+
+                    b.HasIndex("AgencyId", "RefundedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_refunds_agency_id_refunded_at");
+
+                    b.ToTable("refunds", "payments");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Payments.Wallet", b =>
@@ -3058,10 +3285,18 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnName("currency")
                         .IsFixedLength();
 
+                    b.Property<DateTimeOffset?>("EscalatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("escalated_at");
+
                     b.Property<string>("FailureReason")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("failure_reason");
+
+                    b.Property<DateTimeOffset?>("FifteenMinuteWarningSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fifteen_minute_warning_sent_at");
 
                     b.Property<bool>("HashVerified")
                         .HasColumnType("boolean")
@@ -3116,6 +3351,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("product_type");
 
+                    b.Property<DateTimeOffset?>("SixtyMinuteWarningSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sixty_minute_warning_sent_at");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -3158,6 +3397,11 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
                     b.HasKey("Id")
                         .HasName("pk_supplier_bookings");
 
@@ -3181,6 +3425,9 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Status", "NextPollAt")
                         .HasDatabaseName("ix_supplier_bookings_status_next_poll_at");
+
+                    b.HasIndex("Status", "TicketTimeLimit")
+                        .HasDatabaseName("ix_supplier_bookings_status_ticket_time_limit");
 
                     b.ToTable("supplier_bookings", "supplier");
                 });
@@ -4091,6 +4338,30 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_generated_documents_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_generated_documents_assets_asset_id");
+
+                    b.HasOne("TripsAgent.Domain.Orders.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_generated_documents_orders_order_id");
+
+                    b.HasOne("TripsAgent.Domain.Orders.OrderLine", null)
+                        .WithMany()
+                        .HasForeignKey("OrderLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_generated_documents_order_lines_order_line_id");
+
+                    b.HasOne("TripsAgent.Domain.Documents.GeneratedDocument", null)
+                        .WithMany()
+                        .HasForeignKey("SupersedesDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_generated_documents_generated_documents_supersedes_document");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Identity.OtpCode", b =>
@@ -4342,6 +4613,42 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_payment_transactions_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Payments.Refund", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_refunds_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Orders.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_refunds_orders_order_id");
+
+                    b.HasOne("TripsAgent.Domain.Orders.OrderLine", null)
+                        .WithMany()
+                        .HasForeignKey("OrderLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_refunds_order_lines_order_line_id");
+
+                    b.HasOne("TripsAgent.Domain.Suppliers.SupplierBooking", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierBookingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_refunds_supplier_bookings_supplier_booking_id");
+
+                    b.HasOne("TripsAgent.Domain.Suppliers.SupplierStatusPoll", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierStatusPollId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_refunds_supplier_status_polls_supplier_status_poll_id");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Payments.Wallet", b =>

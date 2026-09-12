@@ -21,6 +21,8 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+    <!-- Reads rendered invoices and vouchers back as text. -->
+    <PackageReference Include="PdfPig" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,6 +33,7 @@
     <ProjectReference Include="..\..\services\TripsAgent.Domain\TripsAgent.Domain.csproj" />
     <ProjectReference Include="..\..\services\TripsAgent.Application\TripsAgent.Application.csproj" />
     <ProjectReference Include="..\..\services\TripsAgent.Infrastructure\TripsAgent.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\services\TripsAgent.Documents\TripsAgent.Documents.csproj" />
     <ProjectReference Include="..\..\services\TripsAgent.Integrations.Paystack\TripsAgent.Integrations.Paystack.csproj" />
     <ProjectReference Include="..\..\services\TripsAgent.Integrations.TripsAfrica\TripsAgent.Integrations.TripsAfrica.csproj" />
   </ItemGroup>

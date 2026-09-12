@@ -4,10 +4,12 @@ import type { BookingsApi } from '../bookings-api';
 import { newestFirst } from '../bookings-rules';
 import type { BookingDetail } from '../types';
 import { allBookings, findBooking, scheduleSettlement, updateBooking } from './booking-store';
+import { documentsFor, reissueDocument } from './document-store';
 
 /**
  * ============================================================================
- *  TEMPORARY. Delete this folder when the orders API lands (#42, #44).
+ *  The demo stand-in. main.tsx uses it only with VITE_AUTH_MODE=mock; the real
+ *  orders API (#42, #44) is createHttpBookingsApi.
  * ============================================================================
  *
  * The bookings screens' stand-in, over the shared in-memory store. A retried
@@ -25,6 +27,16 @@ const delay = (ms = LATENCY_MS) => new Promise((resolve) => setTimeout(resolve, 
 const copy = (booking: BookingDetail): BookingDetail => structuredClone(booking);
 
 export const mockBookingsApi: BookingsApi = {
+  async listDocuments(reference) {
+    await delay();
+    return documentsFor(reference);
+  },
+
+  async reissueDocument(documentId) {
+    await delay(600);
+    return reissueDocument(documentId);
+  },
+
   async listBookings() {
     await delay();
     return newestFirst(allBookings().map(copy));

@@ -115,6 +115,7 @@ public static class DependencyInjection
         services.AddScoped<FollowUpService>();
         services.AddScoped<StorefrontCrmService>();
         services.AddScoped<CustomerBookingRecorder>();
+        services.AddScoped<TaskReminders>();
         services.AddScoped<IQuoteEmails, QuoteEmails>();
 
         // Stages notifications in the caller's unit of work; the Worker sends them.

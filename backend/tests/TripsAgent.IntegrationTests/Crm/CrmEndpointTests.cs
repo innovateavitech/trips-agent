@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Api.Crm;
+using TripsAgent.Application.Crm;
 using TripsAgent.Application.Identity;
 using TripsAgent.Contracts.Crm;
 using TripsAgent.Domain.Identity;
@@ -570,6 +571,43 @@ public sealed class CrmEndpointTests : IAsyncLifetime, IDisposable
         using var response = await PostPublicAsync($"{Public}/trip-requests", HostA, Submission());
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+    }
+
+    // ------------------------------------------------------------------ reminders
+
+    [Fact]
+    public async Task A_task_that_falls_due_reminds_its_owner_once()
+    {
+        var lead = await CreateLeadAsync();
+
+        // Due a minute ago, so the sweep finds it on its first run.
+        var task = await PostAsync<TaskResponse>(
+            Tasks,
+            new TaskRequest("Call her back about dates", DateTimeOffset.UtcNow.AddMinutes(-1), new RelatedRecord("Lead", lead.Id)));
+
+        var reminders = _factory.Services.GetRequiredService<IServiceScopeFactory>();
+
+        (await SweepAsync(reminders)).Should().Be(1);
+        (await SweepAsync(reminders)).Should().Be(0, "a task is reminded once, however often the job runs");
+
+        var (tenant, scope) = TestTenancy.For(_agencyA);
+        await using var db = _postgres.Connect(_database, tenant, scope);
+
+        var reminder = await db.Notifications.SingleAsync(row => row.TemplateKey == "crm.task-due");
+
+        reminder.RecipientAddress.Should().Be("ada@lagos-travel.test");
+        reminder.Payload.Should().Contain("Call her back about dates");
+        reminder.Payload.Should().Contain("Chiamaka Okonkwo");
+
+        (await db.FollowUpTasks.SingleAsync(row => row.Id == task.Id)).ReminderSentAt.Should().NotBeNull();
+    }
+
+    /// <summary>One run of the reminder sweep, in its own scope, as the Worker runs it.</summary>
+    private static async Task<int> SweepAsync(IServiceScopeFactory scopes)
+    {
+        await using var scope = scopes.CreateAsyncScope();
+
+        return await scope.ServiceProvider.GetRequiredService<TaskReminders>().RunAsync();
     }
 
     // ------------------------------------------------------------------ helpers

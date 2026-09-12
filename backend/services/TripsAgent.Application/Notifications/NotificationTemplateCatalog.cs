@@ -113,6 +113,9 @@ public static class NotificationTemplateCatalog
     /// </summary>
     public const string CrmQuoteSent = "crm.quote-sent";
 
+    /// <summary>A follow-up task that has fallen due, to the person at the agency who owns it (#62).</summary>
+    public const string CrmTaskDue = "crm.task-due";
+
     // ------------------------------------------------------------------ brand tokens
 
     /// <summary>Whose mail this appears to be: the agency's trading name, or <see cref="ProductName"/>.</summary>
@@ -307,6 +310,28 @@ public static class NotificationTemplateCatalog
                   It is waiting in your resolution queue, where you can rebook it or refund your
                   customer. Funds held in your wallet for the order are released once nothing else on
                   it still needs them.
+                  """),
+
+        AgencyFacing(
+            CrmTaskDue,
+            version: 1,
+            subject: "Follow-up due: {{taskTitle}}",
+            tokens: ["taskTitle", "customerName", "dueAt"],
+            html: """
+                  <p>A follow-up you are looking after was due at {{dueAt}}.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>To do</strong></td><td>{{taskTitle}}</td></tr>
+                    <tr><td><strong>Customer</strong></td><td>{{customerName}}</td></tr>
+                  </table>
+                  <p>Open your tasks in the console to mark it done, or move it if it can wait.</p>
+                  """,
+            text: """
+                  A follow-up you are looking after was due at {{dueAt}}.
+
+                      To do:    {{taskTitle}}
+                      Customer: {{customerName}}
+
+                  Open your tasks in the console to mark it done, or move it if it can wait.
                   """),
 
         // ------------------------------------------------------------------ traveller-facing

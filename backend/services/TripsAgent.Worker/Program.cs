@@ -110,4 +110,7 @@ TicketTimeLimitMonitorSchedule.Register(recurringJobs);
 // is safe — the issuer sends the supplier nothing for a booking that is already issuing.
 TripsAgent.Infrastructure.Checkout.CheckoutSweepSchedule.Register(recurringJobs);
 
+// The CRM's follow-up reminders (#62): a task that fell due emails the person who owns it.
+TripsAgent.Infrastructure.Crm.CrmTaskReminderSchedule.Register(recurringJobs);
+
 await host.RunAsync();

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient } from '@tanstack/react-query';
 import { App, type ConsoleApis } from './App';
 import { createHttpAgenciesApi } from './features/agencies';
+import { createHttpPlatformAnalyticsApi } from './features/analytics';
 import { createHttpAuditApi } from './features/audit';
 import { createHttpBackOfficeApi } from './features/back-office';
 import { createHttpDashboardApi } from './features/dashboard';
@@ -21,6 +22,7 @@ const client = createApiClient({ store });
 
 const apis: ConsoleApis = {
   agencies: createHttpAgenciesApi(client),
+  analytics: createHttpPlatformAnalyticsApi(client),
   audit: createHttpAuditApi(client),
   backOffice: createHttpBackOfficeApi(client),
   dashboard: createHttpDashboardApi(client),

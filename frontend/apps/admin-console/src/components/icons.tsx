@@ -29,6 +29,18 @@ function Icon({ children, className = 'h-4 w-4', ...props }: IconProps) {
   );
 }
 
+/** Analytics: three bars of different heights. */
+export function ChartIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 20h16" />
+      <path d="M7 20v-6" />
+      <path d="M12 20V8" />
+      <path d="M17 20v-9" />
+    </Icon>
+  );
+}
+
 /** The KYB queue: a stack of papers waiting. */
 export function QueueIcon(props: IconProps) {
   return (

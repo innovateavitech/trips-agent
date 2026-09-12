@@ -7,6 +7,11 @@ import { AuthProvider, useAuth } from './features/auth/auth-context';
 import { RequireStaff } from './features/auth/guards';
 import { SignInPage } from './features/auth/sign-in-page';
 import { AgenciesApiProvider, agencyRoutes, type AgenciesApi } from './features/agencies';
+import {
+  PlatformAnalyticsApiProvider,
+  platformAnalyticsRoutes,
+  type PlatformAnalyticsApi,
+} from './features/analytics';
 import { AuditApiProvider, auditRoutes, type AuditApi } from './features/audit';
 import {
   BackOfficeApiProvider,
@@ -40,6 +45,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <HomeRedirect /> },
       ...dashboardRoutes,
+      ...platformAnalyticsRoutes,
       ...agencyRoutes,
       ...kybReviewRoutes,
       ...auditRoutes,
@@ -57,6 +63,7 @@ const router = createBrowserRouter([
  */
 export interface ConsoleApis {
   agencies: AgenciesApi;
+  analytics: PlatformAnalyticsApi;
   audit: AuditApi;
   backOffice: BackOfficeApi;
   dashboard: DashboardApi;
@@ -82,7 +89,9 @@ export function App({
             <BackOfficeApiProvider value={apis.backOffice}>
               <DashboardApiProvider value={apis.dashboard}>
                 <KybReviewApiProvider value={apis.kybReview}>
-                  <RouterProvider router={router} />
+                  <PlatformAnalyticsApiProvider value={apis.analytics}>
+                    <RouterProvider router={router} />
+                  </PlatformAnalyticsApiProvider>
                 </KybReviewApiProvider>
               </DashboardApiProvider>
             </BackOfficeApiProvider>

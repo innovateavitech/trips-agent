@@ -24,7 +24,7 @@ namespace TripsAgent.Api.Tenancy;
 /// endpoint serialises <see cref="NetworkPerformanceResponse"/> or
 /// <see cref="NetworkPerformanceWithMarginResponse"/> depending on the caller's
 /// <c>margin.view</c> claim — and a sub-agent whose principal has denied that claim never holds
-/// it, because <see cref="SubAgentClaimsTransformation"/> strips it off the token on every
+/// it, because <see cref="SubAgentPermissionMiddleware"/> strips it off the token on every
 /// request. The margin keys are then absent from the JSON, not null in it.
 /// </para>
 /// </remarks>

@@ -141,20 +141,36 @@ public sealed class SubAgentNetworkReport
         {
             // The agency ids are repeated in the predicate on purpose: under the scope the filter
             // is off, and this WHERE is then the only thing keeping the read to this network.
-            totals = await _db.Orders
+            //
+            // Summed here rather than in PostgreSQL: money is a Money value object behind a value
+            // converter, and SUM over a converted type is not something EF can translate. The rows
+            // are one date range of one network's orders, and the shape of this method does not
+            // change when F11's daily read models arrive — it reads agg_agency_daily instead, and
+            // the sums go back to the database where they belong.
+            var placed = await _db.Orders
                 .AsNoTracking()
                 .Where(order => ids.Contains(order.AgencyId)
                                 && order.PlacedAt != null
                                 && order.PlacedAt >= start
                                 && order.PlacedAt < end
                                 && order.Status != OrderStatus.Cancelled)
+                .Select(order => new
+                {
+                    order.AgencyId,
+                    order.TotalGrossMinor,
+                    order.TotalMarkupMinor,
+                    order.TotalPlatformFeeMinor,
+                })
+                .ToListAsync(cancellationToken);
+
+            totals = placed
                 .GroupBy(order => order.AgencyId)
                 .Select(group => new OrderTotals(
                     group.Key,
                     group.Count(),
                     group.Sum(order => order.TotalGrossMinor.AmountMinor),
                     group.Sum(order => order.TotalMarkupMinor.AmountMinor - order.TotalPlatformFeeMinor.AmountMinor)))
-                .ToListAsync(cancellationToken);
+                .ToList();
         }
 
         var rows = members

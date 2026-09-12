@@ -229,6 +229,8 @@ public sealed class WalletAllowance : Entity, IAuditableEntity, ITenantScoped, I
         {
             AllowancePeriod.Lifetime => null,
             AllowancePeriod.Daily => new DateTimeOffset(utc.Date, TimeSpan.Zero).AddDays(1),
+            // A week runs Sunday to Saturday, which is what DayOfWeek counts from. An allowance
+            // period only has to be consistent and predictable, not to match a working week.
             AllowancePeriod.Weekly => new DateTimeOffset(utc.Date, TimeSpan.Zero)
                 .AddDays(7 - (int)utc.DayOfWeek),
             AllowancePeriod.Monthly => new DateTimeOffset(

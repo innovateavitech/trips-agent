@@ -308,6 +308,15 @@ public sealed class SubAgentNetworkService
         var (agencyId, expiresAt) = await _transactions.RunAsync(
             async ct =>
             {
+                // Creating an agency writes rows that belong to it — its settings, its branding,
+                // the invitation to it — and the caller is not that agency yet. The tenant stamper
+                // refuses that on purpose, and row-level security refuses it again, so this is one
+                // of the handful of places the audited scope is the right answer rather than a way
+                // round a guard: a principal creating an agency beneath itself is cross-tenant by
+                // definition, and the log should say who did it.
+                using var scope = _platformScope.Enter(
+                    "sub-agent creation — a principal writes the new agency's own settings, branding and invitation");
+
                 var subAgency = Agency.RegisterSubAgent(
                     principal,
                     legalName,

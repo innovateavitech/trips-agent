@@ -7,6 +7,7 @@ using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Application.Tenancy.SubAgents;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
@@ -114,6 +115,8 @@ public sealed partial class CheckoutService
     private readonly PriceConfirmationService _priceConfirmation;
     private readonly ISupplierBookingLocks _bookingLocks;
     private readonly IOutbox _outbox;
+    private readonly SubAgentScopeService _scopes;
+    private readonly SubAgentSpending _allowance;
     private readonly IUniqueViolationDetector _uniqueViolations;
     private readonly TimeProvider _clock;
     private readonly ILogger<CheckoutService> _logger;
@@ -128,6 +131,8 @@ public sealed partial class CheckoutService
         PriceConfirmationService priceConfirmation,
         ISupplierBookingLocks bookingLocks,
         IOutbox outbox,
+        SubAgentScopeService scopes,
+        SubAgentSpending allowance,
         IUniqueViolationDetector uniqueViolations,
         TimeProvider clock,
         ILogger<CheckoutService> logger)
@@ -141,6 +146,8 @@ public sealed partial class CheckoutService
         _priceConfirmation = priceConfirmation;
         _bookingLocks = bookingLocks;
         _outbox = outbox;
+        _scopes = scopes;
+        _allowance = allowance;
         _uniqueViolations = uniqueViolations;
         _clock = clock;
         _logger = logger;
@@ -185,20 +192,32 @@ public sealed partial class CheckoutService
         var subject = new PricingSubject(PricedTypeOf(offer.ProductType), offer.Currency, supplierCode: supplierCode);
         var searched = await _pricing.PriceAsync(subject, offer.TotalFareMinor, cancellationToken);
 
-        // Q3: the wallet first. A short wallet fails here, before any supplier call.
-        var provisionalHoldId = await PlaceProvisionalHoldAsync(
-            offer.Currency, searched.NetAmountMinor + searched.PlatformFeeMinor, cancellationToken);
+        // Feature F10: a sub-agent may only sell what its principal allows. Search already leaves
+        // out what it may not, so reaching here means either a stale result or a hand-written call
+        // — and either way it is refused before the supplier is asked or any money moves.
+        await RefuseIfOutOfScopeAsync(agencyId, offer, cancellationToken);
+
+        var provisional = searched.NetAmountMinor + searched.PlatformFeeMinor;
+
+        // Q3: the wallet first. A short wallet fails here, before any supplier call. For a
+        // sub-agent the allowance is checked in the same breath, because it is the tighter of the
+        // two limits and refusing on it costs nothing.
+        await ReserveAllowanceAsync(offer.Currency, provisional, cancellationToken);
+
+        var provisionalHoldId = await PlaceProvisionalHoldAsync(offer.Currency, provisional, cancellationToken);
 
         try
         {
             return await ConfirmHeldAsync(
                 agencyId, offer, supplierSessionId, supplierCode, adapter, subject, searched.GrossAmountMinor,
-                travellers, provisionalHoldId, correlationId, cancellationToken);
+                travellers, provisionalHoldId, provisional, correlationId, cancellationToken);
         }
         catch
         {
-            // Nothing was bought, so the money held for it goes straight back.
+            // Nothing was bought, so the money held for it — and the allowance counted against it
+            // — go straight back.
             await ReleaseProvisionalHoldAsync(provisionalHoldId);
+            await ReleaseAllowanceAsync(agencyId, offer.Currency, provisional);
             throw;
         }
     }
@@ -213,6 +232,7 @@ public sealed partial class CheckoutService
         Money searchedSell,
         IReadOnlyList<CheckoutTraveller> travellers,
         Guid provisionalHoldId,
+        Money provisionalAmount,
         string? correlationId,
         CancellationToken cancellationToken)
     {
@@ -321,6 +341,13 @@ public sealed partial class CheckoutService
                 {
                     throw NotEnough(amount, wallet.AvailableMinor, "The supplier's price rose above what the wallet can cover.");
                 }
+
+                // The allowance follows the hold. The supplier's confirmed price is rarely the
+                // searched one, so the difference is reserved or given back here — inside this
+                // transaction, so a rise the allowance cannot cover rolls the whole confirmation
+                // back rather than leaving a booking nobody is allowed to have made.
+                await SettleAllowanceDifferenceAsync(
+                    agencyId, offer.Currency, provisionalAmount, amount, token);
 
                 _db.WalletHolds.Add(wallet.PlaceHold(amount, now, ticketTimeLimit - now + HoldGrace, order.Id));
 
@@ -708,6 +735,83 @@ public sealed partial class CheckoutService
     [LoggerMessage(Level = LogLevel.Error,
         Message = "Could not release provisional wallet hold {HoldId}; the checkout sweeper will once it expires.")]
     private static partial void LogReleaseFailed(ILogger logger, Guid holdId, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Error,
+        Message = "Could not give agency {AgencyId} back {AmountMinor} kobo of spending allowance; it will come back at the next period reset.")]
+    private static partial void LogAllowanceReleaseFailed(ILogger logger, Guid agencyId, long amountMinor, Exception exception);
+
+    // ------------------------------------------------------------------------- sub-agent limits
+
+    /// <summary>
+    /// Refuses a fare the caller's agency is not allowed to sell.
+    /// </summary>
+    /// <remarks>
+    /// A principal is not scoped, so this reads nothing for one. For a sub-agent it is the server
+    /// side of a button the console did not render — which is the only kind of guard worth having.
+    /// </remarks>
+    private async Task RefuseIfOutOfScopeAsync(Guid agencyId, SupplierOffer offer, CancellationToken cancellationToken)
+    {
+        var maySell = await _scopes.MaySellAsync(
+            agencyId, SubAgentScopes.For(offer.ProductType), offer.SupplierId, cancellationToken);
+
+        if (!maySell)
+        {
+            throw new CheckoutRefusedException(
+                CheckoutRefusal.Unprocessable,
+                "This agency is not allowed to sell that.",
+                "The agency that manages you decides which products and suppliers you can sell. "
+                + "Nothing was booked or charged.");
+        }
+    }
+
+    /// <summary>Counts an amount against the caller's allowance, or refuses the checkout.</summary>
+    private async Task ReserveAllowanceAsync(string currency, Money amount, CancellationToken cancellationToken)
+    {
+        var outcome = await _allowance.ReserveAsync(currency, amount, cancellationToken);
+
+        if (outcome != AllowanceReservation.Reserved)
+        {
+            throw new CheckoutRefusedException(
+                CheckoutRefusal.Unprocessable,
+                "This booking is over this agency's spending allowance.",
+                SubAgentSpending.WhyRefused(outcome) + " Nothing was booked or charged.");
+        }
+    }
+
+    /// <summary>Gives an allowance reservation back. Never throws: it runs on a failure path.</summary>
+    private async Task ReleaseAllowanceAsync(Guid agencyId, string currency, Money amount)
+    {
+        try
+        {
+            await _allowance.ReleaseAsync(agencyId, currency, amount, CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogAllowanceReleaseFailed(_logger, agencyId, amount.AmountMinor, ex);
+        }
+    }
+
+    /// <summary>Moves the allowance by the difference between the searched price and the confirmed one.</summary>
+    private async Task SettleAllowanceDifferenceAsync(
+        Guid agencyId,
+        string currency,
+        Money reserved,
+        Money confirmed,
+        CancellationToken cancellationToken)
+    {
+        if (!_allowance.CallerIsSubAgent || confirmed == reserved)
+        {
+            return;
+        }
+
+        if (confirmed > reserved)
+        {
+            await ReserveAllowanceAsync(currency, confirmed - reserved, cancellationToken);
+            return;
+        }
+
+        await _allowance.ReleaseAsync(agencyId, currency, reserved - confirmed, cancellationToken);
+    }
 
     // ------------------------------------------------------------------------- wallet holds
 

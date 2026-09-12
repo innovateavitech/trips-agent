@@ -56,6 +56,7 @@ public static class DependencyInjection
         services.AddScoped<Tenancy.SubAgents.SubAgentPermissionService>();
         services.AddScoped<Tenancy.SubAgents.SubAgentAllowanceService>();
         services.AddScoped<Tenancy.SubAgents.SubAgentNetworkReport>();
+        services.AddScoped<Tenancy.SubAgents.SubAgentSpending>();
         services.AddScoped<Tenancy.SubAgents.AcceptInvitationHandler>();
         services.AddScoped<Tenancy.SubAgents.IAllowanceResetJob, Tenancy.SubAgents.AllowanceResetJob>();
 

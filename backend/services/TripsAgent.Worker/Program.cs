@@ -96,6 +96,10 @@ SupplierApiCallMaintenanceSchedule.Register(recurringJobs);
 // touches financial records or the audit log. Runbook: docs/runbooks/data-retention.md.
 DataRetentionSchedule.Register(recurringJobs);
 
+// Starts each sub-agent's allowance period again when it turns over (feature F10). Hourly, and
+// idempotent: on twenty-three of the twenty-four passes it finds nothing due.
+TripsAgent.Infrastructure.Tenancy.AllowanceResetSchedule.Register(recurringJobs);
+
 // Expires uploads that never arrived and re-enqueues processing that was lost. The complete step
 // enqueues each asset directly, so like the webhook drain this normally finds nothing.
 AssetSweepSchedule.Register(recurringJobs);

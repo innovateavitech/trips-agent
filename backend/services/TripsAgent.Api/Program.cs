@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using Hangfire;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using TripsAgent.Api.Assets;
@@ -96,6 +97,12 @@ builder.Services
 // A policy per permission code, each satisfied by a claim on the token. Registered from the
 // catalogue rather than listed by hand, so a new permission cannot end up with no policy.
 builder.Services.AddAuthorizationBuilder().AddPermissionPolicies();
+
+// Applied to every authenticated request, before any policy above is evaluated: a sub-agent's
+// token loses any permission its principal has denied it, so taking one away bites at once rather
+// than when the access token expires. It only ever removes claims — see the class remarks.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IClaimsTransformation, SubAgentClaimsTransformation>();
 
 // The outbox check reports Degraded, never Unhealthy, when messages are piling up: restarting the
 // API cannot fix a backlog the Worker or the broker is causing. See OutboxBacklogHealthCheck.

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TripsAgent.Application.Payments;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Application.Tenancy.SubAgents;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
@@ -33,12 +34,18 @@ public sealed class WalletRefunds
 {
     private readonly IAppDbContext _db;
     private readonly IPlatformScope _platformScope;
+    private readonly SubAgentSpending _allowance;
     private readonly LedgerAccounts _accounts;
 
-    public WalletRefunds(IAppDbContext db, IPlatformScope platformScope, LedgerAccounts accounts)
+    public WalletRefunds(
+        IAppDbContext db,
+        IPlatformScope platformScope,
+        SubAgentSpending allowance,
+        LedgerAccounts accounts)
     {
         _db = db;
         _platformScope = platformScope;
+        _allowance = allowance;
         _accounts = accounts;
     }
 
@@ -73,6 +80,10 @@ public sealed class WalletRefunds
         if (hold.Status == WalletHoldStatus.Held)
         {
             wallet.ReleaseHold(hold, now);
+
+            // A sub-agent's spending allowance moves with its wallet hold (feature F10). The money
+            // was never taken, so the cap must stop counting it. Does nothing for a principal.
+            await _allowance.ReleaseAsync(hold.AgencyId, wallet.Currency, amount, cancellationToken);
 
             refund = Refund.Record(
                 order.AgencyId, order.Id, line.Id, reason, RefundMethod.WalletHoldReleased, amount, order.Currency, now,

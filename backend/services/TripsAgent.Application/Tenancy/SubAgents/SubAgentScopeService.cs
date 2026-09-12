@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TripsAgent.Application.Persistence;
+using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.SubAgents;
 
@@ -202,4 +203,44 @@ public sealed class SubAgentScopeService
             : throw new SubAgentRefusedException(
                 SubAgentRefusal.NotFound, "That sub-agent is not one of yours.");
     }
+}
+
+/// <summary>
+/// Raised when an agency is asked to sell something its principal has not allowed it to.
+/// </summary>
+/// <remarks>
+/// Its own type rather than a generic refusal so search, price confirmation and checkout can each
+/// turn it into the right answer for their own surface — a 403 with an explanation, rather than an
+/// empty result list that looks like the supplier is down.
+/// </remarks>
+public sealed class SupplierScopeException : Exception
+{
+    public SupplierScopeException(string message)
+        : base(message)
+    {
+    }
+
+    public SupplierScopeException()
+        : base("This agency is not allowed to sell that.")
+    {
+    }
+
+    public SupplierScopeException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}
+
+/// <summary>Maps the supplier's product vocabulary onto the one a scope is written in.</summary>
+/// <remarks>
+/// Two enums on purpose — see <see cref="SellableProductType"/> — so this is the one place that
+/// knows a supplier's <c>Flight</c> and a scope's <c>Flight</c> are the same thing.
+/// </remarks>
+public static class SubAgentScopes
+{
+    public static SellableProductType For(SupplierProductType productType) => productType switch
+    {
+        SupplierProductType.Bus => SellableProductType.Bus,
+        _ => SellableProductType.Flight,
+    };
 }

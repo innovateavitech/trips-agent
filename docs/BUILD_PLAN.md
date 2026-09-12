@@ -30,7 +30,7 @@ The first place to look when picking this up again. Update it whenever a branch 
 
 **On `main`:** Milestone 1's foundation (see *Already built*), supplier search (#158), the booking and bookings screens against stand-ins (#159), rate limiting and the retention purge (#165), and this plan.
 
-| Branch | PR | What it holds | State (11 September, evening) |
+| Branch | PR | What it holds | State (12 September, evening) |
 |---|---|---|---|
 | `feat/M1-ticket-issuance` | 1 | F1: ticket issuance, the status poller, the time-limit monitor, the checkout saga, payment reversals and the resolution backend (#36-#38, #42-#44); the booking screens on the real API | pushed, merged into the PR 1 branch |
 | `feat/M1-notifications-documents` | 1 | **The PR 1 branch:** F1 merged in, plus F2 - notifications (#45), branded invoice and voucher PDFs (#46), the traveller's emails wired to the pipeline's events, and documents with download and reissue in the booking screens | pushed, PR open |
@@ -39,10 +39,10 @@ The first place to look when picking this up again. Update it whenever a branch 
 | `feat/M2-storefront` | 2 | F4 whole (#58-#60): the site builder with versioned publish and rollback, custom domains with DNS verification and certificates, the public host-resolved API, the Next.js traveller site, and the console's website and web-address screens. The CRM branch is merged in, and the real host directory replaces its placeholder | pushed, done |
 | `feat/M2-crm` | 2 | F7 backend (#62), on top of the console branch | just started, not pushed |
 | `feat/M2-departures` | 2 | F6 (#57) whole: the departures schema and API, seat holds and the no-oversell CHECK, status from the seats, the waitlist with timed offers, installment schedules and reminders, decision 12's refunds, and the console on the real API | pushed |
-| — | 2 | F5 customer commerce (#61) | not started: it needs F1 and F4 |
+| `feat/M2-commerce` | 2 | F5 whole (#61): the cart, guest checkout, card payment through the gateway, the magic link to manage a booking, partial failures routed to the resolution queue and refunds to a traveller's card. The storefront and CRM branches are merged in, so it also holds the storefront's cart, checkout and departure pages — the departure detail page F4 could not build without group departures | pushed, done |
 | — | 3, 4 | F8–F14 | not started |
 
-**Next:** PR 1 is open from `feat/M1-notifications-documents`. When it merges, assemble PR 2: merge the catalog, storefront, CRM, group tours and commerce branches into one, regenerate the API client, run every gate, tick F3-F7 here, and open it with `Closes` for each finished issue.
+**Next:** PR 1 is open from `feat/M1-notifications-documents`. When it merges, assemble PR 2: merge the catalog, storefront, CRM, group tours and commerce branches into one, regenerate the API client, run every gate, tick F3-F7 here, and open it with `Closes` for each finished issue. `feat/M2-commerce` already carries the storefront and CRM merges, so it is the branch to merge the others into.
 
 ## Decisions for the MVP
 
@@ -86,7 +86,8 @@ Decided during the build:
 - **Checkout saga:** built as services, the transactional outbox and scheduled jobs rather than a MassTransit state machine; a booking's messages stay in order through row locks, versions and idempotent handlers.
 - **Proving one ticket per booking:** the chaos test counts supplier calls on an in-process stub, and the kill test cancels the call mid-flight. Both prove what #36 asks: one supplier call, and recovery through `GetBookingStatus`.
 - **Paying by card in the console:** the agent tops up the wallet first; a card payment inside the booking flow comes later.
-- **Refunds:** to the wallet for console bookings; refunds to a traveller's card come with F5.
+- **Refunds:** to the wallet for console bookings; a booking a traveller paid for by card on the
+  storefront is refunded to that card through the gateway (F5). Money goes back the way it came.
 - **Resolving a failed booking:** "retry" means booking again from search; escalating slow resolutions waits until after the MVP.
 - **To check on Trips Africa staging:** a bus booking with no PNR is polled with the flight status endpoint, which their documentation does not cover for buses.
 
@@ -97,7 +98,9 @@ Each feature meets its criteria the simplest safe way. These wait until after th
 - **F1:** escalating slow resolutions; a card payment inside the console's booking flow.
 - **F2:** full templates for flights and buses; one plain template serves tours, visas and group departures. No SMS or WhatsApp sending.
 - **F4:** two site templates and a fixed set of blocks (hero, product grid, text, contact). SSL issuance and renewal go through a port with a development adapter; a real ACME adapter follows once hosting is chosen.
-- **F5 and F6:** installment reminders, but no automatic charging of saved cards; waitlist offers by email only.
+- **F5 and F6:** installment reminders, but no automatic charging of saved cards; waitlist offers by
+  email only. A departure's later instalments are chased by the agency rather than taken from a card,
+  and a traveller's cart holds one currency — the agency's own (decision 17).
 - **F7:** SMS and WhatsApp are logged, not sent.
 - **F8:** the dashboard shows core counts and sales; the top-agent leaderboard and feature flags wait.
 - **F9:** monthly billing only; promotions wait.
@@ -439,13 +442,13 @@ The Next.js traveller-facing site.
 - [x] Per-site ISR with cache invalidation on publish. Responses are tagged by site and hostname; publishing asks the storefront to drop those tags.
 - [x] Template rendering from site_versions — hero, product grid, text and contact; an unknown block is skipped rather than fatal.
 - [x] Catalog browse and filter.
-- [ ] Product and departure detail. Product detail is done; **departure detail waits for F6**, which owns group departures.
+- [x] Product and departure detail. Departure detail landed with F5, which has both the storefront and group departures.
 - [x] SEO metadata, sitemap and structured data.
 - [x] Nothing on these pages may reference Trips.
 
 ### F5 · Customer commerce
 
-**M2 · Queued** · 0 of 6 boxes ticked
+**M2 · Done** · 7 of 7 boxes ticked
 
 Travellers buy on the agent's storefront: a cart mixing flights, buses, tours and visas, guest checkout, card payment, a magic link to manage the booking, and partial failures routed to the agent's resolution queue.
 
@@ -460,13 +463,42 @@ The traveller's buying flow.
 
 **Tables:** `carts, cart_items, customers`
 
-- [ ] Guest checkout (open question 21 — no accounts in MVP).
-- [ ] Mixed multi-line carts.
-- [ ] Departure holds during checkout.
-- [ ] Payment via Paystack.
-- [ ] Magic-link 'manage my booking'.
-- [ ] Partial-failure handling routing to the agent resolution queue.
-- [ ] Refunds to the traveller's card through Paystack, moved here from #43
+- [x] Guest checkout (open question 21 — no accounts in MVP).
+- [x] Mixed multi-line carts.
+- [x] Departure holds during checkout.
+- [x] Payment via Paystack.
+- [x] Magic-link 'manage my booking'.
+- [x] Partial-failure handling routing to the agent resolution queue.
+- [x] Refunds to the traveller's card through Paystack, moved here from #43
+
+**What F5 ended up holding.**
+
+- **One money path, not two.** The platform is merchant of record (decision 2), so a traveller's card
+  payment settles into the agency's wallet exactly as a top-up does, and the booking then holds and
+  captures from that wallet — the same path an agent's own booking takes. There is one place money
+  leaves a wallet, one place it is captured, and one place it goes back.
+- **What a line costs the agency** is the supplier's net rate plus the platform's fee for a flight or
+  a bus, and the platform's fee alone for a tour, a visa or a departure the agency hosts itself: there
+  is no supplier to owe. The markup and the tax stay in the wallet, which is the agency's margin.
+- **A hold per line.** `wallet_holds` learned `order_line_id`, because a mixed cart's lines are
+  confirmed, fail and are refunded one at a time. `WalletRefunds` used to take the order's newest
+  hold, which on a multi-line order gave back some other line's money.
+- **A departure sold on a plan** collects the agency's markup and our fee with the deposit, and defers
+  exactly what the stored schedule defers. That keeps the schedule the traveller's truth to the kobo
+  rather than splitting a margin across instalments by rounding. A departure with no deposit and no
+  instalments is paid for in full at checkout, like anything else in the cart.
+- **Refunds refuse rather than pretend.** A card refund the gateway will not send, or that the
+  agency's wallet cannot cover, refuses the resolution with the reason and raises a P1 — the line
+  stays in the queue instead of being closed as refunded with nothing sent.
+- **The confirmation the pipeline raises** (`BookingConfirmed`) now carries a nullable supplier
+  booking, so an agency's own product gets the same invoice, voucher, email and CRM customer record a
+  flight does.
+- **The departure page is the one F4 could not build**, because group departures were on another
+  branch. It shows the dates on sale, the seats really left, the price for the party in the URL, what
+  is due today and when the rest falls due. What it promises has to match what the checkout charges:
+  a departure with no deposit and no instalments still has a schedule in the domain — one line due at
+  the cutoff — and reading that as deferred would have offered the trip for nothing today. Both sides
+  now apply the same rule, and an integration test holds them together.
 
 ### F6 · Group tours
 

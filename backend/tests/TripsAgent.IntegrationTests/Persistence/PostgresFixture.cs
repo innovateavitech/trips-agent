@@ -23,10 +23,24 @@ namespace TripsAgent.IntegrationTests.Persistence;
 /// </remarks>
 public sealed class PostgresFixture : IAsyncLifetime
 {
+    /// <summary>
+    /// How much shared memory the server gets. Docker gives a container 64 MB of <c>/dev/shm</c> by
+    /// default, and PostgreSQL puts every parallel worker's hash and sort segments there. With a
+    /// suite this size that runs out mid-migration and comes back as
+    /// <c>53100: could not resize shared memory segment … No space left on device</c> — a failure
+    /// that reads like a broken migration and is nothing of the sort.
+    /// </summary>
+    private const long SharedMemoryBytes = 1024L * 1024 * 1024;
+
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:16-alpine")
         .WithDatabase("tripsagent_test")
         .WithUsername("postgres")
         .WithPassword("postgres")
+        .WithCreateParameterModifier(parameters =>
+        {
+            parameters.HostConfig ??= new Docker.DotNet.Models.HostConfig();
+            parameters.HostConfig.ShmSize = SharedMemoryBytes;
+        })
         .Build();
 
     /// <summary>

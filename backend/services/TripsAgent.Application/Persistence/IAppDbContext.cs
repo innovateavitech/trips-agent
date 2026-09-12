@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Auditing;
+using TripsAgent.Domain.Billing;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Notifications;
@@ -123,6 +124,47 @@ public interface IAppDbContext
 
     /// <summary>Addresses that bounced permanently. Platform-wide.</summary>
     public DbSet<SuppressedEmailAddress> SuppressedEmailAddresses { get; }
+
+    /// <summary>
+    /// The catalogue of things a subscription tier can grant.
+    /// </summary>
+    /// <remarks>
+    /// Not tenant-scoped: the catalogue is the platform's, not any agency's, and every agency
+    /// resolves its entitlements against the same rows.
+    /// </remarks>
+    public DbSet<Entitlement> Entitlements { get; }
+
+    /// <summary>
+    /// The plans an agency can be on. Platform-owned, and archived rather than deleted.
+    /// </summary>
+    public DbSet<SubscriptionTier> SubscriptionTiers { get; }
+
+    /// <summary>What each tier has cost, with history. A closed row is never edited.</summary>
+    public DbSet<TierPrice> TierPrices { get; }
+
+    /// <summary>What each tier grants.</summary>
+    public DbSet<TierEntitlement> TierEntitlements { get; }
+
+    /// <summary>What admins changed about a tier, with the migration policy and the notice sent.</summary>
+    public DbSet<TierChangeLogEntry> TierChangeLog { get; }
+
+    /// <summary>Each agency's plan. At most one live per agency, enforced by a partial unique index.</summary>
+    public DbSet<Subscription> Subscriptions { get; }
+
+    /// <summary>What Trips charged each agency. The one invoice that carries our name, not theirs.</summary>
+    public DbSet<SubscriptionInvoice> SubscriptionInvoices { get; }
+
+    /// <summary>The lines whose sum is an invoice's total — always, and checked by the database.</summary>
+    public DbSet<SubscriptionInvoiceLine> SubscriptionInvoiceLines { get; }
+
+    /// <summary>Every try at taking a subscription payment, successful or not. Append-only.</summary>
+    public DbSet<SubscriptionChargeAttempt> SubscriptionChargeAttempts { get; }
+
+    /// <summary>Tier changes that have been agreed but have not landed yet.</summary>
+    public DbSet<SubscriptionMigration> SubscriptionMigrations { get; }
+
+    /// <summary>Reusable gateway authorisations. Opaque tokens, never card numbers.</summary>
+    public DbSet<PaymentAuthorization> PaymentAuthorizations { get; }
 
     /// <summary>
     /// Each agency's markup rules. Never edited in place — see <see cref="MarkupRule"/> — so the rule

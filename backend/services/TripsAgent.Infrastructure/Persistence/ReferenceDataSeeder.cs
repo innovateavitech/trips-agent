@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Domain.Billing;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Suppliers;
 
@@ -45,7 +46,51 @@ public static class ReferenceDataSeeder
         // The supplier rows adapters look themselves up by: an adapter with no row cannot audit a call.
         await EnsureSuppliersAsync(dbContext, cancellationToken);
 
+        // The entitlement catalogue. A tier can only grant an entitlement that has a row here, and
+        // the resolver falls back to the catalogue's defaults for anything a tier does not grant —
+        // so a deploy that skipped this would leave every agency on the fallback set.
+        await EnsureEntitlementsAsync(dbContext, cancellationToken);
+
         return (permissions, roles);
+    }
+
+    /// <summary>
+    /// Every entitlement a tier can grant, from <see cref="EntitlementCatalog"/>.
+    /// </summary>
+    /// <remarks>
+    /// Additive like everything else here: a code that has disappeared from the catalogue keeps its
+    /// row, because a tier may still grant it and removing the row would break that tier's foreign
+    /// key. Names and descriptions are refreshed, because those are only ever shown to an admin.
+    /// </remarks>
+    private static async Task EnsureEntitlementsAsync(AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        var existing = await dbContext.Entitlements.ToDictionaryAsync(
+            entitlement => entitlement.Code, StringComparer.Ordinal, cancellationToken);
+
+        var changed = false;
+
+        foreach (var definition in EntitlementCatalog.All)
+        {
+            if (existing.TryGetValue(definition.Code, out var entitlement))
+            {
+                if (entitlement.Name != definition.Name || entitlement.Description != definition.Description)
+                {
+                    entitlement.Describe(definition.Name, definition.Description);
+                    changed = true;
+                }
+
+                continue;
+            }
+
+            dbContext.Entitlements.Add(
+                new Entitlement(definition.Code, definition.Name, definition.Description, definition.ValueType));
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 
     /// <summary>

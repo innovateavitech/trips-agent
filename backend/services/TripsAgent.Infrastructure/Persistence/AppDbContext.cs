@@ -6,6 +6,7 @@ using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Auditing;
+using TripsAgent.Domain.Billing;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
@@ -177,6 +178,39 @@ public class AppDbContext : DbContext, IAppDbContext
     /// upsert, never by loading a row and saving it back. Deliberately absent from IAppDbContext.
     /// </summary>
     public DbSet<DocumentNumberSequence> DocumentNumberSequences => Set<DocumentNumberSequence>();
+
+    /// <inheritdoc />
+    public DbSet<Entitlement> Entitlements => Set<Entitlement>();
+
+    /// <inheritdoc />
+    public DbSet<SubscriptionTier> SubscriptionTiers => Set<SubscriptionTier>();
+
+    /// <inheritdoc />
+    public DbSet<TierPrice> TierPrices => Set<TierPrice>();
+
+    /// <inheritdoc />
+    public DbSet<TierEntitlement> TierEntitlements => Set<TierEntitlement>();
+
+    /// <inheritdoc />
+    public DbSet<TierChangeLogEntry> TierChangeLog => Set<TierChangeLogEntry>();
+
+    /// <inheritdoc />
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
+
+    /// <inheritdoc />
+    public DbSet<SubscriptionInvoice> SubscriptionInvoices => Set<SubscriptionInvoice>();
+
+    /// <inheritdoc />
+    public DbSet<SubscriptionInvoiceLine> SubscriptionInvoiceLines => Set<SubscriptionInvoiceLine>();
+
+    /// <inheritdoc />
+    public DbSet<SubscriptionChargeAttempt> SubscriptionChargeAttempts => Set<SubscriptionChargeAttempt>();
+
+    /// <inheritdoc />
+    public DbSet<SubscriptionMigration> SubscriptionMigrations => Set<SubscriptionMigration>();
+
+    /// <inheritdoc />
+    public DbSet<PaymentAuthorization> PaymentAuthorizations => Set<PaymentAuthorization>();
 
     /// <inheritdoc />
     public DbSet<MarkupRule> MarkupRules => Set<MarkupRule>();

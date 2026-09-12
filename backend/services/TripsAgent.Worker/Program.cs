@@ -4,6 +4,7 @@ using TripsAgent.Documents;
 using TripsAgent.Infrastructure;
 using TripsAgent.Infrastructure.Assets;
 using TripsAgent.Infrastructure.Auditing;
+using TripsAgent.Infrastructure.Catalog;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Payments;
 using TripsAgent.Infrastructure.Retention;
@@ -109,5 +110,14 @@ TicketTimeLimitMonitorSchedule.Register(recurringJobs);
 // The checkout's one unwatched wait: paid for, but the issue message never ran (#42). Sending it again
 // is safe — the issuer sends the supplier nothing for a booking that is already issuing.
 TripsAgent.Infrastructure.Checkout.CheckoutSweepSchedule.Register(recurringJobs);
+
+// Group departures (#57), plan §3 jobs 6, 9, 10 and 11. The seats and the status are moved by the
+// checkout that earns them; these are the clock's share of the work — the checkout that walked
+// away, the offer nobody answered, the payment nobody made, and the nightly proof that every
+// status still matches its seats.
+DepartureHoldExpirySchedule.Register(recurringJobs);
+WaitlistOfferExpirySchedule.Register(recurringJobs);
+DepartureStatusSweepSchedule.Register(recurringJobs);
+InstallmentReminderSchedule.Register(recurringJobs);
 
 await host.RunAsync();

@@ -187,6 +187,9 @@ app.MapBookingEndpoints();
 app.MapAssetEndpoints();
 app.MapCatalogEndpoints();
 
+// The agency's dated departures, sold by the seat (#57).
+app.MapDepartureEndpoints();
+
 // A booking's invoices and vouchers (#46). The two download routes are anonymous and signed: a PDF
 // opens in a new tab, which carries no token.
 app.MapDocumentEndpoints();

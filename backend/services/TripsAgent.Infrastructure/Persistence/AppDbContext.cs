@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Application.Auditing;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Domain.Analytics;
 using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
@@ -250,6 +251,32 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <summary>Addresses we no longer send to. Platform-wide.</summary>
     public DbSet<SuppressedEmailAddress> SuppressedEmailAddresses => Set<SuppressedEmailAddress>();
 
+    // -------------------------------------------------------------------- analytics read models
+
+    /// <summary>One row per order line, flattened for counting. Tenant-scoped.</summary>
+    public DbSet<BookingFact> BookingFacts => Set<BookingFact>();
+
+    /// <summary>One agency's day. Tenant-scoped.</summary>
+    public DbSet<AgencyDailyAggregate> AgencyDailyAggregates => Set<AgencyDailyAggregate>();
+
+    /// <summary>The platform's day. Platform-only — see the filter below.</summary>
+    public DbSet<PlatformDailyAggregate> PlatformDailyAggregates => Set<PlatformDailyAggregate>();
+
+    /// <summary>A supplier's day. Platform-only — see the filter below.</summary>
+    public DbSet<SupplierDailyAggregate> SupplierDailyAggregates => Set<SupplierDailyAggregate>();
+
+    /// <summary>What the rollup did. Platform-only.</summary>
+    public DbSet<RollupRun> RollupRuns => Set<RollupRun>();
+
+    /// <summary>The catalogue of reports. Reference data, readable by everybody.</summary>
+    public DbSet<ReportDefinition> ReportDefinitions => Set<ReportDefinition>();
+
+    /// <summary>One run of one report. Nullable agency: null is a platform run.</summary>
+    public DbSet<ReportJob> ReportJobs => Set<ReportJob>();
+
+    /// <summary>Every export, logged. Append-only.</summary>
+    public DbSet<ReportExportAudit> ReportExportAudits => Set<ReportExportAudit>();
+
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.
     /// </summary>
@@ -414,6 +441,36 @@ public class AppDbContext : DbContext, IAppDbContext
         // A supplier call made for no agency — a platform smoke test — is platform business only.
         modelBuilder.Entity<SupplierApiCall>().HasQueryFilter(call =>
             AllowCrossTenantAccess || call.AgencyId == CurrentAgencyId);
+
+        // ------------------------------------------------------------------ the analytics models
+        //
+        // fact_bookings and agg_agency_daily are ITenantScoped and already covered by the loop
+        // above. The three below are not, and each is written out for a different reason.
+        //
+        // The platform aggregates carry no agency at all: they ARE the cross-tenant view. There is
+        // no column to match, so the only safe filter is "a platform scope is open" — an agency
+        // session reads nothing from them, not even an empty row it might infer volume from. The
+        // rollup job that writes them opens a scope with a reason, like every other cross-tenant
+        // read; row-level security says the same thing underneath (ADR-0006).
+        modelBuilder.Entity<PlatformDailyAggregate>().HasQueryFilter(_ => AllowCrossTenantAccess);
+        modelBuilder.Entity<SupplierDailyAggregate>().HasQueryFilter(_ => AllowCrossTenantAccess);
+
+        // The rollup's own history. Platform operations, and no agency's business.
+        modelBuilder.Entity<RollupRun>().HasQueryFilter(_ => AllowCrossTenantAccess);
+
+        // A report run and an export record carry a NULLABLE agency — null means "every agency",
+        // a platform report — so they cannot implement ITenantScoped. The filter is the audit
+        // log's: my own rows, or everything inside a platform scope. A null agency never equals
+        // CurrentAgencyId, so a platform run is invisible to every agency.
+        modelBuilder.Entity<ReportJob>().HasQueryFilter(job =>
+            AllowCrossTenantAccess || job.AgencyId == CurrentAgencyId);
+
+        modelBuilder.Entity<ReportExportAudit>().HasQueryFilter(entry =>
+            AllowCrossTenantAccess || entry.AgencyId == CurrentAgencyId);
+
+        // ReportDefinition is deliberately unfiltered: it is the catalogue of what may be run,
+        // like identity.permissions, and holds no agency's data. Who may run which report is
+        // decided by the permission on its endpoint, not by hiding the menu.
 
         // Permissions are a platform-wide catalogue with no owner, and login attempts are
         // deliberately unfiltered: the ones worth investigating are against addresses that match

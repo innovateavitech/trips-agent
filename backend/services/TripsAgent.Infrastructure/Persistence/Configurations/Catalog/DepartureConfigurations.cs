@@ -192,6 +192,12 @@ public sealed class DepartureHoldConfiguration : IEntityTypeConfiguration<Depart
             .OnDelete(DeleteBehavior.Cascade)
             .HasConstraintName("fk_departure_holds_carts_cart_id");
 
+        // The seats one order line bought (build plan F5): how a paid line finds the hold to convert.
+        // Partial, because a hold that is still only a cart's names no line.
+        builder.HasIndex(hold => hold.OrderLineId)
+            .HasFilter("order_line_id IS NOT NULL")
+            .HasDatabaseName("ix_departure_holds_order_line_id");
+
         // What CartAndHoldExpiryJob (job 6) reads every minute: the held ones, oldest deadline first.
         builder.HasIndex(hold => new { hold.Status, hold.ExpiresAt })
             .HasDatabaseName("ix_departure_holds_status_expires_at");

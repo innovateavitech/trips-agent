@@ -176,6 +176,9 @@ public interface IAppDbContext
     /// <summary>What is in those carts.</summary>
     public DbSet<CartItem> CartItems { get; }
 
+    /// <summary>The traveller's "manage my booking" links (build plan F5, decision 21).</summary>
+    public DbSet<BookingAccessToken> BookingAccessTokens { get; }
+
     /// <summary>The aggregators we buy from. Platform reference data: not tenant-scoped.</summary>
     public DbSet<Supplier> Suppliers { get; }
 

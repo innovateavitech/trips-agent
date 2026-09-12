@@ -204,6 +204,9 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <inheritdoc />
     public DbSet<CartItem> CartItems => Set<CartItem>();
 
+    /// <summary>The traveller's "manage my booking" links (build plan F5, decision 21).</summary>
+    public DbSet<BookingAccessToken> BookingAccessTokens => Set<BookingAccessToken>();
+
     /// <summary>The aggregators we buy flights and bus seats from. Platform reference data, not tenant-scoped.</summary>
     public DbSet<Supplier> Suppliers => Set<Supplier>();
 

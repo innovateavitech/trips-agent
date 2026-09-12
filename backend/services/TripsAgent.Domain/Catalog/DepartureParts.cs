@@ -174,6 +174,16 @@ public sealed class DepartureHold : Entity, ITenantScoped
     /// <summary>The cart these seats are being bought in.</summary>
     public Guid CartId { get; private set; }
 
+    /// <summary>
+    /// The order line the cart became, once checkout has written it. Null while the hold is still
+    /// only a cart's.
+    /// </summary>
+    /// <remarks>
+    /// What lets the confirmation of a paid line find the seats it bought, and what a pax manifest
+    /// entry is hung off. Set once, when the order is placed.
+    /// </remarks>
+    public Guid? OrderLineId { get; private set; }
+
     public int PaxCount { get; private set; }
 
     public DepartureHoldStatus Status { get; private set; }
@@ -185,6 +195,13 @@ public sealed class DepartureHold : Entity, ITenantScoped
 
     /// <summary>When it stopped being held, either way. Null while it is still held.</summary>
     public DateTimeOffset? SettledAt { get; private set; }
+
+    /// <summary>Names the order line these seats were bought on. Once.</summary>
+    public void AttachToOrderLine(Guid orderLineId)
+    {
+        ArgumentOutOfRangeException.ThrowIfEqual(orderLineId, Guid.Empty);
+        OrderLineId ??= orderLineId;
+    }
 
     /// <summary>Gives the seats back. Idempotent: releasing a settled hold does nothing.</summary>
     /// <returns>True when this call is the one that released it.</returns>

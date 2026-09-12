@@ -68,7 +68,8 @@ public sealed class PaymentTransaction : Entity, IAuditableEntity, ITenantScoped
         Money amount,
         string currency,
         string reference,
-        string? idempotencyKey = null)
+        string? idempotencyKey = null,
+        Guid? orderId = null)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(agencyId, Guid.Empty);
         ArgumentException.ThrowIfNullOrWhiteSpace(reference);
@@ -87,6 +88,7 @@ public sealed class PaymentTransaction : Entity, IAuditableEntity, ITenantScoped
             Currency = currency.Trim().ToUpperInvariant(),
             Reference = reference,
             IdempotencyKey = idempotencyKey,
+            OrderId = orderId,
             Status = PaymentStatus.Pending,
         };
     }
@@ -139,6 +141,17 @@ public sealed class PaymentTransaction : Entity, IAuditableEntity, ITenantScoped
 
     /// <summary>Caller-supplied, to make a retried initialise return the same attempt.</summary>
     public string? IdempotencyKey { get; private set; }
+
+    /// <summary>
+    /// The order being paid for, on a payment whose purpose is <see cref="PaymentPurpose.OrderPayment"/>.
+    /// Null for a top-up or a subscription, which pay for no order.
+    /// </summary>
+    /// <remarks>
+    /// A traveller's card payment on a storefront credits the agency's wallet like any other payment,
+    /// and then funds exactly this order (build plan F5). Without the link, the only way back from a
+    /// gateway callback to the booking it paid for would be to parse a reference string.
+    /// </remarks>
+    public Guid? OrderId { get; private set; }
 
     /// <summary>Why it failed, from the gateway. For support, not for the agent.</summary>
     public string? FailureReason { get; private set; }

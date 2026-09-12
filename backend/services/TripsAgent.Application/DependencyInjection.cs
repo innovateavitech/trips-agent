@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Assets;
 using TripsAgent.Application.Catalog;
+using TripsAgent.Application.Commerce;
 using TripsAgent.Application.Crm;
 using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity.Authentication;
@@ -84,6 +85,11 @@ public static class DependencyInjection
         // The checkout (#42): confirm and pay, capture on the ticket, and sweep up lost issue messages.
         // Reversals (#43) and the agent's resolution queue (#44) give money back through one path.
         services.AddScoped<LedgerAccounts>();
+
+        // Confirming a searched fare with the supplier, shared by the console's checkout and the
+        // storefront's so the hash gate and the deadline check cannot drift apart.
+        services.AddScoped<Checkout.SupplierLineTitles>();
+        services.AddScoped<Checkout.SupplierFareConfirmation>();
         services.AddScoped<Checkout.CheckoutService>();
         services.AddScoped<Checkout.CheckoutCompletion>();
         services.AddScoped<Checkout.CheckoutSweeper>();
@@ -126,6 +132,17 @@ public static class DependencyInjection
         services.AddScoped<CustomerBookingRecorder>();
         services.AddScoped<TaskReminders>();
         services.AddScoped<IQuoteEmails, QuoteEmails>();
+
+        // The traveller's buying flow on an agency's storefront (build plan F5): the cart, guest
+        // checkout, the card payment that funds it, and the link that manages the booking after.
+        services.AddScoped<StorefrontTenant>();
+        services.AddScoped<CartPricing>();
+        services.AddScoped<CartService>();
+        services.AddScoped<BookingAccessLinks>();
+        services.AddScoped<StorefrontCheckoutService>();
+        services.AddScoped<AgencyLineFulfilment>();
+        services.AddScoped<CustomerOrderPayments>();
+        services.AddScoped<ManageBookingQueries>();
 
         // Stages notifications in the caller's unit of work; the Worker sends them.
         services.AddScoped<INotifier, Notifier>();

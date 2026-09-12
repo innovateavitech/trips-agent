@@ -20,9 +20,10 @@ public enum ResolutionChoice
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Refund</b> gives back whatever wallet money is still held or was taken for the line — unless a
-/// supplier reversal already did — and closes the line as resolved-refunded. The order's status trail
-/// records who decided and what happened, and the order line's change is written to the audit trail.
+/// <b>Refund</b> gives the line's money back to wherever it was paid from — the agency's wallet for a
+/// booking the agent made, the traveller's card for one bought on the storefront (build plan F5) —
+/// unless a supplier reversal already did, and closes the line as resolved-refunded. The order's
+/// status trail records who decided and what happened, and the line's change goes to the audit trail.
 /// </para>
 /// <para>
 /// <b>Retry is refused, honestly.</b> A line lands here because the supplier released its fare or said no
@@ -34,7 +35,7 @@ public sealed partial class ResolutionService
 {
     private readonly IAppDbContext _db;
     private readonly ITransactionRunner _transactions;
-    private readonly WalletRefunds _refunds;
+    private readonly OrderRefunds _refunds;
     private readonly IPlatformScope _platformScope;
     private readonly IOutbox _outbox;
     private readonly IUniqueViolationDetector _uniqueViolations;
@@ -44,7 +45,7 @@ public sealed partial class ResolutionService
     public ResolutionService(
         IAppDbContext db,
         ITransactionRunner transactions,
-        WalletRefunds refunds,
+        OrderRefunds refunds,
         IPlatformScope platformScope,
         IOutbox outbox,
         IUniqueViolationDetector uniqueViolations,
@@ -121,8 +122,9 @@ public sealed partial class ResolutionService
             : await _refunds.ReturnAsync(order, line, RefundReason.AgentResolution, now, refundedByUserId: decidedByUserId, cancellationToken: cancellationToken);
 
         var note = refund is null
-            ? "Closed and refunded: the money for it had already gone back to the wallet."
-            : $"Refunded {order.Currency} {refund.AmountMinor.AmountMinor} (in kobo) to the wallet.";
+            ? "Closed and refunded: the money for it had already gone back."
+            : $"Refunded {order.Currency} {refund.AmountMinor.AmountMinor} (in kobo) "
+              + (refund.Method == RefundMethod.Gateway ? "to the card it was paid from." : "to the wallet.");
 
         line.Resolve(ResolutionStatus.ResolvedRefunded, decidedByUserId, now);
         line.RecordFulfilment(FulfilmentStatus.Refunded, now);

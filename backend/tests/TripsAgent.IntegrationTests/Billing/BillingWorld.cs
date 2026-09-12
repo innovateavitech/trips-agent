@@ -371,6 +371,18 @@ internal sealed class ScriptedGateway : IRecurringChargeGateway, IPaymentGateway
         return Task.FromResult(answer(reference));
     }
 
+    /// <summary>
+    /// Subscriptions are never refunded — a plan that was used for a month was delivered. This is
+    /// here because the gateway interface has it, and it throws rather than answering so that
+    /// wiring a refund into billing by accident fails a test instead of passing quietly.
+    /// </summary>
+    public Task<GatewayRefund> RefundAsync(
+        string reference,
+        Money amount,
+        string reason,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("Billing does not refund a subscription charge.");
+
     public bool IsValidSignature(string payload, string? signature) => true;
 
     private static Func<string, GatewayVerification> Succeed(long amountMinor) =>

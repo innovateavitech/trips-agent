@@ -7,6 +7,9 @@ using TripsAgent.Api.Assets;
 using TripsAgent.Api.Authorization;
 using TripsAgent.Api.Billing;
 using TripsAgent.Api.Bookings;
+using TripsAgent.Api.Catalog;
+using TripsAgent.Api.Commerce;
+using TripsAgent.Api.Crm;
 using TripsAgent.Api.Documents;
 using TripsAgent.Api.Identity;
 using TripsAgent.Api.Networking;
@@ -17,6 +20,7 @@ using TripsAgent.Api.RateLimiting;
 using TripsAgent.Api.Scheduling;
 using TripsAgent.Api.Search;
 using TripsAgent.Api.Storage;
+using TripsAgent.Api.Storefront;
 using TripsAgent.Api.Tenancy;
 using TripsAgent.Application;
 using TripsAgent.Application.Identity;
@@ -194,8 +198,23 @@ app.MapSubscriptionEndpoints();
 app.MapTierAdminEndpoints();
 app.MapSearchEndpoints();
 app.MapBookingEndpoints();
+app.MapStorefrontEndpoints();
+app.MapPublicStorefrontEndpoints();
 
 app.MapAssetEndpoints();
+app.MapCatalogEndpoints();
+app.MapCrmEndpoints();
+
+// Anonymous, and reached from the agency's own storefront: the trip-request widget and the
+// customer's quote page (#62).
+app.MapPublicCrmEndpoints();
+
+// The traveller's cart, guest checkout and "manage my booking" link (build plan F5). Anonymous,
+// with the agency resolved from the host name their browser used.
+app.MapPublicCommerceEndpoints();
+
+// The agency's dated departures, sold by the seat (#57).
+app.MapDepartureEndpoints();
 
 // A booking's invoices and vouchers (#46). The two download routes are anonymous and signed: a PDF
 // opens in a new tab, which carries no token.

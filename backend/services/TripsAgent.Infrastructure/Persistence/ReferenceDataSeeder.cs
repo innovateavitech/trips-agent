@@ -46,6 +46,9 @@ public static class ReferenceDataSeeder
         // The supplier rows adapters look themselves up by: an adapter with no row cannot audit a call.
         await EnsureSuppliersAsync(dbContext, cancellationToken);
 
+        // Website templates and the hostname denylist: every agency reads them, and the application role
+        // cannot write them, so they have to come from here.
+        await Storefront.StorefrontReferenceData.EnsureAsync(dbContext, cancellationToken);
         // The entitlement catalogue. A tier can only grant an entitlement that has a row here, and
         // the resolver falls back to the catalogue's defaults for anything a tier does not grant —
         // so a deploy that skipped this would leave every agency on the fallback set.

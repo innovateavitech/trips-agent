@@ -32,6 +32,17 @@ public enum WalletTransactionType
     Refund = 3,
     Reversal = 4,
     Adjustment = 5,
+
+    /// <summary>
+    /// A traveller paid the agency on its storefront, and the money settled into its wallet
+    /// (build plan F5, decision 2 — the platform is merchant of record).
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="TopUp"/> because it is not one: nobody at the agency paid it in,
+    /// and a statement that called it a top-up would be telling the agent something untrue. The
+    /// booking it funds appears as its own <see cref="BookingPayment"/> line when it is ticketed.
+    /// </remarks>
+    CustomerPayment = 6,
 }
 
 /// <summary>
@@ -141,7 +152,16 @@ public sealed class Wallet : Entity, IAuditableEntity, ITenantScoped, IAuditLogg
     }
 
     /// <summary>Reserves funds so a concurrent booking cannot spend them.</summary>
-    public WalletHold PlaceHold(Money amount, DateTimeOffset now, TimeSpan ttl, Guid? orderId = null)
+    /// <param name="amount">What to reserve.</param>
+    /// <param name="now">When the hold starts.</param>
+    /// <param name="ttl">How long it stands before the sweeper may give it back.</param>
+    /// <param name="orderId">The order it is for, once there is one.</param>
+    /// <param name="orderLineId">
+    /// The line it is for. Named on a multi-line order, whose lines are confirmed, failed and
+    /// refunded one at a time — so each line's money is captured or released on its own. Null for a
+    /// console booking, which has exactly one line.
+    /// </param>
+    public WalletHold PlaceHold(Money amount, DateTimeOffset now, TimeSpan ttl, Guid? orderId = null, Guid? orderLineId = null)
     {
         RequirePositive(amount);
         RequireActive();
@@ -155,7 +175,7 @@ public sealed class Wallet : Entity, IAuditableEntity, ITenantScoped, IAuditLogg
         ReservedMinor += amount;
         Version++;
 
-        return WalletHold.Create(Id, AgencyId, amount, now.Add(ttl), orderId);
+        return WalletHold.Create(Id, AgencyId, amount, now.Add(ttl), orderId, orderLineId);
     }
 
     /// <summary>Spends a hold: the reservation becomes an actual debit.</summary>
@@ -250,7 +270,13 @@ public sealed class WalletHold : Entity, IAuditableEntity, ITenantScoped
     {
     }
 
-    internal static WalletHold Create(Guid walletId, Guid agencyId, Money amount, DateTimeOffset expiresAt, Guid? orderId) =>
+    internal static WalletHold Create(
+        Guid walletId,
+        Guid agencyId,
+        Money amount,
+        DateTimeOffset expiresAt,
+        Guid? orderId,
+        Guid? orderLineId = null) =>
         new()
         {
             WalletId = walletId,
@@ -259,6 +285,7 @@ public sealed class WalletHold : Entity, IAuditableEntity, ITenantScoped
             Status = WalletHoldStatus.Held,
             ExpiresAt = expiresAt,
             OrderId = orderId,
+            OrderLineId = orderLineId,
         };
 
     public Guid WalletId { get; private set; }
@@ -267,6 +294,17 @@ public sealed class WalletHold : Entity, IAuditableEntity, ITenantScoped
 
     /// <summary>The order this reserves funds for. Null for a hold placed before one exists.</summary>
     public Guid? OrderId { get; private set; }
+
+    /// <summary>
+    /// The one line it reserves funds for, on an order with more than one. Null on a console
+    /// booking, whose single line owns the whole order's hold.
+    /// </summary>
+    /// <remarks>
+    /// A cart from a storefront can hold a flight, a visa and a tour at once, and each of those is
+    /// confirmed, fails or is refunded on its own (build plan F5). Money held per line is what lets
+    /// one line's failure give its own money back without touching the rest.
+    /// </remarks>
+    public Guid? OrderLineId { get; private set; }
 
     public Money AmountMinor { get; private set; }
 

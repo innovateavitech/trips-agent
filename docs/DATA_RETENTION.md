@@ -193,6 +193,20 @@ erasing a person (#106) one row anonymised in place rather than a sweep of five 
 | `notifications.notification_templates` | No | While in use | Kept | Configuration |
 | `notifications.suppressed_email_addresses` | Yes | Indefinitely | Kept | A bounced or complaining address must stay suppressed, or we mail it again |
 
+### Storefront
+
+| Table | Personal data | Kept for | Treatment | Why |
+|---|---|---|---|---|
+| `storefront.site_templates` | No | While offered | Kept | Reference data: the starter websites |
+| `storefront.reserved_hostname_labels` | No | Indefinitely | Kept | Reference data: the hostname denylist and brand list (open question 20) |
+| `storefront.sites` | No | While the agency exists | Kept | The agency's website and its settings |
+| `storefront.site_versions` | Some (agency contact details in snapshots) | While the site exists | Kept | Every staged and published version: rollback needs them, and they record what travellers were shown |
+| `storefront.site_pages` | No | While the site exists | Kept | The draft's pages |
+| `storefront.site_blocks` | No | With their page | Kept | The draft's blocks |
+| `storefront.site_themes` | No | While the site exists | Kept | The site's typography |
+| `storefront.site_domains` | No | While connected | Kept | Hostnames the site answers on; a removed one is deleted with its checks |
+| `storefront.site_domain_checks` | No | With their hostname | Kept | What DNS said on each check — the answer to "why isn't my domain working?" |
+
 ---
 
 ## The purge job

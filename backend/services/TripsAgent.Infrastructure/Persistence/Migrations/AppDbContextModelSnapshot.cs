@@ -4376,6 +4376,661 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.ToTable("price_quotes", "pricing");
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.ReservedHostnameLabel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(63)
+                        .HasColumnType("character varying(63)")
+                        .HasColumnName("label");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_reserved_hostname_labels");
+
+                    b.HasIndex("Label")
+                        .IsUnique()
+                        .HasDatabaseName("ix_reserved_hostname_labels_label");
+
+                    b.ToTable("reserved_hostname_labels", "storefront");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.Site", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<string>("AnalyticsIds")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("analytics_ids");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("DraftVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("draft_version_id");
+
+                    b.Property<bool>("FlightSearchEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("flight_search_enabled");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("language");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid?>("PrimaryDomainId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("primary_domain_id");
+
+                    b.Property<Guid?>("PublishedVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("published_version_id");
+
+                    b.Property<string>("SeoDescription")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("seo_description");
+
+                    b.Property<string>("SeoTitle")
+                        .HasMaxLength(70)
+                        .HasColumnType("character varying(70)")
+                        .HasColumnName("seo_title");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TemplateId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("template_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sites");
+
+                    b.HasIndex("AgencyId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sites_agency_id");
+
+                    b.HasIndex("TemplateId")
+                        .HasDatabaseName("ix_sites_template_id");
+
+                    b.ToTable("sites", "storefront");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SiteBlock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<string>("BlockType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("block_type");
+
+                    b.Property<string>("Config")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("config");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("PageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("page_id");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_site_blocks");
+
+                    b.HasIndex("PageId")
+                        .HasDatabaseName("ix_site_blocks_page_id");
+
+                    b.HasIndex("AgencyId", "PageId")
+                        .HasDatabaseName("ix_site_blocks_agency_id_page_id");
+
+                    b.ToTable("site_blocks", "storefront");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SiteDomain", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<int>("CheckCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("check_count");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Hostname")
+                        .IsRequired()
+                        .HasColumnType("citext")
+                        .HasColumnName("hostname");
+
+                    b.Property<DateTimeOffset?>("LastCheckedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_checked_at");
+
+                    b.Property<bool>("NeedsReview")
+                        .HasColumnType("boolean")
+                        .HasColumnName("needs_review");
+
+                    b.Property<DateTimeOffset?>("NextCheckAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_check_at");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_user_id");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("site_id");
+
+                    b.Property<int>("SslAttemptCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("ssl_attempt_count");
+
+                    b.Property<DateTimeOffset?>("SslExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ssl_expires_at");
+
+                    b.Property<DateTimeOffset?>("SslIssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ssl_issued_at");
+
+                    b.Property<string>("SslLastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("ssl_last_error");
+
+                    b.Property<DateTimeOffset?>("SslNextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ssl_next_attempt_at");
+
+                    b.Property<string>("SslStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("ssl_status");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTimeOffset?>("VerificationStartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("verification_started_at");
+
+                    b.Property<string>("VerificationStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("verification_status");
+
+                    b.Property<string>("VerificationToken")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("verification_token");
+
+                    b.Property<DateTimeOffset?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("verified_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_site_domains");
+
+                    b.HasIndex("Hostname")
+                        .IsUnique()
+                        .HasDatabaseName("ix_site_domains_verified_hostname")
+                        .HasFilter("verification_status = 'Verified'");
+
+                    b.HasIndex("AgencyId", "Hostname")
+                        .IsUnique()
+                        .HasDatabaseName("ix_site_domains_agency_id_hostname");
+
+                    b.HasIndex("AgencyId", "SiteId")
+                        .HasDatabaseName("ix_site_domains_agency_id_site_id");
+
+                    b.HasIndex("SslStatus", "SslNextAttemptAt")
+                        .HasDatabaseName("ix_site_domains_ssl_status_ssl_next_attempt_at");
+
+                    b.HasIndex("VerificationStatus", "NextCheckAt")
+                        .HasDatabaseName("ix_site_domains_verification_status_next_check_at");
+
+                    b.HasIndex(new[] { "SiteId" }, "ix_site_domains_one_subdomain_per_site")
+                        .IsUnique()
+                        .HasDatabaseName("ix_site_domains_site_id")
+                        .HasFilter("type = 'Subdomain'");
+
+                    b.ToTable("site_domains", "storefront");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SiteDomainCheck", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CheckedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("checked_at");
+
+                    b.Property<string>("ErrorDetail")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("error_detail");
+
+                    b.Property<string>("ExpectedValue")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("expected_value");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("kind");
+
+                    b.PrimitiveCollection<string[]>("ObservedValues")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("observed_values");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("RecordName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("record_name");
+
+                    b.Property<string>("Resolver")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("resolver");
+
+                    b.Property<Guid>("SiteDomainId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("site_domain_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_site_domain_checks");
+
+                    b.HasIndex("AgencyId", "SiteDomainId")
+                        .HasDatabaseName("ix_site_domain_checks_agency_id_site_domain_id");
+
+                    b.HasIndex("SiteDomainId", "CheckedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_site_domain_checks_site_domain_id_checked_at");
+
+                    b.ToTable("site_domain_checks", "storefront");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SitePage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_system");
+
+                    b.Property<string>("MetaDescription")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("meta_description");
+
+                    b.Property<string>("MetaTitle")
+                        .HasMaxLength(70)
+                        .HasColumnType("character varying(70)")
+                        .HasColumnName("meta_title");
+
+                    b.Property<string>("PageType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("page_type");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("revision");
+
+                    b.Property<bool>("ShowInNav")
+                        .HasColumnType("boolean")
+                        .HasColumnName("show_in_nav");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("slug");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("VersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("version_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_site_pages");
+
+                    b.HasIndex("AgencyId", "VersionId")
+                        .HasDatabaseName("ix_site_pages_agency_id_version_id");
+
+                    b.HasIndex("VersionId", "Slug")
+                        .IsUnique()
+                        .HasDatabaseName("ix_site_pages_version_id_slug");
+
+                    b.HasIndex(new[] { "VersionId", "PageType" }, "ix_site_pages_one_system_page_per_type")
+                        .IsUnique()
+                        .HasDatabaseName("ix_site_pages_version_id_page_type")
+                        .HasFilter("page_type <> 'Custom'");
+
+                    b.ToTable("site_pages", "storefront");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SiteTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BlockSchema")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("block_schema");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("PreviewImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("preview_image_url");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_site_templates");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_site_templates_code");
+
+                    b.ToTable("site_templates", "storefront");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SiteTheme", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<string>("Colors")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("colors");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CustomCss")
+                        .HasColumnType("text")
+                        .HasColumnName("custom_css");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("site_id");
+
+                    b.Property<string>("Typography")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("typography");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_site_themes");
+
+                    b.HasIndex("AgencyId")
+                        .HasDatabaseName("ix_site_themes_agency_id");
+
+                    b.HasIndex("SiteId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_site_themes_site_id");
+
+                    b.ToTable("site_themes", "storefront");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SiteVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("archived_at");
+
+                    b.Property<string>("ContentSnapshot")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("content_snapshot");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<Guid?>("PublishedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("published_by_user_id");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("site_id");
+
+                    b.Property<DateTimeOffset?>("StagedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("staged_at");
+
+                    b.Property<Guid?>("StagedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("staged_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("ThemeSnapshot")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("theme_snapshot");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("version_no");
+
+                    b.HasKey("Id")
+                        .HasName("pk_site_versions");
+
+                    b.HasIndex("AgencyId", "SiteId")
+                        .HasDatabaseName("ix_site_versions_agency_id_site_id");
+
+                    b.HasIndex("SiteId", "VersionNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_site_versions_site_id_version_no");
+
+                    b.HasIndex(new[] { "SiteId" }, "ix_site_versions_one_draft_per_site")
+                        .IsUnique()
+                        .HasDatabaseName("ix_site_versions_site_id")
+                        .HasFilter("status = 'Draft'");
+
+                    b.ToTable("site_versions", "storefront");
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Suppliers.BusSegment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5590,6 +6245,16 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("contact_address");
 
+                    b.Property<string>("ContactEmail")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("contact_email");
+
+                    b.Property<string>("ContactPhone")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("contact_phone");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -5623,6 +6288,11 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
+
+                    b.Property<string>("WhatsAppNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("whats_app_number");
 
                     b.HasKey("Id")
                         .HasName("pk_agency_branding");
@@ -6855,6 +7525,125 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_price_quotes_markup_rules_markup_rule_id");
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.Site", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithOne()
+                        .HasForeignKey("TripsAgent.Domain.Storefront.Site", "AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sites_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Storefront.SiteTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sites_site_templates_template_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SiteBlock", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_site_blocks_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Storefront.SitePage", null)
+                        .WithMany("Blocks")
+                        .HasForeignKey("PageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_site_blocks_site_pages_page_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SiteDomain", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_site_domains_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Storefront.Site", null)
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_site_domains_sites_site_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SiteDomainCheck", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_site_domain_checks_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Storefront.SiteDomain", null)
+                        .WithMany()
+                        .HasForeignKey("SiteDomainId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_site_domain_checks_site_domains_site_domain_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SitePage", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_site_pages_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Storefront.SiteVersion", null)
+                        .WithMany()
+                        .HasForeignKey("VersionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_site_pages_site_versions_version_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SiteTheme", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_site_themes_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Storefront.Site", null)
+                        .WithOne()
+                        .HasForeignKey("TripsAgent.Domain.Storefront.SiteTheme", "SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_site_themes_sites_site_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SiteVersion", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_site_versions_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Storefront.Site", null)
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_site_versions_sites_site_id");
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Suppliers.BusSegment", b =>
                 {
                     b.HasOne("TripsAgent.Domain.Suppliers.SupplierOffer", null)
@@ -7139,6 +7928,11 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.Navigation("Lines");
 
                     b.Navigation("StatusHistory");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Storefront.SitePage", b =>
+                {
+                    b.Navigation("Blocks");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Suppliers.SupplierBooking", b =>

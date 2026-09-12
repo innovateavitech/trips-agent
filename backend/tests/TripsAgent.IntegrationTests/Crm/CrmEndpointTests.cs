@@ -7,14 +7,18 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using StackExchange.Redis;
 using TripsAgent.Api.Crm;
 using TripsAgent.Application.Crm;
 using TripsAgent.Application.Identity;
 using TripsAgent.Contracts.Crm;
 using TripsAgent.Domain.Identity;
+using TripsAgent.Domain.Storefront;
 using TripsAgent.Domain.Tenancy;
+using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.Infrastructure.Storefront;
 using TripsAgent.IntegrationTests.Persistence;
+using TripsAgent.IntegrationTests.Pricing;
 
 namespace TripsAgent.IntegrationTests.Crm;
 
@@ -24,7 +28,7 @@ namespace TripsAgent.IntegrationTests.Crm;
 /// application role.
 /// </summary>
 [Collection(PostgresCollection.Name)]
-public sealed class CrmEndpointTests : IAsyncLifetime, IDisposable
+public sealed class CrmEndpointTests : IClassFixture<RedisFixture>, IAsyncLifetime, IDisposable
 {
     private const string Leads = "/api/v1/crm/leads";
     private const string Quotes = "/api/v1/crm/quotes";
@@ -36,6 +40,7 @@ public sealed class CrmEndpointTests : IAsyncLifetime, IDisposable
     private static readonly string[] Everything = [PermissionCodes.CustomerView, PermissionCodes.CustomerEdit];
 
     private readonly PostgresFixture _postgres;
+    private readonly RedisFixture _redis;
 
     private (string Key, string Value)[] _overrides = [];
     private WebApplicationFactory<Program> _factory = null!;
@@ -47,22 +52,54 @@ public sealed class CrmEndpointTests : IAsyncLifetime, IDisposable
     private User _adaAtA = null!;
     private User _bolaAtB = null!;
 
-    public CrmEndpointTests(PostgresFixture postgres) => _postgres = postgres;
+    public CrmEndpointTests(PostgresFixture postgres, RedisFixture redis)
+    {
+        _postgres = postgres;
+        _redis = redis;
+    }
+
+    /// <summary>
+    /// An agency's website on its free address, which is verified from birth because we own the zone.
+    /// It is what the storefront directory resolves an anonymous request's host by.
+    /// </summary>
+    private static void AddSiteWithAddress(AppDbContext db, Agency agency, Guid templateId, string hostname)
+    {
+        var site = Site.Create(agency.Id, templateId, agency.LegalName);
+        var draft = SiteVersion.CreateDraft(site);
+        site.AttachDraft(draft);
+
+        var domain = SiteDomain.ForSubdomain(site, hostname, DateTimeOffset.UtcNow);
+        site.SetPrimaryDomain(domain);
+
+        db.Sites.Add(site);
+        db.SiteVersions.Add(draft);
+        db.SiteDomains.Add(domain);
+    }
 
     private static DateOnly Today => DateOnly.FromDateTime(DateTime.UtcNow);
 
-    /// <summary>The host agency A's storefront answers on, as the placeholder directory builds it.</summary>
-    private static string HostA => PlaceholderStorefrontDirectory.HostFor("lagos-travel");
+    /// <summary>
+    /// The host each agency's storefront answers on: its free subdomain, verified from birth because
+    /// we own the zone. The directory reads <c>site_domains</c>, so these tests give each agency a
+    /// real site with a real address rather than a name conjured from its slug.
+    /// </summary>
+    private const string HostA = "lagos-travel.localhost";
 
-    private static string HostB => PlaceholderStorefrontDirectory.HostFor("abuja-tours");
+    private const string HostB = "abuja-tours.localhost";
 
     public async Task InitializeAsync()
     {
         _database = $"crm_api_{Guid.NewGuid():N}";
 
-        await using (var setup = await _postgres.CreateEmptyDatabaseAsync(_database))
+        var tenancy = TestTenancy.None();
+
+        await using (var setup = await _postgres.CreateEmptyDatabaseAsync(_database, tenancy.Tenant, tenancy.Scope))
         {
             await setup.Database.MigrateAsync();
+            await ReferenceDataSeeder.EnsureAsync(setup, tenancy.Scope);
+
+            using var seeding = tenancy.Scope.Enter("test setup — two agencies, each with a website");
+            var template = await setup.SiteTemplates.FirstAsync();
 
             var a = Agency.RegisterPrincipal("Lagos Travel Limited", "lagos-travel", "NG", "NGN", "Africa/Lagos");
             var b = Agency.RegisterPrincipal("Abuja Tours Limited", "abuja-tours", "NG", "NGN", "Africa/Lagos");
@@ -76,6 +113,10 @@ public sealed class CrmEndpointTests : IAsyncLifetime, IDisposable
             setup.Users.AddRange(ada, bola);
             await setup.SaveChangesAsync();
 
+            AddSiteWithAddress(setup, a, template.Id, HostA);
+            AddSiteWithAddress(setup, b, template.Id, HostB);
+            await setup.SaveChangesAsync();
+
             (_agencyA, _agencyB) = (a.Id, b.Id);
             (_adaAtA, _bolaAtB) = (ada, bola);
         }
@@ -87,12 +128,19 @@ public sealed class CrmEndpointTests : IAsyncLifetime, IDisposable
         [
             ("ConnectionStrings__Postgres", _postgres.ConnectionStringFor(_database, asApplicationRole: true)),
             ("ConnectionStrings__PostgresAdmin", _postgres.ConnectionStringFor(_database, asApplicationRole: false)),
+            ("ConnectionStrings__Redis", _redis.ConnectionString),
         ];
 
         foreach (var (key, value) in _overrides)
         {
             Environment.SetEnvironmentVariable(key, value);
         }
+
+        // The host map is cached by hostname alone, which is right in production, where a hostname
+        // belongs to one agency and one database. Each test here rebuilds the same hostnames in a
+        // database of its own, so the map from the test before is retired first — the same generation
+        // bump a domain change performs.
+        await _redis.Connection.GetDatabase().StringIncrementAsync(RedisStorefrontHostCache.GenerationKey);
 
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(host => host.UseEnvironment("Development"));
@@ -313,7 +361,12 @@ public sealed class CrmEndpointTests : IAsyncLifetime, IDisposable
 
         sent.Status.Should().Be("Sent");
         sent.SentAt.Should().NotBeNull();
-        sent.PublicUrl.Should().StartWith($"https://{HostA}/q/");
+        // On the agency's own address, whatever scheme and port the environment serves sites on —
+        // the rule is whose host it is (CLAUDE.md rule 4), not how the URL is spelled.
+        var link = new Uri(sent.PublicUrl!);
+
+        link.Host.Should().Be(HostA);
+        link.AbsolutePath.Should().StartWith("/q/");
         sent.PublicUrl.Should().NotContain("trips", "nothing traveller-facing may mention us");
 
         (await GetAsync<LeadResponse>($"{Leads}/{lead.Id}")).Stage.Should().Be("Quoted");

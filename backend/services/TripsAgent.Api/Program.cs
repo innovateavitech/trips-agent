@@ -17,6 +17,7 @@ using TripsAgent.Api.RateLimiting;
 using TripsAgent.Api.Scheduling;
 using TripsAgent.Api.Search;
 using TripsAgent.Api.Storage;
+using TripsAgent.Api.Storefront;
 using TripsAgent.Api.Tenancy;
 using TripsAgent.Application;
 using TripsAgent.Application.Identity;
@@ -184,6 +185,8 @@ app.MapWalletEndpoints();
 app.MapPricingEndpoints();
 app.MapSearchEndpoints();
 app.MapBookingEndpoints();
+app.MapStorefrontEndpoints();
+app.MapPublicStorefrontEndpoints();
 
 app.MapAssetEndpoints();
 app.MapCatalogEndpoints();

@@ -36,7 +36,7 @@ The first place to look when picking this up again. Update it whenever a branch 
 | `feat/M1-notifications-documents` | 1 | **The PR 1 branch:** F1 merged in, plus F2 - notifications (#45), branded invoice and voucher PDFs (#46), the traveller's emails wired to the pipeline's events, and documents with download and reissue in the booking screens | pushed, PR open |
 | `feat/M2-catalog-api` | 2 | F3 backend: catalog schema, publish rules and product API (#160 and #161, all criteria met); ClamAV scanning (#18); the Package pricing type | pushed, done |
 | `feat/M2-catalog-screens` | 2 | Console: catalog list and editor and the pricing product picker (#162–#164); group departure screens (F6); CRM screens (F7), all against stand-ins; the catalog backend merged in, with the real catalog adapter next | pushed |
-| `feat/M2-storefront` | 2 | F4: the site builder with versioned publish and rollback is committed; domains and the public storefront still to come (#58-#60) | in progress, not pushed |
+| `feat/M2-storefront` | 2 | F4 whole (#58-#60): the site builder with versioned publish and rollback, custom domains with DNS verification and certificates, the public host-resolved API, the Next.js traveller site, and the console's website and web-address screens. The CRM branch is merged in, and the real host directory replaces its placeholder | pushed, done |
 | `feat/M2-crm` | 2 | F7 backend (#62), on top of the console branch | just started, not pushed |
 | `feat/M2-departures` | 2 | F6 (#57) whole: the departures schema and API, seat holds and the no-oversell CHECK, status from the seats, the waitlist with timed offers, installment schedules and reminders, decision 12's refunds, and the console on the real API | pushed |
 | — | 2 | F5 customer commerce (#61) | not started: it needs F1 and F4 |
@@ -397,7 +397,7 @@ The pricing screen takes a product ID for a product-scoped rule, because there w
 
 ### F4 · Storefront
 
-**M2 · Queued** · 0 of 19 boxes ticked
+**M2 · Done** · 18 of 19 boxes ticked · `feat/M2-storefront`
 
 Every agent gets a branded website: built from templates and blocks in the console, published with rollback, served on their own domain with SSL, showing their catalog to travellers. Nothing on it may mention Trips.
 
@@ -411,13 +411,13 @@ The no-code branded site builder.
 
 **Tables:** `site_templates, sites, site_versions, site_themes, site_pages, site_blocks`
 
-- [ ] Template library.
-- [ ] Logo and colour upload.
-- [ ] Block-based page editing.
-- [ ] About/Contact/Terms.
-- [ ] Staging preview.
-- [ ] Publish with rollback via versioned snapshots.
-- [ ] FRD blocks publishing until a product is published — see open question 11, which may relax this for flight-only agents.
+- [x] Template library.
+- [x] Logo and colour upload.
+- [x] Block-based page editing.
+- [x] About/Contact/Terms.
+- [x] Staging preview.
+- [x] Publish with rollback via versioned snapshots.
+- [x] FRD blocks publishing until a product is published — relaxed per decision 11: one published product **or** flight search switched on. `SomethingToSellRule` is the only place that rule lives.
 
 #### #59 · Custom domains, DNS verification and SSL
 
@@ -425,23 +425,23 @@ Each agent's site on their own domain.
 
 **Tables:** `site_domains, site_domain_checks`
 
-- [ ] Free subdomain provisioning.
-- [ ] Custom domain with TXT/CNAME verification.
-- [ ] Automatic SSL issuance and renewal at T-30 days.
-- [ ] Host-header tenant resolution cached in Redis.
-- [ ] Reserved-hostname denylist to stop subdomain squatting (open question 20).
+- [x] Free subdomain provisioning.
+- [x] Custom domain with TXT/CNAME verification.
+- [x] Automatic SSL issuance and renewal at T-30 days — through a port, with a development adapter; a real ACME adapter follows once hosting is chosen.
+- [x] Host-header tenant resolution cached in Redis. The same cache answers the CRM's `IStorefrontDirectory`, so one domain change clears both.
+- [x] Reserved-hostname denylist to stop subdomain squatting (open question 20).
 
 #### #60 · Public storefront rendering
 
 The Next.js traveller-facing site.
 
-- [ ] Host-based tenant resolution.
-- [ ] Per-site ISR with cache invalidation on publish.
-- [ ] Template rendering from site_versions.
-- [ ] Catalog browse and filter.
-- [ ] Product and departure detail.
-- [ ] SEO metadata, sitemap and structured data.
-- [ ] Nothing on these pages may reference Trips.
+- [x] Host-based tenant resolution — the hostname and nothing else, resolved inside `IPlatformScope` and then read under that tenant.
+- [x] Per-site ISR with cache invalidation on publish. Responses are tagged by site and hostname; publishing asks the storefront to drop those tags.
+- [x] Template rendering from site_versions — hero, product grid, text and contact; an unknown block is skipped rather than fatal.
+- [x] Catalog browse and filter.
+- [ ] Product and departure detail. Product detail is done; **departure detail waits for F6**, which owns group departures.
+- [x] SEO metadata, sitemap and structured data.
+- [x] Nothing on these pages may reference Trips.
 
 ### F5 · Customer commerce
 

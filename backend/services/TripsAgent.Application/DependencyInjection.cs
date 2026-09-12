@@ -11,6 +11,7 @@ using TripsAgent.Application.Orders;
 using TripsAgent.Application.Payments;
 using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Search;
+using TripsAgent.Application.Storefront;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy.Kyb;
 
@@ -119,6 +120,27 @@ public static class DependencyInjection
         services.AddScoped<DepartureStatusSweep>();
         services.AddScoped<DepartureInstallments>();
         services.AddScoped<InstallmentReminders>();
+
+        // The website builder: editing the draft, and staging, publishing and rolling back versions.
+        services.AddScoped<SiteQueries>();
+        services.AddScoped<SiteBuilderService>();
+        services.AddScoped<SiteVersionService>();
+        services.AddScoped<SitePreviewTokens>();
+
+        // The website's addresses: connecting and checking the agency's own domains, the two sweeps the
+        // Worker runs on a clock, and the platform's review queue for brand-like addresses.
+        services.AddScoped<DomainVerifier>();
+        services.AddScoped<SiteDomainService>();
+        services.AddScoped<DomainVerificationSweep>();
+        services.AddScoped<CertificateSweep>();
+        services.AddScoped<HostnameReviewService>();
+
+        // The traveller-facing side: resolving the hostname to an agency, and reading that agency's
+        // published site and catalog. Anonymous, and read-only.
+        services.AddScoped<PublicSiteResolver>();
+        services.AddScoped<PublicSiteService>();
+        services.AddScoped<PublicCatalogService>();
+
         // The CRM: leads, quotes, customers, tasks and the timeline (#62), and the storefront's own
         // anonymous side of it. CrmContext and CrmReader are shared by all of them.
         services.AddScoped<CrmContext>();

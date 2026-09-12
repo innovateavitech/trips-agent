@@ -9,6 +9,7 @@ using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Payments;
 using TripsAgent.Infrastructure.Retention;
 using TripsAgent.Infrastructure.Scheduling;
+using TripsAgent.Infrastructure.Storefront;
 using TripsAgent.Infrastructure.Suppliers;
 using TripsAgent.Integrations.Paystack;
 
@@ -119,6 +120,12 @@ DepartureHoldExpirySchedule.Register(recurringJobs);
 WaitlistOfferExpirySchedule.Register(recurringJobs);
 DepartureStatusSweepSchedule.Register(recurringJobs);
 InstallmentReminderSchedule.Register(recurringJobs);
+
+// Agencies' own website addresses (issue 59): looks for the DNS records of every hostname waiting to
+// be verified, and issues and renews their certificates — renewal starts 30 days before expiry.
+DomainVerificationSchedule.Register(recurringJobs);
+CertificateSchedule.Register(recurringJobs);
+
 // The CRM's follow-up reminders (#62): a task that fell due emails the person who owns it.
 TripsAgent.Infrastructure.Crm.CrmTaskReminderSchedule.Register(recurringJobs);
 

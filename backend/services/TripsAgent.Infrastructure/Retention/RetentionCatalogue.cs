@@ -294,6 +294,21 @@ public static partial class RetentionCatalogue
         new("notifications.notification_templates", RetentionTreatment.Kept, "While in use", "Configuration."),
         new("notifications.suppressed_email_addresses", RetentionTreatment.Kept, "Indefinitely",
             "An address that bounced or complained has to stay suppressed, or we mail it again."),
+
+        // ---------------------------------------------------------------- storefront
+        new("storefront.site_templates", RetentionTreatment.Kept, "While offered", "Reference data: the starter websites."),
+        new("storefront.reserved_hostname_labels", RetentionTreatment.Kept, "Indefinitely",
+            "Reference data: the hostname denylist and the brand list behind open question 20."),
+        new("storefront.sites", RetentionTreatment.Kept, "While the agency exists", "The agency's website and its settings."),
+        new("storefront.site_versions", RetentionTreatment.Kept, "While the site exists",
+            "Every staged and published version: rollback needs them, and they record what travellers were shown."),
+        new("storefront.site_pages", RetentionTreatment.Kept, "While the site exists", "The draft's pages."),
+        new("storefront.site_blocks", RetentionTreatment.Kept, "With their page", "The draft's blocks."),
+        new("storefront.site_themes", RetentionTreatment.Kept, "While the site exists", "The site's typography."),
+        new("storefront.site_domains", RetentionTreatment.Kept, "While connected",
+            "Hostnames the site answers on. A removed one is deleted, with its checks."),
+        new("storefront.site_domain_checks", RetentionTreatment.Kept, "With their hostname",
+            "What DNS said on each check — the answer to \"why isn't my domain working?\". Small, and removed with the hostname."),
     ];
 
     /// <summary>The tables no retention rule may ever target.</summary>

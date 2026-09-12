@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using TripsAgent.Application.Checkout;
 using TripsAgent.Application.Crm;
+using TripsAgent.Application.Storefront;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Crm;
 using TripsAgent.Domain.Orders;
@@ -255,7 +256,7 @@ public sealed class CustomerBookingRecorderTests : IAsyncLifetime
         return new CustomerService(
             db,
             new CrmContext(db, tenant, new FixedClock(Now)),
-            new CrmReader(db, new PlaceholderStorefrontDirectory(db, scope)));
+            new CrmReader(db, new SiteDomainDirectory(db, scope, new UncachedStorefrontHostCache(), new StorefrontOptions())));
     }
 
     /// <summary>A clock stopped at one instant, so every row a test writes carries the same time.</summary>

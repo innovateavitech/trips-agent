@@ -123,9 +123,9 @@ public static class DependencyInjection
 
         // Which agency a storefront host name belongs to, and where an agency's own site lives —
         // what the CRM's public endpoints resolve a traveller's request by, and what a quote's link
-        // is built from. A placeholder until custom domains (#59) land; the storefront work replaces
-        // this one registration with a lookup of the agency's primary verified domain.
-        services.AddScoped<IStorefrontDirectory, PlaceholderStorefrontDirectory>();
+        // is built from. Now the real lookup, against the agency's verified domains (issue 59); it
+        // shares the storefront's host cache, so one domain change clears both.
+        services.AddScoped<IStorefrontDirectory, SiteDomainDirectory>();
 
         // Alerting: logs, the back-office queue and email. Scoped because it writes an
         // admin_alerts row through the request's DbContext.
@@ -240,6 +240,9 @@ public static class DependencyInjection
 
         // The retention schedule's purge job (issue #105). Run by the Worker, dry run by default.
         services.AddDataRetention(configuration);
+
+        // The website builder's settings and the row lock publishing takes (issues 58–60).
+        services.AddStorefront(configuration);
 
         return services;
     }

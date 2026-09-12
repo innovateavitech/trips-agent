@@ -20,7 +20,7 @@ Where each part of the system is designed — tables, jobs, the money path — i
 |---|---|---|
 | **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (in progress); F2 Notifications and documents (in progress) | 9 of 72 |
 | **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog (in progress); F4 Storefront (queued); F5 Customer commerce (queued); F6 Group tours (queued); F7 CRM (queued) | 0 of 74 |
-| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (queued); F10 Sub-agent network (queued); F11 Analytics and reporting (queued); F12 Payouts, disputes and reconciliation (queued); F13 Loyalty and reviews (queued (flag only)) | 5 of 42 |
+| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (in progress); F10 Sub-agent network (done); F11 Analytics and reporting (queued); F12 Payouts, disputes and reconciliation (queued); F13 Loyalty and reviews (queued (flag only)) | 12 of 42 |
 | **PR 4** · Launch readiness | F14 Security and launch readiness (queued) | 0 of 50 |
 
 
@@ -40,11 +40,15 @@ The first place to look when picking this up again. Update it whenever a branch 
 | `feat/M2-crm` | 2 | F7 backend (#62), on top of the console branch | just started, not pushed |
 | — | 2 | F5 customer commerce (#61) and the F6 group tours backend (#57) | not started: F5 needs F1 and F4, F6 needs F3 |
 | `feat/M3-admin-console` | 3 | **The first piece of PR 3.** F8: back-office roles and the agency lifecycle rules, the agency directory, profile and lifecycle actions with data export, the operations dashboard, the audit viewer and back-office users, and all five console screens | pushed, done |
-| — | 3, 4 | F9–F14 | not started |
+| `feat/M3-subagents` | 3 | F10: the sub-agent network end to end (#63) — invitations, scopes, permission overrides and margin visibility, race-free wallet allowances, freeze and revoke, consolidated network reporting, and four console screens. On top of `feat/M3-admin-console` | pushed, done |
+| — | 3, 4 | F9, F11–F14 | F9 in progress on `feat/M3-billing`; the rest not started |
 
-**Next:** F8 is done on `feat/M3-admin-console`, the first piece of PR 3 — the rest of Milestone 3 is
-assembled on top of it. One thing waits on PR 2: `StorefrontAvailability` needs calling from
-`PublicSiteResolver` once the storefront lands, which is the site-serving half of decision 14.
+**Next:** F8 and F10 are done, on `feat/M3-admin-console` and `feat/M3-subagents` — the rest of
+Milestone 3 is assembled on top of them. Two things wait on other branches: `StorefrontAvailability`
+needs calling from `PublicSiteResolver` once the storefront lands (the site-serving half of decision
+14), and `ISubAgentEntitlement` needs an implementation that reads the `max_sub_agents` entitlement
+once F9 lands — until then `UnlimitedSubAgentEntitlement` allows everything, and swapping it is one
+line in `ApplicationServices`.
 
 PR 1 is open from `feat/M1-notifications-documents`. When it merges, assemble PR 2: merge the catalog, storefront, CRM, group tours and commerce branches into one, regenerate the API client, run every gate, tick F3-F7 here, and open it with `Closes` for each finished issue.
 

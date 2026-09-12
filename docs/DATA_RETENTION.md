@@ -80,6 +80,26 @@ The source of truth is `RetentionCatalogue.Tables` in
 | `pricing.price_quotes` | No | At least 7 years | Protected | The priced snapshot each order line was placed from |
 | `pricing.markup_rules` | No | At least 7 years | Protected | Explains the markup on every historic order line |
 
+### Subscriptions and billing
+
+What Trips charged its own customers. Every row here is Protected for the same reason: it is our
+revenue record and the agency's expense record, and both sides need it for the same seven years an
+order needs. None of it is a traveller's personal data, so there is nothing to anonymise.
+
+| Table | Personal data | Kept for | Treatment | Why |
+|---|---|---|---|---|
+| `billing.subscription_tiers` | No | At least 7 years | Protected | The plans. Archived rather than deleted — every invoice names the tier it billed for |
+| `billing.tier_prices` | No | At least 7 years | Protected | What each plan cost, with history; explains the amount on every historic invoice |
+| `billing.entitlements` | No | At least 7 years | Protected | The catalogue of what a plan can grant. Reference data, seeded from code |
+| `billing.tier_entitlements` | No | At least 7 years | Protected | What each plan granted; explains why an agency could do what it did |
+| `billing.tier_change_log` | No | At least 7 years | Protected | What an admin changed, who was migrated and when they were told (FRD RS-6, RS-7). Append-only |
+| `billing.subscriptions` | No | At least 7 years | Protected | Which plan each agency was on, and for which periods |
+| `billing.subscription_invoices` | No | At least 7 years | Protected | What Trips charged each agency — a tax record on both sides |
+| `billing.subscription_invoice_lines` | No | At least 7 years | Protected | The lines that add up to each total; without them the total is an assertion |
+| `billing.subscription_charge_attempts` | No | At least 7 years | Protected | Every attempt to take a payment, successful or not — the record of dunning actually running. Append-only |
+| `billing.subscription_migrations` | No | At least 7 years | Protected | Plan changes and the notice given for each |
+| `billing.payment_authorizations` | No | At least 7 years | Protected | Gateway tokens with a card's brand, last four and expiry. **No card number, ever** — card entry happens on Paystack's hosted page |
+
 ### Supplier bookings
 
 | Table | Personal data | Kept for | Treatment | Why |

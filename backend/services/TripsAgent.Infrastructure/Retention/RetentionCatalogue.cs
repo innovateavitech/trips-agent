@@ -131,6 +131,35 @@ public static partial class RetentionCatalogue
             "With their cart", "Deleted by the cart's ON DELETE CASCADE.",
             PurgedWith: "orders.carts"),
 
+        // ---------------------------------------------------------------- subscriptions and billing
+        //
+        // Every one of these is Protected, and the reason is the same for all of them: this is what
+        // Trips charged its own customers. It is our revenue record and their expense record, and
+        // both sides need it for the same seven years an order needs. Nothing here is a traveller's
+        // personal data, so there is nothing to anonymise either.
+        new("billing.subscription_tiers", RetentionTreatment.Protected, SevenYears,
+            "The plans. Archived rather than deleted, because every invoice names the tier it billed for."),
+        new("billing.tier_prices", RetentionTreatment.Protected, SevenYears,
+            "What each plan cost, with history. Explains the amount on every historic subscription invoice."),
+        new("billing.entitlements", RetentionTreatment.Protected, SevenYears,
+            "The catalogue of what a plan can grant. Reference data, seeded from code."),
+        new("billing.tier_entitlements", RetentionTreatment.Protected, SevenYears,
+            "What each plan granted. Explains why an agency could do what it did."),
+        new("billing.tier_change_log", RetentionTreatment.Protected, SevenYears,
+            "What an admin changed about a plan, who was migrated and when they were told. FRD RS-6 and RS-7. Append-only in the database as well."),
+        new("billing.subscriptions", RetentionTreatment.Protected, SevenYears,
+            "Which plan each agency was on, and for which periods."),
+        new("billing.subscription_invoices", RetentionTreatment.Protected, SevenYears,
+            "What Trips charged each agency. A financial and tax record on both sides."),
+        new("billing.subscription_invoice_lines", RetentionTreatment.Protected, SevenYears,
+            "The lines that add up to each invoice's total. Without them the total is an assertion."),
+        new("billing.subscription_charge_attempts", RetentionTreatment.Protected, SevenYears,
+            "Every attempt to take a subscription payment, successful or not — the record of the dunning schedule actually running. Append-only in the database as well."),
+        new("billing.subscription_migrations", RetentionTreatment.Protected, SevenYears,
+            "Plan changes and the notice given for each. The evidence behind 'why is my bill different?'"),
+        new("billing.payment_authorizations", RetentionTreatment.Protected, SevenYears,
+            "Reusable gateway tokens, with a card's brand, last four and expiry. No card number, ever — card entry happens on the gateway's hosted page (decision 18). Kept with the payments they authorised."),
+
         // ---------------------------------------------------------------- documents and pricing
         new("documents.generated_documents", RetentionTreatment.Protected, SevenYears,
             "Issued invoices and vouchers. Tax law requires them kept."),

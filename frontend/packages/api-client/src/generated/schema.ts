@@ -695,6 +695,278 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListPlans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMyPlan"];
+        put?: never;
+        post: operations["ChoosePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/entitlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMyEntitlements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSubscriptionInvoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/invoices/{invoiceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSubscriptionInvoice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscription/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CompletePlanCheckout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscription/scheduled-change/{migrationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["CancelScheduledPlanChange"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/entitlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["EntitlementCatalogue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSubscriptionTiers"];
+        put?: never;
+        post: operations["CreateSubscriptionTier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSubscriptionTier"];
+        put: operations["UpdateSubscriptionTier"];
+        post?: never;
+        delete: operations["DeleteSubscriptionTier"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}/price": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetSubscriptionTierPrice"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}/entitlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetSubscriptionTierEntitlements"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PublishSubscriptionTier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ArchiveSubscriptionTier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RestoreSubscriptionTier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}/migrate-subscribers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MigrateSubscriptionTierSubscribers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/subscribers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSubscribers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/search/flights": {
         parameters: {
             query?: never;
@@ -1277,6 +1549,14 @@ export interface components {
             status: string;
             reason: string;
         };
+        ChoosePlanRequest: {
+            /** Format: uuid */
+            tierId: string;
+            callbackUrl: string;
+        };
+        CompleteCheckoutRequest: {
+            reference: string;
+        };
         ConfirmPriceRequest: {
             /** Format: uuid */
             offerId: string;
@@ -1300,6 +1580,13 @@ export interface components {
         };
         EmailVerifiedResponse: {
             message: string;
+        };
+        EntitlementCatalogueItem: {
+            code: string;
+            name: string;
+            description: string;
+            valueType: string;
+            defaultValue: string;
         };
         FlightJourneyResponse: {
             /** Format: int32 */
@@ -1503,6 +1790,45 @@ export interface components {
             supersededById: null | string;
             status: string;
         };
+        MigrateSubscribersRequest: {
+            /** Format: uuid */
+            toTierId: string;
+            reason: string;
+        };
+        MyEntitlementsResponse: {
+            /** Format: uuid */
+            tierId: null | string;
+            planName: string;
+            entitlements: components["schemas"]["PlanFeatureResponse"][];
+        };
+        MyPlanResponse: {
+            /** Format: uuid */
+            subscriptionId: null | string;
+            /** Format: uuid */
+            tierId: null | string;
+            planName: string;
+            status: null | string;
+            statusReason: null | string;
+            currency: string;
+            /** Format: int64 */
+            amountMinor: null | number | string;
+            interval: null | string;
+            /** Format: date-time */
+            currentPeriodStart: null | string;
+            /** Format: date-time */
+            currentPeriodEnd: null | string;
+            /** Format: date-time */
+            trialEndsAt: null | string;
+            /** Format: date-time */
+            nextChargeAt: null | string;
+            cardOnFile: null | string;
+            /** Format: int32 */
+            dunningRetries: number | string;
+            /** Format: date-time */
+            nextDunningAttemptAt: null | string;
+            features: components["schemas"]["PlanFeatureResponse"][];
+            scheduledChange: null | components["schemas"]["ScheduledChangeResponse"];
+        };
         OfferMarginResponse: {
             /** Format: int64 */
             netMinor: number | string;
@@ -1543,6 +1869,36 @@ export interface components {
         };
         PlacedBookingResponse: {
             reference: string;
+        };
+        PlanChangeResponse: {
+            result: string;
+            plan: null | components["schemas"]["MyPlanResponse"];
+            authorizationUrl: null | string;
+            reference: null | string;
+            /** Format: int64 */
+            amountMinor: null | number | string;
+            scheduledChange: null | components["schemas"]["ScheduledChangeResponse"];
+        };
+        PlanFeatureResponse: {
+            code: string;
+            name: string;
+            display: string;
+        };
+        PlanResponse: {
+            /** Format: uuid */
+            tierId: string;
+            code: string;
+            name: string;
+            description: null | string;
+            currency: string;
+            /** Format: int64 */
+            amountMinor: null | number | string;
+            interval: string;
+            /** Format: int32 */
+            trialDays: number | string;
+            isCurrent: boolean;
+            isFallback: boolean;
+            features: components["schemas"]["PlanFeatureResponse"][];
         };
         PlatformRoleResponse: {
             /** Format: uuid */
@@ -1722,6 +2078,28 @@ export interface components {
             /** Format: int64 */
             platformFeeMinor: number | string;
         };
+        SaveTierRequest: {
+            code: string;
+            name: string;
+            customerDescription: null | string;
+            /** Format: int32 */
+            trialDays: number | string;
+            /** Format: int32 */
+            sortOrder: number | string;
+            isFallback: boolean;
+            reason: string;
+        };
+        ScheduledChangeResponse: {
+            /** Format: uuid */
+            migrationId: string;
+            fromPlan: string;
+            toPlan: string;
+            reason: string;
+            explanation: string;
+            /** Format: date-time */
+            effectiveAt: string;
+            canCancel: boolean;
+        };
         SearchLegRequest: {
             origin: string;
             destination: string;
@@ -1747,6 +2125,17 @@ export interface components {
             fromCache: boolean;
             offers: components["schemas"]["SearchOfferResponse"][];
         };
+        SetTierEntitlementsRequest: {
+            entitlements: components["schemas"]["TierEntitlementInput"][];
+            reason: string;
+        };
+        SetTierPriceRequest: {
+            currency: string;
+            interval: string;
+            /** Format: int64 */
+            amountMinor: number | string;
+            reason: string;
+        };
         StartTopUpRequest: {
             /** Format: int64 */
             amountMinor: number | string;
@@ -1754,6 +2143,115 @@ export interface components {
         StartTopUpResponse: {
             authorizationUrl: string;
             reference: string;
+        };
+        SubscriberResponse: {
+            /** Format: uuid */
+            agencyId: string;
+            agencyName: string;
+            agencyStatus: string;
+            /** Format: uuid */
+            subscriptionId: string;
+            tierName: string;
+            status: string;
+            currency: string;
+            /** Format: int64 */
+            amountMinor: null | number | string;
+            /** Format: date-time */
+            currentPeriodStart: string;
+            /** Format: date-time */
+            currentPeriodEnd: string;
+            /** Format: date-time */
+            trialEndsAt: null | string;
+            /** Format: int32 */
+            dunningRetries: number | string;
+            /** Format: date-time */
+            nextDunningAttemptAt: null | string;
+            /** Format: int64 */
+            outstandingMinor: number | string;
+        };
+        SubscriptionInvoiceLineResponse: {
+            description: string;
+            /** Format: int32 */
+            quantity: number | string;
+            /** Format: int64 */
+            unitAmountMinor: number | string;
+            /** Format: int64 */
+            amountMinor: number | string;
+        };
+        SubscriptionInvoiceResponse: {
+            /** Format: uuid */
+            id: string;
+            invoiceNumber: string;
+            receiptNumber: null | string;
+            status: string;
+            statusReason: null | string;
+            currency: string;
+            /** Format: int64 */
+            totalMinor: number | string;
+            /** Format: date-time */
+            issuedAt: string;
+            /** Format: date-time */
+            dueAt: string;
+            /** Format: date-time */
+            paidAt: null | string;
+            /** Format: date-time */
+            periodStart: string;
+            /** Format: date-time */
+            periodEnd: string;
+            lines: components["schemas"]["SubscriptionInvoiceLineResponse"][];
+        };
+        TierChangeResponse: {
+            tier: components["schemas"]["TierResponse"];
+            /** Format: int32 */
+            subscribersScheduled: number | string;
+        };
+        TierEntitlementInput: {
+            code: string;
+            value: string;
+        };
+        TierEntitlementResponse: {
+            code: string;
+            name: string;
+            valueType: string;
+            value: string;
+            display: string;
+        };
+        TierPriceResponse: {
+            /** Format: uuid */
+            id: string;
+            currency: string;
+            interval: string;
+            /** Format: int64 */
+            amountMinor: number | string;
+            isPromotional: boolean;
+            /** Format: date-time */
+            effectiveFrom: string;
+            /** Format: date-time */
+            effectiveTo: null | string;
+        };
+        TierReasonRequest: {
+            reason: string;
+        };
+        TierResponse: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            customerDescription: null | string;
+            status: string;
+            /** Format: int32 */
+            trialDays: number | string;
+            /** Format: int32 */
+            sortOrder: number | string;
+            isFallback: boolean;
+            /** Format: int32 */
+            subscribers: number | string;
+            /** Format: date-time */
+            publishedAt: null | string;
+            /** Format: date-time */
+            archivedAt: null | string;
+            prices: components["schemas"]["TierPriceResponse"][];
+            entitlements: components["schemas"]["TierEntitlementResponse"][];
         };
         TokenPairResponse: {
             accessToken: string;
@@ -3131,6 +3629,811 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PriceQuoteWithMarginResponse"];
+                };
+            };
+        };
+    };
+    ListPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanResponse"][];
+                };
+            };
+        };
+    };
+    GetMyPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyPlanResponse"];
+                };
+            };
+        };
+    };
+    ChoosePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChoosePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetMyEntitlements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyEntitlementsResponse"];
+                };
+            };
+        };
+    };
+    ListSubscriptionInvoices: {
+        parameters: {
+            query?: {
+                take?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionInvoiceResponse"][];
+                };
+            };
+        };
+    };
+    GetSubscriptionInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionInvoiceResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CompletePlanCheckout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteCheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CancelScheduledPlanChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                migrationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    EntitlementCatalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntitlementCatalogueItem"][];
+                };
+            };
+        };
+    };
+    ListSubscriptionTiers: {
+        parameters: {
+            query?: {
+                includeArchived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierResponse"][];
+                };
+            };
+        };
+    };
+    CreateSubscriptionTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveTierRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetSubscriptionTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateSubscriptionTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveTierRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeleteSubscriptionTier: {
+        parameters: {
+            query?: {
+                reason?: string;
+            };
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SetSubscriptionTierPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetTierPriceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SetSubscriptionTierEntitlements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetTierEntitlementsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    PublishSubscriptionTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TierReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ArchiveSubscriptionTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TierReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RestoreSubscriptionTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TierReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    MigrateSubscriptionTierSubscribers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrateSubscribersRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListSubscribers: {
+        parameters: {
+            query?: {
+                tierId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriberResponse"][];
                 };
             };
         };

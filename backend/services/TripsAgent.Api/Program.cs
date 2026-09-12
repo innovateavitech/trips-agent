@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using TripsAgent.Api.Assets;
 using TripsAgent.Api.Authorization;
+using TripsAgent.Api.Billing;
 using TripsAgent.Api.Bookings;
 using TripsAgent.Api.Documents;
 using TripsAgent.Api.Identity;
@@ -189,6 +190,8 @@ app.MapOperationsDashboardEndpoints();
 app.MapAuditLogEndpoints();
 app.MapWalletEndpoints();
 app.MapPricingEndpoints();
+app.MapSubscriptionEndpoints();
+app.MapTierAdminEndpoints();
 app.MapSearchEndpoints();
 app.MapBookingEndpoints();
 

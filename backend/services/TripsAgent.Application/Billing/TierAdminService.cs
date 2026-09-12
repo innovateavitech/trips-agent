@@ -55,6 +55,24 @@ public sealed record TierDraft(
 /// <summary>One entitlement an admin is setting on a tier.</summary>
 public sealed record EntitlementGrant(string Code, string Value);
 
+/// <summary>One agency on a plan, as the back office's subscriber list shows it.</summary>
+/// <param name="OutstandingMinor">What this agency owes Trips right now, in minor units.</param>
+public sealed record SubscriberView(
+    Guid AgencyId,
+    string AgencyName,
+    string AgencyStatus,
+    Guid SubscriptionId,
+    string TierName,
+    SubscriptionStatus Status,
+    string Currency,
+    long? AmountMinor,
+    DateTimeOffset CurrentPeriodStart,
+    DateTimeOffset CurrentPeriodEnd,
+    DateTimeOffset? TrialEndsAt,
+    int DunningRetries,
+    DateTimeOffset? NextDunningAttemptAt,
+    long OutstandingMinor);
+
 /// <summary>How a tier change went.</summary>
 public abstract record TierChangeOutcome
 {
@@ -580,6 +598,90 @@ public sealed class TierAdminService
         return view is null
             ? new TierChangeOutcome.NotFound()
             : new TierChangeOutcome.Saved(view, scheduled);
+    }
+
+    /// <summary>
+    /// Every agency on a plan, with what it owes.
+    /// </summary>
+    /// <param name="tierId">Narrow it to one tier, or null for every subscriber.</param>
+    /// <remarks>
+    /// Reads across agencies, which is the whole point of a back-office screen, so it goes through
+    /// an audited platform scope. Nothing here is money an agency owes another agency — it is what
+    /// each agency owes Trips.
+    /// </remarks>
+    public async Task<IReadOnlyList<SubscriberView>> SubscribersAsync(
+        Guid? tierId = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _platformScope.Enter(
+            "back office — listing the agencies on a subscription tier, across every agency");
+
+        var subscriptions = await _db.Subscriptions
+            .Where(subscription => tierId == null || subscription.TierId == tierId)
+            .Where(subscription => subscription.Status != SubscriptionStatus.Cancelled)
+            .OrderBy(subscription => subscription.CurrentPeriodEnd)
+            .Take(500)
+            .ToListAsync(cancellationToken);
+
+        if (subscriptions.Count == 0)
+        {
+            return [];
+        }
+
+        var agencyIds = subscriptions.ConvertAll(subscription => subscription.AgencyId);
+        var tierIds = subscriptions.Select(subscription => subscription.TierId).Distinct().ToList();
+        var priceIds = subscriptions
+            .Where(subscription => subscription.TierPriceId is not null)
+            .Select(subscription => subscription.TierPriceId!.Value)
+            .Distinct()
+            .ToList();
+
+        var agencies = await _db.Agencies
+            .Where(agency => agencyIds.Contains(agency.Id))
+            .Select(agency => new { agency.Id, agency.LegalName, agency.TradingName, agency.Status })
+            .ToDictionaryAsync(agency => agency.Id, cancellationToken);
+
+        var tiers = await _db.SubscriptionTiers
+            .Where(tier => tierIds.Contains(tier.Id))
+            .ToDictionaryAsync(tier => tier.Id, tier => tier.Name, cancellationToken);
+
+        var prices = await _db.TierPrices
+            .Where(price => priceIds.Contains(price.Id))
+            .ToDictionaryAsync(price => price.Id, price => price.AmountMinor.AmountMinor, cancellationToken);
+
+        var subscriptionIds = subscriptions.ConvertAll(subscription => subscription.Id);
+
+        var outstanding = await _db.SubscriptionInvoices
+            .Where(invoice => subscriptionIds.Contains(invoice.SubscriptionId))
+            .Where(invoice => invoice.Status == SubscriptionInvoiceStatus.Open
+                           || invoice.Status == SubscriptionInvoiceStatus.PastDue)
+            .GroupBy(invoice => invoice.SubscriptionId)
+            .Select(group => new { SubscriptionId = group.Key, Total = group.Sum(invoice => invoice.TotalMinor.AmountMinor) })
+            .ToDictionaryAsync(row => row.SubscriptionId, row => row.Total, cancellationToken);
+
+        return
+        [
+            .. subscriptions.Select(subscription =>
+            {
+                var agency = agencies.GetValueOrDefault(subscription.AgencyId);
+
+                return new SubscriberView(
+                    subscription.AgencyId,
+                    agency?.TradingName ?? agency?.LegalName ?? "Unknown agency",
+                    agency?.Status.ToString() ?? "Unknown",
+                    subscription.Id,
+                    tiers.GetValueOrDefault(subscription.TierId, "Unknown plan"),
+                    subscription.Status,
+                    subscription.Currency,
+                    subscription.TierPriceId is { } priceId ? prices.GetValueOrDefault(priceId) : null,
+                    subscription.CurrentPeriodStart,
+                    subscription.CurrentPeriodEnd,
+                    subscription.TrialEndsAt,
+                    subscription.DunningRetries,
+                    subscription.NextDunningAttemptAt,
+                    outstanding.GetValueOrDefault(subscription.Id));
+            }),
+        ];
     }
 
     /// <summary>The entitlement catalogue, for the tier builder's list of things to set.</summary>

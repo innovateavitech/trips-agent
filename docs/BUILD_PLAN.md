@@ -20,7 +20,7 @@ Where each part of the system is designed — tables, jobs, the money path — i
 |---|---|---|
 | **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (in progress); F2 Notifications and documents (in progress) | 9 of 72 |
 | **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog (in progress); F4 Storefront (queued); F5 Customer commerce (queued); F6 Group tours (queued); F7 CRM (queued) | 0 of 74 |
-| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (queued); F10 Sub-agent network (queued); F11 Analytics and reporting (queued); F12 Payouts, disputes and reconciliation (queued); F13 Loyalty and reviews (queued (flag only)) | 5 of 42 |
+| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (done); F10 Sub-agent network (queued); F11 Analytics and reporting (queued); F12 Payouts, disputes and reconciliation (queued); F13 Loyalty and reviews (flag shipped with F9) | 16 of 42 |
 | **PR 4** · Launch readiness | F14 Security and launch readiness (queued) | 0 of 50 |
 
 
@@ -40,11 +40,16 @@ The first place to look when picking this up again. Update it whenever a branch 
 | `feat/M2-crm` | 2 | F7 backend (#62), on top of the console branch | just started, not pushed |
 | — | 2 | F5 customer commerce (#61) and the F6 group tours backend (#57) | not started: F5 needs F1 and F4, F6 needs F3 |
 | `feat/M3-admin-console` | 3 | **The first piece of PR 3.** F8: back-office roles and the agency lifecycle rules, the agency directory, profile and lifecycle actions with data export, the operations dashboard, the audit viewer and back-office users, and all five console screens | pushed, done |
-| — | 3, 4 | F9–F14 | not started |
+| `feat/M3-billing` | 3 | F9 (#64, #65) on top of the admin console: the billing schema, tier administration, the entitlement enforcement point, recurring billing with dunning, the plan builder and subscriber view, and the agency's own plan and invoices. Carries F13's loyalty flag (#70) | pushed, done |
+| — | 3, 4 | F10–F14 | not started |
 
-**Next:** F8 is done on `feat/M3-admin-console`, the first piece of PR 3 — the rest of Milestone 3 is
-assembled on top of it. One thing waits on PR 2: `StorefrontAvailability` needs calling from
-`PublicSiteResolver` once the storefront lands, which is the site-serving half of decision 14.
+**Next:** F8 and F9 are done, on `feat/M3-admin-console` and `feat/M3-billing` — the rest of
+Milestone 3 is assembled on top of them. Two things wait on PR 2, both one call each:
+`StorefrontAvailability` needs calling from `PublicSiteResolver` when the storefront lands, which is
+the site-serving half of decision 14; and the catalog's publish handler needs
+`IEntitlements.MayAddAsync(agencyId, EntitlementCodes.MaxCatalogListings, published)` — the ceiling
+exists and is tested, and nothing counts published products until F3 is merged in. F4's domain claim
+is the matching one-liner for `custom_domain`.
 
 PR 1 is open from `feat/M1-notifications-documents`. When it merges, assemble PR 2: merge the catalog, storefront, CRM, group tours and commerce branches into one, regenerate the API client, run every gate, tick F3-F7 here, and open it with `Closes` for each finished issue.
 
@@ -610,7 +615,7 @@ PR 2 merges**, since there is no host resolution on this branch to call it from.
 
 ### F9 · Subscriptions and billing
 
-**M3 · Queued** · 0 of 10 boxes ticked
+**M3 · Done** · branch `feat/M3-billing` · 10 of 10 boxes ticked
 
 Plans with entitlements the platform enforces at runtime, configured by admins, and recurring billing with dunning.
 
@@ -622,23 +627,25 @@ Plans with entitlements the platform enforces at runtime, configured by admins, 
 
 FRD §2.15 UC-1E — admin-configurable plans.
 
-**Tables:** `subscription_tiers, tier_prices, entitlements, tier_entitlements, subscriptions, subscription_invoices, tier_change_log, subscription_migrations`
+**Tables:** `subscription_tiers, tier_prices, entitlements, tier_entitlements, subscriptions, subscription_invoices, subscription_invoice_lines, subscription_charge_attempts, payment_authorizations, tier_change_log, subscription_migrations`
 
-- [ ] Admin tier CRUD.
-- [ ] Entitlements (max sub-agents, custom domain, transaction fee %, catalog limits, loyalty, API access).
-- [ ] Pricing per interval.
-- [ ] Trials and promos.
-- [ ] Archive-not-delete when subscribers exist.
-- [ ] Migration with advance notice.
-- [ ] Full change audit.
-- [ ] Entitlement enforcement middleware.
-- [ ] See open question 15 on downgrades while entitlements are in use.
+- [x] Admin tier CRUD — the plan builder in the admin console, behind `subscription.manage`.
+- [x] Entitlements (max sub-agents, custom domain, transaction fee, catalog limits, loyalty, API access). The fee entitlement is named `transaction_fee_bps`: the value is basis points, and calling it `_pct` is how somebody stores 2.5 where 250 belongs.
+- [x] Pricing per interval — monthly and annual are both modelled; only monthly is billed, and the renewal job refuses an annual price rather than guessing a proration rule.
+- [x] Trials. **Promotions wait** — the MVP decision above. `tier_prices.is_promotional` is carried so a promotion needs no schema change.
+- [x] Archive-not-delete when subscribers exist — refused by the service and again by a database trigger. The only delete allowed is an unpublished draft nobody has ever been on.
+- [x] Migration with advance notice — 30 days, one `subscription_migrations` row per subscriber, each visible on the agency's own plan screen before it lands.
+- [x] Full change audit — the save interceptor's before/after diff, plus `tier_change_log` for the migration policy and the notice date, which a diff cannot express.
+- [x] Entitlement enforcement — `IEntitlements`, one place that answers "may this agency do this?". Wired to the platform fee on every quote and to the sub-agent ceiling; F3's publish handler and F4's domain claim call the same two methods when they land.
+- [x] Open question 15 on downgrades: existing usage kept, new usage blocked, notice given. Nothing is ever deleted by a plan change.
 
 #### #65 · Recurring billing and dunning
 
 Charging agents on a schedule.
 
-- [ ] Renewals, trial expiry, dunning retries at 1/3/5/7 days, downgrade or suspend on failure, entitlement re-evaluation, subscription invoices and receipts.
+- [x] Renewals, trial expiry, dunning retries at 1/3/5/7 days, downgrade or suspend on failure, entitlement re-evaluation, subscription invoices and receipts. One nightly job, in that order — a migration landing today changes what today's renewal charges. Each attempt carries a reference unique to itself, so replaying the job cannot charge a card twice. An unreachable gateway is an unknown outcome and does not spend a retry.
+
+**Left out, deliberately:** a PDF for a subscription invoice. The invoice and its receipt are first-class records with lines that the database holds to their total, and the agent console shows them; rendering them through QuestPDF needs a Trips-branded template that the traveller-facing brand guard would reject, and no one has asked to print one.
 
 ### F10 · Sub-agent network
 
@@ -721,7 +728,7 @@ Getting money out and keeping the books straight.
 
 ### F13 · Loyalty and reviews
 
-**M3 · Queued (flag only)** · 0 of 4 boxes ticked
+**M3 · Flag shipped with F9** · 1 of 4 boxes ticked
 
 The entitlement flag for loyalty now, so tiers can carry it. Points, redemption and reviews wait on requirements: the FRD lists both with no use case written (open question 24).
 
@@ -738,7 +745,7 @@ FRD §1.2 lists both in scope with no use case written.
 - [ ] Points earn and redeem.
 - [ ] Verified-purchase reviews with agent moderation and platform override.
 - [ ] BLOCKED on requirements — see open questions 24.
-- [ ] Model the entitlement flag now, build the feature once specified.
+- [x] Model the entitlement flag now, build the feature once specified. **Only the flag shipped**, with F9: `loyalty_program` is an entitlement a tier can carry, off by default, answered by the same runtime check as every other flag. Nothing is built behind it.
 
 ## PR 4 · Launch readiness
 

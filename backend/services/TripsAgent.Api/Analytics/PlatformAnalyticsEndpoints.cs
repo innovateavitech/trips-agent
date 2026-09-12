@@ -103,6 +103,16 @@ public static class PlatformAnalyticsEndpoints
             .Produces<SupplierPerformanceResponse>()
             .ProducesValidationProblem();
 
+        // The export log. Writing it is the acceptance criterion; reading it is what makes the
+        // criterion worth anything.
+        group.MapGet("/exports", async (
+                int? limit,
+                PlatformAnalyticsService analytics,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await analytics.ExportsAsync(limit ?? 100, cancellationToken)))
+            .WithName("ListReportExports")
+            .Produces<List<ReportExportAuditResponse>>();
+
         return app;
     }
 }

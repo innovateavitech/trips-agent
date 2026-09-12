@@ -194,6 +194,7 @@ app.MapPricingEndpoints();
 app.MapSearchEndpoints();
 app.MapBookingEndpoints();
 app.MapAnalyticsEndpoints();
+app.MapReportEndpoints();
 
 app.MapAssetEndpoints();
 

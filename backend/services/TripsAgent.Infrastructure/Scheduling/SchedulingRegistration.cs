@@ -2,6 +2,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Analytics;
 using TripsAgent.Application.Assets;
 using TripsAgent.Application.Payments;
 using TripsAgent.Infrastructure.Assets;
@@ -141,6 +142,10 @@ public static class SchedulingRegistration
         services.AddScoped<Suppliers.TicketTimeLimitMonitorJob>();
         services.AddScoped<Checkout.CheckoutSweepJob>();
         services.AddScoped<IAssetPipelineDispatcher, HangfireAssetPipelineDispatcher>();
+
+        // Reports that are too long or too wide to answer in a request (#68). The API enqueues
+        // them; the Worker produces the file and emails whoever asked.
+        services.AddScoped<IReportDispatcher, Analytics.HangfireReportDispatcher>();
 
         return services;
     }

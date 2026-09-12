@@ -202,3 +202,53 @@ public sealed record SupplierDayResponse(
     int TotalCalls,
     int Errors,
     int AverageLatencyMs);
+
+/// <summary>One report the caller may run.</summary>
+/// <param name="AlwaysAsynchronous">
+/// True for a platform report, which crosses tenants and is therefore never answered in the
+/// request. The console says so before the button is pressed rather than after.
+/// </param>
+/// <param name="SynchronousDayLimit">
+/// The longest window that still comes back in the response. Beyond it the report is emailed.
+/// </param>
+public sealed record ReportDefinitionResponse(
+    string Code,
+    string Name,
+    string Description,
+    string Scope,
+    bool AlwaysAsynchronous,
+    int SynchronousDayLimit);
+
+/// <summary>One recorded run of a report.</summary>
+public sealed record ReportJobResponse(
+    Guid Id,
+    string DefinitionCode,
+    string Scope,
+    string RunMode,
+    string Status,
+    string Format,
+    DateOnly FromDay,
+    DateOnly ToDay,
+    string ScopeDescription,
+    DateTimeOffset RequestedAt,
+    DateTimeOffset? CompletedAt,
+    int? RowCount,
+    long? ResultSizeBytes,
+    bool CanDownload,
+    string? ErrorMessage);
+
+/// <summary>What to run, and over what window.</summary>
+public sealed record RunReportRequest(string DefinitionCode, DateOnly From, DateOnly To);
+
+/// <summary>One logged export: who took what, how many rows, and when.</summary>
+public sealed record ReportExportAuditResponse(
+    Guid Id,
+    Guid? ReportJobId,
+    string DefinitionCode,
+    string Scope,
+    Guid? AgencyId,
+    Guid? ActorUserId,
+    string ActorType,
+    string ScopeDescription,
+    int RowCount,
+    DateTimeOffset ExportedAt);

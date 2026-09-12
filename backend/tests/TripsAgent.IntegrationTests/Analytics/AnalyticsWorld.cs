@@ -1,11 +1,18 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using TripsAgent.Application.Analytics;
+using TripsAgent.Application.Auditing;
+using TripsAgent.Application.Notifications;
+using TripsAgent.Application.Storage;
+using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
+using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
+using TripsAgent.Infrastructure.Auditing;
+using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.IntegrationTests.Persistence;
 
@@ -267,6 +274,98 @@ internal sealed class AnalyticsWorld : IAsyncDisposable
             outcome.ToString());
     }
 
+    /// <summary>A user of one agency, so a report has somebody to be told it is ready.</summary>
+    public async Task<Guid> AddUserAsync(Guid agencyId, string email, string firstName)
+    {
+        var db = AsAgency(agencyId);
+        var user = User.ForAgency(agencyId, email, "not-a-real-hash", firstName, "Tester");
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+        return user.Id;
+    }
+
+    /// <summary>
+    /// A <see cref="ReportService"/> wired the way one request would wire it.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="agencyId"/> null is a Trips back-office caller: no tenant, so only
+    /// platform-scoped reports are open to them.
+    /// </remarks>
+    public ReportingHarness Reporting(Guid? agencyId, Guid? actorUserId = null, IBlobStorage? storage = null)
+    {
+        // The tenant carries the acting user, because that is what a real request's middleware
+        // sets and what ReportJob.Request reads to know who asked.
+        var tenant = new TripsAgent.Application.Tenancy.TenantContext();
+
+        if (agencyId is not null)
+        {
+            tenant.SetTenant(agencyId.Value, userId: actorUserId);
+        }
+
+        var scope = new TripsAgent.Infrastructure.Tenancy.PlatformScope(
+            tenant, NullLogger<TripsAgent.Infrastructure.Tenancy.PlatformScope>.Instance);
+
+        var tenancy = (Tenant: tenant, Scope: scope);
+        var db = Track(_postgres.Connect(Database, tenancy.Tenant, tenancy.Scope, Clock));
+
+        var audit = new AuditContext
+        {
+            ActorUserId = actorUserId,
+            ActorType = actorUserId is null ? AuditActorType.System : AuditActorType.User,
+            ActorIpAddress = "198.51.100.7",
+            AgencyId = agencyId,
+        };
+
+        var dispatcher = new RecordingReportDispatcher();
+
+        var reports = new ReportService(
+            db,
+            new ReportGenerator(db),
+            storage ?? Storage,
+            tenancy.Scope,
+            dispatcher,
+            audit,
+            tenancy.Tenant,
+            Clock,
+            NullLogger<ReportService>.Instance);
+
+        return new ReportingHarness(reports, dispatcher, db);
+    }
+
+    /// <summary>
+    /// Runs a queued report the way Hangfire would: a fresh scope, no tenant, no platform scope.
+    /// </summary>
+    public async Task RunQueuedReportAsync(Guid reportJobId)
+    {
+        var tenancy = TestTenancy.None();
+        var db = Track(_postgres.Connect(Database, tenancy.Tenant, tenancy.Scope, Clock));
+
+        var audit = new AuditContext { ActorType = AuditActorType.System };
+
+        var reports = new ReportService(
+            db,
+            new ReportGenerator(db),
+            Storage,
+            tenancy.Scope,
+            new RecordingReportDispatcher(),
+            audit,
+            tenancy.Tenant,
+            Clock,
+            NullLogger<ReportService>.Instance);
+
+        var runner = new ReportRunner(
+            db,
+            reports,
+            tenancy.Scope,
+            tenancy.Tenant,
+            new Notifier(db, new EfOutbox(db, Clock)));
+
+        await runner.RunAsync(reportJobId);
+    }
+
+    /// <summary>Where finished reports go in a test. In memory: nothing is being tested about disks.</summary>
+    public InMemoryBlobStorage Storage { get; } = new();
+
     private AppDbContext Track(AppDbContext context)
     {
         _contexts.Add(context);
@@ -280,4 +379,65 @@ internal sealed class AnalyticsWorld : IAsyncDisposable
             await context.DisposeAsync();
         }
     }
+}
+
+/// <summary>A report service and the things it was wired with, so a test can inspect both.</summary>
+internal sealed record ReportingHarness(
+    ReportService Reports,
+    RecordingReportDispatcher Dispatcher,
+    AppDbContext Db);
+
+/// <summary>Records what would have been queued, instead of queueing it.</summary>
+internal sealed class RecordingReportDispatcher : IReportDispatcher
+{
+    private readonly List<Guid> _enqueued = [];
+
+    public IReadOnlyList<Guid> Enqueued => _enqueued;
+
+    public Task EnqueueAsync(Guid reportJobId, CancellationToken cancellationToken = default)
+    {
+        _enqueued.Add(reportJobId);
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>Blob storage in a dictionary. Enough for "was the file written, and is it the same file".</summary>
+internal sealed class InMemoryBlobStorage : IBlobStorage
+{
+    private readonly Dictionary<string, byte[]> _objects = new(StringComparer.Ordinal);
+
+    public IReadOnlyCollection<string> Keys => _objects.Keys;
+
+    public async Task<StoredBlob> StoreAsync(Stream content, string key, string contentType, CancellationToken cancellationToken = default)
+    {
+        using var buffer = new MemoryStream();
+        await content.CopyToAsync(buffer, cancellationToken);
+        var bytes = buffer.ToArray();
+        _objects[key] = bytes;
+
+        return new StoredBlob(key, bytes.LongLength, Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)));
+    }
+
+    public Task<Stream> OpenReadAsync(string key, CancellationToken cancellationToken = default) =>
+        _objects.TryGetValue(key, out var bytes)
+            ? Task.FromResult<Stream>(new MemoryStream(bytes, writable: false))
+            : throw new FileNotFoundException(key);
+
+    public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_objects.ContainsKey(key));
+
+    public Task<long?> GetSizeAsync(string key, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_objects.TryGetValue(key, out var bytes) ? bytes.LongLength : (long?)null);
+
+    public Task DeleteAsync(string key, CancellationToken cancellationToken = default)
+    {
+        _objects.Remove(key);
+        return Task.CompletedTask;
+    }
+
+    public Task<PresignedUpload> CreateUploadUrlAsync(string key, string contentType, long maxSizeBytes, DateTimeOffset expiresAt, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("Reports are written by the server, never uploaded to it.");
+
+    public Task<SignedDownload> CreateDownloadUrlAsync(string key, string contentType, DateTimeOffset expiresAt, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("Reports are served through the API so the download can be logged.");
 }

@@ -72,6 +72,12 @@ public static class DependencyInjection
         services.AddScoped<AgencyAnalyticsService>();
         services.AddScoped<PlatformAnalyticsService>();
 
+        // Reporting and exports (#68). The runner is resolved by the job runner when a queued
+        // report comes up, which is why it is registered behind its interface.
+        services.AddScoped<ReportGenerator>();
+        services.AddScoped<ReportService>();
+        services.AddScoped<IReportRunner, ReportRunner>();
+
         services.AddScoped<DocumentIssuer>();
 
         // Records what was sold, at the price the quote froze. The saga (#42) takes it from there.

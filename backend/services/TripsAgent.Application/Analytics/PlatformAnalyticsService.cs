@@ -168,6 +168,38 @@ public sealed class PlatformAnalyticsService
     }
 
     /// <summary>
+    /// The export log: who took what, how many rows, and when.
+    /// </summary>
+    /// <remarks>
+    /// The point of writing <c>analytics.report_exports_audit</c> is that somebody can read it, and
+    /// this is where they do. Platform-wide, so it shows agency exports and cross-tenant ones side
+    /// by side — which is the view that answers "who has this data" after the fact.
+    /// </remarks>
+    public async Task<IReadOnlyList<ReportExportAuditResponse>> ExportsAsync(
+        int limit = 100,
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _platformScope.Enter(
+            "Export audit — lists exports taken by every agency and by Trips staff");
+
+        return await _db.ReportExportAudits.AsNoTracking()
+            .OrderByDescending(entry => entry.ExportedAt)
+            .Take(Math.Clamp(limit, 1, 500))
+            .Select(entry => new ReportExportAuditResponse(
+                entry.Id,
+                entry.ReportJobId,
+                entry.DefinitionCode,
+                entry.Scope.ToString(),
+                entry.AgencyId,
+                entry.ActorUserId,
+                entry.ActorType.ToString(),
+                entry.ScopeDescription,
+                entry.RowCount,
+                entry.ExportedAt))
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
     /// A ratio in basis points, or null when the denominator is zero.
     /// </summary>
     /// <remarks>

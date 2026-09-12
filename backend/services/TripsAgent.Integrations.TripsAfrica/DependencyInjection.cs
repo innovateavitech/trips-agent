@@ -29,9 +29,18 @@ public static class DependencyInjection
         services.AddSupplierHttpClient<TripsAfricaBookingHttp, TripsAfricaBookingHttp>(
             client => client.BaseAddress = baseAddress, options.BookingTimeout);
 
+        // The ticket-issue call gets a client of its own — see docs/adr/0003-never-retry-ticket-issuance.md.
+        // Its timeout is set apart from every other call's, and like every supplier client it is built
+        // through AddSupplierHttpClient, which refuses any handler but the audit handler: retries are not
+        // switched off here, they cannot be switched on. A timeout is an unknown outcome, handed to the
+        // status poller, and never a reason to send the call again.
+        services.AddSupplierHttpClient<TripsAfricaIssueHttp, TripsAfricaIssueHttp>(
+            client => client.BaseAddress = baseAddress, options.IssueTimeout);
+
         services.AddScoped<TripsAfricaCredentials>();
         services.AddScoped<TripsAfricaSupplier>();
         services.AddScoped<TripsAfricaSearchRunner>();
+        services.AddScoped<TripsAfricaTicketing>();
 
         // One adapter per product, as ISupplierAdapter asks: the two use different endpoints and
         // different authentication. SupplierAdapterRegistry refuses a second claim on either.
@@ -52,18 +61,31 @@ public static class DependencyInjection
         var section = configuration.GetSection(TripsAfricaOptions.SectionName);
         var defaults = new TripsAfricaOptions();
 
-        return new TripsAfricaOptions
+        var options = new TripsAfricaOptions
         {
             BaseUrl = section["BaseUrl"] is { Length: > 0 } baseUrl ? baseUrl : defaults.BaseUrl,
             Environment = section["Environment"] is { Length: > 0 } environment
                 ? Enum.Parse<SupplierEnvironment>(environment, ignoreCase: true)
                 : defaults.Environment,
             BookingTimeout = Seconds(section, "TimeoutSeconds") ?? defaults.BookingTimeout,
+            IssueTimeout = Seconds(section, "IssueTimeoutSeconds") ?? defaults.IssueTimeout,
             SearchTimeout = Seconds(section, "SearchTimeoutSeconds") ?? defaults.SearchTimeout,
             MerchantCode = section["MerchantCode"],
             MerchantKey = section["MerchantKey"],
             BearerToken = section["BearerToken"],
         };
+
+        // The poller takes over an unanswered issue call after IssueRecoveryDelay. An issue call allowed
+        // to wait longer than that could still be waiting when the poller steps in.
+        if (options.IssueTimeout >= SupplierPollSchedule.IssueRecoveryDelay)
+        {
+            throw new InvalidOperationException(
+                $"{TripsAfricaOptions.SectionName}:IssueTimeoutSeconds must be below "
+                + $"{SupplierPollSchedule.IssueRecoveryDelay.TotalSeconds:0} seconds, after which the status poller takes "
+                + $"over an unanswered issue call. It was {options.IssueTimeout.TotalSeconds:0}.");
+        }
+
+        return options;
     }
 
     private static TimeSpan? Seconds(IConfigurationSection section, string name)

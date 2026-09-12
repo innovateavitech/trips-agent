@@ -24,9 +24,10 @@ import { describeError } from '../../../api/errors';
 import { PageHeader } from '../../../shell/page-header';
 import { STATUS_DISPLAY, formatDeparture } from '../../dashboard/booking-display';
 import { useBookings } from '../bookings-api';
-import { STATUS_FILTERS, filterBookings, statusCounts } from '../bookings-rules';
+import { STATUS_FILTERS, dateRangeProblem, filterBookings, statusCounts } from '../bookings-rules';
 import {
   NO_BOOKING_FILTERS,
+  type BookingDateField,
   type BookingFilters,
   type BookingListItem,
   type ProductKind,
@@ -90,6 +91,33 @@ export function BookingsPage() {
             <option value="flight">Flights</option>
             <option value="bus">Buses</option>
           </Select>
+        </div>
+        <div className="grid items-start gap-3 sm:grid-cols-3">
+          <Select
+            label="Date"
+            value={filters.dateField}
+            onChange={(event) =>
+              setFilters({ ...filters, dateField: event.target.value as BookingDateField })
+            }
+          >
+            <option value="departure">Departure date</option>
+            <option value="booked">Booking date</option>
+          </Select>
+          <Input
+            type="date"
+            label="From"
+            value={filters.from}
+            max={filters.to || undefined}
+            onChange={(event) => setFilters({ ...filters, from: event.target.value })}
+          />
+          <Input
+            type="date"
+            label="To"
+            value={filters.to}
+            min={filters.from || undefined}
+            error={dateRangeProblem(filters) ?? undefined}
+            onChange={(event) => setFilters({ ...filters, to: event.target.value })}
+          />
         </div>
       </Card>
 

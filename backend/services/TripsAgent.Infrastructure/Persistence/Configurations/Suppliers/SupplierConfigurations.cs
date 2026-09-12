@@ -354,9 +354,20 @@ public sealed class SupplierBookingConfiguration : IEntityTypeConfiguration<Supp
             .IsUnique()
             .HasDatabaseName("ix_supplier_bookings_idempotency_key");
 
+        // Compared on every write, like the wallet's: the issuer and the poller can both finish with one
+        // booking at once, and the second must see the first rather than overwrite it.
+        builder.Property(booking => booking.Version).IsConcurrencyToken().IsRequired();
+
+        // Derived from Status; nothing to store.
+        builder.Ignore(booking => booking.IsAwaitingOutcome);
+
         // What the status poller (#37) reads: bookings in a given state that are due.
         builder.HasIndex(booking => new { booking.Status, booking.NextPollAt })
             .HasDatabaseName("ix_supplier_bookings_status_next_poll_at");
+
+        // What the ticket time limit monitor (#38) reads: held bookings, by deadline.
+        builder.HasIndex(booking => new { booking.Status, booking.TicketTimeLimit })
+            .HasDatabaseName("ix_supplier_bookings_status_ticket_time_limit");
 
         builder.HasIndex(booking => new { booking.AgencyId, booking.CreatedAt })
             .IsDescending(false, true)

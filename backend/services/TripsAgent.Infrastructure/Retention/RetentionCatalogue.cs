@@ -111,6 +111,8 @@ public static partial class RetentionCatalogue
             "What the gateway told us, with its signature check — the evidence in a payment dispute."),
         new("payments.reconciliation_exceptions", RetentionTreatment.Protected, SevenYears,
             "Discrepancies the ledger audit found, and how each was resolved."),
+        new("payments.refunds", RetentionTreatment.Protected, SevenYears,
+            "Every refund, with the status poll or the agent behind it — the evidence that money went back for a reason. Append-only in the database as well."),
 
         // ---------------------------------------------------------------- sales
         new("orders.orders", RetentionTreatment.Protected, SevenYears,

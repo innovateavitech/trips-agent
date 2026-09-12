@@ -33,6 +33,11 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         // Stored by name, not number, so a psql query reads "PendingPayment" rather than "1" — and so
         // reordering an enum can never silently change what a stored order means.
         builder.Property(order => order.Status).HasConversion<string>().HasMaxLength(30).IsRequired();
+
+        // How and when it was paid, and the key the payment came with (#42). All three or none: the
+        // migration's CHECK says so.
+        builder.Property(order => order.PaidFrom).HasConversion<string>().HasMaxLength(20);
+        builder.Property(order => order.PaymentIdempotencyKey).HasMaxLength(100);
         builder.Property(order => order.BuyerType).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(order => order.Channel).HasConversion<string>().HasMaxLength(20).IsRequired();
 
@@ -61,6 +66,12 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.HasIndex(order => new { order.AgencyId, order.Status })
             .HasDatabaseName("ix_orders_agency_id_status");
+
+        // The idempotency key at the API's edge: the same key twice is one booking, never a second charge.
+        builder.HasIndex(order => new { order.AgencyId, order.PaymentIdempotencyKey })
+            .IsUnique()
+            .HasFilter("payment_idempotency_key IS NOT NULL")
+            .HasDatabaseName("ix_orders_agency_id_payment_idempotency_key");
     }
 }
 

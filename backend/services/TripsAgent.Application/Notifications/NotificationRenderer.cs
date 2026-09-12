@@ -9,7 +9,10 @@ namespace TripsAgent.Application.Notifications;
 /// <summary>Whose mail this appears to be, as the renderer needs it.</summary>
 /// <param name="Name">Shown in the header, the footer, the greeting line and the From name.</param>
 /// <param name="Color">A hex colour for the traveller layout's header. Ignored by the agency layout.</param>
-/// <param name="LogoUrl">An absolute https URL, or null to show the name as text instead.</param>
+/// <param name="LogoUrl">
+/// An absolute https URL, or <see cref="NotificationRenderer.InlineLogoUrl"/> when the logo is sent
+/// inside the message, or null to show the name as text instead.
+/// </param>
 /// <param name="Contact">The footer's contact line, or null.</param>
 /// <param name="ReplyTo">Where a reply should go, or null for the sender's default.</param>
 public sealed record NotificationBrand(
@@ -78,15 +81,14 @@ public static partial class NotificationRenderer
     public const string NameBlockOpen = "<!--name-->";
     public const string NameBlockClose = "<!--/name-->";
 
-    /// <summary>
-    /// Strings that give our identity away. Checked against every traveller-facing rendering.
-    /// </summary>
-    /// <remarks>
-    /// Not the bare word "Trips": an agency may well be called "Lagos Trips Ltd", and blocking its
-    /// own name from its own mail would be absurd. These are the forms our brand actually takes —
-    /// the product name and the domain.
-    /// </remarks>
-    private static readonly string[] PlatformMarkers = [NotificationTemplateCatalog.ProductName, "tripsagent"];
+    /// <summary>The URI scheme an HTML body uses for an image sent inside the message itself.</summary>
+    public const string InlineImageScheme = "cid";
+
+    /// <summary>The content id the agency's logo travels under when it is sent inside the message.</summary>
+    public const string InlineLogoContentId = "agency-logo";
+
+    /// <summary>What <see cref="NotificationBrand.LogoUrl"/> holds when the logo travels inside the message.</summary>
+    public const string InlineLogoUrl = InlineImageScheme + ":" + InlineLogoContentId;
 
     /// <summary>Renders <paramref name="template"/> for one recipient.</summary>
     /// <param name="template">The version to render.</param>
@@ -179,8 +181,8 @@ public static partial class NotificationRenderer
         }
     }
 
-    private static bool ContainsPlatformMarker(string value) =>
-        PlatformMarkers.Any(marker => value.Contains(marker, StringComparison.OrdinalIgnoreCase));
+    // The same markers the documents check, from one list: see TravellerBrandGuard.
+    private static bool ContainsPlatformMarker(string value) => TravellerBrandGuard.MentionsPlatform(value);
 
     private static string Fill(
         string template,
@@ -244,9 +246,13 @@ public static partial class NotificationRenderer
     private static string SafeColor(string? color) =>
         color is not null && HexColorPattern().IsMatch(color) ? color : AgencyBranding.DefaultPrimaryColor;
 
-    /// <summary>An absolute https URL, or null. Anything else is not something to point an img at.</summary>
+    /// <summary>
+    /// An absolute https URL, or a <c>cid:</c> reference to an image sent inside the message, or
+    /// null. Anything else is not something to point an img at.
+    /// </summary>
     private static string? SafeLogoUrl(string? url) =>
-        Uri.TryCreate(url, UriKind.Absolute, out var parsed) && parsed.Scheme == Uri.UriSchemeHttps
+        Uri.TryCreate(url, UriKind.Absolute, out var parsed)
+        && (parsed.Scheme == Uri.UriSchemeHttps || parsed.Scheme == InlineImageScheme)
             ? parsed.AbsoluteUri
             : null;
 

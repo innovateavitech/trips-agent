@@ -80,6 +80,12 @@ public interface IAppDbContext
     /// <summary>Every attempt to take money, successful or not.</summary>
     public DbSet<PaymentTransaction> PaymentTransactions { get; }
 
+    /// <summary>
+    /// Money given back for an order line — one per line, each with its reason and, for a supplier
+    /// reversal, the status poll behind it. Append-only.
+    /// </summary>
+    public DbSet<Refund> Refunds { get; }
+
     /// <summary>Gateway deliveries, recorded so each is processed exactly once.</summary>
     public DbSet<PaymentWebhookEvent> PaymentWebhookEvents { get; }
 
@@ -175,6 +181,18 @@ public interface IAppDbContext
     public DbSet<FlightSegment> FlightSegments { get; }
 
     public DbSet<BusSegment> BusSegments { get; }
+
+    /// <summary>Our record of each booking with a supplier. One per order line, enforced by the database.</summary>
+    public DbSet<SupplierBooking> SupplierBookings { get; }
+
+    /// <summary>The travellers on a supplier booking. The lead one's surname identifies it to the supplier.</summary>
+    public DbSet<SupplierBookingPassenger> SupplierBookingPassengers { get; }
+
+    /// <summary>
+    /// Every status poll and what was done about it: the evidence a payment reversal rests on.
+    /// Append-only — a trigger refuses UPDATE and DELETE, even to the owner.
+    /// </summary>
+    public DbSet<SupplierStatusPoll> SupplierStatusPolls { get; }
 
     /// <summary>
     /// What this context is about to write.

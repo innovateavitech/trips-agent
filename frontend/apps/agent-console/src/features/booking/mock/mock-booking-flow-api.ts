@@ -12,7 +12,8 @@ import type { BookingDraft, PlaceBookingInput } from '../types';
 
 /**
  * ============================================================================
- *  TEMPORARY. Delete this folder when the checkout saga lands (#42).
+ *  The demo stand-in. main.tsx uses it only with VITE_AUTH_MODE=mock; the real
+ *  checkout (#42) is createHttpBookingFlowApi.
  * ============================================================================
  *
  * The booking flow's stand-in. A booking it places goes into the same store the

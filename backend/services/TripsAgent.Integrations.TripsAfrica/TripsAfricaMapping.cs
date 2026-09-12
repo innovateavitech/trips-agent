@@ -40,21 +40,18 @@ internal static partial class TripsAfricaMapping
     };
 
     /// <summary>Lagos time, all year: Nigeria keeps no daylight saving.</summary>
-    internal static readonly TimeSpan NigeriaOffset = TimeSpan.FromHours(1);
+    internal static readonly TimeSpan NigeriaOffset = Airports.NigeriaOffset;
 
     /// <summary>
     /// Nigerian airports, which decide the domestic endpoint and the time zone of a wall-clock time.
     /// </summary>
     /// <remarks>
     /// The supplier has two flight search endpoints and says nothing about which serves what beyond
-    /// their names, so a search is domestic when every airport in it is on this list. A new airport
-    /// is one line here; until it is added, its flights are searched internationally.
+    /// their names, so a search is domestic when every airport in it is on this list. The list itself
+    /// lives in <see cref="Airports"/>, where the bookings screens read it too; until an airport is
+    /// added there, its flights are searched internationally.
     /// </remarks>
-    internal static readonly FrozenSet<string> NigerianAirports = new[]
-    {
-        "ABB", "ABV", "AKR", "BCU", "BNI", "CBQ", "DKA", "ENU", "GMO", "IBA", "ILR", "JOS", "KAD",
-        "KAN", "LOS", "MDI", "MIU", "MXJ", "PHC", "QOW", "QRW", "QUO", "SKO", "YOL",
-    }.ToFrozenSet(StringComparer.Ordinal);
+    internal static readonly FrozenSet<string> NigerianAirports = Airports.Nigerian;
 
     // ------------------------------------------------------------------------------ flight search
 
@@ -426,6 +423,287 @@ internal static partial class TripsAfricaMapping
             AddressLine1: string.Empty,
             City: string.Empty,
             CountryCode: "NG");
+    }
+
+    // ------------------------------------------------------------------------------ issue and status
+
+    /// <summary>What <c>BookingReferenceType</c> the bus reservation lookup is sent with: the documented sample's.</summary>
+    internal const int BusReservationReferenceType = 10;
+
+    /// <summary>Trips Africa's status codes by name, as the issue call writes them.</summary>
+    internal static readonly FrozenDictionary<string, int> StatusCodesByName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Booking"] = 0,
+        ["Cancelled"] = 1,
+        ["TicketIssued"] = 2,
+        ["TicketPending"] = 3,
+        ["CancellationFailed"] = 11,
+        ["Error"] = 100,
+    }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// A Trips Africa status code in our words.
+    /// </summary>
+    /// <remarks>
+    /// 0 (Booking), 1 (Cancelled) and 11 (CancellationFailed) are the codes the supplier's reversal rules
+    /// name: no ticket will come, so the payment goes back. 100 (Error) and anything unknown get no
+    /// reading at all — the poller puts those in front of a person rather than acting on a guess.
+    /// </remarks>
+    internal static SupplierBookingStatus? StatusFor(int? code) => code switch
+    {
+        0 or 11 => SupplierBookingStatus.Failed,
+        1 => SupplierBookingStatus.Cancelled,
+        2 => SupplierBookingStatus.Ticketed,
+        3 => SupplierBookingStatus.TicketPending,
+        _ => null,
+    };
+
+    /// <summary>
+    /// The issue request: the supplier's session, and the trip type and mode the price confirmation recorded.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// TripType is <c>International</c> or <c>Domestic</c>; TripMode is <c>Flight</c> or <c>Road</c>, and must be
+    /// the product's own — a bus booking issued as a flight is a ticket for the wrong thing. One sample in the
+    /// supplier's documentation has the two swapped ("TripType": "flight"); every other sample, and #36, put
+    /// them this way round.
+    /// </para>
+    /// <para>
+    /// Everything is checked here, before a request exists, so a mistake provably sends nothing.
+    /// </para>
+    /// </remarks>
+    internal static string ToIssueBody(SupplierIssueRequest request, SupplierProductType product)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.ProductType != product)
+        {
+            throw new ArgumentException($"The {product} adapter was asked to issue a {request.ProductType} booking.", nameof(request));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.SupplierSessionId))
+        {
+            throw new ArgumentException("An issue request needs the supplier's session id.", nameof(request));
+        }
+
+        return JsonSerializer.Serialize(
+            new IssueRequestWire(
+                request.SupplierSessionId.Trim(),
+                TripTypeFor(request.TripType, product),
+                TripModeFor(request.TripMode, product)),
+            Json);
+    }
+
+    /// <summary>International or Domestic, spelled as the supplier spells it.</summary>
+    internal static string TripTypeFor(string? tripType, SupplierProductType product)
+    {
+        var value = tripType?.Trim();
+
+        if (string.Equals(value, "International", StringComparison.OrdinalIgnoreCase))
+        {
+            return "International";
+        }
+
+        if (string.Equals(value, "Domestic", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Domestic";
+        }
+
+        // Every documented bus trip is domestic, and the bus confirmation records it so. A flight has to
+        // say which it is: guessing sends the wrong trip type to a call that cannot be taken back.
+        if (string.IsNullOrEmpty(value) && product == SupplierProductType.Bus)
+        {
+            return "Domestic";
+        }
+
+        throw new ArgumentException($"'{tripType}' is not a Trips Africa trip type: it must be International or Domestic.", nameof(tripType));
+    }
+
+    /// <summary>Flight for a flight, Road for a bus — and nothing else for either.</summary>
+    internal static string TripModeFor(string? tripMode, SupplierProductType product)
+    {
+        var expected = product switch
+        {
+            SupplierProductType.Flight => "Flight",
+            SupplierProductType.Bus => "Road",
+            _ => throw new ArgumentOutOfRangeException(nameof(product), product, "Trips Africa sells flights and buses only."),
+        };
+
+        var value = tripMode?.Trim();
+
+        if (string.IsNullOrEmpty(value) || string.Equals(value, expected, StringComparison.OrdinalIgnoreCase))
+        {
+            return expected;
+        }
+
+        throw new ArgumentException(
+            $"A {product} booking cannot be issued with trip mode '{tripMode}'. Trips Africa's word for it is {expected}.",
+            nameof(tripMode));
+    }
+
+    /// <summary>What an issue call answered.</summary>
+    internal sealed record IssueAnswer(bool IsSuccessful, string? Pnr, int? StatusCode, string? Message);
+
+    /// <summary>Reads an issue answer. False when the body is not one.</summary>
+    internal static bool TryReadIssueAnswer(string json, out IssueAnswer answer)
+    {
+        answer = new IssueAnswer(IsSuccessful: false, Pnr: null, StatusCode: null, Message: null);
+
+        try
+        {
+            if (JsonSerializer.Deserialize<IssueResponseWire>(json, Json) is not { } wire)
+            {
+                return false;
+            }
+
+            answer = new IssueAnswer(
+                wire.IsSuccessful == true,
+                CleanReference(wire.Pnr),
+                StatusCodeOf(wire.BookingStatus),
+                Clip(wire.Message, 500));
+
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>The flight status query — by confirmation code and the lead passenger's surname.</summary>
+    internal static string ToStatusBody(string confirmationCode, string surname)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(confirmationCode);
+        ArgumentException.ThrowIfNullOrWhiteSpace(surname);
+
+        return JsonSerializer.Serialize(new BookingStatusRequestWire(confirmationCode.Trim(), surname.Trim()), Json);
+    }
+
+    /// <summary>The bus reservation lookup — by PNR and the lead passenger's surname.</summary>
+    internal static string ToBusReservationBody(string pnr, string surname)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(pnr);
+        ArgumentException.ThrowIfNullOrWhiteSpace(surname);
+
+        return JsonSerializer.Serialize(
+            new BusReservationRequestWire(pnr.Trim(), BusReservationReferenceType, surname.Trim(), ETicketNumber: string.Empty),
+            Json);
+    }
+
+    /// <summary>Reads a flight status answer. False when it carries no status code we can read.</summary>
+    internal static bool TryReadBookingStatus(string json, out int? code, out string? message)
+    {
+        code = null;
+        message = null;
+
+        try
+        {
+            if (JsonSerializer.Deserialize<BookingStatusResponseWire>(json, Json) is not { } wire)
+            {
+                return false;
+            }
+
+            code = StatusCodeOf(wire.StatusCode) ?? StatusCodeOf(wire.StatusDescription);
+            message = Describe(wire.StatusDescription, wire.ErrorList);
+
+            return code is not null;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Reads a bus reservation answer. False when it carries no status code we can read.</summary>
+    internal static bool TryReadBusReservation(string json, out int? code, out string? pnr, out string? message)
+    {
+        code = null;
+        pnr = null;
+        message = null;
+
+        try
+        {
+            if (JsonSerializer.Deserialize<BusReservationResponseWire>(json, Json) is not { } wire)
+            {
+                return false;
+            }
+
+            code = StatusCodeOf(wire.BookingStatus) ?? StatusCodeOf(wire.BookingStatusName);
+            pnr = CleanReference(wire.BookingReferenceId);
+            message = Clip(wire.BookingStatusName, 500);
+
+            return code is not null;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>A status as a number, or as the name the issue call writes it with. Null for anything else.</summary>
+    internal static int? StatusCodeOf(JsonElement? element)
+    {
+        if (element is not { } value)
+        {
+            return null;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.Number when value.TryGetInt32(out var code) => code,
+            JsonValueKind.String => StatusCodeOf(value.GetString()),
+            _ => null,
+        };
+    }
+
+    /// <summary>A status name or a number written as text. The string "null" is not a status.</summary>
+    internal static int? StatusCodeOf(string? name)
+    {
+        var value = name?.Trim();
+
+        if (string.IsNullOrEmpty(value))
+        {
+            return null;
+        }
+
+        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
+        {
+            return number;
+        }
+
+        return StatusCodesByName.TryGetValue(value, out var code) ? code : null;
+    }
+
+    /// <summary>A reference the supplier sent, or null for nothing — including its literal "null".</summary>
+    internal static string? CleanReference(string? value)
+    {
+        var trimmed = value?.Trim();
+
+        return string.IsNullOrEmpty(trimmed) || string.Equals(trimmed, "null", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : trimmed;
+    }
+
+    private static string? Describe(string? description, List<JsonElement>? errors)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(description))
+        {
+            parts.Add(description.Trim());
+        }
+
+        foreach (var error in errors ?? [])
+        {
+            var text = error.ValueKind == JsonValueKind.String ? error.GetString() : error.GetRawText();
+
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                parts.Add(text.Trim());
+            }
+        }
+
+        return parts.Count == 0 ? null : Clip(string.Join(": ", parts), 500);
     }
 
     // ------------------------------------------------------------------------------------- shared

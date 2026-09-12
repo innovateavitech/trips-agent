@@ -6,7 +6,8 @@ using TripsAgent.Domain.Suppliers;
 namespace TripsAgent.Integrations.TripsAfrica;
 
 /// <summary>
-/// Trips Africa buses: one-way search (#34) and price confirmation (#35).
+/// Trips Africa buses: one-way search (#34), price confirmation (#35), ticket issue (#36) and status
+/// polling (#37). Issue and status are shared with flights, in <see cref="TripsAfricaTicketing"/>.
 /// </summary>
 /// <remarks>
 /// A separate adapter from flights because Trips Africa treats them as separate APIs: different
@@ -20,6 +21,7 @@ public sealed partial class TripsAfricaBusAdapter : ISupplierAdapter
 
     private readonly TripsAfricaSearchRunner _searcher;
     private readonly TripsAfricaBookingHttp _booking;
+    private readonly TripsAfricaTicketing _ticketing;
     private readonly TripsAfricaCredentials _credentials;
     private readonly TripsAfricaSupplier _supplier;
     private readonly ILogger<TripsAfricaBusAdapter> _logger;
@@ -27,12 +29,14 @@ public sealed partial class TripsAfricaBusAdapter : ISupplierAdapter
     public TripsAfricaBusAdapter(
         TripsAfricaSearchRunner searcher,
         TripsAfricaBookingHttp booking,
+        TripsAfricaTicketing ticketing,
         TripsAfricaCredentials credentials,
         TripsAfricaSupplier supplier,
         ILogger<TripsAfricaBusAdapter> logger)
     {
         _searcher = searcher;
         _booking = booking;
+        _ticketing = ticketing;
         _credentials = credentials;
         _supplier = supplier;
         _logger = logger;
@@ -119,17 +123,18 @@ public sealed partial class TripsAfricaBusAdapter : ISupplierAdapter
             TripsAfricaMapping.MapConfirmations(response.Body, credentials.MerchantKey));
     }
 
+    /// <summary>Sent once, never retried — see <see cref="TripsAfricaTicketing"/> and ADR-0003.</summary>
     public Task<SupplierIssueResult> IssueAsync(
         SupplierCallContext context,
         SupplierIssueRequest request,
         CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException("Trips Africa ticket issue is built in #36.");
+        _ticketing.IssueAsync(SupplierProductType.Bus, context, request, cancellationToken);
 
     public Task<SupplierStatusResult> GetStatusAsync(
         SupplierCallContext context,
         SupplierStatusQuery query,
         CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException("Trips Africa booking status polling is built in #37.");
+        _ticketing.GetStatusAsync(SupplierProductType.Bus, context, query, cancellationToken);
 
     public Task<SupplierFareRules> GetRulesAsync(
         SupplierCallContext context,

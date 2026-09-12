@@ -14,6 +14,7 @@ using TripsAgent.Application.Storage;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
+using TripsAgent.Infrastructure.Concurrency;
 using TripsAgent.Infrastructure.Documents;
 using TripsAgent.Infrastructure.Identity;
 using TripsAgent.Infrastructure.Messaging;
@@ -111,6 +112,12 @@ public static class DependencyInjection
         // NotificationQueuedConsumer calls it, but registering it everywhere keeps the two hosts'
         // containers the same shape.
         services.AddScoped<NotificationDispatcher>();
+
+        // An agency's logo as PNG, for its travellers' email and its documents (#45, #46).
+        services.AddScoped<TripsAgent.Application.Assets.IAgencyLogoSource, Assets.AgencyLogoSource>();
+
+        // The supplier's side of an order — its PNR and ticket numbers — for vouchers (#46).
+        services.AddScoped<ISupplierBookingReader, SupplierBookingReader>();
 
         // Alerting: logs, the back-office queue and email. Scoped because it writes an
         // admin_alerts row through the request's DbContext.
@@ -212,6 +219,11 @@ public static class DependencyInjection
         // Net search results, per agency, for a few minutes (#40). After the pricing cache, whose
         // Redis connection it reuses.
         services.AddSearchCache(configuration);
+
+        // The lock ticket issuance takes on an order line (#36) — the outermost of its four guards
+        // against a second ticket. Redis, on the pricing cache's connection; no lock at all without it,
+        // which leaves the three database guards to hold on their own.
+        services.AddDistributedLocks(configuration);
 
         // Request counts for the API's rate limiter (issue #102), on the same Redis connection the
         // pricing cache registered — one multiplexer per process. Nothing at all without Redis, on
@@ -373,6 +385,10 @@ public static class DependencyInjection
             configuration.GetSection(SupplierCredentialOptions.SectionName).Get<SupplierCredentialOptions>()
             ?? new SupplierCredentialOptions());
         services.AddScoped<ISupplierCredentialStore, SupplierCredentialStore>();
+
+        // The row locks the booking pipeline takes — FOR UPDATE, and SKIP LOCKED for the jobs every
+        // Worker shares (#36, #37, #38). On the request's AppDbContext, so in its transaction.
+        services.AddScoped<ISupplierBookingLocks, SupplierBookingLocks>();
 
         var section = configuration.GetSection(SupplierApiCallOptions.SectionName);
 

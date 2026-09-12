@@ -15,9 +15,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return [];
   }
 
-  return map.entries.map((entry) => ({
+  const pages = map.entries.map((entry) => ({
     url: `${map.baseUrl}${entry.path}`,
     lastModified: new Date(entry.lastModified),
     changeFrequency: entry.changeFrequency as MetadataRoute.Sitemap[number]['changeFrequency'],
   }));
+
+  // The enquiry form is the storefront's own route rather than a page the agent built, so the API
+  // does not know about it — but it is the page most worth finding, so it is listed here. A quote's
+  // page is deliberately never listed: its address is its secret.
+  return [...pages, { url: `${map.baseUrl}/enquire`, changeFrequency: 'monthly' as const }];
 }

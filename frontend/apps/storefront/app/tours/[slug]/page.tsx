@@ -232,7 +232,7 @@ export default async function ProductPage({ params }: Props) {
           Get in touch and we will hold your place and answer any questions.
         </p>
         <Link
-          href="/contact"
+          href={`/enquire?destination=${encodeURIComponent(product.destinationCity || product.title)}`}
           className="mt-4 inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           Enquire about this trip

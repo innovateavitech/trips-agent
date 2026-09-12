@@ -23,6 +23,8 @@ export type Catalog = Schemas['PublicCatalogResponse'];
 export type Product = Schemas['PublicProductResponse'];
 export type ProductSummary = Schemas['PublicProductSummary'];
 export type Sitemap = Schemas['PublicSitemapResponse'];
+export type Quote = Schemas['PublicQuoteResponse'];
+export type TripRequest = Schemas['TripRequestSubmission'];
 export type Block = Schemas['SiteBlockDto'];
 export type Page = Schemas['SiteSnapshotPage'];
 
@@ -186,6 +188,67 @@ export async function getGridsFor(
   );
 
   return Object.fromEntries(grids.filter((entry) => entry !== null));
+}
+
+/**
+ * The CRM's anonymous endpoints, which live beside the storefront's own (issue 62).
+ *
+ * Same rule as everything else here: the agency is decided by the hostname the traveller used, which
+ * this sends on as `X-Storefront-Host`. Nothing is cached — a trip request is a write, and a quote is
+ * one customer's, read once and then marked as opened.
+ */
+async function crm<T>(
+  path: string,
+  init: { method: 'GET' | 'POST'; body?: unknown },
+): Promise<{ ok: boolean; status: number; data: T | null }> {
+  const hostname = await requestHostname();
+
+  const response = await fetch(`${apiBaseUrl()}/api/v1/public/crm${path}`, {
+    method: init.method,
+    headers: {
+      'X-Storefront-Host': hostname,
+      Accept: 'application/json',
+      ...(init.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+    },
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+    cache: 'no-store',
+  });
+
+  // A 202 to a trip request has no body, and a refusal has a problem document rather than the type
+  // asked for. The caller is given the status either way and decides what to say about it.
+  const data = response.headers.get('content-type')?.includes('json')
+    ? ((await response.json()) as T)
+    : null;
+
+  return { ok: response.ok, status: response.status, data };
+}
+
+/** Sends a traveller's enquiry to the agency. Accepted means it is in their CRM as a new lead. */
+export async function submitTripRequest(request: TripRequest): Promise<{ ok: boolean }> {
+  const { ok } = await crm<unknown>('/trip-requests', { method: 'POST', body: request });
+
+  return { ok };
+}
+
+/** One customer's quote, by the token in their link. Reading it records that they opened it. */
+export async function getQuote(token: string): Promise<Quote | null> {
+  const { ok, data } = await crm<Quote>(`/quotes/${encodeURIComponent(token)}`, { method: 'GET' });
+
+  return ok ? data : null;
+}
+
+/** The customer's answer to a quote. */
+export async function respondToQuote(
+  token: string,
+  answer: 'accept' | 'decline',
+  reason?: string,
+): Promise<{ ok: boolean }> {
+  const { ok } = await crm<unknown>(`/quotes/${encodeURIComponent(token)}/${answer}`, {
+    method: 'POST',
+    body: answer === 'decline' ? { reason: reason ?? null } : undefined,
+  });
+
+  return { ok };
 }
 
 /** Every address on the site, for `sitemap.xml`. */

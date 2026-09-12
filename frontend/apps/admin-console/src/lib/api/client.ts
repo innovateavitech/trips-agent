@@ -23,6 +23,16 @@ import { ApiError, NetworkError, readProblem } from './problem';
 export interface ApiClient {
   get<T>(path: string): Promise<T>;
   post<T = void>(path: string, body?: unknown): Promise<T>;
+  put<T = void>(path: string, body?: unknown): Promise<T>;
+  /**
+   * Fetches a file the API serves as an attachment, and returns its text and the name the API
+   * asked for it to be saved as.
+   *
+   * A plain `<a href>` would not do: these routes need the Authorization header, and an anchor
+   * sends none. The response is read as text rather than saved here, so the screen decides what
+   * to do with it and nothing in this file touches the DOM.
+   */
+  download(path: string): Promise<{ fileName: string; json: string }>;
   /**
    * Exchanges credentials for a session and returns it WITHOUT keeping it. The caller decides
    * whether the account belongs in this console before anything is stored — see AuthProvider.
@@ -155,9 +165,34 @@ export function createApiClient({
     }
   }
 
+  /** Like `request`, but for a body that is a file rather than JSON. */
+  async function requestFile(path: string): Promise<{ fileName: string; json: string }> {
+    const accessToken = await currentAccessToken();
+    let response = await send('GET', path, undefined, accessToken);
+
+    if (response.status === 401 && accessToken !== null) {
+      const renewed = await refresh();
+      if (renewed === null) {
+        throw new ApiError(401, { title: 'Your session has ended.', status: 401 });
+      }
+      response = await send('GET', path, undefined, renewed.accessToken);
+    }
+
+    if (!response.ok) {
+      throw new ApiError(response.status, await readProblem(response));
+    }
+
+    return {
+      fileName: fileNameFrom(response.headers.get('content-disposition')),
+      json: await response.text(),
+    };
+  }
+
   return {
     get: <T>(path: string) => request<T>('GET', path),
     post: <T = void>(path: string, body?: unknown) => request<T>('POST', path, body),
+    put: <T = void>(path: string, body?: unknown) => request<T>('PUT', path, body),
+    download: requestFile,
 
     async signIn(email, password) {
       const response = await send('POST', '/api/v1/auth/login', { email, password }, null);
@@ -194,4 +229,15 @@ async function readBody<T>(response: Response): Promise<T> {
   if (!contentType.includes('json')) return undefined as T;
 
   return (await response.json()) as T;
+}
+
+/**
+ * The filename the API asked for, from its Content-Disposition header.
+ *
+ * Falls back to a generic name rather than throwing: a missing header is a worse filename, not a
+ * failed download, and the person still gets their file.
+ */
+function fileNameFrom(header: string | null): string {
+  const match = header?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+  return match?.[1] ? decodeURIComponent(match[1]) : 'export.json';
 }

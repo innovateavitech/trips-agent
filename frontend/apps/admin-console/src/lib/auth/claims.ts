@@ -22,14 +22,34 @@ export interface StaffClaims {
 /** Permission codes only platform roles hold — see PermissionCodes.PlatformOnly in the API. */
 export const PLATFORM_PERMISSIONS = [
   'kyb.review',
+  'agency.view',
   'agency.manage',
   'agency.suspend',
+  'agency.terminate',
+  'agency.export',
+  'audit.view',
   'platform.report.view',
   'subscription.manage',
   'platform.user.manage',
 ] as const;
 
 export const KYB_REVIEW_PERMISSION = 'kyb.review';
+
+/**
+ * The codes the back-office screens check, named rather than typed inline.
+ *
+ * None of this is security — the token is decoded, not verified, and every endpoint checks the
+ * same permission server-side. Reading them here only lets the console show the right screens and
+ * explain a refusal before somebody runs into it.
+ */
+export const AGENCY_VIEW_PERMISSION = 'agency.view';
+export const AGENCY_MANAGE_PERMISSION = 'agency.manage';
+export const AGENCY_SUSPEND_PERMISSION = 'agency.suspend';
+export const AGENCY_TERMINATE_PERMISSION = 'agency.terminate';
+export const AGENCY_EXPORT_PERMISSION = 'agency.export';
+export const AUDIT_VIEW_PERMISSION = 'audit.view';
+export const PLATFORM_REPORT_PERMISSION = 'platform.report.view';
+export const PLATFORM_USER_PERMISSION = 'platform.user.manage';
 
 /**
  * Decodes the claims in a JWT, or returns `null` when the token is not one we can read.

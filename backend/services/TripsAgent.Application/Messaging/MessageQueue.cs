@@ -83,6 +83,13 @@ public sealed class MessageQueue
     /// <summary>Analytics rollups into the fact and aggregate tables.</summary>
     public static MessageQueue AnalyticsRollup { get; } = new("analytics.rollup");
 
+    /// <summary>
+    /// What the CRM does when something happens elsewhere (#62): putting a confirmed booking on its
+    /// customer's record. Its own queue so a customer record that fails to write cannot make a
+    /// traveller's documents render again.
+    /// </summary>
+    public static MessageQueue CrmFollowUp { get; } = new("crm.followup");
+
     /// <summary>The name on the wire, exactly as it appears in the RabbitMQ management UI.</summary>
     public string Name { get; }
 
@@ -109,6 +116,7 @@ public sealed class MessageQueue
         ReportsGenerate,
         DomainsProvision,
         AnalyticsRollup,
+        CrmFollowUp,
     ];
 
     /// <inheritdoc />

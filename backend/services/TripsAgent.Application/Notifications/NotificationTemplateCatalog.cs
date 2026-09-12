@@ -107,6 +107,12 @@ public static class NotificationTemplateCatalog
     /// <summary>An agent's held booking passed its ticket time limit before it was issued (#38).</summary>
     public const string BookingExpired = "booking.expired";
 
+    /// <summary>
+    /// A quote the agency has sent to one of its own customers (#62). The customer's link to it is the
+    /// whole point of the email, and it goes to the agency's own storefront — never to ours.
+    /// </summary>
+    public const string CrmQuoteSent = "crm.quote-sent";
+
     // ------------------------------------------------------------------ brand tokens
 
     /// <summary>Whose mail this appears to be: the agency's trading name, or <see cref="ProductName"/>.</summary>
@@ -458,6 +464,42 @@ public static class NotificationTemplateCatalog
                   before. Please use this one from now on.
 
                   Reply to this email if anything on it looks wrong.
+                  """),
+
+        // The quote an agency sends its own customer (#62). It says the agency's name, links to the
+        // agency's own site, and the reply goes to the agency: the traveller has no way to learn that
+        // anything else is involved (CLAUDE.md rule 4).
+        TravellerFacing(
+            CrmQuoteSent,
+            version: 1,
+            subject: "Your quote from {{brandName}} — {{quoteNumber}}",
+            tokens: ["quoteNumber", "quoteTitle", "quoteTotal", "validUntil", "quoteUrl"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Here is your quote for {{quoteTitle}}.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>Quote</strong></td><td>{{quoteNumber}}</td></tr>
+                    <tr><td><strong>Total</strong></td><td>{{quoteTotal}}</td></tr>
+                    <tr><td><strong>Valid until</strong></td><td>{{validUntil}}</td></tr>
+                  </table>
+                  <p>Open it to see the full itinerary, and to accept or decline it:</p>
+                  <p><a href="{{quoteUrl}}">View your quote</a></p>
+                  <p>Reply to this email if you would like anything changed.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Here is your quote for {{quoteTitle}}.
+
+                      Quote:       {{quoteNumber}}
+                      Total:       {{quoteTotal}}
+                      Valid until: {{validUntil}}
+
+                  Open it to see the full itinerary, and to accept or decline it:
+
+                      {{quoteUrl}}
+
+                  Reply to this email if you would like anything changed.
                   """),
     ];
 

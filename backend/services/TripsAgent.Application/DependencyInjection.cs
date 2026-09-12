@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Assets;
 using TripsAgent.Application.Catalog;
+using TripsAgent.Application.Crm;
 using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
@@ -102,6 +103,19 @@ public static class DependencyInjection
         // The agent-authored catalog: tours, packages and visas, and their categories (#160, #161).
         services.AddScoped<ProductCatalogService>();
         services.AddScoped<ProductCategoryService>();
+
+        // The CRM: leads, quotes, customers, tasks and the timeline (#62), and the storefront's own
+        // anonymous side of it. CrmContext and CrmReader are shared by all of them.
+        services.AddScoped<CrmContext>();
+        services.AddScoped<CrmReader>();
+        services.AddScoped<CustomerDirectory>();
+        services.AddScoped<LeadService>();
+        services.AddScoped<QuoteService>();
+        services.AddScoped<CustomerService>();
+        services.AddScoped<FollowUpService>();
+        services.AddScoped<StorefrontCrmService>();
+        services.AddScoped<CustomerBookingRecorder>();
+        services.AddScoped<IQuoteEmails, QuoteEmails>();
 
         // Stages notifications in the caller's unit of work; the Worker sends them.
         services.AddScoped<INotifier, Notifier>();

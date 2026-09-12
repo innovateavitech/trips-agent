@@ -322,7 +322,7 @@ Read models, rebuilt by jobs — never queried live off `orders` for dashboards:
 
 **Mechanism:** Hangfire (Postgres-backed) for cron and recurring work; MassTransit sagas + consumers over RabbitMQ for event-driven and long-running flows. Both run in `TripsAgent.Worker`, scaled separately from the API.
 
-**Named queues:** `booking.saga` (highest priority) · `supplier.poll` · `payments.webhook` · `payments.reversal` · `notifications.email` · `notifications.sms` · `documents.render` · `media.process` · `reports.generate` (isolated pool — long-running) · `domains.provision` · `analytics.rollup` · plus a dead-letter queue per queue.
+**Named queues:** `booking.saga` (highest priority) · `supplier.poll` · `payments.webhook` · `payments.reversal` · `notifications.email` · `notifications.sms` · `documents.render` · `media.process` · `reports.generate` (isolated pool — long-running) · `domains.provision` · `analytics.rollup` · `crm.followup` · plus a dead-letter queue per queue.
 
 ### Critical path — money and tickets
 

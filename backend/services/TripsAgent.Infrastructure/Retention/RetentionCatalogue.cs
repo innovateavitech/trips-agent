@@ -163,6 +163,29 @@ public static partial class RetentionCatalogue
         new("catalog.visa_document_requirements", RetentionTreatment.Kept, "With their product",
             "The applicant's checklist: a list of documents, not anyone's documents."),
 
+        // ---------------------------------------------------------------- the agency's own CRM
+        //
+        // Personal data the agency controls, and the reason the CRM keeps it in one place: a
+        // customer's name, email and phone live on their own row and nowhere else here, so erasing
+        // a person (#106) is one row anonymised rather than a sweep of five tables. Nothing has an
+        // automatic window: an agency's customer list is the agency's to keep while it trades.
+        new("crm.customers", RetentionTreatment.Kept, "While the agency exists. Erased on request (#106)",
+            "The agency's own customers. Name, email and phone — personal data, and the only copy of it in the CRM."),
+        new("crm.leads", RetentionTreatment.Kept, "While the agency exists",
+            "What each customer asked for, and where it got to. Points at the customer rather than copying their details."),
+        new("crm.lead_stage_history", RetentionTreatment.Kept, "With their lead",
+            "Every move of every lead, and who made it. Append-only in the database as well."),
+        new("crm.quotes", RetentionTreatment.Kept, "While the agency exists",
+            "What was quoted, and what the customer answered. A sent quote never changes; the database says so too."),
+        new("crm.quote_items", RetentionTreatment.Kept, "With their quote",
+            "A quote's priced lines. Replaced while the quote is a draft, final once it is sent."),
+        new("crm.quote_itinerary_days", RetentionTreatment.Kept, "With their quote",
+            "A quote's proposed days. Replaced while the quote is a draft, final once it is sent."),
+        new("crm.tasks", RetentionTreatment.Kept, "While the agency exists",
+            "Follow-up work: a title, a date and what it is about. No personal data of its own."),
+        new("crm.communications", RetentionTreatment.Kept, "With their customer",
+            "Each customer's timeline of messages and notes — what an agent needs to pick a conversation back up. Append-only in the database as well."),
+
         // ---------------------------------------------------------------- supplier bookings
         new("supplier.supplier_bookings", RetentionTreatment.Protected, SevenYears,
             "The booking with the airline or operator — the cost side of the order line."),

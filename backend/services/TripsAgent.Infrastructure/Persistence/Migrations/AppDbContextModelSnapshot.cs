@@ -412,6 +412,9 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_products");
 
+                    b.HasAlternateKey("AgencyId", "Id")
+                        .HasName("ak_products_agency_id_id");
+
                     b.HasIndex("AgencyId", "HeroAssetId")
                         .HasDatabaseName("ix_products_agency_id_hero_asset_id");
 
@@ -792,6 +795,580 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_visa_document_requirements_visa_details_id");
 
                     b.ToTable("visa_document_requirements", "catalog");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.Communication", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("at");
+
+                    b.Property<string>("ByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("by_name");
+
+                    b.Property<Guid?>("ByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("by_user_id");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("channel");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("direction");
+
+                    b.Property<Guid?>("LeadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lead_id");
+
+                    b.Property<Guid>("RelatedId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("related_id");
+
+                    b.Property<string>("RelatedType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("related_type");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("summary");
+
+                    b.HasKey("Id")
+                        .HasName("pk_communications");
+
+                    b.HasIndex("AgencyId", "CustomerId")
+                        .HasDatabaseName("ix_communications_agency_id_customer_id");
+
+                    b.HasIndex("AgencyId", "LeadId")
+                        .HasDatabaseName("ix_communications_agency_id_lead_id");
+
+                    b.ToTable("communications", "crm");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.Customer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTimeOffset>("LastActivityAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_activity_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("phone");
+
+                    b.Property<string>("PhoneKey")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("phone_key");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_customers");
+
+                    b.HasAlternateKey("AgencyId", "Id")
+                        .HasName("ak_customers_agency_id_id");
+
+                    b.HasIndex("AgencyId", "Email")
+                        .IsUnique()
+                        .HasDatabaseName("ix_customers_agency_id_email")
+                        .HasFilter("email IS NOT NULL");
+
+                    b.HasIndex("AgencyId", "LastActivityAt")
+                        .HasDatabaseName("ix_customers_agency_id_last_activity_at");
+
+                    b.HasIndex("AgencyId", "PhoneKey")
+                        .HasDatabaseName("ix_customers_agency_id_phone_key")
+                        .HasFilter("phone_key IS NOT NULL");
+
+                    b.ToTable("customers", "crm");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.FollowUpTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateTimeOffset>("DueAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("due_at");
+
+                    b.Property<Guid?>("LeadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lead_id");
+
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_user_id");
+
+                    b.Property<Guid>("RelatedId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("related_id");
+
+                    b.Property<string>("RelatedType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("related_type");
+
+                    b.Property<DateTimeOffset?>("ReminderSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reminder_sent_at");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tasks");
+
+                    b.HasIndex("DueAt")
+                        .HasDatabaseName("ix_tasks_due_at_awaiting_reminder")
+                        .HasFilter("completed_at IS NULL AND reminder_sent_at IS NULL");
+
+                    b.HasIndex("OwnerUserId")
+                        .HasDatabaseName("ix_tasks_owner_user_id");
+
+                    b.HasIndex("AgencyId", "CustomerId")
+                        .HasDatabaseName("ix_tasks_agency_id_customer_id");
+
+                    b.HasIndex("AgencyId", "DueAt")
+                        .HasDatabaseName("ix_tasks_agency_id_due_at_open")
+                        .HasFilter("completed_at IS NULL");
+
+                    b.HasIndex("AgencyId", "LeadId")
+                        .HasDatabaseName("ix_tasks_agency_id_lead_id");
+
+                    b.ToTable("tasks", "crm");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.Lead", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Adults")
+                        .HasColumnType("integer")
+                        .HasColumnName("adults");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<long?>("BudgetMaxMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("budget_max_minor");
+
+                    b.Property<long?>("BudgetMinMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("budget_min_minor");
+
+                    b.Property<int>("Children")
+                        .HasColumnType("integer")
+                        .HasColumnName("children");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("Destination")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("destination");
+
+                    b.Property<string>("LostReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("lost_reason");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("message");
+
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_user_id");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("stage");
+
+                    b.Property<DateOnly?>("TravelFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("travel_from");
+
+                    b.Property<DateOnly?>("TravelTo")
+                        .HasColumnType("date")
+                        .HasColumnName("travel_to");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_leads");
+
+                    b.HasAlternateKey("AgencyId", "Id")
+                        .HasName("ak_leads_agency_id_id");
+
+                    b.HasIndex("OwnerUserId")
+                        .HasDatabaseName("ix_leads_owner_user_id");
+
+                    b.HasIndex("AgencyId", "CreatedAt")
+                        .HasDatabaseName("ix_leads_agency_id_created_at");
+
+                    b.HasIndex("AgencyId", "CustomerId")
+                        .HasDatabaseName("ix_leads_agency_id_customer_id");
+
+                    b.ToTable("leads", "crm");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.LeadStageChange", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("at");
+
+                    b.Property<string>("ByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("by_name");
+
+                    b.Property<Guid?>("ByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("by_user_id");
+
+                    b.Property<Guid>("LeadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lead_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("stage");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lead_stage_history");
+
+                    b.HasIndex("LeadId")
+                        .HasDatabaseName("ix_lead_stage_history_lead_id");
+
+                    b.HasIndex("AgencyId", "LeadId", "At")
+                        .HasDatabaseName("ix_lead_stage_history_agency_id_lead_id_at");
+
+                    b.ToTable("lead_stage_history", "crm");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.Quote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("LeadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lead_id");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("notes");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer")
+                        .HasColumnName("number");
+
+                    b.Property<string>("PublicToken")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("public_token");
+
+                    b.Property<string>("QuoteNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("quote_number");
+
+                    b.Property<DateTimeOffset?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("responded_at");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<long>("TotalMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_minor");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateOnly>("ValidUntil")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_until");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.Property<DateTimeOffset?>("ViewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("viewed_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_quotes");
+
+                    b.HasIndex("PublicToken")
+                        .IsUnique()
+                        .HasDatabaseName("ix_quotes_public_token")
+                        .HasFilter("public_token IS NOT NULL");
+
+                    b.HasIndex("AgencyId", "LeadId")
+                        .HasDatabaseName("ix_quotes_agency_id_lead_id");
+
+                    b.HasIndex("AgencyId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_quotes_agency_id_number");
+
+                    b.ToTable("quotes", "crm");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.QuoteItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<Guid>("QuoteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("quote_id");
+
+                    b.Property<long>("UnitPriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unit_price_minor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_quote_items");
+
+                    b.HasIndex("AgencyId", "ProductId")
+                        .HasDatabaseName("ix_quote_items_agency_id_product_id");
+
+                    b.HasIndex("QuoteId", "Position")
+                        .IsUnique()
+                        .HasDatabaseName("ix_quote_items_quote_id_position");
+
+                    b.ToTable("quote_items", "crm");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.QuoteItineraryDay", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<int>("DayNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("day_number");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid>("QuoteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("quote_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.HasKey("Id")
+                        .HasName("pk_quote_itinerary_days");
+
+                    b.HasIndex("AgencyId")
+                        .HasDatabaseName("ix_quote_itinerary_days_agency_id");
+
+                    b.HasIndex("QuoteId", "DayNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_quote_itinerary_days_quote_id_day_number");
+
+                    b.ToTable("quote_itinerary_days", "crm");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Documents.DocumentNumberFormat", b =>
@@ -2042,6 +2619,9 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_orders");
+
+                    b.HasIndex("AgencyId", "CustomerId")
+                        .HasDatabaseName("ix_orders_agency_id_customer_id");
 
                     b.HasIndex("AgencyId", "OrderNumber")
                         .IsUnique()
@@ -5631,6 +6211,172 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_visa_document_requirements_visa_details_visa_details_id");
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Crm.Communication", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_communications_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Crm.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId", "CustomerId")
+                        .HasPrincipalKey("AgencyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_communications_customers_agency_id_customer_id");
+
+                    b.HasOne("TripsAgent.Domain.Crm.Lead", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId", "LeadId")
+                        .HasPrincipalKey("AgencyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_communications_leads_agency_id_lead_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.Customer", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_customers_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.FollowUpTask", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_tasks_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_tasks_users_owner_user_id");
+
+                    b.HasOne("TripsAgent.Domain.Crm.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId", "CustomerId")
+                        .HasPrincipalKey("AgencyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_tasks_customers_agency_id_customer_id");
+
+                    b.HasOne("TripsAgent.Domain.Crm.Lead", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId", "LeadId")
+                        .HasPrincipalKey("AgencyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_tasks_leads_agency_id_lead_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.Lead", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_leads_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_leads_users_owner_user_id");
+
+                    b.HasOne("TripsAgent.Domain.Crm.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId", "CustomerId")
+                        .HasPrincipalKey("AgencyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_leads_customers_agency_id_customer_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.LeadStageChange", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_lead_stage_history_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Crm.Lead", null)
+                        .WithMany("History")
+                        .HasForeignKey("LeadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_lead_stage_history_leads_lead_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.Quote", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_quotes_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Crm.Lead", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId", "LeadId")
+                        .HasPrincipalKey("AgencyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_quotes_leads_agency_id_lead_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.QuoteItem", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_quote_items_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Crm.Quote", null)
+                        .WithMany("Items")
+                        .HasForeignKey("QuoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_quote_items_quotes_quote_id");
+
+                    b.HasOne("TripsAgent.Domain.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId", "ProductId")
+                        .HasPrincipalKey("AgencyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_quote_items_products_agency_id_product_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.QuoteItineraryDay", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_quote_itinerary_days_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Crm.Quote", null)
+                        .WithMany("Itinerary")
+                        .HasForeignKey("QuoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_quote_itinerary_days_quotes_quote_id");
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Documents.DocumentNumberFormat", b =>
                 {
                     b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
@@ -5847,6 +6593,13 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_orders_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Crm.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId", "CustomerId")
+                        .HasPrincipalKey("AgencyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_orders_customers_customer");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Orders.OrderLine", b =>
@@ -6396,6 +7149,18 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("TripsAgent.Domain.Catalog.VisaDetails", b =>
                 {
                     b.Navigation("Documents");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.Lead", b =>
+                {
+                    b.Navigation("History");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Crm.Quote", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("Itinerary");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Orders.Cart", b =>

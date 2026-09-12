@@ -1095,6 +1095,246 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListLeads"];
+        put?: never;
+        post: operations["CreateLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/leads/{leadId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetLead"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/leads/{leadId}/stage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MoveLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/leads/{leadId}/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/quotes/{quoteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetQuote"];
+        put: operations["SaveQuote"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/quotes/{quoteId}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SendQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListCustomers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/customers/{customerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCustomer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListTasks"];
+        put?: never;
+        post: operations["AddTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/tasks/{taskId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CompleteTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/communications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["LogCommunication"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/crm/trip-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SubmitTripRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/crm/quotes/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ViewPublicQuote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/crm/quotes/{token}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AcceptPublicQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/crm/quotes/{token}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DeclinePublicQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/documents": {
         parameters: {
             query?: never;
@@ -1353,6 +1593,23 @@ export interface components {
             name: string;
             type: string;
         };
+        CommunicationRequest: {
+            channel: string;
+            direction: string;
+            summary: string;
+            related: components["schemas"]["RelatedRecord"];
+        };
+        CommunicationResponse: {
+            /** Format: uuid */
+            id: string;
+            channel: string;
+            direction: string;
+            summary: string;
+            /** Format: date-time */
+            at: string;
+            byName: string;
+            related: components["schemas"]["RelatedRecord"];
+        };
         ConfirmPriceRequest: {
             /** Format: uuid */
             offerId: string;
@@ -1381,6 +1638,63 @@ export interface components {
             agencyId: null | string;
             agencyName: null | string;
             roles: string[];
+        };
+        CustomerBookingResponse: {
+            reference: string;
+            title: string;
+            /** Format: date */
+            travelDate: null | string;
+            status: string;
+            /** Format: int64 */
+            amountMinor: number | string;
+        };
+        CustomerRefResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            email: null | string;
+            phone: null | string;
+        };
+        CustomerResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            email: null | string;
+            phone: null | string;
+            /** Format: int64 */
+            lifetimeValueMinor: number | string;
+            /** Format: int32 */
+            totalBookings: number | string;
+            /** Format: date-time */
+            lastActivityAt: string;
+            /** Format: int32 */
+            openLeadCount: number | string;
+            currency: string;
+            /** Format: date-time */
+            createdAt: string;
+            leads: components["schemas"]["LeadSummaryResponse"][];
+            quotes: components["schemas"]["QuoteSummaryResponse"][];
+            bookings: components["schemas"]["CustomerBookingResponse"][];
+            tasks: components["schemas"]["TaskResponse"][];
+            communications: components["schemas"]["CommunicationResponse"][];
+        };
+        CustomerSummaryResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            email: null | string;
+            phone: null | string;
+            /** Format: int64 */
+            lifetimeValueMinor: number | string;
+            /** Format: int32 */
+            totalBookings: number | string;
+            /** Format: date-time */
+            lastActivityAt: string;
+            /** Format: int32 */
+            openLeadCount: number | string;
+        };
+        DeclineQuoteRequest: {
+            reason: null | string;
         };
         EmailVerifiedResponse: {
             message: string;
@@ -1575,6 +1889,88 @@ export interface components {
             allowedExtensions: string[];
             requiredDocumentTypes: string[];
         };
+        LeadCustomerRequest: {
+            name: string;
+            email: null | string;
+            phone: null | string;
+        };
+        LeadRequest: {
+            customer: components["schemas"]["LeadCustomerRequest"];
+            destination: string;
+            /** Format: date */
+            travelFrom: null | string;
+            /** Format: date */
+            travelTo: null | string;
+            /** Format: int32 */
+            adults: number | string;
+            /** Format: int32 */
+            children: number | string;
+            /** Format: int64 */
+            budgetMinMinor: null | number | string;
+            /** Format: int64 */
+            budgetMaxMinor: null | number | string;
+            message: string;
+        };
+        LeadResponse: {
+            /** Format: uuid */
+            id: string;
+            customer: components["schemas"]["CustomerRefResponse"];
+            source: string;
+            destination: string;
+            /** Format: date */
+            travelFrom: null | string;
+            /** Format: date */
+            travelTo: null | string;
+            /** Format: int32 */
+            adults: number | string;
+            /** Format: int32 */
+            children: number | string;
+            /** Format: int64 */
+            budgetMaxMinor: null | number | string;
+            currency: string;
+            stage: string;
+            ownerName: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            nextTaskDueAt: null | string;
+            /** Format: int32 */
+            quoteCount: number | string;
+            message: string;
+            /** Format: int64 */
+            budgetMinMinor: null | number | string;
+            lostReason: null | string;
+            history: components["schemas"]["StageChangeResponse"][];
+            quotes: components["schemas"]["QuoteSummaryResponse"][];
+            tasks: components["schemas"]["TaskResponse"][];
+            communications: components["schemas"]["CommunicationResponse"][];
+        };
+        LeadSummaryResponse: {
+            /** Format: uuid */
+            id: string;
+            customer: components["schemas"]["CustomerRefResponse"];
+            source: string;
+            destination: string;
+            /** Format: date */
+            travelFrom: null | string;
+            /** Format: date */
+            travelTo: null | string;
+            /** Format: int32 */
+            adults: number | string;
+            /** Format: int32 */
+            children: number | string;
+            /** Format: int64 */
+            budgetMaxMinor: null | number | string;
+            currency: string;
+            stage: string;
+            ownerName: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            nextTaskDueAt: null | string;
+            /** Format: int32 */
+            quoteCount: number | string;
+        };
         LoginRequest: {
             email: string;
             password: string;
@@ -1631,6 +2027,10 @@ export interface components {
             /** Format: uuid */
             supersededById: null | string;
             status: string;
+        };
+        MoveLeadRequest: {
+            stage: string;
+            reason: null | string;
         };
         OfferMarginResponse: {
             /** Format: int64 */
@@ -1970,6 +2370,25 @@ export interface components {
             categories: string[];
             imageUrl: null | string;
         };
+        PublicQuoteResponse: {
+            quoteNumber: string;
+            title: string;
+            status: string;
+            /** Format: date */
+            validUntil: string;
+            currency: string;
+            items: components["schemas"]["QuoteItemResponse"][];
+            itinerary: components["schemas"]["QuoteDayResponse"][];
+            notes: string;
+            /** Format: int64 */
+            totalMinor: number | string;
+            customerName: string;
+            /** Format: date-time */
+            sentAt: string;
+            /** Format: date-time */
+            respondedAt: null | string;
+            canRespond: boolean;
+        };
         PublicSiteResponse: {
             status: string;
             /** Format: uuid */
@@ -2017,6 +2436,83 @@ export interface components {
             field: string;
             message: string;
         };
+        QuoteDayRequest: {
+            /** Format: int32 */
+            dayNumber: number | string;
+            title: string;
+            description: string;
+        };
+        QuoteDayResponse: {
+            /** Format: int32 */
+            dayNumber: number | string;
+            title: string;
+            description: string;
+        };
+        QuoteItemRequest: {
+            description: string;
+            /** Format: int32 */
+            quantity: number | string;
+            /** Format: int64 */
+            unitPriceMinor: number | string;
+            /** Format: uuid */
+            productId: null | string;
+        };
+        QuoteItemResponse: {
+            description: string;
+            /** Format: int32 */
+            quantity: number | string;
+            /** Format: int64 */
+            unitPriceMinor: number | string;
+            /** Format: uuid */
+            productId: null | string;
+        };
+        QuoteRequest: {
+            title: string;
+            /** Format: date */
+            validUntil: string;
+            items: components["schemas"]["QuoteItemRequest"][];
+            itinerary: components["schemas"]["QuoteDayRequest"][];
+            notes: string;
+        };
+        QuoteResponse: {
+            /** Format: uuid */
+            id: string;
+            quoteNumber: string;
+            /** Format: uuid */
+            leadId: string;
+            customer: components["schemas"]["CustomerRefResponse"];
+            title: string;
+            status: string;
+            /** Format: date */
+            validUntil: string;
+            currency: string;
+            items: components["schemas"]["QuoteItemResponse"][];
+            itinerary: components["schemas"]["QuoteDayResponse"][];
+            notes: string;
+            /** Format: int64 */
+            totalMinor: number | string;
+            publicUrl: null | string;
+            /** Format: date-time */
+            sentAt: null | string;
+            /** Format: date-time */
+            viewedAt: null | string;
+            /** Format: date-time */
+            respondedAt: null | string;
+        };
+        QuoteSummaryResponse: {
+            /** Format: uuid */
+            id: string;
+            quoteNumber: string;
+            title: string;
+            status: string;
+            /** Format: int64 */
+            totalMinor: number | string;
+            currency: string;
+            /** Format: date */
+            validUntil: string;
+            /** Format: date-time */
+            sentAt: null | string;
+        };
         RefreshTokenRequest: {
             refreshToken: string;
         };
@@ -2034,6 +2530,11 @@ export interface components {
         };
         RejectKybRequest: {
             reason: string;
+        };
+        RelatedRecord: {
+            type: string;
+            /** Format: uuid */
+            id: string;
         };
         RequestAssetUploadRequest: {
             purpose: string;
@@ -2311,6 +2812,13 @@ export interface components {
             canRollBackTo: boolean;
             isLive: boolean;
         };
+        StageChangeResponse: {
+            stage: string;
+            /** Format: date-time */
+            at: string;
+            byName: string;
+            reason: null | string;
+        };
         StartTopUpRequest: {
             /** Format: int64 */
             amountMinor: number | string;
@@ -2318,6 +2826,29 @@ export interface components {
         StartTopUpResponse: {
             authorizationUrl: string;
             reference: string;
+        };
+        TaskRelatedResponse: {
+            type: string;
+            /** Format: uuid */
+            id: string;
+            label: string;
+        };
+        TaskRequest: {
+            title: string;
+            /** Format: date-time */
+            dueAt: string;
+            related: components["schemas"]["RelatedRecord"];
+        };
+        TaskResponse: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** Format: date-time */
+            dueAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+            related: components["schemas"]["TaskRelatedResponse"];
+            ownerName: null | string;
         };
         TextBlockConfig: {
             heading: null | string;
@@ -2335,6 +2866,25 @@ export interface components {
             /** Format: int64 */
             maximumMinor: number | string;
             currency: string;
+        };
+        TripRequestSubmission: {
+            name: string;
+            email: null | string;
+            phone: null | string;
+            destination: string;
+            /** Format: date */
+            travelFrom: null | string;
+            /** Format: date */
+            travelTo: null | string;
+            /** Format: int32 */
+            adults: number | string;
+            /** Format: int32 */
+            children: number | string;
+            /** Format: int64 */
+            budgetMinMinor: null | number | string;
+            /** Format: int64 */
+            budgetMaxMinor: null | number | string;
+            message: string;
         };
         VerifyEmailRequest: {
             email: string;
@@ -5032,6 +5582,672 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListLeads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadSummaryResponse"][];
+                };
+            };
+        };
+    };
+    CreateLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    MoveLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveLeadRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SaveQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    SendQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quoteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListCustomers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerSummaryResponse"][];
+                };
+            };
+        };
+    };
+    GetCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListTasks: {
+        parameters: {
+            query?: {
+                open?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponse"][];
+                };
+            };
+        };
+    };
+    AddTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    CompleteTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    LogCommunication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommunicationRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunicationResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    SubmitTripRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TripRequestSubmission"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ViewPublicQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicQuoteResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AcceptPublicQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicQuoteResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeclinePublicQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["DeclineQuoteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicQuoteResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
                 };
             };
         };

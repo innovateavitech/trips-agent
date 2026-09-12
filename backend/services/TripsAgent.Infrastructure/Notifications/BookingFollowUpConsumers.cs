@@ -1,5 +1,6 @@
 using MassTransit;
 using TripsAgent.Application.Checkout;
+using TripsAgent.Application.Crm;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Auditing;
@@ -15,20 +16,37 @@ namespace TripsAgent.Infrastructure.Notifications;
 // ============================================================================================
 
 /// <summary>
-/// A confirmed booking's invoice, vouchers and "booking confirmed" email. Bound to
+/// Everything a confirmed booking sets off: the traveller's invoice, vouchers and "booking
+/// confirmed" email, and the customer record the booking belongs to (#62). Bound to
 /// <c>documents.render</c> in <c>MessagingRegistration</c>.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Two jobs, one consumer, because one message type has exactly one consumer here — published
+/// messages fan out, so a second consumer of <see cref="BookingConfirmed"/> would be a second copy
+/// of the event and a second set of everything it causes. <c>ConsumerRoutingTests</c> holds that
+/// line.
+/// </para>
+/// <para>
+/// The traveller's side runs first: it is what someone is waiting for. Both halves are safe to run
+/// again, so a redelivery after either one finds its work already done — the emails are keyed, the
+/// documents are issued once, and an order already linked to a customer stays linked.
+/// </para>
+/// </remarks>
 public sealed class BookingConfirmedConsumer(
     TenantContext tenant,
     AuditContext audit,
-    BookingFollowUps followUps) : IConsumer<BookingConfirmed>
+    BookingFollowUps followUps,
+    CustomerBookingRecorder customers) : IConsumer<BookingConfirmed>
 {
-    public Task Consume(ConsumeContext<BookingConfirmed> context)
+    public async Task Consume(ConsumeContext<BookingConfirmed> context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         ActingAs.Agency(tenant, audit, context.Message.AgencyId, context);
-        return followUps.ConfirmedAsync(context.Message, context.CancellationToken);
+
+        await followUps.ConfirmedAsync(context.Message, context.CancellationToken);
+        await customers.RecordAsync(context.Message, context.CancellationToken);
     }
 }
 

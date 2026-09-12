@@ -1,5 +1,9 @@
 import {
   Bus,
+  CalendarDays,
+  ClipboardList,
+  Compass,
+  Inbox,
   LayoutDashboard,
   LifeBuoy,
   Plane,
@@ -7,6 +11,7 @@ import {
   Globe,
   SlidersHorizontal,
   Ticket,
+  Users,
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
@@ -50,6 +55,16 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Buses', to: '/search/buses', icon: Bus }, // #52
       { label: 'Bookings', to: '/bookings', icon: Ticket }, // #54
       { label: 'Resolution queue', to: '/resolution', icon: LifeBuoy }, // #54
+      { label: 'Catalog', to: '/catalog', icon: Compass }, // build plan F3
+      { label: 'Group departures', to: '/departures', icon: CalendarDays }, // build plan F6
+    ],
+  },
+  {
+    label: 'Customers',
+    items: [
+      { label: 'Leads', to: '/crm/leads', icon: Inbox }, // build plan F7
+      { label: 'Customers', to: '/crm/customers', icon: Users }, // build plan F7
+      { label: 'Tasks', to: '/crm/tasks', icon: ClipboardList }, // build plan F7
     ],
   },
   {

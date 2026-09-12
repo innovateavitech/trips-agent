@@ -7,6 +7,7 @@ using TripsAgent.Api.Assets;
 using TripsAgent.Api.Authorization;
 using TripsAgent.Api.Bookings;
 using TripsAgent.Api.Catalog;
+using TripsAgent.Api.Crm;
 using TripsAgent.Api.Documents;
 using TripsAgent.Api.Identity;
 using TripsAgent.Api.Networking;
@@ -189,6 +190,11 @@ app.MapPublicStorefrontEndpoints();
 
 app.MapAssetEndpoints();
 app.MapCatalogEndpoints();
+app.MapCrmEndpoints();
+
+// Anonymous, and reached from the agency's own storefront: the trip-request widget and the
+// customer's quote page (#62).
+app.MapPublicCrmEndpoints();
 
 // A booking's invoices and vouchers (#46). The two download routes are anonymous and signed: a PDF
 // opens in a new tab, which carries no token.

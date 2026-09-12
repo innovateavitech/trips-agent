@@ -512,7 +512,7 @@ Fixed-date departures sold by the seat.
 
 ### F7 · CRM
 
-**M2 · Queued** · 0 of 6 boxes ticked
+**M2 · In progress** · branch `feat/M2-crm` · 6 of 6 boxes ticked
 
 Leads from the storefront's trip-request widget, a pipeline from New to Won, quotes with a public accept link, follow-up tasks, and a customer record built from every inquiry, quote and booking.
 
@@ -549,12 +549,33 @@ FRD §2.8 and §2.10.
 
 **Tables:** `customers, leads, lead_stage_history, quotes, quote_items, tasks, communications`
 
-- [ ] Trip-request widget creating leads.
-- [ ] Pipeline New → Quoted → Negotiating → Won → Lost.
-- [ ] Quote builder with itinerary days and a shareable public accept link.
-- [ ] Follow-up tasks with reminders.
-- [ ] Communication timeline.
-- [ ] Customer 360 auto-created from any inquiry, quote or booking.
+- [x] Trip-request widget creating leads. *(the API below; the widget itself is the storefront's, F4)*
+- [x] Pipeline New → Quoted → Negotiating → Won → Lost.
+- [x] Quote builder with itinerary days and a shareable public accept link.
+- [x] Follow-up tasks with reminders.
+- [x] Communication timeline.
+- [x] Customer 360 auto-created from any inquiry, quote or booking.
+
+**The storefront's own routes.** Anonymous, and not in the contract above because the console never
+calls them. The agency is the one whose storefront answers on the host the traveller used, sent as
+`X-Storefront-Host` (the request's own `Host` is used when it is absent); a host nobody answers on
+gets the same 404 as a quote that does not exist. Rate-limited per address under the `Storefront`
+policy. Nothing they return mentions Trips.
+
+```
+POST /api/v1/public/crm/trip-requests           → 202: TripRequestSubmission; opens a New lead, source TripRequestWidget
+GET  /api/v1/public/crm/quotes/{token}          → PublicQuoteResponse; the first read records viewedAt
+POST /api/v1/public/crm/quotes/{token}/accept   → PublicQuoteResponse
+POST /api/v1/public/crm/quotes/{token}/decline  → PublicQuoteResponse: {reason?}
+```
+
+- **TripRequestSubmission:** `name`, `email?`, `phone?` (one of the two), `destination`, `travelFrom?`,
+  `travelTo?`, `adults`, `children`, `budgetMinMinor?`, `budgetMaxMinor?`, `message`. Nothing comes
+  back but a 202: the traveller has no business seeing the lead they made.
+- **PublicQuoteResponse:** `quoteNumber`, `title`, `status`, `validUntil`, `currency`, `items[]`,
+  `itinerary[]`, `notes`, `totalMinor`, `customerName`, `sentAt`, `respondedAt?`, `canRespond`.
+  Accepting or declining moves a New or Quoted lead to Negotiating and puts the customer's own words
+  on the timeline; answering twice is a 409.
 
 ## PR 3 · Milestone 3: running and charging for the platform
 

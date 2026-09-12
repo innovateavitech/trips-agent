@@ -8,6 +8,7 @@ using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Catalog;
 using TripsAgent.Domain.Common;
+using TripsAgent.Domain.Crm;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Notifications;
@@ -290,6 +291,30 @@ public class AppDbContext : DbContext, IAppDbContext
 
     /// <inheritdoc />
     public DbSet<SiteDomainCheck> SiteDomainChecks => Set<SiteDomainCheck>();
+
+    /// <inheritdoc />
+    public DbSet<Customer> Customers => Set<Customer>();
+
+    /// <inheritdoc />
+    public DbSet<Lead> Leads => Set<Lead>();
+
+    /// <inheritdoc />
+    public DbSet<LeadStageChange> LeadStageHistory => Set<LeadStageChange>();
+
+    /// <inheritdoc />
+    public DbSet<Quote> Quotes => Set<Quote>();
+
+    /// <summary>A quote's priced lines. Written only through <see cref="Quote"/>.</summary>
+    public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
+
+    /// <summary>A quote's proposed days. Written only through <see cref="Quote"/>.</summary>
+    public DbSet<QuoteItineraryDay> QuoteItineraryDays => Set<QuoteItineraryDay>();
+
+    /// <inheritdoc />
+    public DbSet<FollowUpTask> FollowUpTasks => Set<FollowUpTask>();
+
+    /// <inheritdoc />
+    public DbSet<Communication> Communications => Set<Communication>();
 
     /// <summary>
     /// The agency whose audit rows the caller may see, or null for a platform-wide caller.

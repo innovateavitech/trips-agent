@@ -11,6 +11,7 @@ using TripsAgent.Application.Payments;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Security;
 using TripsAgent.Application.Storage;
+using TripsAgent.Application.Storefront;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Auditing;
@@ -119,6 +120,12 @@ public static class DependencyInjection
 
         // The supplier's side of an order — its PNR and ticket numbers — for vouchers (#46).
         services.AddScoped<ISupplierBookingReader, SupplierBookingReader>();
+
+        // Which agency a storefront host name belongs to, and where an agency's own site lives —
+        // what the CRM's public endpoints resolve a traveller's request by, and what a quote's link
+        // is built from. Now the real lookup, against the agency's verified domains (issue 59); it
+        // shares the storefront's host cache, so one domain change clears both.
+        services.AddScoped<IStorefrontDirectory, SiteDomainDirectory>();
 
         // Alerting: logs, the back-office queue and email. Scoped because it writes an
         // admin_alerts row through the request's DbContext.

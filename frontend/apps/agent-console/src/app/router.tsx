@@ -5,6 +5,9 @@ import { SIGN_IN_PATH } from '../auth/redirect';
 import { authRoutes } from '../features/auth/routes';
 import { bookingRoutes } from '../features/booking/routes';
 import { bookingsRoutes } from '../features/bookings/routes';
+import { catalogRoutes } from '../features/catalog/routes';
+import { crmRoutes } from '../features/crm/routes';
+import { departuresRoutes } from '../features/departures/routes';
 import { DashboardPage } from '../features/dashboard';
 import { onboardingRoutes } from '../features/onboarding/routes';
 import { pricingRoutes } from '../features/pricing/routes';
@@ -60,6 +63,9 @@ export const appRoutes: RouteObject[] = [
               ...searchRoutes,
               ...bookingRoutes,
               ...bookingsRoutes,
+              ...catalogRoutes,
+              ...departuresRoutes,
+              ...crmRoutes,
               ...walletRoutes,
               ...pricingRoutes,
               ...storefrontRoutes,

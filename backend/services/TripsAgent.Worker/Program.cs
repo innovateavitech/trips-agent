@@ -119,5 +119,7 @@ DepartureHoldExpirySchedule.Register(recurringJobs);
 WaitlistOfferExpirySchedule.Register(recurringJobs);
 DepartureStatusSweepSchedule.Register(recurringJobs);
 InstallmentReminderSchedule.Register(recurringJobs);
+// The CRM's follow-up reminders (#62): a task that fell due emails the person who owns it.
+TripsAgent.Infrastructure.Crm.CrmTaskReminderSchedule.Register(recurringJobs);
 
 await host.RunAsync();

@@ -108,6 +108,23 @@ The source of truth is `RetentionCatalogue.Tables` in
 | `catalog.booking_payment_schedules` | Yes — name, email | 7 years | Protected | What a booking on a departure was billed, and who was billed |
 | `catalog.booking_installments` | No | 7 years | Protected | The payments that schedule was split into, and whether they were paid |
 
+### The agency's CRM
+
+A customer's name, email and phone live on `crm.customers` and nowhere else in the CRM — leads,
+quotes, tasks and messages point at the customer instead of copying the details. That is what makes
+erasing a person (#106) one row anonymised in place rather than a sweep of five tables.
+
+| Table | Personal data | Kept for | Treatment | Why |
+|---|---|---|---|---|
+| `crm.customers` | Yes (name, email, phone) | While the agency exists; erased on request (#106) | Kept | The agency's own customers — the only copy of their contact details in the CRM |
+| `crm.leads` | No | While the agency exists | Kept | What each customer asked for and where it got to; points at the customer rather than copying their details |
+| `crm.lead_stage_history` | No | With their lead | Kept | Every move of every lead, and who made it. Append-only in the database too |
+| `crm.quotes` | No | While the agency exists | Kept | What was quoted and what the customer answered; a sent quote never changes |
+| `crm.quote_items` | No | With their quote | Kept | A quote's priced lines; replaced while it is a draft, final once sent |
+| `crm.quote_itinerary_days` | No | With their quote | Kept | A quote's proposed days; replaced while it is a draft, final once sent |
+| `crm.tasks` | No | While the agency exists | Kept | Follow-up work: a title, a date and what it is about |
+| `crm.communications` | Some (what was said) | With their customer | Kept | Each customer's timeline, so an agent can pick a conversation back up. Append-only in the database too |
+
 ### Supplier bookings
 
 | Table | Personal data | Kept for | Treatment | Why |

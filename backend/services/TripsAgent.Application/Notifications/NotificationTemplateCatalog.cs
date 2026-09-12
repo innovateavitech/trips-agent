@@ -123,6 +123,15 @@ public static class NotificationTemplateCatalog
     /// <summary>A departure the traveller has a seat on was called off (build plan decision 12).</summary>
     public const string DepartureCancelled = "departure.cancelled";
 
+    /// <summary>
+    /// A quote the agency has sent to one of its own customers (#62). The customer's link to it is the
+    /// whole point of the email, and it goes to the agency's own storefront — never to ours.
+    /// </summary>
+    public const string CrmQuoteSent = "crm.quote-sent";
+
+    /// <summary>A follow-up task that has fallen due, to the person at the agency who owns it (#62).</summary>
+    public const string CrmTaskDue = "crm.task-due";
+
     // ------------------------------------------------------------------ brand tokens
 
     /// <summary>Whose mail this appears to be: the agency's trading name, or <see cref="ProductName"/>.</summary>
@@ -317,6 +326,28 @@ public static class NotificationTemplateCatalog
                   It is waiting in your resolution queue, where you can rebook it or refund your
                   customer. Funds held in your wallet for the order are released once nothing else on
                   it still needs them.
+                  """),
+
+        AgencyFacing(
+            CrmTaskDue,
+            version: 1,
+            subject: "Follow-up due: {{taskTitle}}",
+            tokens: ["taskTitle", "customerName", "dueAt"],
+            html: """
+                  <p>A follow-up you are looking after was due at {{dueAt}}.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>To do</strong></td><td>{{taskTitle}}</td></tr>
+                    <tr><td><strong>Customer</strong></td><td>{{customerName}}</td></tr>
+                  </table>
+                  <p>Open your tasks in the console to mark it done, or move it if it can wait.</p>
+                  """,
+            text: """
+                  A follow-up you are looking after was due at {{dueAt}}.
+
+                      To do:    {{taskTitle}}
+                      Customer: {{customerName}}
+
+                  Open your tasks in the console to mark it done, or move it if it can wait.
                   """),
 
         // ------------------------------------------------------------------ traveller-facing
@@ -603,6 +634,39 @@ public static class NotificationTemplateCatalog
 
                   Suggested action: call the traveller, and either take the payment or release the
                   seat so somebody on the waitlist can have it.
+                  """),
+
+        TravellerFacing(
+            CrmQuoteSent,
+            version: 1,
+            subject: "Your quote from {{brandName}} — {{quoteNumber}}",
+            tokens: ["quoteNumber", "quoteTitle", "quoteTotal", "validUntil", "quoteUrl"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Here is your quote for {{quoteTitle}}.</p>
+                  <table role="presentation" cellpadding="6" cellspacing="0">
+                    <tr><td><strong>Quote</strong></td><td>{{quoteNumber}}</td></tr>
+                    <tr><td><strong>Total</strong></td><td>{{quoteTotal}}</td></tr>
+                    <tr><td><strong>Valid until</strong></td><td>{{validUntil}}</td></tr>
+                  </table>
+                  <p>Open it to see the full itinerary, and to accept or decline it:</p>
+                  <p><a href="{{quoteUrl}}">View your quote</a></p>
+                  <p>Reply to this email if you would like anything changed.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Here is your quote for {{quoteTitle}}.
+
+                      Quote:       {{quoteNumber}}
+                      Total:       {{quoteTotal}}
+                      Valid until: {{validUntil}}
+
+                  Open it to see the full itinerary, and to accept or decline it:
+
+                      {{quoteUrl}}
+
+                  Reply to this email if you would like anything changed.
                   """),
     ];
 

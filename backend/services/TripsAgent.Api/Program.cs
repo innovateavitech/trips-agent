@@ -7,6 +7,7 @@ using TripsAgent.Api.Assets;
 using TripsAgent.Api.Authorization;
 using TripsAgent.Api.Bookings;
 using TripsAgent.Api.Catalog;
+using TripsAgent.Api.Crm;
 using TripsAgent.Api.Documents;
 using TripsAgent.Api.Identity;
 using TripsAgent.Api.Networking;
@@ -186,6 +187,11 @@ app.MapBookingEndpoints();
 
 app.MapAssetEndpoints();
 app.MapCatalogEndpoints();
+app.MapCrmEndpoints();
+
+// Anonymous, and reached from the agency's own storefront: the trip-request widget and the
+// customer's quote page (#62).
+app.MapPublicCrmEndpoints();
 
 // The agency's dated departures, sold by the seat (#57).
 app.MapDepartureEndpoints();

@@ -41,7 +41,7 @@ public static class IdentitySeedData
 
     /// <summary>
     /// A Manager runs the day-to-day business but does not restructure it: no sub-agents, no
-    /// team changes beyond inviting, and no wallet top-ups.
+    /// team changes beyond inviting, no wallet top-ups, and no changing the plan Trips bills for.
     /// </summary>
     public static IReadOnlyList<string> ManagerPermissions { get; } =
     [
@@ -53,6 +53,10 @@ public static class IdentitySeedData
         PermissionCodes.WalletView,
         PermissionCodes.MarginView,
         PermissionCodes.MarginEdit,
+
+        // Sees the plan and its invoices, because knowing what the agency is paying for is part of
+        // running it. Changing the plan is billing.manage and stays with the Owner.
+        PermissionCodes.BillingView,
         PermissionCodes.CatalogView,
         PermissionCodes.CatalogEdit,
         PermissionCodes.CatalogPublish,

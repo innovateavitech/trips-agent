@@ -137,6 +137,11 @@ public static class DependencyInjection
         services.AddScoped<ITransactionRunner, EfTransactionRunner>();
         services.AddScoped<IDocumentNumberAllocator, DocumentNumberAllocator>();
 
+        // Trips' own invoice and receipt numbers, from two PostgreSQL sequences. Deliberately not
+        // the allocator above: that one is gapless within one agency's series, these are one series
+        // for the whole platform.
+        services.AddScoped<Application.Billing.ISubscriptionNumberAllocator, Billing.SubscriptionNumberAllocator>();
+
         // Files on disk, for local development. A cloud adapter arrives behind this same port once
         // a provider is chosen; nothing above it knows the difference. Registered as itself as well,
         // because the API's local storage endpoints stand in for the provider and need the concrete

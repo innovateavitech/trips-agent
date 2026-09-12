@@ -4,6 +4,7 @@ using TripsAgent.Documents;
 using TripsAgent.Infrastructure;
 using TripsAgent.Infrastructure.Assets;
 using TripsAgent.Infrastructure.Auditing;
+using TripsAgent.Infrastructure.Billing;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Payments;
 using TripsAgent.Infrastructure.Retention;
@@ -95,6 +96,10 @@ SupplierApiCallMaintenanceSchedule.Register(recurringJobs);
 // set to false deliberately: it counts and records what it would delete, and deletes nothing. It never
 // touches financial records or the audit log. Runbook: docs/runbooks/data-retention.md.
 DataRetentionSchedule.Register(recurringJobs);
+
+// Subscriptions and billing (issue 65): renewals, trial expiry, the dunning schedule and the tier
+// changes that were scheduled with notice. One job rather than four, because their order matters.
+SubscriptionBillingSchedule.Register(recurringJobs);
 
 // Expires uploads that never arrived and re-enqueues processing that was lost. The complete step
 // enqueues each asset directly, so like the webhook drain this normally finds nothing.

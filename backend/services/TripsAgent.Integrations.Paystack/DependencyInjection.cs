@@ -29,10 +29,18 @@ public static class DependencyInjection
                 client.Timeout = TimeSpan.FromSeconds(20);
             })
 
-            // Retries, circuit-breaker and a per-attempt timeout. Safe for both calls we make:
-            // initialize carries our own reference so a retry returns the same attempt rather
-            // than creating a second one, and verify is a read.
+            // Retries, circuit-breaker and a per-attempt timeout. Safe for all three calls we make:
+            // initialize and charge_authorization both carry our own reference, which Paystack
+            // refuses to reuse, so a retry returns the same attempt rather than creating a second
+            // charge; and verify is a read.
             .AddStandardResilienceHandler();
+
+        // The same client, asked a different question. Resolved rather than registered separately so
+        // there is one HttpClient, one resilience pipeline and one set of credentials — two
+        // registrations would mean two circuit breakers, and a gateway that is open for renewals
+        // while closed for top-ups is a confusing thing to debug at two in the morning.
+        services.AddScoped<IRecurringChargeGateway>(provider =>
+            (PaystackGateway)provider.GetRequiredService<IPaymentGateway>());
 
         return services;
     }

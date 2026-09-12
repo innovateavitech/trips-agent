@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Assets;
+using TripsAgent.Application.Billing;
 using TripsAgent.Application.Documents;
 using TripsAgent.Application.Identity.Authentication;
 using TripsAgent.Application.Identity.Registration;
@@ -71,7 +72,19 @@ public static class DependencyInjection
         services.AddScoped<MarkupRuleService>();
 
         // Zero until subscription tiers (#64) supply each agency's transaction fee.
-        services.AddSingleton<IPlatformFeePolicy, NoPlatformFeePolicy>();
+        // Subscriptions and billing (issues 64 and 65). Scoped like everything else here: each
+        // works through the request's DbContext, and the entitlement resolver remembers what it
+        // resolved for the length of one request rather than across them.
+        services.AddScoped<IEntitlements, Billing.EntitlementService>();
+        services.AddScoped<Billing.SubAgentAllowance>();
+        services.AddScoped<Billing.TierAdminService>();
+        services.AddScoped<Billing.SubscriptionService>();
+        services.AddScoped<ISubscriptionBillingRun, Billing.SubscriptionBillingRun>();
+
+        // The seam NoPlatformFeePolicy was standing in for: the platform's share of a sale is now
+        // the agency tier's transaction_fee_bps entitlement. Scoped rather than singleton, because
+        // it reads the database through the request's context.
+        services.AddScoped<IPlatformFeePolicy, Billing.EntitlementPlatformFeePolicy>();
 
         // Picks the adapter for a supplier and product from whatever adapters the host registered.
         // Adding an aggregator is a new ISupplierAdapter registration, never a change here.

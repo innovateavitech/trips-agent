@@ -107,6 +107,21 @@ public static class NotificationTemplateCatalog
     /// <summary>An agent's held booking passed its ticket time limit before it was issued (#38).</summary>
     public const string BookingExpired = "booking.expired";
 
+    /// <summary>A subscription invoice was paid. The receipt, with what it covered (issue 65).</summary>
+    public const string BillingReceipt = "billing.receipt";
+
+    /// <summary>A subscription charge failed and the dunning schedule is running (issue 65).</summary>
+    public const string BillingPaymentFailed = "billing.payment-failed";
+
+    /// <summary>Dunning ran out. Says what happened to the plan, and how to put it right (issue 65).</summary>
+    public const string BillingDunningEnded = "billing.dunning-ended";
+
+    /// <summary>
+    /// A plan change has been scheduled and has not happened yet — the advance notice a downgrade
+    /// or an admin migration owes the agency (issue 64, FRD RS-7).
+    /// </summary>
+    public const string BillingPlanChangeScheduled = "billing.plan-change-scheduled";
+
     // ------------------------------------------------------------------ brand tokens
 
     /// <summary>Whose mail this appears to be: the agency's trading name, or <see cref="ProductName"/>.</summary>
@@ -252,6 +267,113 @@ public static class NotificationTemplateCatalog
 
                   You can see the full statement in your console.
                   """),
+
+        // ------------------------------------------------------------- subscriptions and billing
+        //
+        // These are agency-facing, so they carry the Trips brand. CLAUDE.md rule 4 is about what a
+        // traveller sees; this is Trips writing to its own customer about its own bill, and pretending
+        // otherwise would leave the agency with a receipt from nobody.
+        AgencyFacing(
+            BillingReceipt,
+            version: 1,
+            subject: "Your {{brandName}} receipt — {{amount}}",
+            tokens: ["amount", "planName", "receiptNumber", "invoiceNumber", "periodStart", "periodEnd"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Thank you — we've received <strong>{{amount}}</strong> for your {{planName}} plan,
+                     covering {{periodStart}} to {{periodEnd}}.</p>
+                  <p>Receipt {{receiptNumber}}, for invoice {{invoiceNumber}}.</p>
+                  <p>The full invoice, with its lines, is under Billing in your console.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Thank you — we've received {{amount}} for your {{planName}} plan, covering
+                  {{periodStart}} to {{periodEnd}}.
+
+                  Receipt {{receiptNumber}}, for invoice {{invoiceNumber}}.
+
+                  The full invoice, with its lines, is under Billing in your console.
+                  """),
+
+        AgencyFacing(
+            BillingPaymentFailed,
+            version: 1,
+            subject: "We couldn't take your {{brandName}} subscription payment",
+            tokens: ["amount", "planName", "invoiceNumber", "reason", "nextAttempt"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>We tried to charge <strong>{{amount}}</strong> for your {{planName}} plan and the
+                     payment did not go through.</p>
+                  <p>The bank said: {{reason}}</p>
+                  <p>We'll try again on {{nextAttempt}}. Nothing has changed about your account in the
+                     meantime — your bookings, your customers and your site all carry on as normal.</p>
+                  <p>If the card has expired or been replaced, you can pay invoice {{invoiceNumber}} with
+                     another card under Billing in your console, and that card will be used from then on.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  We tried to charge {{amount}} for your {{planName}} plan and the payment did not go through.
+
+                  The bank said: {{reason}}
+
+                  We'll try again on {{nextAttempt}}. Nothing has changed about your account in the meantime —
+                  your bookings, your customers and your site all carry on as normal.
+
+                  If the card has expired or been replaced, you can pay invoice {{invoiceNumber}} with another
+                  card under Billing in your console, and that card will be used from then on.
+                  """),
+
+        AgencyFacing(
+            BillingDunningEnded,
+            version: 1,
+            subject: "Your {{brandName}} plan has changed",
+            tokens: ["planName", "outcome", "invoiceNumber", "amount"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>We tried four times over a week to collect {{amount}} for your {{planName}} plan and
+                     could not. {{outcome}}</p>
+                  <p>Invoice {{invoiceNumber}} is still outstanding. Paying it under Billing in your
+                     console puts everything back as it was.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  We tried four times over a week to collect {{amount}} for your {{planName}} plan and could not.
+                  {{outcome}}
+
+                  Invoice {{invoiceNumber}} is still outstanding. Paying it under Billing in your console puts
+                  everything back as it was.
+                  """),
+
+        AgencyFacing(
+            BillingPlanChangeScheduled,
+            version: 1,
+            subject: "Your {{brandName}} plan changes on {{effectiveDate}}",
+            tokens: ["fromPlan", "toPlan", "effectiveDate", "reason"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Your plan moves from <strong>{{fromPlan}}</strong> to <strong>{{toPlan}}</strong> on
+                     {{effectiveDate}}.</p>
+                  <p>{{reason}}</p>
+                  <p>Nothing you have already set up is removed. If the new plan allows fewer of something
+                     than you are using today, you keep what you have and cannot add more until you are
+                     back inside the new limit. You can see exactly where you stand under Billing in your
+                     console.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Your plan moves from {{fromPlan}} to {{toPlan}} on {{effectiveDate}}.
+
+                  {{reason}}
+
+                  Nothing you have already set up is removed. If the new plan allows fewer of something than you
+                  are using today, you keep what you have and cannot add more until you are back inside the new
+                  limit. You can see exactly where you stand under Billing in your console.
+                  """),
+
 
         // The ticket time limit (#38). To the agent, not the traveller: the agent is the one who can
         // still act — finish the booking, or rebook and refund — and whether and how to tell their own

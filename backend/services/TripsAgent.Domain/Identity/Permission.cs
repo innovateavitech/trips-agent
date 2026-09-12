@@ -58,6 +58,12 @@ public static class PermissionCodes
     public const string MarginView = "margin.view";
     public const string MarginEdit = "margin.edit";
 
+    /// <summary>See the agency's own plan, what it includes, and its subscription invoices.</summary>
+    public const string BillingView = "billing.view";
+
+    /// <summary>Change the agency's own plan. Separate from seeing it: it costs money.</summary>
+    public const string BillingManage = "billing.manage";
+
     public const string CatalogView = "catalog.view";
     public const string CatalogEdit = "catalog.edit";
     public const string CatalogPublish = "catalog.publish";
@@ -131,6 +137,8 @@ public static class PermissionCodes
         (WalletFund, Categories.Money, "Top the wallet up"),
         (MarginView, Categories.Money, "See net rates and the markup applied"),
         (MarginEdit, Categories.Money, "Change markup rules"),
+        (BillingView, Categories.Money, "See the agency's plan and its subscription invoices"),
+        (BillingManage, Categories.Money, "Change the agency's plan and pay its subscription"),
 
         (CatalogView, Categories.Catalog, "See tours, visas and group departures"),
         (CatalogEdit, Categories.Catalog, "Create and edit catalog products"),

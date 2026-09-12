@@ -602,10 +602,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                 GRANT SELECT, INSERT, UPDATE ON billing.tier_prices TO {AddRowLevelSecurity.ApplicationRole};
                 GRANT SELECT, INSERT, UPDATE, DELETE ON billing.tier_entitlements TO {AddRowLevelSecurity.ApplicationRole};
 
-                -- No DELETE on a tier anywhere, at any level. A tier is what an invoice says the
-                -- agency was charged for; archiving is the operation, and the absence of the grant
-                -- is what makes that true rather than merely intended.
-                REVOKE DELETE ON billing.subscription_tiers FROM {AddRowLevelSecurity.ApplicationRole};
+                -- DELETE is granted, and then narrowed to almost nothing by the trigger below: a
+                -- draft that was never published and never subscribed to may be thrown away, and
+                -- nothing else may ever be deleted. Somebody has to be able to undo a typo.
+                GRANT DELETE ON billing.subscription_tiers TO {AddRowLevelSecurity.ApplicationRole};
 
                 -- Append-only: the change log records what an admin did.
                 GRANT SELECT, INSERT ON billing.tier_change_log TO {AddRowLevelSecurity.ApplicationRole};
@@ -849,22 +849,41 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     EXECUTE FUNCTION billing.reject_history_rewrite();
                 """);
 
-            // ------------------------------------------------------------------ a tier is never deleted
+            // -------------------------------------------------- a tier with subscribers is archived
             //
-            // The grant above already withholds DELETE from the application role, and this says the
-            // same thing to the owner. FRD RS-6: a tier with subscribers may not be deleted, and the
-            // safe reading of that is that no tier is ever deleted at all — an invoice from six
-            // months ago names the plan it billed for, and a dangling name is not an answer anyone
-            // can give a customer.
+            // FRD RS-6. The application refuses too, but the application is one bug away from not
+            // refusing, and this is the kind of delete nobody can undo: an invoice from six months
+            // ago names the tier it billed for, and a dangling name is not an answer anyone can give
+            // a customer in a dispute.
+            //
+            // The one delete that is allowed is a draft nobody ever saw: never published, never
+            // subscribed to. Somebody has to be able to throw away a typo.
+            //
+            // SECURITY DEFINER for the same reason the ledger's balance check is: it reads
+            // billing.subscriptions, which is policed by row-level security, and as the caller it
+            // would see only the caller's own tenant — which for a back-office admin is none of
+            // them, so every delete would look safe.
             migrationBuilder.Sql("""
                 CREATE OR REPLACE FUNCTION billing.reject_tier_delete()
                 RETURNS trigger
                 LANGUAGE plpgsql
+                SECURITY DEFINER
+                SET search_path = billing, pg_catalog
                 AS $$
                 BEGIN
-                    RAISE EXCEPTION 'Subscription tier % (%) cannot be deleted', OLD.code, OLD.id
-                        USING ERRCODE = 'restrict_violation',
-                              HINT = 'Archive it instead. Invoices name the tier they billed for, and archiving takes it out of the picker while leaving them readable.';
+                    IF OLD.status <> 'Draft' OR OLD.published_at IS NOT NULL THEN
+                        RAISE EXCEPTION 'Subscription tier % has been published and cannot be deleted', OLD.code
+                            USING ERRCODE = 'restrict_violation',
+                                  HINT = 'Archive it instead. Archiving takes it out of the plan picker and leaves every invoice that names it readable.';
+                    END IF;
+
+                    IF EXISTS (SELECT 1 FROM billing.subscriptions WHERE tier_id = OLD.id) THEN
+                        RAISE EXCEPTION 'Subscription tier % has subscribers and cannot be deleted', OLD.code
+                            USING ERRCODE = 'restrict_violation',
+                                  HINT = 'Archive it instead. Existing subscribers keep the plan; nobody new can join it.';
+                    END IF;
+
+                    RETURN OLD;
                 END;
                 $$;
 

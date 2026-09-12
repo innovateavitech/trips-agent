@@ -202,6 +202,7 @@ Login and reset responses are deliberately generic to prevent account enumeratio
 | `departure_holds` | `cart_id`, `pax_count`, `expires_at`, `status` — TTL seat holds during checkout; a job releases expiries |
 | `installment_plans` / `installment_schedule_items` | `deposit_percent`; items carry `sequence`, `due_basis (from_booking\|before_departure)`, `due_offset_days`, `percent_of_balance` |
 | `departure_waitlist` | `pax_count`, `status (waiting\|offered\|converted\|expired)`, `offered_at`, `expires_at` — FRD §2.13 RS-6 routes sold-out interest here |
+| `booking_payment_schedules` / `booking_installments` | The bill one booking was given: `pax_count`, `price_per_pax_minor`, the contact to remind, and items carrying `sequence`, `label`, `due_date`, `amount_minor`, `state (pending\|paid\|cancelled)`, `last_reminder_stage`. A snapshot of the departure's terms on the day it was booked, never a view of them — job 11 reminds from it, and job 12's automatic charging waits until after the MVP |
 
 Every catalog table carries its own `agency_id` and its own `tenant_isolation` policy — the child tables too, rather than relying on being reachable through `product_id` (ADR-0006).
 

@@ -38,7 +38,8 @@ The first place to look when picking this up again. Update it whenever a branch 
 | `feat/M2-catalog-screens` | 2 | Console: catalog list and editor and the pricing product picker (#162–#164); group departure screens (F6); CRM screens (F7), all against stand-ins; the catalog backend merged in, with the real catalog adapter next | pushed |
 | `feat/M2-storefront` | 2 | F4: the site builder with versioned publish and rollback is committed; domains and the public storefront still to come (#58-#60) | in progress, not pushed |
 | `feat/M2-crm` | 2 | F7 backend (#62), on top of the console branch | just started, not pushed |
-| — | 2 | F5 customer commerce (#61) and the F6 group tours backend (#57) | not started: F5 needs F1 and F4, F6 needs F3 |
+| `feat/M2-departures` | 2 | F6 (#57) whole: the departures schema and API, seat holds and the no-oversell CHECK, status from the seats, the waitlist with timed offers, installment schedules and reminders, decision 12's refunds, and the console on the real API | pushed |
+| — | 2 | F5 customer commerce (#61) | not started: it needs F1 and F4 |
 | — | 3, 4 | F8–F14 | not started |
 
 **Next:** PR 1 is open from `feat/M1-notifications-documents`. When it merges, assemble PR 2: merge the catalog, storefront, CRM, group tours and commerce branches into one, regenerate the API client, run every gate, tick F3-F7 here, and open it with `Closes` for each finished issue.
@@ -469,7 +470,7 @@ The traveller's buying flow.
 
 ### F6 · Group tours
 
-**M2 · Queued** · 0 of 7 boxes ticked
+**M2 · Done** · branch `feat/M2-departures` · 7 of 7 boxes ticked
 
 Fixed-date departures sold by the seat, with deposits, installment plans, a waitlist and manifests — and a database that makes overselling impossible.
 
@@ -500,15 +501,24 @@ GET  /api/v1/catalog/departures/{id}/waitlist         catalog.view     → Waitl
 
 Fixed-date departures sold by the seat.
 
-**Tables:** `departures, departure_price_tiers, departure_holds, installment_plans, installment_schedule_items, departure_waitlist, pax_manifests`
+**Tables:** `departures, departure_price_tiers, departure_holds, installment_plans, installment_schedule_items, departure_waitlist, pax_manifests`, plus `booking_payment_schedules` and `booking_installments` — the bill one booking was given, snapshotted from the departure's terms on the day, so a later edit cannot move a payment somebody has been told about.
 
-- [ ] Capacity with a DB CHECK preventing oversell.
-- [ ] Tiered pricing per pax count.
-- [ ] Deposit + installment schedules.
-- [ ] Auto status Open → Guaranteed to Run → Nearly Full → Sold Out.
-- [ ] Waitlist with timed offers.
-- [ ] Rooming and pax manifest.
-- [ ] Concurrency test: parallel reservations never oversell.
+- [x] Capacity with a DB CHECK preventing oversell.
+- [x] Tiered pricing per pax count.
+- [x] Deposit + installment schedules.
+- [x] Auto status Open → Guaranteed to Run → Nearly Full → Sold Out.
+- [x] Waitlist with timed offers.
+- [x] Rooming and pax manifest.
+- [x] Concurrency test: parallel reservations never oversell.
+
+Seats move in one atomic `UPDATE` guarded by `ck_departures_no_oversell`, and the status follows them
+on every move (job 9) with a nightly sweep behind it. Job 6 gives back a lapsed hold's seats and
+offers them to the queue; job 10 rolls an unanswered offer on; job 11 sends T-7/T-3/T-1 and overdue
+reminders and tells the agency at T+7 — **no automatic charging**, which waits until after the MVP.
+Cancelling a departure puts every paid booking on the resolution queue as a full refund (decision 12).
+
+One route beyond the contract above: `POST /api/v1/catalog/departures/{id}/waitlist` (`catalog.edit`),
+without which nothing could join a waitlist at all. The storefront needs it too (F5).
 
 ### F7 · CRM
 

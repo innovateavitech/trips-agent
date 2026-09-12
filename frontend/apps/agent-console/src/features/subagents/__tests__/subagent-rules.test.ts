@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { navigationFor } from '../../../app/navigation';
 import {
   allowanceUsedPercent,
   canChangeStanding,
@@ -123,5 +124,31 @@ describe('the date range', () => {
   it('sends instants in UTC, because the API refuses any other offset', () => {
     expect(fromDateInput('2026-09-12')).toBe('2026-09-12T00:00:00.000Z');
     expect(fromDateInput('2026-09-12', true)).toBe('2026-09-12T23:59:59.000Z');
+  });
+});
+
+describe('the sidebar for each kind of agency', () => {
+  it('offers a principal its network', () => {
+    const labels = navigationFor('principal').flatMap((section) =>
+      section.items.map((item) => item.label),
+    );
+
+    expect(labels).toContain('Sub-agents');
+    expect(labels).toContain('Network performance');
+  });
+
+  it('does not offer a sub-agent a network of its own', () => {
+    // Two levels only, so "Sub-agents" would be a dead end for one. Its own
+    // figures are still worth showing, and the same endpoint serves both.
+    const labels = navigationFor('sub_agent').flatMap((section) =>
+      section.items.map((item) => item.label),
+    );
+
+    expect(labels).not.toContain('Sub-agents');
+    expect(labels).toContain('Network performance');
+  });
+
+  it('leaves no empty section behind', () => {
+    expect(navigationFor('sub_agent').every((section) => section.items.length > 0)).toBe(true);
   });
 });

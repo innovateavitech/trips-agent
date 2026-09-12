@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Domain.Assets;
+using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Notifications;
@@ -65,6 +66,15 @@ public interface IAppDbContext
     /// the queue across all of them.
     /// </summary>
     public DbSet<AdminAlert> AdminAlerts { get; }
+
+    /// <summary>
+    /// Who did what, when, and why. Append-only and partitioned by month.
+    /// </summary>
+    /// <remarks>
+    /// Exposed so the back office's audit viewer can read it. Nothing writes through this set:
+    /// rows are written by the save interceptor, and the table refuses updates and deletes.
+    /// </remarks>
+    public DbSet<AuditLogEntry> AuditLogs { get; }
 
     public DbSet<LedgerAccount> LedgerAccounts { get; }
 

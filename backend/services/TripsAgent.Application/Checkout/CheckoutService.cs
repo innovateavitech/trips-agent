@@ -12,6 +12,7 @@ using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Suppliers;
+using TripsAgent.Domain.Tenancy;
 
 namespace TripsAgent.Application.Checkout;
 
@@ -161,6 +162,7 @@ public sealed partial class CheckoutService
         ArgumentNullException.ThrowIfNull(travellers);
 
         var agencyId = RequireAgency();
+        await RefuseIfNotSellingAsync(agencyId, cancellationToken);
         RequireTravellers(travellers);
 
         var offer = await _db.SupplierOffers.AsNoTracking().SingleOrDefaultAsync(candidate => candidate.Id == offerId, cancellationToken)
@@ -356,7 +358,7 @@ public sealed partial class CheckoutService
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(reference);
-        RequireAgency();
+        await RefuseIfNotSellingAsync(RequireAgency(), cancellationToken);
 
         var key = idempotencyKey?.Trim();
 
@@ -654,6 +656,40 @@ public sealed partial class CheckoutService
 
     private Guid RequireAgency() =>
         _tenant.AgencyId ?? throw new InvalidOperationException("A checkout is always for an agency, and this request has none.");
+
+    /// <summary>
+    /// Refuses a new booking when the agency is not allowed to sell.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Build-plan decision 14: a suspended agency's existing bookings stand, but it takes no new
+    /// ones. The rule itself is in <see cref="AgencyAccess"/>, so the storefront and this checkout
+    /// answer the same question the same way; all this does is ask it, at the two points where a
+    /// booking begins.
+    /// </para>
+    /// <para>
+    /// Only the entry points check. Everything after a price is confirmed — paying, issuing,
+    /// resolving — belongs to a booking that already exists, and suspending an agency mid-flight
+    /// must not strand a traveller who has already paid.
+    /// </para>
+    /// </remarks>
+    private async Task RefuseIfNotSellingAsync(Guid agencyId, CancellationToken cancellationToken)
+    {
+        var status = await _db.Agencies.AsNoTracking()
+            .Where(agency => agency.Id == agencyId)
+            .Select(agency => agency.Status)
+            .SingleAsync(cancellationToken);
+
+        if (AgencyAccess.CanTakeNewBookings(status))
+        {
+            return;
+        }
+
+        throw new CheckoutRefusedException(
+            CheckoutRefusal.Unprocessable,
+            "This account cannot take new bookings.",
+            AgencyAccess.WhyNewBookingsAreRefused(status) ?? "Contact Trips support.");
+    }
 
     private static CheckoutRefusedException NotFound() =>
         new(

@@ -39,6 +39,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
     /// </remarks>
     public partial class AddAdminConsole : Migration
     {
+        // The same InitPlan-wrapped calls AddRowLevelSecurity uses; see the note there.
+        private const string PlatformScope = "(SELECT tenancy.platform_scope_active())";
+        private const string CurrentAgency = "(SELECT tenancy.current_agency_id())";
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -88,6 +92,37 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                    AND ur.agency_id IS NOT NULL;
                 """);
 
+            // -------------------------------------------------- row-level security on the audit log
+            //
+            // platform.audit_logs had no policy: its only protection was the EF query filter, and
+            // ADR-0006 says the database must enforce the same rule underneath. The back office's
+            // audit viewer is what made that gap matter — it is the first screen whose whole job
+            // is reading the trail, so the backstop goes in with it.
+            //
+            // Two policies rather than one, because reads and writes are not the same question:
+            //
+            //   * reading is policed exactly as every tenant table is — your own agency's rows, or
+            //     everything inside a platform scope. A row with no agency is platform business
+            //     and an agency never sees one.
+            //   * writing is left open. Audit rows are written by the save interceptor on behalf
+            //     of whatever caused the change, including background jobs that hold no tenant at
+            //     all, and a job that cannot write its own audit row would fail silently into
+            //     exactly the blind spot this table exists to remove. UPDATE and DELETE are
+            //     already revoked from the application role and blocked by a trigger, so "open"
+            //     here means INSERT and nothing else.
+            migrationBuilder.Sql($"""
+                ALTER TABLE platform.audit_logs ENABLE ROW LEVEL SECURITY;
+                ALTER TABLE platform.audit_logs FORCE ROW LEVEL SECURITY;
+
+                CREATE POLICY tenant_isolation_read ON platform.audit_logs
+                    FOR SELECT
+                    USING ({PlatformScope} OR agency_id = {CurrentAgency});
+
+                CREATE POLICY append_only_write ON platform.audit_logs
+                    FOR INSERT
+                    WITH CHECK (true);
+                """);
+
             // ------------------------------------------------------------------ status reasons
             //
             // A status change has to be explained, and an empty string is not an explanation.
@@ -106,6 +141,11 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql("""
+                DROP POLICY IF EXISTS append_only_write ON platform.audit_logs;
+                DROP POLICY IF EXISTS tenant_isolation_read ON platform.audit_logs;
+                ALTER TABLE platform.audit_logs NO FORCE ROW LEVEL SECURITY;
+                ALTER TABLE platform.audit_logs DISABLE ROW LEVEL SECURITY;
+
                 ALTER TABLE tenancy.agencies
                     DROP CONSTRAINT IF EXISTS ck_agencies_status_change_is_explained,
                     DROP CONSTRAINT IF EXISTS ck_agencies_status_reason_not_blank;

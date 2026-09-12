@@ -10,6 +10,7 @@ using TripsAgent.Api.Documents;
 using TripsAgent.Api.Identity;
 using TripsAgent.Api.Networking;
 using TripsAgent.Api.Payments;
+using TripsAgent.Api.Platform;
 using TripsAgent.Api.Pricing;
 using TripsAgent.Api.RateLimiting;
 using TripsAgent.Api.Scheduling;
@@ -29,6 +30,10 @@ using TripsAgent.Integrations.TripsAfrica;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+
+// One in-process cache, used today by the operations dashboard so counting the whole platform
+// happens once every five minutes rather than on every admin's page load.
+builder.Services.AddMemoryCache();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -178,6 +183,10 @@ app.MapRegistrationEndpoints();
 app.MapAuthenticationEndpoints();
 app.MapKybEndpoints();
 app.MapKybReviewEndpoints();
+app.MapAgencyAdminEndpoints();
+app.MapPlatformUserEndpoints();
+app.MapOperationsDashboardEndpoints();
+app.MapAuditLogEndpoints();
 app.MapWalletEndpoints();
 app.MapPricingEndpoints();
 app.MapSearchEndpoints();

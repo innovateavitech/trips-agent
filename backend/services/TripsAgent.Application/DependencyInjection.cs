@@ -6,6 +6,7 @@ using TripsAgent.Application.Identity.Registration;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Orders;
 using TripsAgent.Application.Payments;
+using TripsAgent.Application.Platform;
 using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Search;
 using TripsAgent.Application.Suppliers;
@@ -38,6 +39,16 @@ public static class DependencyInjection
         services.AddScoped<GetKybStatusHandler>();
         services.AddScoped<KybReviewHandler>();
         services.AddScoped<KybDocumentLink>();
+
+        // The Trips back office (epic 66). Each reads across agencies through IPlatformScope,
+        // and each endpoint above them requires its own platform permission.
+        services.AddScoped<Tenancy.StorefrontAvailability>();
+        services.AddScoped<AgencyDirectoryService>();
+        services.AddScoped<AgencyLifecycleService>();
+        services.AddScoped<AgencyExportService>();
+        services.AddScoped<OperationsDashboardService>();
+        services.AddScoped<AuditLogQueryService>();
+        services.AddScoped<PlatformUserService>();
 
         services.AddScoped<WalletTopUpService>();
         services.AddScoped<StartTopUpHandler>();

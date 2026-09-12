@@ -7,6 +7,38 @@
  */
 
 export interface paths {
+    "/api/v1/my-allowance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetOwnAllowance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/network-performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetNetworkPerformance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -807,6 +839,230 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sub-agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSubAgents"];
+        put?: never;
+        post: operations["InviteSubAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/freeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FreezeSubAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/unfreeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UnfreezeSubAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RevokeSubAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSubAgentScopes"];
+        put?: never;
+        post: operations["GrantSubAgentScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/scopes/{scopeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["RevokeSubAgentScope"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSubAgentPermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/permissions/deny": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DenySubAgentPermission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/permissions/{permissionCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AllowSubAgentPermission"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/allowance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSubAgentAllowance"];
+        put: operations["SetSubAgentAllowance"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/allowance/freeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FreezeSubAgentAllowance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/allowance/unfreeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UnfreezeSubAgentAllowance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PreviewInvitation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AcceptInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assets/limits": {
         parameters: {
             query?: never;
@@ -907,6 +1163,20 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AcceptInvitationRequest: {
+            token: string;
+            firstName: string;
+            lastName: string;
+            password: string;
+            phoneNumber: null | string;
+        };
+        AcceptInvitationResponse: {
+            /** Format: uuid */
+            userId: string;
+            /** Format: uuid */
+            agencyId: string;
+            email: string;
+        };
         AdminAlertResponse: {
             /** Format: uuid */
             id: string;
@@ -1030,6 +1300,21 @@ export interface components {
             roles: string[];
             /** Format: date-time */
             lastLoginAt: null | string;
+        };
+        AllowanceResponse: {
+            /** Format: uuid */
+            subAgencyId: string;
+            currency: string;
+            /** Format: int64 */
+            spentMinor: number | string;
+            /** Format: int64 */
+            limitMinor: number | string;
+            /** Format: int64 */
+            remainingMinor: number | string;
+            period: string;
+            status: string;
+            /** Format: date-time */
+            resetsAt: null | string;
         };
         AssetLinkResponse: {
             kind: string;
@@ -1298,6 +1583,10 @@ export interface components {
             agencyName: null | string;
             roles: string[];
         };
+        DenyPermissionRequest: {
+            permissionCode: string;
+            reason: string;
+        };
         EmailVerifiedResponse: {
             message: string;
         };
@@ -1335,6 +1624,11 @@ export interface components {
         ForgotPasswordRequest: {
             email: string;
         };
+        GrantSubAgentScopeRequest: {
+            productType: string;
+            /** Format: uuid */
+            supplierId: null | string;
+        };
         HttpValidationProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -1371,6 +1665,24 @@ export interface components {
             /** Format: date-time */
             effectiveTo: null | string;
             summary: string;
+        };
+        InvitationPreviewResponse: {
+            email: string;
+            businessName: string;
+            invitedBy: string;
+        };
+        InviteSubAgentRequest: {
+            legalName: string;
+            tradingName: null | string;
+            email: string;
+        };
+        InviteSubAgentResponse: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            invitationToken: string;
+            /** Format: date-time */
+            expiresAt: string;
         };
         KybDocumentResponse: {
             /** Format: uuid */
@@ -1502,6 +1814,37 @@ export interface components {
             /** Format: uuid */
             supersededById: null | string;
             status: string;
+        };
+        NetworkMemberWithMarginResponse: {
+            /** Format: uuid */
+            agencyId: string;
+            name: string;
+            status: string;
+            isPrincipal: boolean;
+            /** Format: int32 */
+            orders: number | string;
+            /** Format: int64 */
+            salesMinor: number | string;
+            /** Format: int64 */
+            marginMinor: number | string;
+            /** Format: int64 */
+            allowanceSpentMinor: null | number | string;
+            /** Format: int64 */
+            allowanceLimitMinor: null | number | string;
+        };
+        NetworkPerformanceWithMarginResponse: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            currency: string;
+            /** Format: int32 */
+            orders: number | string;
+            /** Format: int64 */
+            salesMinor: number | string;
+            /** Format: int64 */
+            marginMinor: number | string;
+            members: components["schemas"]["NetworkMemberWithMarginResponse"][];
         };
         OfferMarginResponse: {
             /** Format: int64 */
@@ -1747,6 +2090,11 @@ export interface components {
             fromCache: boolean;
             offers: components["schemas"]["SearchOfferResponse"][];
         };
+        SetAllowanceRequest: {
+            /** Format: int64 */
+            limitMinor: number | string;
+            period: string;
+        };
         StartTopUpRequest: {
             /** Format: int64 */
             amountMinor: number | string;
@@ -1754,6 +2102,53 @@ export interface components {
         StartTopUpResponse: {
             authorizationUrl: string;
             reference: string;
+        };
+        SubAgentListResponse: {
+            subAgents: components["schemas"]["SubAgentResponse"][];
+            /** Format: int32 */
+            maxSubAgents: null | number | string;
+            canAddAnother: boolean;
+            cannotAddReason: null | string;
+        };
+        SubAgentPermissionResponse: {
+            code: string;
+            category: string;
+            description: string;
+            isDenied: boolean;
+            reason: null | string;
+        };
+        SubAgentResponse: {
+            /** Format: uuid */
+            id: string;
+            legalName: string;
+            tradingName: null | string;
+            slug: string;
+            status: string;
+            statusReason: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            hasOpenInvitation: boolean;
+            /** Format: int32 */
+            scopeCount: number | string;
+            /** Format: int32 */
+            deniedPermissionCount: number | string;
+            canSeeMargin: boolean;
+            /** Format: int64 */
+            allowanceSpentMinor: null | number | string;
+            /** Format: int64 */
+            allowanceLimitMinor: null | number | string;
+            allowanceCurrency: null | string;
+        };
+        SubAgentScopeResponse: {
+            /** Format: uuid */
+            id: string;
+            productType: string;
+            /** Format: uuid */
+            supplierId: null | string;
+            supplierName: null | string;
+        };
+        SubAgentStandingRequest: {
+            reason: string;
         };
         TokenPairResponse: {
             accessToken: string;
@@ -1805,6 +2200,65 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    GetOwnAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowanceResponse"];
+                };
+            };
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetNetworkPerformance: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NetworkPerformanceWithMarginResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
     ServiceInfo: {
         parameters: {
             query?: never;
@@ -3510,6 +3964,608 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListSubAgents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubAgentListResponse"];
+                };
+            };
+        };
+    };
+    InviteSubAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteSubAgentRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteSubAgentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    FreezeSubAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubAgentStandingRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UnfreezeSubAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubAgentStandingRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RevokeSubAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubAgentStandingRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListSubAgentScopes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubAgentScopeResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GrantSubAgentScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantSubAgentScopeRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RevokeSubAgentScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+                scopeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListSubAgentPermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubAgentPermissionResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DenySubAgentPermission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DenyPermissionRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AllowSubAgentPermission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+                permissionCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetSubAgentAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowanceResponse"];
+                };
+            };
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SetSubAgentAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetAllowanceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowanceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    FreezeSubAgentAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowanceResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UnfreezeSubAgentAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowanceResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    PreviewInvitation: {
+        parameters: {
+            query?: {
+                token?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationPreviewResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AcceptInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptInvitationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcceptInvitationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

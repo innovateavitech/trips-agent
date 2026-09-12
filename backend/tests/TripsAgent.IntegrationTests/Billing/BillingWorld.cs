@@ -276,6 +276,34 @@ internal sealed class BillingWorld : IAsyncDisposable
             .ToListAsync();
     }
 
+    /// <summary>
+    /// The agency-facing service, acting as <paramref name="agencyId"/>.
+    /// </summary>
+    /// <remarks>
+    /// Its own context, as the policed application role, because this is the half of the module an
+    /// agency actually reaches — and a test that exercised it as the platform would prove nothing
+    /// about whether an agency can.
+    /// </remarks>
+    public (SubscriptionService Service, AppDbContext Db) ServiceFor(Guid agencyId)
+    {
+        var tenancy = TestTenancy.For(agencyId);
+        var audit = new AuditContext { AgencyId = agencyId, ActorType = AuditActorType.User };
+        var db = _postgres.Connect(_database, tenancy.Tenant, tenancy.Scope, Clock, audit);
+
+        var entitlements = new EntitlementService(db, tenancy.Scope, Clock);
+
+        return (
+            new SubscriptionService(
+                db,
+                tenancy.Tenant,
+                tenancy.Scope,
+                entitlements,
+                new SubscriptionNumberAllocator(db),
+                Gateway,
+                Clock),
+            db);
+    }
+
     /// <summary>The next subscription invoice number, for a test about the numbering itself.</summary>
     public Task<string> NumbersNextInvoiceAsync() => Numbers.NextInvoiceNumberAsync(Clock.GetUtcNow());
 

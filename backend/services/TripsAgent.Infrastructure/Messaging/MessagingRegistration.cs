@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Messaging;
 using TripsAgent.Infrastructure.Notifications;
+using TripsAgent.Infrastructure.Storefront;
 
 namespace TripsAgent.Infrastructure.Messaging;
 
@@ -37,6 +38,10 @@ public static class MessagingRegistration
     public static IReadOnlyList<(MessageQueue Queue, Type Consumer)> ConsumerRoutes { get; } =
     [
         (MessageQueue.NotificationsEmail, typeof(NotificationQueuedConsumer)),
+
+        // Both storefront events land on the same queue and the same consumer: a publish and a
+        // hostname change make the same caches wrong, and neither is urgent enough for its own queue.
+        (MessageQueue.DomainsProvision, typeof(StorefrontCacheConsumer)),
     ];
 
     /// <summary>Registers a publish-only bus. Use this in the API.</summary>

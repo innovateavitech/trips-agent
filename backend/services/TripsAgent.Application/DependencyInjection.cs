@@ -100,6 +100,12 @@ public static class DependencyInjection
         services.AddScoped<CertificateSweep>();
         services.AddScoped<HostnameReviewService>();
 
+        // The traveller-facing side: resolving the hostname to an agency, and reading that agency's
+        // published site and catalog. Anonymous, and read-only.
+        services.AddScoped<PublicSiteResolver>();
+        services.AddScoped<PublicSiteService>();
+        services.AddScoped<PublicCatalogService>();
+
         // Stages notifications in the caller's unit of work; the Worker sends them.
         services.AddScoped<INotifier, Notifier>();
 

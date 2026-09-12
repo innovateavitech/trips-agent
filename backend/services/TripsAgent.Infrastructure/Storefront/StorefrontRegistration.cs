@@ -3,10 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 using TripsAgent.Application.Storefront;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Storefront;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Pricing;
 
 namespace TripsAgent.Infrastructure.Storefront;
 
@@ -38,7 +41,94 @@ public static class StorefrontRegistration
         services.AddScoped<DomainVerificationJob>();
         services.AddScoped<CertificateJob>();
 
+        AddHostCache(services, configuration);
+        AddRevalidation(services, configuration);
+
+        // Consumed on the domains queue in the Worker; registered in both hosts so the two agree
+        // about what exists, exactly as the notification consumer is.
+        services.AddScoped<StorefrontCacheConsumer>();
+
         return services;
+    }
+
+    /// <summary>
+    /// Wires the host-to-agency cache: Redis when one is configured, and the database alone when not.
+    /// </summary>
+    /// <remarks>
+    /// The same Redis the markup rules use, read from the same connection string, so there is one
+    /// cache to run and one to watch. Without it the storefront still works, just one query slower
+    /// per page view.
+    /// </remarks>
+    private static void AddHostCache(IServiceCollection services, IConfiguration configuration)
+    {
+        var options = ReadHostCacheOptions(configuration);
+        services.AddSingleton(options);
+
+        if (string.IsNullOrWhiteSpace(configuration.GetConnectionString(PricingRegistration.RedisConnectionName)))
+        {
+            services.AddSingleton<IStorefrontHostCache, UncachedStorefrontHostCache>();
+            return;
+        }
+
+        // The multiplexer is registered once, by AddPricingCache, and shared: it is thread-safe and
+        // a second one would be a second set of TCP connections for no gain.
+        services.AddSingleton<IStorefrontHostCache>(sp => new RedisStorefrontHostCache(
+            sp.GetRequiredService<IConnectionMultiplexer>(),
+            options,
+            sp.GetRequiredService<ILogger<RedisStorefrontHostCache>>()));
+    }
+
+    /// <summary>
+    /// Wires how the storefront is told to rebuild a site's pages: over HTTP when its address and
+    /// token are configured, and to the log when they are not.
+    /// </summary>
+    private static void AddRevalidation(IServiceCollection services, IConfiguration configuration)
+    {
+        var section = configuration.GetSection(StorefrontRevalidationSettings.SectionName);
+
+        var settings = new StorefrontRevalidationSettings
+        {
+            Endpoint = section["Endpoint"],
+            Token = section["Token"],
+        };
+
+        services.AddSingleton(settings);
+
+        if (!settings.IsConfigured)
+        {
+            services.AddScoped<IStorefrontRevalidator, LoggingStorefrontRevalidator>();
+            return;
+        }
+
+        if (!Uri.TryCreate(settings.Endpoint!.Trim(), UriKind.Absolute, out _))
+        {
+            throw new InvalidOperationException(
+                $"{StorefrontRevalidationSettings.SectionName}:Endpoint must be an absolute address, like "
+                + $"https://sites.example.com. It was '{settings.Endpoint}'.");
+        }
+
+        // Short: a rebuild request is fire-and-forget, and a storefront that is slow to answer must
+        // not hold a background message open.
+        services.AddHttpClient(HttpStorefrontRevalidator.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10));
+        services.AddScoped<IStorefrontRevalidator, HttpStorefrontRevalidator>();
+    }
+
+    /// <summary>Reads <c>Storefront:HostCache:*</c>.</summary>
+    private static StorefrontHostCacheOptions ReadHostCacheOptions(IConfiguration configuration)
+    {
+        var section = configuration.GetSection(StorefrontHostCacheOptions.SectionName);
+        var defaults = new StorefrontHostCacheOptions();
+
+        return new StorefrontHostCacheOptions
+        {
+            EntryLifetime = Minutes(section["EntryMinutes"]) ?? defaults.EntryLifetime,
+            MissLifetime = Minutes(section["MissMinutes"]) ?? defaults.MissLifetime,
+        };
+
+        static TimeSpan? Minutes(string? value) =>
+            double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var minutes) && minutes > 0
+                ? TimeSpan.FromMinutes(minutes)
+                : null;
     }
 
     /// <summary>Reads <c>Storefront:Dns:*</c>. A value set wrongly stops startup.</summary>

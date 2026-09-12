@@ -47,6 +47,12 @@ public static class SiteTemplateCatalog
 
     public static IReadOnlyList<SiteTemplateDefinition> All { get; } = [Horizon(), Harbour()];
 
+    /// <summary>
+    /// The layout to fall back on when a site's own template cannot be read — a site created before
+    /// a template was withdrawn, say. The storefront must render something rather than nothing.
+    /// </summary>
+    public static string DefaultCode => All[0].Code;
+
     /// <summary>The JSON stored in <c>site_templates.block_schema</c>.</summary>
     public static string SchemaJson(SiteTemplateDefinition template)
     {

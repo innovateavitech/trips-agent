@@ -17,8 +17,9 @@ namespace TripsAgent.Api.Networking;
 /// </para>
 /// <para>
 /// The storefront's server-side rendering calls the API from its own server, so every traveller would
-/// otherwise share that server's one address. When the storefront goes live, its servers belong on
-/// this list, and it must forward the visitor's address.
+/// otherwise share that server's one address, and every request would arrive for the API's own
+/// hostname rather than the agency's. When the storefront goes live, its servers belong on this list,
+/// and it must forward both the visitor's address and the host they asked for.
 /// </para>
 /// </remarks>
 public static class ForwardedHeadersSetup
@@ -33,7 +34,12 @@ public static class ForwardedHeadersSetup
 
         services.Configure<ForwardedHeadersOptions>(options =>
         {
-            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            // XForwardedHost as well, because the storefront is answered by hostname: the API has to
+            // see the address the traveller typed, not the internal one the renderer called. Believed
+            // only from the proxies below, exactly like the address — from anyone else it is a claim
+            // the caller made about itself, and believing it would let them pick whose site is served.
+            options.ForwardedHeaders =
+                ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
             options.ForwardLimit = trusted.ForwardLimit;
 
             // Added to the framework's defaults, which trust loopback only: a proxy on the same

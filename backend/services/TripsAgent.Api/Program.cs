@@ -182,6 +182,7 @@ app.MapWalletEndpoints();
 app.MapPricingEndpoints();
 app.MapSearchEndpoints();
 app.MapStorefrontEndpoints();
+app.MapPublicStorefrontEndpoints();
 
 app.MapAssetEndpoints();
 app.MapCatalogEndpoints();

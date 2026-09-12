@@ -227,6 +227,36 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     ADD CONSTRAINT ck_wallet_allowances_two_agencies CHECK (agency_id <> sub_agency_id);
                 """);
 
+            // ------------------------------------------------------------------ the network is real
+            //
+            // agency_id must actually be sub_agency_id's principal. Without this a sub-agent could
+            // insert a row naming *itself* as some other agency's principal: the tenant rule only
+            // says "agency_id is me", and that would be true. A permission override written that
+            // way would take a permission off an unrelated agency's staff.
+            //
+            // Declared rather than triggered: a composite foreign key onto (parent_agency_id, id)
+            // says exactly "this pair is a real parent and child", PostgreSQL checks it on every
+            // write, and the unique index it needs is one the hierarchy queries want anyway.
+            migrationBuilder.Sql("""
+                CREATE UNIQUE INDEX IF NOT EXISTS ux_agencies_parent_agency_id_id
+                    ON tenancy.agencies (parent_agency_id, id);
+
+                ALTER TABLE tenancy.sub_agent_scopes
+                    ADD CONSTRAINT fk_sub_agent_scopes_network
+                        FOREIGN KEY (agency_id, sub_agency_id)
+                        REFERENCES tenancy.agencies (parent_agency_id, id);
+
+                ALTER TABLE tenancy.permission_overrides
+                    ADD CONSTRAINT fk_permission_overrides_network
+                        FOREIGN KEY (agency_id, sub_agency_id)
+                        REFERENCES tenancy.agencies (parent_agency_id, id);
+
+                ALTER TABLE payments.wallet_allowances
+                    ADD CONSTRAINT fk_wallet_allowances_network
+                        FOREIGN KEY (agency_id, sub_agency_id)
+                        REFERENCES tenancy.agencies (parent_agency_id, id);
+                """);
+
             // Money, in kobo, and never negative on either column.
             //
             // Deliberately NOT `spent_minor <= limit_minor`. Build-plan decision 8 and the epic
@@ -255,11 +285,21 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
 
             // ------------------------------------------------------------------ row-level security
             //
-            // USING (reads) is widened by one clause: the sub-agent the row is about may read it.
-            // It has to — the console shows a sub-agent what it may sell and what it may spend.
+            // TWO policies per table, and the split is the whole point.
             //
-            // WITH CHECK (writes) is NOT widened. Only the owning principal writes these rows, and
-            // PostgreSQL refuses anything else even if an EF filter were removed.
+            //   tenant_isolation  FOR ALL     — the ordinary rule: only the owning principal, for
+            //                                   every command. This is what governs INSERT, UPDATE
+            //                                   and DELETE.
+            //   sub_agent_read    FOR SELECT  — one extra clause: the sub-agent a row is about may
+            //                                   read it. It has to — the console shows a sub-agent
+            //                                   what it may sell and what it may spend.
+            //
+            // Permissive policies are OR'ed, so reads see both and writes see only the first.
+            //
+            // One policy with a widened USING and a narrow WITH CHECK is the obvious version and it
+            // is wrong: DELETE has no WITH CHECK, so the widened USING alone would decide it — and
+            // a sub-agent could delete the scope limiting what it sells, or the allowance capping
+            // what it spends. An integration test in SubAgentNetworkRlsTests asserts it cannot.
             foreach (var table in PrincipalOwnedSubAgentTables)
             {
                 migrationBuilder.Sql($"""
@@ -270,10 +310,13 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     ALTER TABLE {table} FORCE ROW LEVEL SECURITY;
 
                     CREATE POLICY tenant_isolation ON {table}
-                        USING ({PlatformScope}
-                               OR agency_id = {CurrentAgency}
-                               OR sub_agency_id = {CurrentAgency})
+                        FOR ALL
+                        USING ({PlatformScope} OR agency_id = {CurrentAgency})
                         WITH CHECK ({PlatformScope} OR agency_id = {CurrentAgency});
+
+                    CREATE POLICY sub_agent_read ON {table}
+                        FOR SELECT
+                        USING (sub_agency_id = {CurrentAgency});
                     """);
             }
 
@@ -411,6 +454,16 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
             migrationBuilder.Sql("""
                 DROP FUNCTION IF EXISTS payments.reserve_sub_agent_allowance(text, bigint);
                 DROP FUNCTION IF EXISTS payments.release_sub_agent_allowance(uuid, text, bigint);
+
+                -- Before the tables go, so the index they reference can go with them.
+                ALTER TABLE IF EXISTS tenancy.sub_agent_scopes
+                    DROP CONSTRAINT IF EXISTS fk_sub_agent_scopes_network;
+                ALTER TABLE IF EXISTS tenancy.permission_overrides
+                    DROP CONSTRAINT IF EXISTS fk_permission_overrides_network;
+                ALTER TABLE IF EXISTS payments.wallet_allowances
+                    DROP CONSTRAINT IF EXISTS fk_wallet_allowances_network;
+
+                DROP INDEX IF EXISTS tenancy.ux_agencies_parent_agency_id_id;
                 """);
 
             // The policies go with the tables, but dropping them first keeps the Down readable
@@ -418,6 +471,7 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
             foreach (var table in PrincipalOwnedSubAgentTables)
             {
                 migrationBuilder.Sql($"""
+                    DROP POLICY IF EXISTS sub_agent_read ON {table};
                     DROP POLICY IF EXISTS tenant_isolation ON {table};
                     ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY;
                     ALTER TABLE {table} DISABLE ROW LEVEL SECURITY;

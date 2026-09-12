@@ -43,6 +43,23 @@ public enum WalletTransactionType
     /// booking it funds appears as its own <see cref="BookingPayment"/> line when it is ticketed.
     /// </remarks>
     CustomerPayment = 6,
+
+    /// <summary>Money withdrawn to the agency's own bank account (build plan F12).</summary>
+    Payout = 7,
+
+    /// <summary>A payout that was rejected or that the bank would not take, put back.</summary>
+    PayoutReturned = 8,
+
+    /// <summary>
+    /// Money frozen because a cardholder disputed a payment. Out of the wallet, not yet gone.
+    /// </summary>
+    DisputeHold = 9,
+
+    /// <summary>The dispute was won: the frozen money comes back.</summary>
+    DisputeReleased = 10,
+
+    /// <summary>The chargeback stood: the frozen money went to the cardholder.</summary>
+    DisputeLost = 11,
 }
 
 /// <summary>

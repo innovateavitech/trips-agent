@@ -114,7 +114,10 @@ public sealed class Subscription : Entity, IAuditableEntity, ITenantScoped, IAud
     /// <remarks>The dunning schedule is measured from here, not from the last attempt.</remarks>
     public DateTimeOffset? DunningStartedAt { get; private set; }
 
-    /// <summary>How many retries this run of failures has already made.</summary>
+    /// <summary>
+    /// How many retries this run of failures has already made — not how many charges have failed.
+    /// The initial failure is the charge, not a retry, so this is one less than the failure count.
+    /// </summary>
     public int DunningRetries { get; private set; }
 
     public DateTimeOffset CreatedAt { get; set; }
@@ -172,16 +175,26 @@ public sealed class Subscription : Entity, IAuditableEntity, ITenantScoped, IAud
     }
 
     /// <summary>Records a failed charge and returns when to try again, or null when the schedule is spent.</summary>
+    /// <remarks>
+    /// The <i>first</i> failure is not a retry — it is the charge that failed — so it starts the
+    /// clock without moving the counter. Counting it as a retry would spend one of the four the
+    /// agency was promised, and end the schedule on day 5 instead of day 7.
+    /// </remarks>
     public DateTimeOffset? RecordChargeFailure(DateTimeOffset now, string reason)
     {
-        DunningStartedAt ??= now;
+        if (DunningStartedAt is null)
+        {
+            DunningStartedAt = now;
+        }
+        else
+        {
+            DunningRetries++;
+        }
+
         Status = SubscriptionStatus.PastDue;
         StatusReason = reason;
 
-        var next = DunningSchedule.NextAttemptAt(DunningStartedAt.Value, DunningRetries);
-        DunningRetries++;
-
-        return next;
+        return DunningSchedule.NextAttemptAt(DunningStartedAt.Value, DunningRetries);
     }
 
     /// <summary>True when every retry in the schedule has been made and none of them worked.</summary>

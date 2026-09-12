@@ -12,7 +12,7 @@ using TripsAgent.Infrastructure.Persistence;
 namespace TripsAgent.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260912171104_AddSubscriptionsAndBilling")]
+    [Migration("20260912175046_AddSubscriptionsAndBilling")]
     partial class AddSubscriptionsAndBilling
     {
         /// <inheritdoc />
@@ -5181,16 +5181,6 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_subscription_migrations_subscriptions_subscription_id");
-                });
-
-            modelBuilder.Entity("TripsAgent.Domain.Billing.TierChangeLogEntry", b =>
-                {
-                    b.HasOne("TripsAgent.Domain.Billing.SubscriptionTier", null)
-                        .WithMany()
-                        .HasForeignKey("TierId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_tier_change_log_subscription_tiers_tier_id");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Billing.TierEntitlement", b =>

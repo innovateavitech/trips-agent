@@ -5180,16 +5180,6 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_subscription_migrations_subscriptions_subscription_id");
                 });
 
-            modelBuilder.Entity("TripsAgent.Domain.Billing.TierChangeLogEntry", b =>
-                {
-                    b.HasOne("TripsAgent.Domain.Billing.SubscriptionTier", null)
-                        .WithMany()
-                        .HasForeignKey("TierId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_tier_change_log_subscription_tiers_tier_id");
-                });
-
             modelBuilder.Entity("TripsAgent.Domain.Billing.TierEntitlement", b =>
                 {
                     b.HasOne("TripsAgent.Domain.Billing.Entitlement", null)

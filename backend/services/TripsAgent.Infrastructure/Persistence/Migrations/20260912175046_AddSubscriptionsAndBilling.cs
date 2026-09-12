@@ -57,7 +57,6 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             ArgumentNullException.ThrowIfNull(migrationBuilder);
-
             migrationBuilder.EnsureSchema(
                 name: "billing");
 
@@ -157,13 +156,6 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_tier_change_log", x => x.id);
-                    table.ForeignKey(
-                        name: "fk_tier_change_log_subscription_tiers_tier_id",
-                        column: x => x.tier_id,
-                        principalSchema: "billing",
-                        principalTable: "subscription_tiers",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -652,8 +644,11 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     -- "interval" is quoted: unquoted, PostgreSQL reads it as the type name.
                     ADD CONSTRAINT ck_tier_prices_interval
                         CHECK ("interval" IN ('Monthly', 'Annual')),
+                    -- Greater than or equal, not strictly greater. Repricing a tier in the same
+                    -- instant it was priced — an admin correcting a typo — closes a row that was
+                    -- never in force, and a zero-length window is the honest record of that.
                     ADD CONSTRAINT ck_tier_prices_period_ordered
-                        CHECK (effective_to IS NULL OR effective_to > effective_from);
+                        CHECK (effective_to IS NULL OR effective_to >= effective_from);
 
                 ALTER TABLE billing.subscription_tiers
                     ADD CONSTRAINT ck_subscription_tiers_status

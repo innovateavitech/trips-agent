@@ -390,10 +390,11 @@ public sealed class TierChangeLogEntryConfiguration : IEntityTypeConfiguration<T
         builder.Property(entry => entry.Before).HasColumnType("jsonb");
         builder.Property(entry => entry.After).HasColumnType("jsonb");
 
-        builder.HasOne<SubscriptionTier>()
-            .WithMany()
-            .HasForeignKey(entry => entry.TierId)
-            .OnDelete(DeleteBehavior.Restrict);
+        // No foreign key to subscription_tiers, deliberately. The log outlives what it is about:
+        // the one tier that can be deleted is an unpublished draft, and the record of somebody
+        // creating and then deleting it is exactly the record worth keeping. Same reasoning as
+        // platform.admin_alerts, which records an agency id with no FK to the agency.
+        builder.Property(entry => entry.TierId);
 
         builder.HasIndex(entry => new { entry.TierId, entry.OccurredAt })
             .IsDescending(false, true)

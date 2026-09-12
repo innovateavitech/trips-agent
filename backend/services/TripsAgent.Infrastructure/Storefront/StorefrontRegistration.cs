@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using TripsAgent.Application.Storefront;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Storefront;
@@ -9,7 +10,10 @@ using TripsAgent.Infrastructure.Persistence;
 
 namespace TripsAgent.Infrastructure.Storefront;
 
-/// <summary>Wires the website builder: where sites live, and the row lock publishing takes.</summary>
+/// <summary>
+/// Wires the website builder: where sites live, the row lock publishing takes, and the DNS and certificate
+/// adapters behind custom domains.
+/// </summary>
 public static class StorefrontRegistration
 {
     public static IServiceCollection AddStorefront(this IServiceCollection services, IConfiguration configuration)
@@ -18,9 +22,128 @@ public static class StorefrontRegistration
         ArgumentNullException.ThrowIfNull(configuration);
 
         services.AddSingleton(ReadOptions(configuration));
+        services.AddSingleton(ReadDnsSettings(configuration));
+        services.AddSingleton(ReadCertificateSettings(configuration));
         services.AddScoped<ISiteLock, SiteLock>();
 
+        // DNS and certificates are ports, because the cloud is not chosen. The development adapters work on a
+        // laptop; the environment decides which is used unless configuration names one.
+        services.AddHttpClient(DnsOverHttpsResolver.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15));
+        services.AddScoped<DevelopmentDnsResolver>();
+        services.AddScoped<DnsOverHttpsResolver>();
+        services.AddScoped(ChooseDnsResolver);
+        services.AddSingleton(ChooseCertificateIssuer);
+
+        // The Worker runs these on a clock (see its Program.cs); the API only ever enqueues.
+        services.AddScoped<DomainVerificationJob>();
+        services.AddScoped<CertificateJob>();
+
         return services;
+    }
+
+    /// <summary>Reads <c>Storefront:Dns:*</c>. A value set wrongly stops startup.</summary>
+    public static StorefrontDnsSettings ReadDnsSettings(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var section = configuration.GetSection(StorefrontDnsSettings.SectionName);
+        var defaults = new StorefrontDnsSettings();
+        var configured = section["DohEndpoint"];
+        var endpoint = defaults.DohEndpoint;
+
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            if (!Uri.TryCreate(configured.Trim(), UriKind.Absolute, out var parsed) || parsed.Scheme != Uri.UriSchemeHttps)
+            {
+                throw new InvalidOperationException(
+                    $"{StorefrontDnsSettings.SectionName}:DohEndpoint must be an https:// address, like {defaults.DohEndpoint}. It was '{configured}'.");
+            }
+
+            endpoint = parsed;
+        }
+
+        return new StorefrontDnsSettings
+        {
+            Mode = OneOf(
+                section["Mode"],
+                $"{StorefrontDnsSettings.SectionName}:Mode",
+                StorefrontDnsSettings.DevelopmentMode,
+                StorefrontDnsSettings.DnsOverHttpsMode),
+            DohEndpoint = endpoint,
+        };
+    }
+
+    /// <summary>Reads <c>Storefront:Certificates:*</c>. A value set wrongly stops startup.</summary>
+    public static StorefrontCertificateSettings ReadCertificateSettings(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        return new StorefrontCertificateSettings
+        {
+            Mode = OneOf(
+                configuration[$"{StorefrontCertificateSettings.SectionName}:Mode"],
+                $"{StorefrontCertificateSettings.SectionName}:Mode",
+                StorefrontCertificateSettings.DevelopmentMode,
+                StorefrontCertificateSettings.NoneMode),
+        };
+    }
+
+    /// <summary>
+    /// Development's resolver locally, DNS over HTTPS everywhere else. The development resolver is refused
+    /// outside Development: it answers only <c>.test</c> names, so no real domain could ever verify.
+    /// </summary>
+    private static IDnsResolver ChooseDnsResolver(IServiceProvider provider)
+    {
+        var settings = provider.GetRequiredService<StorefrontDnsSettings>();
+        var environment = provider.GetRequiredService<IHostEnvironment>();
+        var mode = settings.Mode
+                   ?? (environment.IsDevelopment() ? StorefrontDnsSettings.DevelopmentMode : StorefrontDnsSettings.DnsOverHttpsMode);
+
+        if (mode == StorefrontDnsSettings.DnsOverHttpsMode)
+        {
+            return provider.GetRequiredService<DnsOverHttpsResolver>();
+        }
+
+        return environment.IsDevelopment()
+            ? provider.GetRequiredService<DevelopmentDnsResolver>()
+            : throw new InvalidOperationException(
+                $"{StorefrontDnsSettings.SectionName}:Mode is {mode} in the {environment.EnvironmentName} environment. That resolver "
+                + $"only answers .test names, so no real domain could ever be verified. Use {StorefrontDnsSettings.DnsOverHttpsMode}.");
+    }
+
+    /// <summary>
+    /// Pretend certificates locally; none anywhere else until the ACME adapter exists — so a verified hostname
+    /// there backs off and alerts rather than being told it is secure when it is not.
+    /// </summary>
+    private static ICertificateIssuer ChooseCertificateIssuer(IServiceProvider provider)
+    {
+        var settings = provider.GetRequiredService<StorefrontCertificateSettings>();
+        var environment = provider.GetRequiredService<IHostEnvironment>();
+        var mode = settings.Mode
+                   ?? (environment.IsDevelopment() ? StorefrontCertificateSettings.DevelopmentMode : StorefrontCertificateSettings.NoneMode);
+
+        if (mode == StorefrontCertificateSettings.NoneMode)
+        {
+            return new UnavailableCertificateIssuer();
+        }
+
+        return environment.IsDevelopment()
+            ? new DevelopmentCertificateIssuer(provider.GetRequiredService<TimeProvider>())
+            : throw new InvalidOperationException(
+                $"{StorefrontCertificateSettings.SectionName}:Mode is {mode} in the {environment.EnvironmentName} environment. "
+                + "Pretend certificates secure nothing, so they are for Development only.");
+    }
+
+    /// <summary>The allowed spelling of <paramref name="value"/>, null when unset, or a startup error.</summary>
+    private static string? OneOf(string? value, string key, params string[] allowed)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return allowed.FirstOrDefault(candidate => string.Equals(candidate, value.Trim(), StringComparison.OrdinalIgnoreCase))
+               ?? throw new InvalidOperationException($"{key} must be one of {string.Join(", ", allowed)}, or unset. It was '{value}'.");
     }
 
     /// <summary>

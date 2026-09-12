@@ -92,6 +92,14 @@ public static class DependencyInjection
         services.AddScoped<SiteVersionService>();
         services.AddScoped<SitePreviewTokens>();
 
+        // The website's addresses: connecting and checking the agency's own domains, the two sweeps the
+        // Worker runs on a clock, and the platform's review queue for brand-like addresses.
+        services.AddScoped<DomainVerifier>();
+        services.AddScoped<SiteDomainService>();
+        services.AddScoped<DomainVerificationSweep>();
+        services.AddScoped<CertificateSweep>();
+        services.AddScoped<HostnameReviewService>();
+
         // Stages notifications in the caller's unit of work; the Worker sends them.
         services.AddScoped<INotifier, Notifier>();
 

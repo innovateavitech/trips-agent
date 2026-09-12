@@ -1,11 +1,12 @@
 namespace TripsAgent.Contracts.Storefront;
 
 /// <summary>Connects one of the agency's own hostnames to its site.</summary>
-/// <param name="Hostname">For example <c>www.yourbusiness.com</c>.</param>
+/// <param name="Hostname">For example <c>www.yourbusiness.com</c>. A pasted address is fine: the scheme and path are dropped.</param>
 public sealed record AddSiteDomainRequest(string Hostname);
 
 /// <summary>One hostname the site answers on, and where it has got to.</summary>
 /// <param name="Type"><c>Subdomain</c> (the free address) or <c>Custom</c>.</param>
+/// <param name="NeedsReview">True while it waits for a platform review because it looks like a well-known brand. It serves nothing until cleared.</param>
 /// <param name="VerificationStatus"><c>Pending</c>, <c>Verified</c> or <c>Abandoned</c>.</param>
 /// <param name="SslStatus"><c>None</c>, <c>Pending</c>, <c>Issued</c>, <c>Failed</c> or <c>Expired</c> — separate from verification, because a host can be verified and not yet secured.</param>
 /// <param name="NextCheckAt">When we look for the records next, while they are pending.</param>
@@ -16,6 +17,7 @@ public sealed record SiteDomainResponse(
     string Hostname,
     string Type,
     bool IsPrimary,
+    bool NeedsReview,
     string VerificationStatus,
     string SslStatus,
     DateTimeOffset? VerifiedAt,
@@ -50,3 +52,20 @@ public sealed record SiteDomainCheckResponse(
     string Outcome,
     string Resolver,
     string? Detail);
+
+/// <summary>A website address set aside for a platform review, because it looks like a well-known brand (open question 20).</summary>
+/// <param name="DomainId">The address's id, to approve it by.</param>
+/// <param name="Type"><c>Subdomain</c> (a free address) or <c>Custom</c>.</param>
+/// <param name="VerificationStatus">Whether its DNS records have been found yet, for a custom hostname.</param>
+/// <param name="NeedsReview">True until someone clears it.</param>
+/// <param name="AgencyName">The agency's trading name, or its legal name.</param>
+/// <param name="ClaimedAt">When the address was added.</param>
+public sealed record HostnameReviewResponse(
+    Guid DomainId,
+    string Hostname,
+    string Type,
+    string VerificationStatus,
+    bool NeedsReview,
+    Guid AgencyId,
+    string AgencyName,
+    DateTimeOffset ClaimedAt);

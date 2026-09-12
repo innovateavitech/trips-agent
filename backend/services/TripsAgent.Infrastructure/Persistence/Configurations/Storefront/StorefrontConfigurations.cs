@@ -287,7 +287,18 @@ public sealed class SiteDomainConfiguration : IEntityTypeConfiguration<SiteDomai
             .HasForeignKey(domain => domain.SiteId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(domain => domain.Hostname).IsUnique().HasDatabaseName("ix_site_domains_hostname");
+        // One website per hostname, among the claims that are proven. An unproven claim may overlap another:
+        // only whoever controls the domain can verify it, so an agency adding a domain it does not own cannot
+        // block the real owner by getting there first.
+        builder.HasIndex(domain => domain.Hostname)
+            .IsUnique()
+            .HasFilter("verification_status = 'Verified'")
+            .HasDatabaseName("ix_site_domains_verified_hostname");
+
+        // And each agency claims a hostname once.
+        builder.HasIndex(domain => new { domain.AgencyId, domain.Hostname })
+            .IsUnique()
+            .HasDatabaseName("ix_site_domains_agency_id_hostname");
 
         builder.HasIndex(domain => new { domain.AgencyId, domain.SiteId })
             .HasDatabaseName("ix_site_domains_agency_id_site_id");

@@ -7,6 +7,7 @@ using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Payments;
 using TripsAgent.Infrastructure.Retention;
 using TripsAgent.Infrastructure.Scheduling;
+using TripsAgent.Infrastructure.Storefront;
 using TripsAgent.Infrastructure.Suppliers;
 using TripsAgent.Integrations.Paystack;
 
@@ -93,5 +94,10 @@ DataRetentionSchedule.Register(recurringJobs);
 // Expires uploads that never arrived and re-enqueues processing that was lost. The complete step
 // enqueues each asset directly, so like the webhook drain this normally finds nothing.
 AssetSweepSchedule.Register(recurringJobs);
+
+// Agencies' own website addresses (issue 59): looks for the DNS records of every hostname waiting to
+// be verified, and issues and renews their certificates — renewal starts 30 days before expiry.
+DomainVerificationSchedule.Register(recurringJobs);
+CertificateSchedule.Register(recurringJobs);
 
 await host.RunAsync();

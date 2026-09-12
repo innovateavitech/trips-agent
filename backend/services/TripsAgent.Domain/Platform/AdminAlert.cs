@@ -24,6 +24,11 @@ public enum AdminAlertType
     /// (open question 20). It serves nothing until it is cleared.
     /// </summary>
     HostnameReview = 7,
+
+    /// <summary>
+    /// An agency's own website address could not get a certificate, or is about to lose the one it has.
+    /// </summary>
+    SiteCertificate = 8,
 }
 
 /// <summary>How quickly somebody needs to look.</summary>
@@ -74,6 +79,28 @@ public sealed class AdminAlert : Entity, IAuditableEntity
             EntityId = submissionId,
             Message = $"{agencyName} has submitted KYB documents and is waiting for review.",
         };
+
+    /// <summary>
+    /// Raises an alert that a website address looks like a well-known brand and waits for someone to clear
+    /// it (open question 20). Names the address, so clearing it closes exactly this alert.
+    /// </summary>
+    public static AdminAlert ForHostnameReview(Guid agencyId, Guid siteDomainId, string hostname)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(hostname);
+
+        return new AdminAlert
+        {
+            Type = AdminAlertType.HostnameReview,
+
+            // Nothing is broken and nothing is served in the meantime — a warning, not a crisis.
+            Severity = AdminAlertSeverity.Warning,
+            Status = AdminAlertStatus.Open,
+            AgencyId = agencyId,
+            EntityType = nameof(Storefront.SiteDomain),
+            EntityId = siteDomainId,
+            Message = $"The website address {hostname} looks like a well-known brand, so it serves nothing until someone reviews it.",
+        };
+    }
 
     /// <summary>
     /// Raises an alert from the platform itself rather than about one agency's paperwork.

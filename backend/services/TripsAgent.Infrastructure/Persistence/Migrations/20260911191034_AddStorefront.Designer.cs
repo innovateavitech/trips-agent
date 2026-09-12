@@ -3312,7 +3312,12 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Hostname")
                         .IsUnique()
-                        .HasDatabaseName("ix_site_domains_hostname");
+                        .HasDatabaseName("ix_site_domains_verified_hostname")
+                        .HasFilter("verification_status = 'Verified'");
+
+                    b.HasIndex("AgencyId", "Hostname")
+                        .IsUnique()
+                        .HasDatabaseName("ix_site_domains_agency_id_hostname");
 
                     b.HasIndex("AgencyId", "SiteId")
                         .HasDatabaseName("ix_site_domains_agency_id_site_id");

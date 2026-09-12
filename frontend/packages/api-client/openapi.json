@@ -1725,6 +1725,317 @@
         }
       }
     },
+    "/api/v1/storefront/domains": {
+      "get": {
+        "tags": [
+          "Storefront"
+        ],
+        "operationId": "ListSiteDomains",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SiteDomainResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Storefront"
+        ],
+        "operationId": "AddSiteDomain",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddSiteDomainRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteDomainResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/domains/{domainId}": {
+      "delete": {
+        "tags": [
+          "Storefront"
+        ],
+        "operationId": "RemoveSiteDomain",
+        "parameters": [
+          {
+            "name": "domainId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/domains/{domainId}/primary": {
+      "post": {
+        "tags": [
+          "Storefront"
+        ],
+        "operationId": "MakeSiteDomainPrimary",
+        "parameters": [
+          {
+            "name": "domainId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteDomainResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/domains/{domainId}/check": {
+      "post": {
+        "tags": [
+          "Storefront"
+        ],
+        "operationId": "CheckSiteDomain",
+        "parameters": [
+          {
+            "name": "domainId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteDomainResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/hostname-reviews": {
+      "get": {
+        "tags": [
+          "Hostname review"
+        ],
+        "operationId": "ListHostnameReviews",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HostnameReviewResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/hostname-reviews/{domainId}/approve": {
+      "post": {
+        "tags": [
+          "Hostname review"
+        ],
+        "operationId": "ApproveHostname",
+        "parameters": [
+          {
+            "name": "domainId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostnameReviewResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/assets/limits": {
       "get": {
         "tags": [
@@ -2348,6 +2659,17 @@
   },
   "components": {
     "schemas": {
+      "AddSiteDomainRequest": {
+        "required": [
+          "hostname"
+        ],
+        "type": "object",
+        "properties": {
+          "hostname": {
+            "type": "string"
+          }
+        }
+      },
       "AssetLinkResponse": {
         "required": [
           "kind",
@@ -3008,6 +3330,48 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "HostnameReviewResponse": {
+        "required": [
+          "domainId",
+          "hostname",
+          "type",
+          "verificationStatus",
+          "needsReview",
+          "agencyId",
+          "agencyName",
+          "claimedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "domainId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "verificationStatus": {
+            "type": "string"
+          },
+          "needsReview": {
+            "type": "boolean"
+          },
+          "agencyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "agencyName": {
+            "type": "string"
+          },
+          "claimedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -5196,6 +5560,180 @@
           }
         }
       },
+      "SiteDnsRecordResponse": {
+        "required": [
+          "recordType",
+          "name",
+          "hostLabel",
+          "value",
+          "purpose"
+        ],
+        "type": "object",
+        "properties": {
+          "recordType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "hostLabel": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          }
+        }
+      },
+      "SiteDomainCheckResponse": {
+        "required": [
+          "checkedAt",
+          "recordType",
+          "recordName",
+          "expected",
+          "observed",
+          "outcome",
+          "resolver",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "recordType": {
+            "type": "string"
+          },
+          "recordName": {
+            "type": "string"
+          },
+          "expected": {
+            "type": "string"
+          },
+          "observed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "resolver": {
+            "type": "string"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SiteDomainResponse": {
+        "required": [
+          "id",
+          "hostname",
+          "type",
+          "isPrimary",
+          "needsReview",
+          "verificationStatus",
+          "sslStatus",
+          "verifiedAt",
+          "lastCheckedAt",
+          "nextCheckAt",
+          "sslExpiresAt",
+          "sslLastError",
+          "dnsRecords",
+          "recentChecks",
+          "canRemove",
+          "canMakePrimary",
+          "canCheckNow"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "needsReview": {
+            "type": "boolean"
+          },
+          "verificationStatus": {
+            "type": "string"
+          },
+          "sslStatus": {
+            "type": "string"
+          },
+          "verifiedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastCheckedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "nextCheckAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sslExpiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sslLastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dnsRecords": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SiteDnsRecordResponse"
+            }
+          },
+          "recentChecks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SiteDomainCheckResponse"
+            }
+          },
+          "canRemove": {
+            "type": "boolean"
+          },
+          "canMakePrimary": {
+            "type": "boolean"
+          },
+          "canCheckNow": {
+            "type": "boolean"
+          }
+        }
+      },
       "SitePageBlockRequest": {
         "required": [
           "id",
@@ -6145,6 +6683,9 @@
     },
     {
       "name": "Storefront"
+    },
+    {
+      "name": "Hostname review"
     },
     {
       "name": "Assets"

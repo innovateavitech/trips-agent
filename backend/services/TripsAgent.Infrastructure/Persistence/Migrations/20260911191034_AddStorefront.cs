@@ -400,11 +400,19 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                 columns: new[] { "agency_id", "site_id" });
 
             migrationBuilder.CreateIndex(
-                name: "ix_site_domains_hostname",
+                name: "ix_site_domains_agency_id_hostname",
+                schema: "storefront",
+                table: "site_domains",
+                columns: new[] { "agency_id", "hostname" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_site_domains_verified_hostname",
                 schema: "storefront",
                 table: "site_domains",
                 column: "hostname",
-                unique: true);
+                unique: true,
+                filter: "verification_status = 'Verified'");
 
             migrationBuilder.CreateIndex(
                 name: "ix_site_domains_site_id",
@@ -735,7 +743,8 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                 ALTER TABLE platform.admin_alerts DROP CONSTRAINT ck_admin_alerts_type;
                 ALTER TABLE platform.admin_alerts ADD CONSTRAINT ck_admin_alerts_type
                     CHECK (type IN ('PendingKyb', 'GatewayError', 'Dispute', 'ReversalRequired',
-                                    'TicketTimeLimitBreach', 'LedgerIntegrity', 'HostnameReview'));
+                                    'TicketTimeLimitBreach', 'LedgerIntegrity', 'HostnameReview',
+                                    'SiteCertificate'));
                 """);
 
             // ------------------------------------------------------------------ the application role
@@ -807,7 +816,7 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                 ALTER TABLE storefront.site_versions DROP CONSTRAINT IF EXISTS fk_site_versions_site_same_agency;
 
                 -- LedgerIntegrity stays allowed: dropping it again would only restore the old gap.
-                DELETE FROM platform.admin_alerts WHERE type = 'HostnameReview';
+                DELETE FROM platform.admin_alerts WHERE type IN ('HostnameReview', 'SiteCertificate');
                 ALTER TABLE platform.admin_alerts DROP CONSTRAINT ck_admin_alerts_type;
                 ALTER TABLE platform.admin_alerts ADD CONSTRAINT ck_admin_alerts_type
                     CHECK (type IN ('PendingKyb', 'GatewayError', 'Dispute', 'ReversalRequired',

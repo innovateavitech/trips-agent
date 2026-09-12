@@ -131,26 +131,35 @@ public sealed class StorefrontSchemaTests
     }
 
     [Fact]
-    public async Task A_hostname_belongs_to_one_agency_and_is_stored_in_lower_case()
+    public async Task A_verified_hostname_belongs_to_one_website_and_is_stored_in_lower_case()
     {
         var world = await WorldAsync();
         await using var owner = _postgres.Connect(world.Database, asApplicationRole: false);
 
-        var taken = () => InsertCustomDomainAsync(owner, world.AgencyB, world.SiteB, "lagos-travel.localhost");
-        (await taken.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(PostgresErrorCodes.UniqueViolation);
+        var taken = () => InsertCustomDomainAsync(owner, world.AgencyB, world.SiteB, "lagos-travel.localhost", "Verified");
+        (await taken.Should().ThrowAsync<PostgresException>()).Which.ConstraintName.Should().Be("ix_site_domains_verified_hostname");
 
-        var shouting = () => InsertCustomDomainAsync(owner, world.AgencyB, world.SiteB, "WWW.ABUJA-TOURS.COM");
+        // An unproven claim may overlap it: only whoever controls the domain can verify, so getting there
+        // first blocks nobody.
+        var claim = () => InsertCustomDomainAsync(owner, world.AgencyB, world.SiteB, "lagos-travel.localhost", "Pending");
+        await claim.Should().NotThrowAsync();
+
+        var twice = () => InsertCustomDomainAsync(owner, world.AgencyB, world.SiteB, "lagos-travel.localhost", "Pending");
+        (await twice.Should().ThrowAsync<PostgresException>()).Which.ConstraintName.Should().Be("ix_site_domains_agency_id_hostname");
+
+        var shouting = () => InsertCustomDomainAsync(owner, world.AgencyB, world.SiteB, "WWW.ABUJA-TOURS.COM", "Pending");
         (await shouting.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(PostgresErrorCodes.CheckViolation);
     }
 
     [Fact]
-    public async Task The_admin_queue_accepts_hostname_reviews_and_ledger_alerts()
+    public async Task The_admin_queue_accepts_hostname_reviews_certificate_problems_and_ledger_alerts()
     {
         var world = await WorldAsync();
         await using var owner = _postgres.Connect(world.Database, asApplicationRole: false);
 
         owner.AdminAlerts.AddRange(
-            AdminAlert.ForPlatform(AdminAlertType.HostnameReview, AdminAlertSeverity.Warning, "Looks like a brand.", "test", world.AgencyA),
+            AdminAlert.ForHostnameReview(world.AgencyA, Guid.CreateVersion7(), "emirates-deals.localhost"),
+            AdminAlert.ForPlatform(AdminAlertType.SiteCertificate, AdminAlertSeverity.Critical, "A certificate lapsed.", "test", world.AgencyA),
             AdminAlert.ForPlatform(AdminAlertType.LedgerIntegrity, AdminAlertSeverity.Critical, "The books do not balance.", "test"));
 
         var save = () => owner.SaveChangesAsync();
@@ -168,13 +177,13 @@ public sealed class StorefrontSchemaTests
                      0, now(), now())
              """);
 
-    private static Task<int> InsertCustomDomainAsync(AppDbContext db, Guid agencyId, Guid siteId, string hostname) =>
+    private static Task<int> InsertCustomDomainAsync(AppDbContext db, Guid agencyId, Guid siteId, string hostname, string status) =>
         db.Database.ExecuteSqlInterpolatedAsync(
             $"""
              INSERT INTO storefront.site_domains
                  (id, agency_id, site_id, hostname, type, verification_status, verification_token,
                   check_count, ssl_status, ssl_attempt_count, needs_review, created_at, updated_at)
-             VALUES ({Guid.CreateVersion7()}, {agencyId}, {siteId}, {hostname}, 'Custom', 'Pending', {VerificationValue},
+             VALUES ({Guid.CreateVersion7()}, {agencyId}, {siteId}, {hostname}, 'Custom', {status}, {VerificationValue},
                      0, 'None', 0, false, now(), now())
              """);
 

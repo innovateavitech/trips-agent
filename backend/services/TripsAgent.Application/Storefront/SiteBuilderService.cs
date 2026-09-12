@@ -140,12 +140,7 @@ public sealed partial class SiteBuilderService
         {
             // Open question 20: a name that looks like a well-known brand is set aside, not refused.
             subdomain.FlagForReview();
-            _db.AdminAlerts.Add(AdminAlert.ForPlatform(
-                AdminAlertType.HostnameReview,
-                AdminAlertSeverity.Warning,
-                $"The free address {hostname} looks like a well-known brand, so it serves nothing until someone reviews it.",
-                "storefront.free-subdomain",
-                agencyId));
+            _db.AdminAlerts.Add(AdminAlert.ForHostnameReview(agencyId, subdomain.Id, hostname));
         }
 
         site.SetPrimaryDomain(subdomain);

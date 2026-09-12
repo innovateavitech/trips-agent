@@ -162,6 +162,9 @@ public static class StorefrontEndpoints
             .Produces<SitePreviewLinkResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        // The site's addresses and the platform's review queue for them live next door.
+        app.MapSiteDomainEndpoints();
+
         return app;
     }
 

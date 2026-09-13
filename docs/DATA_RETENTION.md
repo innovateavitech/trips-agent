@@ -57,6 +57,10 @@ The source of truth is `RetentionCatalogue.Tables` in
 | `payments.payment_transactions` | Some (gateway references) | At least 7 years | Protected | The evidence behind every top-up and order payment |
 | `payments.payment_webhook_events` | Yes (payer details in payloads) | At least 7 years | Protected | What the gateway told us, with its signature check — the evidence in a dispute |
 | `payments.reconciliation_exceptions` | No | At least 7 years | Protected | What the ledger audit found and how it was resolved |
+| `payments.reconciliation_runs` | No | At least 7 years | Protected | One row per gateway per day of reconciliation — proof a day was checked |
+| `payments.agency_bank_accounts` | No | At least 7 years | Protected | Where each payout was sent, as the bank named it; retired, never deleted |
+| `payments.payouts` | No | At least 7 years | Protected | Every withdrawal, who asked, who approved and what the gateway said |
+| `payments.disputes` | Yes | At least 7 years | Protected | Chargebacks and the evidence filed; the customer's details in evidence are anonymised on erasure, the financial record kept |
 | `payments.refunds` | No | At least 7 years | Protected | Every refund, with the status poll or agent behind it — the evidence that money went back for a reason. Append-only in the database too |
 
 ### Sales

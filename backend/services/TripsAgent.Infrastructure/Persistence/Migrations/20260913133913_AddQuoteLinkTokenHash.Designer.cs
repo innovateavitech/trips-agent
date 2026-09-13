@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TripsAgent.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using TripsAgent.Infrastructure.Persistence;
 namespace TripsAgent.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260913133913_AddQuoteLinkTokenHash")]
+    partial class AddQuoteLinkTokenHash
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3218,6 +3221,11 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("number");
 
+                    b.Property<string>("PublicToken")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("public_token");
+
                     b.Property<string>("PublicTokenHash")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
@@ -3272,6 +3280,11 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_quotes");
+
+                    b.HasIndex("PublicToken")
+                        .IsUnique()
+                        .HasDatabaseName("ix_quotes_public_token")
+                        .HasFilter("public_token IS NOT NULL");
 
                     b.HasIndex("PublicTokenHash")
                         .IsUnique()

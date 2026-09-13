@@ -38,6 +38,7 @@ public sealed class StorefrontCrmService
     private readonly CrmContext _crm;
     private readonly CustomerDirectory _customers;
     private readonly StorefrontTenant _storefront;
+    private readonly QuoteLinks _links;
     private readonly IUniqueViolationDetector _uniqueViolations;
 
     public StorefrontCrmService(
@@ -45,12 +46,14 @@ public sealed class StorefrontCrmService
         CrmContext crm,
         CustomerDirectory customers,
         StorefrontTenant storefront,
+        QuoteLinks links,
         IUniqueViolationDetector uniqueViolations)
     {
         _db = db;
         _crm = crm;
         _customers = customers;
         _storefront = storefront;
+        _links = links;
         _uniqueViolations = uniqueViolations;
     }
 
@@ -274,11 +277,14 @@ public sealed class StorefrontCrmService
 
         var agency = await _crm.AgencyAsync(cancellationToken);
 
+        // By the hash of what was presented, because the hash is all the row keeps (issue 175).
+        var hash = _links.HashOf(token!);
+
         var quote = await _db.Quotes
             .Include(candidate => candidate.Items)
             .Include(candidate => candidate.Itinerary)
             .AsSplitQuery()
-            .FirstOrDefaultAsync(candidate => candidate.PublicToken == token, cancellationToken);
+            .FirstOrDefaultAsync(candidate => candidate.PublicTokenHash == hash, cancellationToken);
 
         if (quote is null)
         {

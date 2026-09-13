@@ -32,14 +32,11 @@ public static class EnumNames
     }
 }
 
-/// <summary>The secret in a quote's link.</summary>
+/// <summary>The shape of the secret in a quote's link. <see cref="QuoteLinks"/> is what makes them.</summary>
 public static class QuoteLinkTokens
 {
     /// <summary>The length of every token: 32 bytes, base64url without padding.</summary>
     public const int Length = 43;
-
-    /// <summary>256 random bits, URL-safe. Unguessable, and meaningless: it names nothing.</summary>
-    public static string New() => Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));
 
     /// <summary>True for something shaped like a token. Anything else is turned away before the database is asked.</summary>
     public static bool LooksValid(string? token) =>

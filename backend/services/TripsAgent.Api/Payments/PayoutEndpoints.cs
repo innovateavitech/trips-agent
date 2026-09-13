@@ -267,6 +267,10 @@ public static class PayoutEndpoints
                     SubmitEvidenceOutcome.Invalid => Results.Problem(
                         statusCode: StatusCodes.Status400BadRequest,
                         title: "Fill in the customer's name, email and phone, and describe what was sold."),
+                    SubmitEvidenceOutcome.UnknownAsset => Results.Problem(
+                        statusCode: StatusCodes.Status400BadRequest,
+                        title: "One of those files could not be found.",
+                        detail: "Attach files from this agency's own uploads, then send the evidence again."),
                     SubmitEvidenceOutcome.GatewayUnavailable => GatewayDown(),
                     _ => throw new InvalidOperationException($"Unhandled outcome {outcome}."),
                 };

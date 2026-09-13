@@ -4,9 +4,11 @@ import {
   ClipboardList,
   Compass,
   Inbox,
+  Landmark,
   LayoutDashboard,
   LifeBuoy,
   Plane,
+  ShieldAlert,
   ShieldCheck,
   Globe,
   SlidersHorizontal,
@@ -72,6 +74,8 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Wallet', to: '/wallet', icon: Wallet }, // #51
       { label: 'Pricing rules', to: '/pricing', icon: SlidersHorizontal }, // #55
+      { label: 'Payouts', to: '/payouts', icon: Landmark }, // build plan F12
+      { label: 'Disputes', to: '/disputes', icon: ShieldAlert }, // build plan F12
     ],
   },
   {

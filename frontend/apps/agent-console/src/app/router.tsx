@@ -10,6 +10,7 @@ import { crmRoutes } from '../features/crm/routes';
 import { departuresRoutes } from '../features/departures/routes';
 import { DashboardPage } from '../features/dashboard';
 import { onboardingRoutes } from '../features/onboarding/routes';
+import { payoutRoutes } from '../features/payouts/routes';
 import { pricingRoutes } from '../features/pricing/routes';
 import { searchRoutes } from '../features/search/routes';
 import { storefrontRoutes } from '../features/storefront/routes';
@@ -68,6 +69,7 @@ export const appRoutes: RouteObject[] = [
               ...crmRoutes,
               ...walletRoutes,
               ...pricingRoutes,
+              ...payoutRoutes,
               ...storefrontRoutes,
               ...onboardingRoutes,
               { path: '*', element: <NotFoundPage /> },

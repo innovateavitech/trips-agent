@@ -95,6 +95,7 @@ LedgerIntegrityAuditSchedule.Register(recurringJobs);
 PayoutSenderSchedule.Register(recurringJobs);
 PayoutStatusPollSchedule.Register(recurringJobs);
 DisputeDeadlineSchedule.Register(recurringJobs);
+GatewayReconciliationSchedule.Register(recurringJobs);
 
 // Keeps the supplier call log's monthly partitions ahead of the calendar. Without it every supplier
 // call fails to record once the prepared months run out.

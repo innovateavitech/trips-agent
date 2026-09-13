@@ -69,6 +69,10 @@ public static class DependencyInjection
         services.AddScoped<IDisputeWebhookSink>(sp => sp.GetRequiredService<DisputeService>());
         services.AddScoped<IDisputeDeadlineMonitor>(sp => sp.GetRequiredService<DisputeService>());
 
+        // The daily match of the gateway's settlements against the books. Reads and reports; never corrects.
+        services.AddScoped<IGatewayReconciliation, GatewayReconciliation>();
+        services.AddScoped<ReconciliationTriage>();
+
         services.AddScoped<DocumentIssuer>();
 
         // Records what was sold, at the price the quote froze. The saga (#42) takes it from there.

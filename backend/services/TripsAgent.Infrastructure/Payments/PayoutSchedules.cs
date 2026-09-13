@@ -97,3 +97,29 @@ public static class DisputeDeadlineSchedule
             new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
     }
 }
+
+/// <summary>
+/// Reconciles yesterday's gateway settlements against the ledger, every morning.
+/// </summary>
+/// <remarks>
+/// 05:00 UTC, 06:00 in Lagos: after the gateway's overnight settlement, before Finance starts work,
+/// and clear of the 02:30 ledger audit. Idempotent — a redeploy or a hand-triggered re-run updates
+/// the day's run in place and raises nothing twice.
+/// </remarks>
+public static class GatewayReconciliationSchedule
+{
+    public const string JobId = "gateway-reconciliation";
+
+    public const string CronExpression = "0 5 * * *";
+
+    public static void Register(IRecurringJobManager recurringJobs)
+    {
+        ArgumentNullException.ThrowIfNull(recurringJobs);
+
+        recurringJobs.AddOrUpdate<IGatewayReconciliation>(
+            JobId,
+            reconciliation => reconciliation.RunYesterdayAsync(CancellationToken.None),
+            CronExpression,
+            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+    }
+}

@@ -95,6 +95,29 @@ public class WebhookIdempotencyTests
     }
 
     [Fact]
+    public async Task A_dispute_event_delivered_five_times_is_handed_over_once_by_its_dispute_id()
+    {
+        await using var world = await WorldAsync();
+
+        var body =
+            "{\"event\":\"charge.dispute.create\",\"data\":{\"id\":8812,\"status\":\"awaiting-merchant-feedback\","
+            + "\"transaction\":{\"id\":991,\"reference\":\"" + world.Reference + "\",\"amount\":500000}}}";
+        var signature = Sign(body);
+
+        var outcomes = new List<WebhookOutcome>();
+
+        for (var delivery = 0; delivery < 5; delivery++)
+        {
+            outcomes.Add(await world.Handler.ReceiveAsync(body, signature));
+            await world.Drain();
+        }
+
+        outcomes[0].Should().Be(WebhookOutcome.Accepted);
+        outcomes.Skip(1).Should().AllBeEquivalentTo(WebhookOutcome.Duplicate);
+        world.Disputes.Synced.Should().Equal("8812");
+    }
+
+    [Fact]
     public async Task Five_deliveries_arriving_at_once_still_credit_only_once()
     {
         // Paying exactly what was asked, so nothing distracts from what is being tested. A short
@@ -244,7 +267,8 @@ public class WebhookIdempotencyTests
 
         // Same transaction id, different event. The event id is built from both, so this must not
         // collide with the success above — deduplicating these together would lose the dispute.
-        (await world.Handler.ReceiveAsync(dispute, Sign(dispute))).Should().Be(WebhookOutcome.Ignored);
+        // Disputes are acted on since issue 69, so it is accepted rather than ignored.
+        (await world.Handler.ReceiveAsync(dispute, Sign(dispute))).Should().Be(WebhookOutcome.Accepted);
 
         await world.Drain();
 

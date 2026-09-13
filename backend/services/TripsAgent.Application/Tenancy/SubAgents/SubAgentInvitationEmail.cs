@@ -36,9 +36,9 @@ public sealed class SubAgentInviteLinkBuilder
 /// its trading name, not <see cref="NotificationBrand.Platform"/>.
 /// </para>
 /// <para>
-/// That is also why it does not go through <c>SynchronousEmail</c>, which forces our own brand on
-/// everything it renders. It is still sent at once and never queued, for the usual reason: the
-/// link is a working credential until it is used, and a queued row would store it.
+/// It is sent at once and never queued, for the usual reason: the link is a working credential
+/// until it is used, and a queued row would store it. The verification code the new user is sent
+/// once they accept carries the same brand (issue 170) — see <see cref="NotificationBrand.OfPrincipal"/>.
 /// </para>
 /// </remarks>
 public static class SubAgentInvitationEmail
@@ -58,12 +58,7 @@ public static class SubAgentInvitationEmail
             ?? throw new InvalidOperationException(
                 $"There is no email template '{NotificationTemplateCatalog.SubAgentInvitation}'.");
 
-        var brand = new NotificationBrand(
-            principal.TradingName ?? principal.LegalName,
-            branding?.PrimaryColor ?? AgencyBranding.DefaultPrimaryColor,
-            LogoUrl: null,
-            branding?.ContactAddress,
-            ReplyTo: null);
+        var brand = NotificationBrand.OfPrincipal(principal, branding);
 
         var rendered = NotificationRenderer.Render(
             definition.ToTemplate(),

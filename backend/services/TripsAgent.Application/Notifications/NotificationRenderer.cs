@@ -25,6 +25,24 @@ public sealed record NotificationBrand(
     /// <summary>Ours, for mail to agency staff. Never used for a traveller — see <see cref="NotificationRenderer"/>.</summary>
     public static NotificationBrand Platform { get; } = new(
         NotificationTemplateCatalog.ProductName, AgencyBranding.DefaultPrimaryColor, null, null, null);
+
+    /// <summary>
+    /// A principal's, for mail to the staff of one of its sub-agents: its trading name and colour,
+    /// never ours. Build-plan decision 6 — a sub-agent works under its principal's brand.
+    /// </summary>
+    /// <param name="principal">The agency whose network the sub-agent is in.</param>
+    /// <param name="branding">Its branding row. Null when the row is missing, and the default colour is used.</param>
+    public static NotificationBrand OfPrincipal(Agency principal, AgencyBranding? branding)
+    {
+        ArgumentNullException.ThrowIfNull(principal);
+
+        return new NotificationBrand(
+            principal.TradingName ?? principal.LegalName,
+            branding?.PrimaryColor ?? AgencyBranding.DefaultPrimaryColor,
+            LogoUrl: null,
+            branding?.ContactAddress,
+            ReplyTo: null);
+    }
 }
 
 /// <summary>A rendered message, ready to hand to a channel.</summary>

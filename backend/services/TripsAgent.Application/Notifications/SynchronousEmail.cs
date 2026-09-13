@@ -22,12 +22,21 @@ namespace TripsAgent.Application.Notifications;
 public static class SynchronousEmail
 {
     /// <summary>Renders the newest version of <paramref name="templateKey"/> for one agency user.</summary>
+    /// <param name="templateKey">An agency-facing template in <see cref="NotificationTemplateCatalog"/>.</param>
+    /// <param name="to">The address it goes to.</param>
+    /// <param name="recipientName">Who it is addressed to.</param>
+    /// <param name="values">The template's own variables.</param>
+    /// <param name="brand">
+    /// Whose brand wraps it; ours when null. The staff of a sub-agent get their principal's instead —
+    /// build-plan decision 6, <see cref="NotificationBrand.OfPrincipal"/> — and the display name follows it.
+    /// </param>
     /// <exception cref="InvalidOperationException">The catalog has no such template, or it is traveller-facing.</exception>
     public static EmailMessage Render(
         string templateKey,
         string to,
         string recipientName,
-        IReadOnlyDictionary<string, string> values)
+        IReadOnlyDictionary<string, string> values,
+        NotificationBrand? brand = null)
     {
         var definition = NotificationTemplateCatalog.Find(templateKey, NotificationChannel.Email)
             ?? throw new InvalidOperationException($"There is no email template '{templateKey}'.");
@@ -41,8 +50,10 @@ public static class SynchronousEmail
         }
 
         var rendered = NotificationRenderer.Render(
-            definition.ToTemplate(), NotificationBrand.Platform, recipientName, values);
+            definition.ToTemplate(), brand ?? NotificationBrand.Platform, recipientName, values);
 
-        return new EmailMessage(to, rendered.Subject, rendered.Html, rendered.Text);
+        // Null keeps the configured sender name, which is ours. A principal's name replaces it, so the
+        // inbox line does not name the platform either.
+        return new EmailMessage(to, rendered.Subject, rendered.Html, rendered.Text, FromName: brand?.Name);
     }
 }

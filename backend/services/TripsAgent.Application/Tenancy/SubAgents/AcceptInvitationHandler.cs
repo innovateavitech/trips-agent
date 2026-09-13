@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TripsAgent.Application.Identity;
+using TripsAgent.Application.Identity.Registration;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Tenancy;
@@ -19,7 +20,10 @@ public abstract record AcceptInvitationOutcome
     {
     }
 
-    /// <summary>The account exists and can sign in.</summary>
+    /// <summary>
+    /// The account exists. It signs in once the code just sent to its address has been entered,
+    /// exactly as a self-registered account does (issue 170).
+    /// </summary>
     public sealed record Accepted(Guid UserId, Guid AgencyId, string Email) : AcceptInvitationOutcome;
 
     /// <summary>The link is wrong, used, revoked or expired. Deliberately one case, not four.</summary>
@@ -46,9 +50,14 @@ public abstract record AcceptInvitationOutcome
 /// says so in the log.
 /// </para>
 /// <para>
-/// <b>The address is taken as verified.</b> They received the link at it, which is what the
-/// verification code proves for a self-service signup. Sending them a second code to prove the
-/// same thing would be a step with nothing behind it.
+/// <b>Holding the link does not prove the address.</b> The principal sees the link too — its console
+/// shows it once, so it can be passed on when an email goes astray — so accepting proves only that
+/// somebody had the link. Taking it as proof of the inbox let a principal accept its own invitation
+/// for somebody else's address and hold an account marked verified that nobody there ever saw; and
+/// since an address is one account platform-wide, its owner could then never register it (issue 170).
+/// So the account is created unverified, the six-digit code registration sends goes to the address,
+/// and the account signs in once that code has come back — the same rule as a self-registered
+/// account, through the same <see cref="VerificationCodeIssuer"/>.
 /// </para>
 /// </remarks>
 public sealed class AcceptInvitationHandler
@@ -58,6 +67,7 @@ public sealed class AcceptInvitationHandler
     private readonly IPasswordHasher _passwords;
     private readonly IPlatformScope _platformScope;
     private readonly ITransactionRunner _transactions;
+    private readonly VerificationCodeIssuer _codes;
     private readonly TimeProvider _clock;
 
     public AcceptInvitationHandler(
@@ -66,6 +76,7 @@ public sealed class AcceptInvitationHandler
         IPasswordHasher passwords,
         IPlatformScope platformScope,
         ITransactionRunner transactions,
+        VerificationCodeIssuer codes,
         TimeProvider clock)
     {
         _db = db;
@@ -73,6 +84,7 @@ public sealed class AcceptInvitationHandler
         _passwords = passwords;
         _platformScope = platformScope;
         _transactions = transactions;
+        _codes = codes;
         _clock = clock;
     }
 
@@ -112,7 +124,7 @@ public sealed class AcceptInvitationHandler
             principal ?? agency.TradingName ?? agency.LegalName);
     }
 
-    /// <summary>Creates the account the invitation was for.</summary>
+    /// <summary>Creates the account the invitation was for, unverified, and sends its address the code.</summary>
     public async Task<AcceptInvitationOutcome> HandleAsync(
         string token,
         string firstName,
@@ -160,23 +172,35 @@ public sealed class AcceptInvitationHandler
 
         var now = _clock.GetUtcNow();
 
-        return await _transactions.RunAsync<AcceptInvitationOutcome>(
+        var created = await _transactions.RunAsync(
             async ct =>
             {
-                var user = User.ForAgency(agencyId, invitation.Email, passwordHash, firstName, lastName);
-                user.SetPhoneNumber(phoneNumber);
-                user.MarkEmailVerified(now);
+                var account = User.ForAgency(agencyId, invitation.Email, passwordHash, firstName, lastName);
+                account.SetPhoneNumber(phoneNumber);
 
-                _db.Users.Add(user);
-                _db.UserRoles.Add(UserRole.Grant(user.Id, invitation.RoleId, agencyId));
+                // Deliberately not verified: see the class remarks. Nobody at the address has done
+                // anything yet — the code below is how they will.
+                _db.Users.Add(account);
+                _db.UserRoles.Add(UserRole.Grant(account.Id, invitation.RoleId, agencyId));
 
                 invitation.MarkAccepted(now);
 
+                // Staged with the account, so a code that reaches the inbox always exists in the database.
+                var issued = await _codes.PrepareAsync(account, now, ct);
+
                 await _db.SaveChangesAsync(ct);
 
-                return new AcceptInvitationOutcome.Accepted(user.Id, agencyId, invitation.Email);
+                return new CreatedAccount(account, issued);
             },
             cancellationToken);
+
+        // After the commit, never inside it: an email cannot be taken back if the save fails.
+        if (created.Code is not null)
+        {
+            await _codes.SendAsync(created.User, created.Code, cancellationToken);
+        }
+
+        return new AcceptInvitationOutcome.Accepted(created.User.Id, agencyId, invitation.Email);
     }
 
     private async Task<UserInvitation?> OpenInvitationAsync(string token, CancellationToken cancellationToken)
@@ -219,4 +243,7 @@ public sealed class AcceptInvitationHandler
 
         return errors;
     }
+
+    /// <summary>The account the transaction made, and the code to email once it has committed.</summary>
+    private sealed record CreatedAccount(User User, string? Code);
 }

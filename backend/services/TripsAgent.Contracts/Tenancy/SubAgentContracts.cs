@@ -67,7 +67,10 @@ public sealed record AcceptInvitationRequest(
     string Password,
     string? PhoneNumber);
 
-/// <summary>The account now exists and can sign in.</summary>
+/// <summary>
+/// The account now exists. It can sign in once the six-digit code just sent to its address has been
+/// entered at <c>/api/v1/auth/verify-email</c>, exactly like a self-registered account (issue 170).
+/// </summary>
 public sealed record AcceptInvitationResponse(Guid UserId, Guid AgencyId, string Email);
 
 // ---------------------------------------------------------------------------- scopes

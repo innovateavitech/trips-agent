@@ -20,7 +20,7 @@ Where each part of the system is designed — tables, jobs, the money path — i
 |---|---|---|
 | **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (in progress); F2 Notifications and documents (in progress) | 9 of 72 |
 | **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog (in progress); F4 Storefront (queued); F5 Customer commerce (queued); F6 Group tours (queued); F7 CRM (queued) | 0 of 74 |
-| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (queued); F9 Subscriptions and billing (queued); F10 Sub-agent network (queued); F11 Analytics and reporting (queued); F12 Payouts, disputes and reconciliation (queued); F13 Loyalty and reviews (queued (flag only)) | 0 of 42 |
+| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (queued); F9 Subscriptions and billing (queued); F10 Sub-agent network (queued); F11 Analytics and reporting (queued); F12 Payouts, disputes and reconciliation (built, 4 boxes); F13 Loyalty and reviews (queued (flag only)) | 0 of 42 |
 | **PR 4** · Launch readiness | F14 Security and launch readiness (queued) | 0 of 50 |
 
 
@@ -42,7 +42,8 @@ The first place to look when picking this up again. Update it whenever a branch 
 | `feat/M2-commerce` | 2 | F5 whole (#61): the cart, guest checkout, card payment through the gateway, the magic link to manage a booking, partial failures routed to the resolution queue and refunds to a traveller's card. The storefront and CRM branches are merged in, so it also holds the storefront's cart, checkout and departure pages — the departure detail page F4 could not build without group departures | pushed, done |
 | `feat/M3-admin-console` | 3 | F8: agency directory, lifecycle with reasons and audit, back-office roles, operations dashboard (#66) | pushed |
 | `feat/M3-billing` | 3 | F9: tiers, entitlements, recurring billing and dunning (#64, #65) | agent working |
-| — | 3, 4 | F10-F14 | not started |
+| `feat/M3-payouts` | 3 | F12 (#69): bank accounts verified through Paystack, payouts with Finance approval and a never-retried transfer (ADR-0008), chargebacks held and settled, daily gateway reconciliation; agent-console Payouts and Disputes screens | pushed, to be assembled into PR 3 |
+| — | 3, 4 | F10, F11, F13, F14 | not started |
 
 **Next:** PR 2 is open from `feat/M2-commerce`. When it merges, re-check decision 14's storefront half (the admin console's `StorefrontAvailability` belongs in `PublicSiteResolver`), then assemble PR 3 from the admin console and billing branches, with sub-agents, analytics, payouts and the loyalty flag still to build. `feat/M2-commerce` already carries the storefront and CRM merges, so it is the branch to merge the others into.
 
@@ -93,6 +94,19 @@ Decided during the build:
 - **Resolving a failed booking:** "retry" means booking again from search; escalating slow resolutions waits until after the MVP.
 - **To check on Trips Africa staging:** a bus booking with no PNR is polled with the flight status endpoint, which their documentation does not cover for buses.
 
+Decided for F12 (payouts, disputes and reconciliation):
+
+- **Payouts are agent-initiated**, never scheduled. Minimum ₦5,000, and at most ₦5,000,000 requested per agency per day in the agency's own time zone, counting rejected requests too.
+- **Withdrawable = available (balance less booking holds) less card money paid in within the last 2 days**, which has not yet settled from Paystack. It never goes below zero. Payouts already requested need no subtraction: a request debits the wallet at once.
+- **The ledger moves at request, not at approval.** Money leaves the wallet into a new `PayoutPayable` account; paid moves it to gateway clearing; rejected, failed and reversed each post their own return. Two simultaneous requests cannot both pass, because the wallet's version token refuses the second save.
+- **Approval is a second person** holding `platform.payout.approve`, which only the new Finance Admin role (and Super Admin) holds. The requester can never approve their own request.
+- **A transfer is never retried** (ADR-0008). A timeout becomes `OutcomeUnknown`; a poller asks Paystack for the transfer's status every 15 minutes and hands it to a person after 96 unanswered queries.
+- **New bank accounts wait 24 hours** before their first withdrawal, and the agency's first-registered active user is emailed whoever made the change.
+- **The agency bears a lost chargeback** (decision 2 makes the platform merchant of record, and the money settled into the agency's wallet). The disputed amount is held into a new `DisputeHeld` account when the dispute opens; if the wallet cannot cover it, the dispute is recorded as uncovered with a P1 exception and alert, and the amount is taken at resolution if the wallet can cover it by then.
+- **A dispute on a payment we have no record of** is recorded as a reconciliation exception rather than a dispute row, because a dispute row needs an agency.
+- **Reconciliation runs each morning for the previous Lagos day**, reads every page of that day's Paystack settlements, matches lines to payments by reference to the kobo, and raises a payment as unsettled only once it is 3 days old. It reads and reports; it never corrects the ledger. One run row per gateway per day; exceptions are keyed on check and subject, so a re-run duplicates nothing. The existing `reconciliation_exceptions` table is shared with the nightly ledger audit, gaining a run link and a written-off status.
+- **To check on Paystack test mode before launch:** whether a dispute's `refund_amount` is in kobo, the field name of a settlement's date, and that transfer OTP is switched off on the account — otherwise every transfer waits on a code and stays `OutcomeUnknown`.
+
 ## What the MVP leaves out
 
 Each feature meets its criteria the simplest safe way. These wait until after the MVP:
@@ -107,7 +121,7 @@ Each feature meets its criteria the simplest safe way. These wait until after th
 - **F8:** the dashboard shows core counts and sales; the top-agent leaderboard and feature flags wait.
 - **F9:** monthly billing only; promotions wait.
 - **F11:** CSV exports only, no XLSX; scheduled reports wait.
-- **F12:** bank accounts verified by hand; reconciliation from Paystack's settlement export.
+- **F12:** scheduled automatic payouts; the Finance back-office screens for payout approval, disputes and reconciliation (the API exists; the screens belong in F8's admin console); forwarding uploaded evidence files to Paystack; posting gateway fees to the ledger; encrypting stored account numbers (F14).
 - **F14:** a written penetration-test scope and an internal checklist run, with the external test after launch; one recorded load-test run.
 
 ## PR 1 · Milestone 1: the money path
@@ -742,7 +756,7 @@ FRD §2.15 UC-1C.
 
 ### F12 · Payouts, disputes and reconciliation
 
-**M3 · Queued** · 0 of 4 boxes ticked
+**M3 · Built on `feat/M3-payouts`** · 4 of 4 boxes ticked
 
 Money out to agents' banks, a dispute workflow with evidence, and a daily reconciliation of Paystack settlements against the ledger.
 
@@ -756,10 +770,10 @@ Getting money out and keeping the books straight.
 
 **Tables:** `payouts, agency_bank_accounts, disputes, reconciliation_runs, reconciliation_exceptions`
 
-- [ ] Agent bank account capture and verification.
-- [ ] Payout scheduling and settlement.
-- [ ] Chargeback and dispute workflow with evidence.
-- [ ] Daily gateway reconciliation matching Paystack settlements to our ledger, flagging mismatches.
+- [x] Agent bank account capture and verification. *(the NUBAN is resolved with Paystack and the bank's name is stored; a name unlike the agency's is flagged, not refused; 24-hour cooling-off; the owner is emailed. The number is stored in plain text and shown as the last four digits — field encryption waits for the security work in F14)*
+- [x] Payout scheduling and settlement. *(agent-initiated, not scheduled; ledger first, then a Paystack transfer that is never retried (ADR-0008) and resolved by status polling; approval by a platform Finance user through the API — the back-office screen for it waits for F8's admin console)*
+- [x] Chargeback and dispute workflow with evidence. *(Paystack dispute webhooks through the existing idempotent path; money held on open, released or sent on at resolution; text evidence filed with Paystack before the deadline, reminders and missed deadlines alerted. Uploaded files are not forwarded to Paystack in the MVP)*
+- [x] Daily gateway reconciliation matching Paystack settlements to our ledger, flagging mismatches. *(runs and exceptions on the API for Finance; the triage screen waits for F8. Gateway fees are recorded on the run but not posted to the ledger)*
 
 ### F13 · Loyalty and reviews
 

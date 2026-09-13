@@ -18,9 +18,9 @@ Where each part of the system is designed — tables, jobs, the money path — i
 
 | PR | Features | Boxes ticked |
 |---|---|---|
-| **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (in progress); F2 Notifications and documents (in progress) | 9 of 72 |
-| **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog (in progress); F4 Storefront (queued); F5 Customer commerce (queued); F6 Group tours (queued); F7 CRM (queued) | 0 of 74 |
-| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (done); F10 Sub-agent network (done); F11 Analytics and reporting (done, less XLSX and scheduled reports); F12 Payouts, disputes and reconciliation (done); F13 Loyalty and reviews (flag shipped with F9) | 16 of 42 |
+| **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (merged, #167); F2 Notifications and documents (merged, #167) | 66 of 72 |
+| **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog; F4 Storefront; F5 Customer commerce; F6 Group tours; F7 CRM — all merged, #168 | 75 of 75 |
+| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (done); F10 Sub-agent network (done); F11 Analytics and reporting (done, less XLSX and scheduled reports); F12 Payouts, disputes and reconciliation (done); F13 Loyalty and reviews (flag shipped with F9) | 36 of 42 |
 | **PR 4** · Launch readiness | F14 Security and launch readiness (queued) | 0 of 50 |
 
 
@@ -457,7 +457,7 @@ The pricing screen takes a product ID for a product-scoped rule, because there w
 
 ### F4 · Storefront
 
-**M2 · Done** · 18 of 19 boxes ticked · `feat/M2-storefront`
+**M2 · Done** · 19 of 19 boxes ticked · `feat/M2-storefront`
 
 Every agent gets a branded website: built from templates and blocks in the console, published with rollback, served on their own domain with SSL, showing their catalog to travellers. Nothing on it may mention Trips.
 
@@ -858,7 +858,7 @@ percentile rather than an average and maximum.
 
 ### F12 · Payouts, disputes and reconciliation
 
-**M3 · Built on `feat/M3-payouts`** · 4 of 4 boxes ticked
+**M3 · Done** · branch `feat/M3-payouts` · 4 of 4 boxes ticked
 
 Money out to agents' banks, a dispute workflow with evidence, and a daily reconciliation of Paystack settlements against the ledger.
 

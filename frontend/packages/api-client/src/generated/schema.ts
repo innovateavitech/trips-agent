@@ -4945,9 +4945,6 @@ export interface components {
             completedAt: null | string;
             failureReason: null | string;
         };
-        RefreshTokenRequest: {
-            refreshToken: string;
-        };
         RegisterAgentRequest: {
             businessName: string;
             firstName: string;
@@ -5642,7 +5639,6 @@ export interface components {
             accessToken: string;
             /** Format: int32 */
             expiresInSeconds: number | string;
-            refreshToken: string;
         };
         TopUpLimitsResponse: {
             /** Format: int64 */
@@ -6047,11 +6043,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RefreshTokenRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
@@ -6080,11 +6072,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RefreshTokenRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description No Content */
             204: {

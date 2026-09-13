@@ -330,16 +330,6 @@
           "Authentication"
         ],
         "operationId": "RefreshToken",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshTokenRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "OK",
@@ -370,16 +360,6 @@
           "Authentication"
         ],
         "operationId": "Logout",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshTokenRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "204": {
             "description": "No Content"
@@ -17820,17 +17800,6 @@
           }
         }
       },
-      "RefreshTokenRequest": {
-        "required": [
-          "refreshToken"
-        ],
-        "type": "object",
-        "properties": {
-          "refreshToken": {
-            "type": "string"
-          }
-        }
-      },
       "RegisterAgentRequest": {
         "required": [
           "businessName",
@@ -20709,8 +20678,7 @@
       "TokenPairResponse": {
         "required": [
           "accessToken",
-          "expiresInSeconds",
-          "refreshToken"
+          "expiresInSeconds"
         ],
         "type": "object",
         "properties": {
@@ -20724,9 +20692,6 @@
               "string"
             ],
             "format": "int32"
-          },
-          "refreshToken": {
-            "type": "string"
           }
         }
       },

@@ -3,20 +3,22 @@ namespace TripsAgent.Contracts.Identity;
 /// <summary>Credentials presented at sign-in.</summary>
 public sealed record LoginRequest(string Email, string Password);
 
-/// <summary>A refresh token being exchanged, or revoked at sign-out.</summary>
+/// <summary>
+/// A refresh token being exchanged, or revoked at sign-out. The API builds it from the refresh
+/// cookie; no client sends it as a body.
+/// </summary>
 public sealed record RefreshTokenRequest(string RefreshToken);
 
 /// <summary>
-/// A freshly issued pair.
+/// A freshly issued session. The refresh token is not in it: the same response sets it as an
+/// <c>HttpOnly</c> cookie, single use, which the browser sends back to <c>/refresh</c> and
+/// <c>/logout</c> by itself (issue 107).
 /// </summary>
-/// <param name="AccessToken">Send as <c>Authorization: Bearer …</c>. Short-lived.</param>
+/// <param name="AccessToken">Send as <c>Authorization: Bearer …</c>. Short-lived; keep it in memory,
+/// never in storage.</param>
 /// <param name="ExpiresInSeconds">How long the access token has left, so the client can refresh
 /// before a request fails rather than after.</param>
-/// <param name="RefreshToken">
-/// Exchange for a new pair when the access token expires. Single use — the exchange returns a new
-/// refresh token, and the old one stops working the moment it is used.
-/// </param>
-public sealed record TokenPairResponse(string AccessToken, int ExpiresInSeconds, string RefreshToken);
+public sealed record TokenPairResponse(string AccessToken, int ExpiresInSeconds);
 
 /// <summary>
 /// Who the caller is, as the API sees them. The agency here is resolved from the token's claims,

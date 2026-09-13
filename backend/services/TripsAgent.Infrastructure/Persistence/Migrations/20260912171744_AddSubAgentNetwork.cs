@@ -212,6 +212,25 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                 columns: new[] { "sub_agency_id", "currency" },
                 unique: true);
 
+            // ------------------------------------------------------------------ admin alert types
+            //
+            // Not sub-agent work, but this is the newest migration, so it is where the fix has to
+            // live. AddStorefront widened ck_admin_alerts_type with HostnameReview and
+            // SiteCertificate; AddAdminConsole, written on a branch without the storefront, sorts
+            // after it and rewrote the constraint from its own list — dropping both. Each branch
+            // was right on its own and the merge made them wrong: a brand-like hostname or a failed
+            // certificate could no longer raise the alert a person needs to act on. The list is
+            // every value of AdminAlertType, and BackOfficeTests checks it stays that way.
+            migrationBuilder.Sql("""
+                ALTER TABLE platform.admin_alerts DROP CONSTRAINT IF EXISTS ck_admin_alerts_type;
+
+                ALTER TABLE platform.admin_alerts
+                    ADD CONSTRAINT ck_admin_alerts_type
+                        CHECK (type IN ('PendingKyb', 'GatewayError', 'Dispute', 'ReversalRequired',
+                                        'TicketTimeLimitBreach', 'LedgerIntegrity', 'SupplierBookingError',
+                                        'HostnameReview', 'SiteCertificate'));
+                """);
+
             // ------------------------------------------------------------------ constraints
             //
             // An agency never scopes, overrides or funds itself: that row would be meaningless and
@@ -450,6 +469,16 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             ArgumentNullException.ThrowIfNull(migrationBuilder);
+
+            // Back to what AddAdminConsole left, so each migration's Down undoes only its own Up.
+            migrationBuilder.Sql("""
+                ALTER TABLE platform.admin_alerts DROP CONSTRAINT IF EXISTS ck_admin_alerts_type;
+
+                ALTER TABLE platform.admin_alerts
+                    ADD CONSTRAINT ck_admin_alerts_type
+                        CHECK (type IN ('PendingKyb', 'GatewayError', 'Dispute', 'ReversalRequired',
+                                        'TicketTimeLimitBreach', 'LedgerIntegrity', 'SupplierBookingError'));
+                """);
 
             migrationBuilder.Sql("""
                 DROP FUNCTION IF EXISTS payments.reserve_sub_agent_allowance(text, bigint);

@@ -74,17 +74,17 @@ public sealed record ErasureOutcome(
 /// </remarks>
 public sealed partial class CustomerErasureService
 {
-    /// <summary>What a name becomes. Deliberately not a blank: a blank looks like a bug.</summary>
-    public const string ErasedName = "Erased at request";
+    /// <summary>What a name becomes. Shared with the database, which recognises it — see ErasureDefaults.</summary>
+    public const string ErasedName = ErasureDefaults.ErasedName;
 
     /// <summary>What a traveller's given name becomes.</summary>
-    public const string ErasedFirstName = "Erased";
+    public const string ErasedFirstName = ErasureDefaults.ErasedFirstName;
 
     /// <summary>What a traveller's family name becomes.</summary>
-    public const string ErasedLastName = "Traveller";
+    public const string ErasedLastName = ErasureDefaults.ErasedLastName;
 
     /// <summary>What a note about somebody becomes.</summary>
-    public const string ErasedText = "[erased at the person's request]";
+    public const string ErasedText = ErasureDefaults.ErasedText;
 
     private readonly IAppDbContext _db;
     private readonly IPlatformScope _platformScope;
@@ -201,13 +201,16 @@ public sealed partial class CustomerErasureService
                 var lineIds = await LineIdsAsync(orderIds, token);
                 var counts = new Dictionary<string, int>(StringComparer.Ordinal);
 
-                // The only copy of the person's contact details in the CRM.
+                // The only copy of the person's contact details in the CRM. The email becomes an address
+                // that cannot exist rather than nothing at all: the table's own rule is that a customer is
+                // contactable, and a row that breaks it would have to be deleted instead — taking the
+                // order's link to its buyer, and the agency's own sales record, with it.
                 counts["crm.customers"] = await _db.Customers
                     .Where(c => c.Id == customerId)
                     .ExecuteUpdateAsync(
                         set => set
                             .SetProperty(c => c.Name, ErasedName)
-                            .SetProperty(c => c.Email, (string?)null)
+                            .SetProperty(c => c.Email, Unreachable(request.Id))
                             .SetProperty(c => c.Phone, (string?)null)
                             .SetProperty(c => c.PhoneKey, (string?)null)
                             .SetProperty(c => c.UpdatedAt, now),
@@ -297,6 +300,19 @@ public sealed partial class CustomerErasureService
                             .SetProperty(d => d.UpdatedAt, now),
                         token);
 
+                // The invoices and vouchers themselves are tax records and keep the bytes that were issued
+                // (see the ADR). What goes is the recipient on the row, which is what a search finds and
+                // what a reissue would otherwise print again. The database permits exactly this change and
+                // no other to an issued document.
+                counts["documents.generated_documents"] = await _db.GeneratedDocuments
+                    .Where(document => document.OrderId != null && orderIds.Contains(document.OrderId.Value))
+                    .ExecuteUpdateAsync(
+                        set => set
+                            .SetProperty(d => d.RecipientName, ErasedName)
+                            .SetProperty(d => d.RecipientEmail, (string?)null)
+                            .SetProperty(d => d.UpdatedAt, now),
+                        token);
+
                 counts["platform.assets"] = evidenceFiles;
 
                 request.Complete(JsonSerializer.Serialize(counts), now);
@@ -326,8 +342,14 @@ public sealed partial class CustomerErasureService
 
     // ------------------------------------------------------------------ the parts
 
-    /// <summary>An address that exists nowhere and can never be delivered to. RFC 2606's reserved domain.</summary>
-    private static string Unreachable(Guid requestId) => $"erased-{requestId:N}@invalid";
+    /// <summary>
+    /// An address that exists nowhere and can never be delivered to: RFC 2606 reserves <c>.invalid</c>.
+    /// </summary>
+    /// <remarks>
+    /// Unique per request, and lower-case, so it satisfies the shape and uniqueness rules the columns
+    /// already carry without colliding with another erasure's placeholder.
+    /// </remarks>
+    private static string Unreachable(Guid requestId) => $"erased-{requestId:N}@erased.invalid";
 
     private Task<List<Guid>> OrderIdsAsync(Guid agencyId, Guid customerId, CancellationToken cancellationToken) =>
         _db.Orders

@@ -77,7 +77,7 @@ The client questions in [§7 of the architecture plan](ARCHITECTURE_AND_DELIVERY
 13. **Unpaid installments:** never cancelled automatically; flagged to the agency at T+7 with a suggested action.
 14. **Suspended agencies:** existing bookings stand, travellers keep their documents through their magic link, and support services them; no new bookings, and the storefront goes offline.
 15. **Downgrades:** existing usage is kept, new usage is blocked, and the agency gets 30 days' notice to put it right.
-16. **Search speed:** the 5-second target is measured on cached results; a live supplier search is bounded by its 20-second timeout.
+16. **Search speed:** the 5-second target is measured on cached results; a live supplier search is bounded by its 20-second timeout. **Measured** (issue 109, [docs/LOAD_TEST_SEARCH.md](LOAD_TEST_SEARCH.md)): warm, 36 ms at p95 at 20 searches a second; cold, 4.3 s at p95, of which 5 ms is ours. A cold search is the supplier's latency and nothing else, so post-cache is the only measurement the target can be held to.
 17. **Currency:** each agency sells in its own base currency only (NGN for now).
 18. **Card data:** never touches our servers; cards are entered only on Paystack's hosted page (PCI SAQ-A).
 19. **Email sender:** a neutral sending domain with no Trips branding, the agency's name as the display name and its address as reply-to. Per-agency sending domains come after the MVP.
@@ -988,12 +988,12 @@ Pre-launch readiness.
 
 #### #109 · Load test the search endpoint, cold and warm cache
 
-- [ ] A k6 (or NBomber) scenario checked into `backend/tests/load/`, runnable locally against Docker
-- [ ] Two runs reported separately: **cold** (every request reaches the supplier stub) and
-- [ ] The supplier is a WireMock stub with realistic injected latency. **Never load-test against
-- [ ] Reports p50/p95/p99 and error rate against the FRD §2.3 target of 5s p95, and states
-- [ ] Measures what the load does to Postgres and Redis: connection pool saturation, cache hit
-- [ ] Written up with the actual numbers, feeding open question 16 (is the SLA measured
+- [x] A k6 (or NBomber) scenario checked into `backend/tests/load/`, runnable locally against Docker *(`run.sh cold|warm`, with a stack of its own — its own database, Redis, RabbitMQ and the stub. Not a CI job: four minutes on every PR would prove nothing repeatable)*
+- [x] Two runs reported separately: **cold** (every request reaches the supplier stub) and warm *(6,002 searches each, no errors)*
+- [x] The supplier is a WireMock stub with realistic injected latency. **Never load-test against the real API** *(log-normal, median 1.5 s domestic and 3 s international; the profile cannot reach Trips Africa)*
+- [x] Reports p50/p95/p99 and error rate against the FRD §2.3 target of 5s p95, and states whether it is met *(warm 36 ms p95; cold 4,299 ms p95 — met, but only because the stub was told to answer in 3 s. Met **warm**, in substance)*
+- [x] Measures what the load does to Postgres and Redis: connection pool saturation, cache hit ratio, memory *(peak 29 of 100 connections cold; 98 % cache hit rate warm; Redis 143 MB for one agency's four minutes of cold searches)*
+- [x] Written up with the actual numbers, feeding open question 16 *(**[docs/LOAD_TEST_SEARCH.md](LOAD_TEST_SEARCH.md)**, with the laptop caveat stated. Our own time is 5 ms p50 of a cold search: the SLA is the supplier's, and is only meetable post-cache — which settles decision 16)*
 
 *Needs first:* #33, #40
 

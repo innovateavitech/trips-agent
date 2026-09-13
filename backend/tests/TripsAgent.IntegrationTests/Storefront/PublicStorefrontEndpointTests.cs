@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
+using TripsAgent.Api.Storefront;
 using TripsAgent.Application.Storefront;
 using TripsAgent.Contracts.Storefront;
 using TripsAgent.Domain.Assets;
@@ -392,6 +393,22 @@ public sealed class PublicStorefrontEndpointTests : IClassFixture<RedisFixture>,
         response.Headers.CacheControl!.Public.Should().BeTrue();
         response.Headers.CacheControl.MaxAge.Should().BeGreaterThan(TimeSpan.Zero);
         response.Headers.Vary.Should().Contain("Host", "the whole answer depends on which hostname was asked for");
+    }
+
+    [Fact]
+    public async Task A_preview_of_an_unpublished_draft_is_never_cached()
+    {
+        // A preview answer is the agency's draft — pages and prices nobody outside it is meant to
+        // see. Marking it "public" invited any cache in front of the storefront to hand that draft
+        // to every visitor of the host. Found in the internal adversarial pass for issue 110.
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri($"http://{QuietHost}{SitePath}"));
+        request.Headers.Add(PublicStorefrontEndpoints.PreviewTokenHeader, "not-a-real-grant");
+
+        using var response = await _api.SendAsync(request);
+
+        response.Headers.CacheControl?.Public.Should().NotBe(true, "a draft is nobody else's to serve");
+        response.Headers.Vary.Should().Contain(
+            PublicStorefrontEndpoints.PreviewTokenHeader, "or a cache mixes a preview up with the live page");
     }
 
     [Fact]

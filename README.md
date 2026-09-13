@@ -527,6 +527,8 @@ wallet screens without clicking through setup each time.
 | Wallet and ledger logic | `backend/services/TripsAgent.Domain/Payments/` |
 | An invoice or voucher layout | `backend/services/TripsAgent.Documents/` |
 | An email template | `backend/services/TripsAgent.Infrastructure/Notifications/Templates/` |
+| How fast search is, and what the load did to Postgres and Redis | [`docs/LOAD_TEST_SEARCH.md`](docs/LOAD_TEST_SEARCH.md), `backend/tests/load/` |
+| What a penetration tester is asked to do, and what we already found ourselves | [`docs/security/`](docs/security/) |
 | CI pipelines | `.github/workflows/` |
 
 ---

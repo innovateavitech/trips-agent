@@ -641,7 +641,7 @@ Ordered by blast radius. **Nothing here blocks starting Milestone 1**, but items
 
 ### Medium
 
-16. **Search latency SLA.** FRD §2.3 requires 5s for 95% of queries; live GDS search routinely exceeds that. Confirm the SLA is measured post-cache, or renegotiate against measured supplier latency.
+16. **Search latency SLA.** FRD §2.3 requires 5s for 95% of queries; live GDS search routinely exceeds that. Confirm the SLA is measured post-cache, or renegotiate against measured supplier latency. *Measured, September 2026 ([docs/LOAD_TEST_SEARCH.md](LOAD_TEST_SEARCH.md)): at 20 searches a second, a warm search is 36 ms at p95 and a cold one 4.3 s, of which our own work is 5 ms. The number is the supplier's, so the target is meetable post-cache and not otherwise. The client still has to agree that reading of it.*
 17. **Multi-currency and FX risk.** Who bears it, and which rate is authoritative (CBN official, parallel, gateway, or a commercial feed)? **Recommendation:** MVP sells only in the agent's base currency; multi-currency display with an agent-set spread is a fast-follow.
 18. **PCI scope.** The design assumes **SAQ-A** — all card entry on Paystack's hosted page or iframe, no card data touching our servers. A fully in-page custom card form jumps us to SAQ-A-EP and a much heavier compliance burden. Confirm **before** checkout UI design.
 19. **Branded email from custom domains.** Sending "from" an agent's own domain needs per-domain SPF/DKIM/DMARC. **Recommendation:** MVP sends from our domain with the agent's display name and reply-to; per-domain DKIM as a fast-follow. Otherwise the first hundred agents collectively destroy our sending reputation.

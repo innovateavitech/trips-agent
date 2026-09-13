@@ -65,7 +65,7 @@ public sealed class CartService
         string? sessionToken,
         CancellationToken cancellationToken = default)
     {
-        if (await _storefront.EnterAsync(host, cancellationToken) is null)
+        if (await _storefront.EnterAsync(host, StorefrontVisit.Shopping, cancellationToken) is null)
         {
             return Store.NotFound<CartResponse>(NoSuchShop);
         }
@@ -92,7 +92,7 @@ public sealed class CartService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var agency = await _storefront.EnterAsync(host, cancellationToken);
+        var agency = await _storefront.EnterAsync(host, StorefrontVisit.Shopping, cancellationToken);
 
         if (agency is null)
         {
@@ -171,7 +171,7 @@ public sealed class CartService
         Guid cartItemId,
         CancellationToken cancellationToken = default)
     {
-        if (await _storefront.EnterAsync(host, cancellationToken) is null)
+        if (await _storefront.EnterAsync(host, StorefrontVisit.Shopping, cancellationToken) is null)
         {
             return Store.NotFound<CartResponse>(NoSuchShop);
         }

@@ -140,6 +140,44 @@ public sealed class ReportingTests
         text.Should().NotContain("Margin").And.NotContain("Cost (NGN)");
     }
 
+    // ------------------------------------------------------------ one person's file is their own
+
+    [Fact]
+    public async Task A_colleague_cannot_list_or_download_somebody_elses_report()
+    {
+        await using var world = await AnalyticsWorld.CreateAsync(_postgres, Now, "reports_mine");
+        var agency = await world.AddAgencyAsync("Lagos Travel Limited", "lagos-travel");
+        await world.PlaceOrderAsync(agency, "ORD-1", Now);
+        await world.Rollup.RunFullRebuildAsync();
+
+        var owner = await world.AddUserAsync(agency, "ada@lagos-travel.test", "Ada");
+        var colleague = await world.AddUserAsync(agency, "emeka@lagos-travel.test", "Emeka");
+
+        // The owner runs a report with margin in it, which is the whole point of the attack: net
+        // rate and markup sitting in a file, addressable by id.
+        var mine = world.Reporting(agency, owner);
+
+        var result = await mine.Reports.RequestAsync(
+            ReportCatalog.AgencySalesDaily,
+            LagosDay.Of(Now).AddDays(-7),
+            LagosDay.Of(Now),
+            [PermissionCodes.ReportView, PermissionCodes.MarginView],
+            showMargin: true);
+
+        var jobId = result.Job!.Id;
+
+        (await mine.Reports.JobsAsync()).Should().ContainSingle().Which.Id.Should().Be(jobId);
+        (await mine.Reports.DownloadAsync(jobId)).Should().NotBeNull("it is their own report");
+
+        // Somebody else in the same agency, with no margin.view of their own, knows the id.
+        var theirs = world.Reporting(agency, colleague);
+
+        (await theirs.Reports.JobsAsync()).Should().BeEmpty("a report belongs to whoever asked for it");
+        (await theirs.Reports.JobAsync(jobId)).Should().BeNull();
+        (await theirs.Reports.DownloadAsync(jobId)).Should().BeNull(
+            "a finished report can carry net rate and markup — issue 110");
+    }
+
     // --------------------------------------------------------------------- every export is logged
 
     [Fact]
@@ -181,7 +219,9 @@ public sealed class ReportingTests
         await world.PlaceOrderAsync(agency, "ORD-1", Now);
         await world.Rollup.RunFullRebuildAsync();
 
-        var harness = world.Reporting(agency);
+        // Signed in as somebody: a report belongs to whoever asked for it, and only they can take
+        // the file (issue 110).
+        var harness = world.Reporting(agency, await world.AddUserAsync(agency, "ada@lagos-travel.test", "Ada"));
 
         var result = await harness.Reports.RequestAsync(
             ReportCatalog.AgencySalesDaily,

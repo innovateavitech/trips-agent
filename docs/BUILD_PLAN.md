@@ -49,8 +49,10 @@ The first place to look when picking this up again. Update it whenever a branch 
 | `feat/M4-data-protection` | 4 | F14's data protection: PII encryption at rest with a key ring and a rotation pass (#104), the three things #105 still owed, and NDPA erasure as anonymisation with its admin screen and ADR-0009 (#106) | merged into PR 4 |
 | `feat/M4-edge-hardening` | 4 | F14: security headers, a CORS policy from the verified domain table, the refresh token in an HttpOnly cookie (#107); dependency and secret scanning confirmed in CI (#108) | merged into PR 4 |
 
-**Next:** PR 3 is merged (#169). PR 4 is being built on three branches at once — data protection,
-edge hardening, and the load and penetration tests — which are assembled into one PR.
+**Next:** PRs 1 to 3 are merged (#167, #168, #169) and PR 4 is open from `feat/M4-launch`, carrying
+F14 at 46 of 50. What is left after it is in **[docs/HANDOVER.md](HANDOVER.md)**: the four F14 boxes
+that wait on people outside the code, the decisions waiting on the client, the six security issues
+the internal pass opened (#170-#175), and the scope the MVP deliberately left out.
 
 Before that: PR 2 is merged, and every issue it carried is closed. #18 is closed too, with the
 S3 adapter deferred until a cloud is chosen. All five `feat/M3-*` branches are merged into
@@ -270,8 +272,7 @@ Each feature meets its criteria the simplest safe way. These wait until after th
 
 ### F1 · Booking pipeline and checkout
 
-**M1 · In progress** · branch `feat/M1-ticket-issuance` · 9 of 58 boxes ticked
-
+**M1 · Merged in #167** · 53 of 58 boxes ticked
 A booking placed in the console ends in a real ticket issued exactly once, or in money provably returned. The ticket-issue call is never retried; the poller learns every outcome; the time-limit monitor fails bookings that ran out of time; the checkout saga holds the wallet before the supplier confirms, captures it on Ticketed and releases it on failure; failed lines land in the agent's resolution queue. The booking and bookings screens already exist against stand-ins, and switch to these endpoints in the same PR.
 
 - **Needs:** Built: price confirmation (#35), orders (#41), wallet and ledger (#22–#27), outbox and messaging (#30, #31).
@@ -408,8 +409,7 @@ Where an agent manages what they have sold — including the things that went wr
 
 ### F2 · Notifications and documents
 
-**M1 · In progress** · branch `feat/M1-notifications-documents` · 0 of 14 boxes ticked
-
+**M1 · Merged in #167** · 13 of 14 boxes ticked
 Every booking produces the paperwork a traveller expects, in the agent's brand: an invoice and a voucher as PDFs, numbered without gaps, emailed to the customer and downloadable from the console; and the emails that tell agents and customers what happened.
 
 - **Needs:** F1, for the booking events that trigger them. Built: gapless numbering (#47), the asset pipeline to store PDFs.
@@ -455,8 +455,7 @@ FRD §2.9 — QuestPDF documents produced when an order line reaches Confirmed.
 
 ### F3 · Product catalog
 
-**M2 · In progress** · branch `feat/M2-catalog-api (backend) and feat/M2-catalog-screens (console), landing as one PR` · 0 of 36 boxes ticked
-
+**M2 · Merged in #168** · 36 of 36 boxes ticked
 Agents build tours, packages and visa listings — itinerary, inclusions, prices by room, age and group size, images, categories and themes — and publish them once they pass the publish rules. The pricing screen then picks a product by name instead of an ID.
 
 - **Needs:** Built: the asset pipeline (#120), pricing (#28).
@@ -554,7 +553,7 @@ The pricing screen takes a product ID for a product-scoped rule, because there w
 
 ### F4 · Storefront
 
-**M2 · Done** · 19 of 19 boxes ticked · `feat/M2-storefront`
+**M2 · Merged in #168** · 19 of 19 boxes ticked
 
 Every agent gets a branded website: built from templates and blocks in the console, published with rollback, served on their own domain with SSL, showing their catalog to travellers. Nothing on it may mention Trips.
 
@@ -602,8 +601,7 @@ The Next.js traveller-facing site.
 
 ### F5 · Customer commerce
 
-**M2 · Done** · 7 of 7 boxes ticked
-
+**M2 · Merged in #168** · 7 of 7 boxes ticked
 Travellers buy on the agent's storefront: a cart mixing flights, buses, tours and visas, guest checkout, card payment, a magic link to manage the booking, and partial failures routed to the agent's resolution queue.
 
 - **Needs:** F1 (the saga, extended to multi-line carts) and F4 (the storefront it runs on).
@@ -656,8 +654,7 @@ The traveller's buying flow.
 
 ### F6 · Group tours
 
-**M2 · Done** · branch `feat/M2-departures` · 7 of 7 boxes ticked
-
+**M2 · Merged in #168** · 7 of 7 boxes ticked
 Fixed-date departures sold by the seat, with deposits, installment plans, a waitlist and manifests — and a database that makes overselling impossible.
 
 - **Needs:** F3 (a departure belongs to a product); F5 for travellers to buy seats.
@@ -708,8 +705,7 @@ without which nothing could join a waitlist at all. The storefront needs it too 
 
 ### F7 · CRM
 
-**M2 · In progress** · branch `feat/M2-crm` · 6 of 6 boxes ticked
-
+**M2 · Merged in #168** · 6 of 6 boxes ticked
 Leads from the storefront's trip-request widget, a pipeline from New to Won, quotes with a public accept link, follow-up tasks, and a customer record built from every inquiry, quote and booking.
 
 - **Needs:** F2 (emails) and F4 (the widget lives on the storefront).
@@ -781,8 +777,7 @@ POST /api/v1/public/crm/quotes/{token}/decline  → PublicQuoteResponse: {reason
 
 ### F8 · Admin console
 
-**M3 · Done** · branch `feat/M3-admin-console` · 5 of 6 boxes ticked
-
+**M3 · Merged in #169** · 5 of 6 boxes ticked
 How Trips runs the platform: agent search and profiles, verify, suspend and terminate with an audit trail, back-office roles, and an operations dashboard.
 
 - **Needs:** Built: KYB review (#20, #131).
@@ -820,8 +815,7 @@ PR 2 merges**, since there is no host resolution on this branch to call it from.
 
 ### F9 · Subscriptions and billing
 
-**M3 · Done** · branch `feat/M3-billing` · 10 of 10 boxes ticked
-
+**M3 · Merged in #169** · 10 of 10 boxes ticked
 Plans with entitlements the platform enforces at runtime, configured by admins, and recurring billing with dunning.
 
 - **Needs:** F8, where admins configure tiers.
@@ -854,8 +848,7 @@ Charging agents on a schedule.
 
 ### F10 · Sub-agent network
 
-**M3 · Done** · branch `feat/M3-subagents` · 7 of 7 boxes ticked
-
+**M3 · Merged in #169** · 7 of 7 boxes ticked
 Agencies invite agents beneath them, choose what each may sell and whether they see margins, and give them wallet allowances they cannot exceed.
 
 - **Needs:** F9 (the number of sub-agents is an entitlement). Built against a named seam,
@@ -879,8 +872,7 @@ FRD §2.7 — an agency onboards agents beneath it.
 
 ### F11 · Analytics and reporting
 
-**M3 · Done** · branch `feat/M3-analytics` · 9 of 11 boxes ticked
-
+**M3 · Merged in #169** · 9 of 11 boxes ticked
 Dashboards from read models rather than live tables, and reports — synchronous for small scopes, asynchronous for large ones — with every export logged.
 
 - **Needs:** F1, so there are bookings to count.
@@ -955,8 +947,7 @@ percentile rather than an average and maximum.
 
 ### F12 · Payouts, disputes and reconciliation
 
-**M3 · Done** · branch `feat/M3-payouts` · 4 of 4 boxes ticked
-
+**M3 · Merged in #169** · 4 of 4 boxes ticked
 Money out to agents' banks, a dispute workflow with evidence, and a daily reconciliation of Paystack settlements against the ledger.
 
 - **Needs:** F5, so travellers' card payments exist.
@@ -976,8 +967,7 @@ Getting money out and keeping the books straight.
 
 ### F13 · Loyalty and reviews
 
-**M3 · Flag shipped with F9** · 1 of 4 boxes ticked
-
+**M3 · Merged in #169** · 1 of 4 boxes ticked
 The entitlement flag for loyalty now, so tiers can carry it. Points, redemption and reviews wait on requirements: the FRD lists both with no use case written (open question 24).
 
 - **Needs:** F9, where entitlements live.
@@ -1003,8 +993,7 @@ FRD §1.2 lists both in scope with no use case written.
 
 ### F14 · Security and launch readiness
 
-**M4 · In progress** · 46 of 50 boxes ticked
-
+**M4 · In PR 4** · 46 of 50 boxes ticked
 What must be true before real travellers and real money: encrypted traveller documents, retention and erasure, hardened headers and cookies, scanning in CI, a load test and a penetration test.
 
 - **Needs:** Each item names its own; the penetration test comes last.

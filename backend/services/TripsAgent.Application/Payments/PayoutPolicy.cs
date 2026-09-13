@@ -154,14 +154,17 @@ public sealed class PayoutBalances
         var settledBefore = _clock.GetUtcNow() - PayoutLimits.SettlementWindow;
 
         // Summed from the statement rather than from payment_transactions, because the statement
-        // is per wallet and already says which credits came from outside. SumAsync over an empty
-        // set returns 0, which is the right answer for a wallet nobody has paid into.
-        var pendingSettlement = await _db.WalletTransactions
+        // is per wallet and already says which credits came from outside. Summed in memory: Money
+        // is a value converter, which EF cannot aggregate, and a two-day window is a handful of rows.
+        var recentCredits = await _db.WalletTransactions
             .AsNoTracking()
             .Where(line => line.WalletId == wallet.Id
                            && line.OccurredAt > settledBefore
                            && GatewayCredits.Contains(line.Type))
-            .SumAsync(line => line.AmountMinor.AmountMinor, cancellationToken);
+            .Select(line => line.AmountMinor)
+            .ToListAsync(cancellationToken);
+
+        var pendingSettlement = recentCredits.Sum(amount => amount.AmountMinor);
 
         var available = wallet.AvailableMinor.AmountMinor;
 
@@ -207,11 +210,12 @@ public sealed class PayoutBalances
         var localMidnight = new DateTimeOffset(localNow.Date, localNow.Offset);
         var since = localMidnight.ToUniversalTime();
 
-        var minor = await _db.Payouts
+        var amounts = await _db.Payouts
             .AsNoTracking()
             .Where(payout => payout.AgencyId == agencyId && payout.RequestedAt >= since)
-            .SumAsync(payout => payout.AmountMinor.AmountMinor, cancellationToken);
+            .Select(payout => payout.AmountMinor)
+            .ToListAsync(cancellationToken);
 
-        return new Money(minor);
+        return new Money(amounts.Sum(amount => amount.AmountMinor));
     }
 }

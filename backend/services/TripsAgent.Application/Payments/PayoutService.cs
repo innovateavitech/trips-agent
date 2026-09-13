@@ -178,7 +178,9 @@ public sealed class PayoutService
                 + $"{Naira(today)} has already been requested today. Try again tomorrow, or contact support.");
         }
 
-        var reference = $"PO-{now.UtcDateTime:yyyyMMdd}-{Guid.CreateVersion7().ToString("N")[..12].ToUpperInvariant()}";
+        // The random tail of the id, not its head: a v7 id starts with the millisecond, and two
+        // requests in the same millisecond would otherwise share a reference.
+        var reference = $"PO-{now.UtcDateTime:yyyyMMdd}-{Guid.NewGuid().ToString("N")[^12..].ToUpperInvariant()}";
         var groupId = await MoveOutOfWalletAsync(wallet, amount, reference, now, cancellationToken);
 
         var payout = Payout.Request(

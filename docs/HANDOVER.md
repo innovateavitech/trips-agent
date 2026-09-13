@@ -74,22 +74,37 @@ with a comment pointing here. Reopen #110 to track the external test once it is 
    week of real `supplier_api_calls.latency_ms`; open question 16 asks whether the SLA should be
    measured with the supplier included at all. See [LOAD_TEST_SEARCH.md](LOAD_TEST_SEARCH.md).
 
-## 2. Security findings still open
+## 2. Security findings — fixed on branches, not yet merged
 
-Found by the internal adversarial pass, one issue each, none Critical or High — those were
-fixed in PR 4 with tests.
+The internal adversarial pass opened six issues. Work on all six exists on two branches that are
+**pushed but not merged**, because the session ended before their test runs finished. Nothing here
+has been through CI. Each branch was cut from `main` and each commit builds with no warnings.
 
-| Issue | Finding | Severity |
-|---|---|---|
-| [#170](https://github.com/innovateavitech/trips-agent/issues/170) | An invitation can make a verified account for an address nobody proved | Medium |
-| [#171](https://github.com/innovateavitech/trips-agent/issues/171) | A suspended agency still takes trip requests and quote acceptances | Medium |
-| [#172](https://github.com/innovateavitech/trips-agent/issues/172) | Any agency user can replace the agency's KYB submission | Low |
-| [#173](https://github.com/innovateavitech/trips-agent/issues/173) | Unauthenticated routes that cost CPU or a gateway call are unthrottled | Low |
-| [#174](https://github.com/innovateavitech/trips-agent/issues/174) | A traveller's document link never expires and outlives the agency | Low |
-| [#175](https://github.com/innovateavitech/trips-agent/issues/175) | Three loose ends: dispute evidence assets, quote tokens stored in plain text, and an allowlist | Low |
+| Issue | Finding | Branch | State |
+|---|---|---|---|
+| [#170](https://github.com/innovateavitech/trips-agent/issues/170) | An invitation marked an address verified that nobody proved | `fix/security-identity` | Fixed: an invited account now proves its address with the six-digit code, as a self-registered one does |
+| [#171](https://github.com/innovateavitech/trips-agent/issues/171) | A suspended agency still took trip requests and quote acceptances | `fix/security-identity` | Fixed: the storefront CRM uses the same standing rule as the rest of the storefront |
+| [#172](https://github.com/innovateavitech/trips-agent/issues/172) | Any agency user could replace the KYB submission | `fix/security-identity` | Fixed: KYB upload, delete and submit need an owner-level permission |
+| [#173](https://github.com/innovateavitech/trips-agent/issues/173) | Anonymous routes that cost CPU or a gateway call were unthrottled | both | Fixed: the invitation token is looked up before Argon2 runs (identity), the gateway is asked only about payments we hold, and the storefront routes carry the `Storefront` policy (edges) |
+| [#174](https://github.com/innovateavitech/trips-agent/issues/174) | A traveller's document link never expired and outlived the agency | `fix/security-edges` | Fixed: the link expires and follows the agency's standing, like the booking link |
+| [#175](https://github.com/innovateavitech/trips-agent/issues/175) | Three loose ends | both | Items 1 and 3 fixed on `fix/security-edges` (evidence assets checked against the agency; the allowance release bounded inside the SECURITY DEFINER function). **Item 2, hashing the quote link token, is unfinished** — see below |
 
-The two Mediums are worth fixing before the external test, so the tester does not spend paid time
-rediscovering them.
+### Finishing it
+
+1. **`fix/security-edges`** — four fixes committed, nothing loose. Its frontend gates and two
+   integration batches passed; the rest of the suite had not been run.
+2. **`fix/security-identity`** — four fixes committed, then one commit marked *unfinished*:
+   `chore(crm): start hashing the quote link token`. It compiles and nothing depends on it. What
+   stopped it is in the commit message: `AddCrm` carries a CHECK constraint **and an immutability
+   trigger** that both name `public_token`, and neither goes away when the column is dropped — the
+   trigger then breaks every quote update. Carry both across in the second migration. The pattern to
+   copy is the PII encryption already on `main`: add the column, backfill through the `migrate`
+   command, then drop the plaintext in a migration that refuses while anything is still unhashed.
+   Either finish it or revert that one commit; the other four do not depend on it.
+3. Merge both branches into one, regenerate the model snapshot rather than hand-merging it
+   (`./scripts/ef.sh add MergeSnapshotTemp`, check the throwaway holds only your own tables, delete
+   its two files, then `./scripts/ef.sh check`), run `pnpm install` and `pnpm generate:api`, run
+   every gate, and open one PR closing #170–#175.
 
 ## 3. Decisions waiting on the client
 

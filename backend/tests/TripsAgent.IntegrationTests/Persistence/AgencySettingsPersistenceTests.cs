@@ -198,8 +198,9 @@ public class AgencySettingsPersistenceTests
 
         var created = await DatabaseSeeder.SeedAsync(context, _tenancy.Scope, new Argon2PasswordHasher());
 
-        // Two demo agencies plus a third left unverified, so the KYB queue has something in it.
-        created.Should().Be(3);
+        // Two demo agencies, a third left unverified so the KYB queue has something in it, and a
+        // fourth with no relation to any of them, for testing the tenant boundary (issue 110).
+        created.Should().Be(4);
 
         context.ChangeTracker.Clear();
 
@@ -214,8 +215,8 @@ public class AgencySettingsPersistenceTests
         subAgent.Path.Should().StartWith(principal.Path);
 
         // Each gets its own settings and branding row.
-        (await context.AgencySettings.CountAsync()).Should().Be(3);
-        (await context.AgencyBranding.CountAsync()).Should().Be(3);
+        (await context.AgencySettings.CountAsync()).Should().Be(4);
+        (await context.AgencyBranding.CountAsync()).Should().Be(4);
     }
 
     [Fact]
@@ -231,7 +232,7 @@ public class AgencySettingsPersistenceTests
         second.Should().Be(0);
 
         using var _ = _tenancy.Scope.Enter("test — counting seeded rows across agencies");
-        (await context.Agencies.CountAsync()).Should().Be(3);
+        (await context.Agencies.CountAsync()).Should().Be(4);
     }
 
     private static Agency NewPrincipal(string slug) =>

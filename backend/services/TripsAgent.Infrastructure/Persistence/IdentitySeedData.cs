@@ -29,8 +29,29 @@ public static class IdentitySeedData
     public const string SubAgentEmail = "owner@ikejabranch.example.com";
     public const string PendingAgentEmail = "owner@pendingtravel.example.com";
 
+    /// <summary>
+    /// An owner at a second, unrelated agency — not a sub-agent of the first, with nothing in
+    /// common with it.
+    /// </summary>
+    /// <remarks>
+    /// Seeded so there is always somebody to attack the tenant boundary with. A penetration test
+    /// is given this account and the one at Lagos Travel and asked to make either read the other's
+    /// data (docs/security/PENETRATION_TEST_SCOPE.md), and a sub-agent will not do: a principal is
+    /// *meant* to see some of its sub-agent's rows.
+    /// </remarks>
+    public const string RivalAgentEmail = "owner@kanojourneys.example.com";
+
+    /// <summary>
+    /// A counter agent at the first agency: signed in, and deliberately without
+    /// <c>margin.view</c>, so "can a colleague see the net rate?" can be asked of a real account.
+    /// </summary>
+    public const string CounterAgentEmail = "agent@lagostravel.example.com";
+
     /// <summary>Slug of the extra agency seeded so a pending-verification account exists.</summary>
     public const string PendingAgencySlug = "pending-travel";
+
+    /// <summary>Slug of the unrelated second agency. See <see cref="RivalAgentEmail"/>.</summary>
+    public const string RivalAgencySlug = "kano-journeys";
 
     /// <summary>Everything an agency Owner may do — every agency permission, no platform ones.</summary>
     public static IReadOnlyList<string> OwnerPermissions { get; } =

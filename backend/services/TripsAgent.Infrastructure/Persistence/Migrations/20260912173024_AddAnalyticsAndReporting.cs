@@ -652,6 +652,25 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     WITH CHECK (true);
                 """);
 
+            // ------------------------------------------------------- the alert types, restored
+            //
+            // Not analytics, but this is the last migration, so it is the only place the fix can
+            // live. AddStorefront widened ck_admin_alerts_type to accept HostnameReview and
+            // SiteCertificate. AddAdminConsole was written on a branch that did not have the
+            // storefront yet, carries a later timestamp, and redefines the same constraint from its
+            // own list — so on a fresh database it silently narrows it again, and every hostname
+            // review and certificate alert the storefront raises is refused. Neither migration is
+            // wrong on its own; together they are. The list here is every AdminAlertType there is.
+            migrationBuilder.Sql("""
+                ALTER TABLE platform.admin_alerts DROP CONSTRAINT IF EXISTS ck_admin_alerts_type;
+
+                ALTER TABLE platform.admin_alerts
+                    ADD CONSTRAINT ck_admin_alerts_type
+                        CHECK (type IN ('PendingKyb', 'GatewayError', 'Dispute', 'ReversalRequired',
+                                        'TicketTimeLimitBreach', 'LedgerIntegrity', 'SupplierBookingError',
+                                        'HostnameReview', 'SiteCertificate'));
+                """);
+
             // ------------------------------------------------------------------ the report catalogue
             //
             // Seeded here rather than by a runtime seeder so a fresh database can run a report
@@ -722,6 +741,19 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                 DROP POLICY IF EXISTS tenant_isolation_read ON analytics.report_exports_audit;
                 DROP TRIGGER IF EXISTS report_exports_audit_append_only_trg ON analytics.report_exports_audit;
                 DROP FUNCTION IF EXISTS analytics.reject_export_audit_rewrite();
+                """);
+
+            // Back to what AddAdminConsole left, narrow as it was. Storefront alerts already stored
+            // would fail the check, so they are removed first, as AddStorefront's own Down does.
+            migrationBuilder.Sql("""
+                DELETE FROM platform.admin_alerts WHERE type IN ('HostnameReview', 'SiteCertificate');
+
+                ALTER TABLE platform.admin_alerts DROP CONSTRAINT IF EXISTS ck_admin_alerts_type;
+
+                ALTER TABLE platform.admin_alerts
+                    ADD CONSTRAINT ck_admin_alerts_type
+                        CHECK (type IN ('PendingKyb', 'GatewayError', 'Dispute', 'ReversalRequired',
+                                        'TicketTimeLimitBreach', 'LedgerIntegrity', 'SupplierBookingError'));
                 """);
 
             migrationBuilder.DropTable(

@@ -56,6 +56,24 @@ public enum LedgerAccountType
 
     /// <summary>Money returned.</summary>
     Refunds = 7,
+
+    /// <summary>
+    /// Money an agency has asked to withdraw, taken out of their wallet and not yet in their bank.
+    /// A <i>liability</i> — still theirs, merely earmarked — so credits increase it.
+    /// </summary>
+    /// <remarks>
+    /// A payout is two movements, not one: out of the wallet when it is requested, and out of the
+    /// platform's cash when the transfer actually lands. Between those two moments the money is
+    /// neither spendable by the agency nor gone, and this account is what that in-between looks
+    /// like on the books. Without it a payout that fails would have nowhere to come back from.
+    /// </remarks>
+    PayoutPayable = 8,
+
+    /// <summary>
+    /// Money frozen while a cardholder's chargeback is decided. A <i>liability</i>: it is either
+    /// the agency's or the cardholder's, and until the gateway rules nobody knows which.
+    /// </summary>
+    DisputeHeld = 9,
 }
 
 /// <summary>
@@ -85,6 +103,8 @@ public static class LedgerAccountTypeExtensions
         LedgerAccountType.PlatformRevenue => false,
         LedgerAccountType.SupplierPayable => false,
         LedgerAccountType.TaxPayable => false,
+        LedgerAccountType.PayoutPayable => false,
+        LedgerAccountType.DisputeHeld => false,
 
         _ => throw new ArgumentOutOfRangeException(
             nameof(accountType), accountType, "No normal balance defined for this account type."),

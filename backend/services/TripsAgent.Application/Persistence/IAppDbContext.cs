@@ -126,6 +126,24 @@ public interface IAppDbContext
     /// </remarks>
     public DbSet<ReconciliationException> ReconciliationExceptions { get; }
 
+    /// <summary>
+    /// One row per reconciler per gateway per day.
+    /// </summary>
+    /// <remarks>
+    /// Platform-wide for the same reason the exceptions are: a settlement that matches nothing
+    /// belongs to no agency. Reached only inside an <c>IPlatformScope</c>.
+    /// </remarks>
+    public DbSet<ReconciliationRun> ReconciliationRuns { get; }
+
+    /// <summary>Where each agency is paid. Verified against the bank before anything is sent.</summary>
+    public DbSet<AgencyBankAccount> AgencyBankAccounts { get; }
+
+    /// <summary>Agencies withdrawing their own money to their own banks.</summary>
+    public DbSet<Payout> Payouts { get; }
+
+    /// <summary>Chargebacks: a cardholder's bank taking money back, on a deadline we do not set.</summary>
+    public DbSet<Dispute> Disputes { get; }
+
     /// <summary>Uploaded files, from the moment a slot is reserved to the moment they are servable.</summary>
     public DbSet<Asset> Assets { get; }
 

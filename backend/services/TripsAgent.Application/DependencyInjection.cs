@@ -80,6 +80,25 @@ public static class DependencyInjection
 
         services.AddScoped<ILedgerIntegrityAudit, LedgerIntegrityAudit>();
 
+        // Money out (build plan F12, issue 69). The request moves the ledger, the approval is a
+        // second person, and the sender is a dumb executor of instructions somebody already
+        // checked. The poller is the only way out of an unknown outcome — see ADR-0008.
+        services.AddScoped<PayoutBalances>();
+        services.AddScoped<BankAccountService>();
+        services.AddScoped<PayoutService>();
+        services.AddScoped<PayoutSettlements>();
+        services.AddScoped<IPayoutTransferService, PayoutTransferService>();
+        services.AddScoped<IPayoutStatusPoller, PayoutStatusPoller>();
+
+        // Chargebacks: the webhook hands them over, the deadline monitor chases the evidence.
+        services.AddScoped<DisputeService>();
+        services.AddScoped<IDisputeWebhookSink>(sp => sp.GetRequiredService<DisputeService>());
+        services.AddScoped<IDisputeDeadlineMonitor>(sp => sp.GetRequiredService<DisputeService>());
+
+        // The daily match of the gateway's settlements against the books. Reads and reports; never corrects.
+        services.AddScoped<IGatewayReconciliation, GatewayReconciliation>();
+        services.AddScoped<ReconciliationTriage>();
+
         services.AddScoped<DocumentIssuer>();
 
         // Records what was sold, at the price the quote froze. The saga (#42) takes it from there.

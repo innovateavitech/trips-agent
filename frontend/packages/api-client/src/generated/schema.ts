@@ -615,6 +615,262 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payouts/banks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListPayoutBanks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/bank-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListBankAccounts"];
+        put?: never;
+        post: operations["AddBankAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/bank-accounts/{bankAccountId}/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MakeBankAccountDefault"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/bank-accounts/{bankAccountId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["RemoveBankAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWithdrawableBalance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListPayouts"];
+        put?: never;
+        post: operations["RequestPayout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/disputes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDisputes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/disputes/{disputeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDispute"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/disputes/{disputeId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SubmitDisputeEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PayoutApprovalQueue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts/{payoutId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ApprovePayout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts/{payoutId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RejectPayout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/finance/disputes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FinanceDisputeQueue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/finance/reconciliation/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReconciliationRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/finance/reconciliation/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReconciliationExceptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/finance/reconciliation/exceptions/{exceptionId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CloseReconciliationException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pricing/markup-rules": {
         parameters: {
             query?: never;
@@ -2393,6 +2649,19 @@ export interface components {
             agencyId: string;
             email: string;
         };
+        AddBankAccountRequest: {
+            bankCode: string;
+            accountNumber: string;
+            accountName: string;
+        };
+        AddBankAccountResponse: {
+            /** Format: uuid */
+            bankAccountId: string;
+            accountName: string;
+            nameMatchesBusiness: boolean;
+            /** Format: date-time */
+            usableFrom: string;
+        };
         AddCartItemRequest: {
             /** Format: uuid */
             productId?: null | string;
@@ -2639,6 +2908,26 @@ export interface components {
             page: number | string;
             /** Format: int32 */
             pageSize: number | string;
+        };
+        BankAccountResponse: {
+            /** Format: uuid */
+            id: string;
+            bankName: string;
+            maskedNumber: string;
+            accountNameResolved: null | string;
+            accountNameProvided: string;
+            status: string;
+            rejectionReason: null | string;
+            isDefault: boolean;
+            /** Format: date-time */
+            verifiedAt: null | string;
+            /** Format: date-time */
+            usableFrom: null | string;
+            currency: string;
+        };
+        BankResponse: {
+            code: string;
+            name: string;
         };
         BeginCheckoutRequest: {
             contact: components["schemas"]["CheckoutContactRequest"];
@@ -2921,6 +3210,10 @@ export interface components {
             tierId: string;
             callbackUrl: string;
         };
+        CloseReconciliationExceptionRequest: {
+            closure: string;
+            note: string;
+        };
         CommunicationRequest: {
             channel: string;
             direction: string;
@@ -3111,6 +3404,39 @@ export interface components {
             cutoffAt: string;
             /** Format: int32 */
             version: number | string;
+        };
+        DisputeEvidenceDefaults: {
+            customerName: null | string;
+            customerEmail: null | string;
+            customerPhone: null | string;
+            serviceDetails: null | string;
+        };
+        DisputeResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            agencyId: string;
+            paymentReference: string;
+            /** Format: uuid */
+            orderId: null | string;
+            /** Format: int64 */
+            amountMinor: number | string;
+            currency: string;
+            category: null | string;
+            reason: null | string;
+            status: string;
+            holdOutcome: string;
+            /** Format: date-time */
+            openedAt: string;
+            /** Format: date-time */
+            evidenceDueAt: string;
+            /** Format: date-time */
+            evidenceSubmittedAt: null | string;
+            /** Format: date-time */
+            resolvedAt: null | string;
+            resolution: null | string;
+            acceptsEvidence: boolean;
+            evidenceDefaults: null | components["schemas"]["DisputeEvidenceDefaults"];
         };
         EmailVerifiedResponse: {
             message: string;
@@ -3633,6 +3959,44 @@ export interface components {
             bookingsNeedingResolution: number | string;
             sales: components["schemas"]["SalesWindowResponse"][];
             alerts: components["schemas"]["AdminAlertResponse"][];
+        };
+        PayoutApprovalItemResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            agencyId: string;
+            agencyName: string;
+            reference: string;
+            /** Format: int64 */
+            amountMinor: number | string;
+            currency: string;
+            status: string;
+            bankName: string;
+            maskedNumber: string;
+            accountNameResolved: null | string;
+            /** Format: uuid */
+            requestedByUserId: string;
+            /** Format: date-time */
+            requestedAt: string;
+        };
+        PayoutResponse: {
+            /** Format: uuid */
+            id: string;
+            reference: string;
+            /** Format: int64 */
+            amountMinor: number | string;
+            currency: string;
+            status: string;
+            bankName: string;
+            maskedNumber: string;
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            approvedAt: null | string;
+            /** Format: date-time */
+            completedAt: null | string;
+            rejectionReason: null | string;
+            failureReason: null | string;
         };
         PlaceBookingRequest: {
             reference: string;
@@ -4195,6 +4559,62 @@ export interface components {
             /** Format: date-time */
             sentAt: null | string;
         };
+        ReconciliationExceptionResponse: {
+            /** Format: uuid */
+            id: string;
+            check: string;
+            severity: string;
+            status: string;
+            subject: string;
+            detail: string;
+            /** Format: int64 */
+            expectedMinor: number | string;
+            /** Format: int64 */
+            actualMinor: number | string;
+            /** Format: int64 */
+            differenceMinor: number | string;
+            /** Format: uuid */
+            agencyId: null | string;
+            /** Format: uuid */
+            reconciliationRunId: null | string;
+            /** Format: int32 */
+            timesSeen: number | string;
+            /** Format: date-time */
+            detectedAt: string;
+            /** Format: date-time */
+            resolvedAt: null | string;
+            resolutionNote: null | string;
+        };
+        ReconciliationRunResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            businessDate: string;
+            gateway: string;
+            status: string;
+            /** Format: int32 */
+            recordsExamined: number | string;
+            /** Format: int32 */
+            recordsMatched: number | string;
+            /** Format: int32 */
+            exceptionsRaised: number | string;
+            /** Format: int64 */
+            gatewayGrossMinor: number | string;
+            /** Format: int64 */
+            gatewayFeesMinor: number | string;
+            /** Format: int64 */
+            gatewayNetMinor: number | string;
+            /** Format: int64 */
+            ledgerGrossMinor: number | string;
+            /** Format: int64 */
+            differenceMinor: number | string;
+            currency: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+            failureReason: null | string;
+        };
         RefreshTokenRequest: {
             refreshToken: string;
         };
@@ -4213,6 +4633,9 @@ export interface components {
         RejectKybRequest: {
             reason: string;
         };
+        RejectPayoutRequest: {
+            reason: string;
+        };
         RelatedRecord: {
             type: string;
             /** Format: uuid */
@@ -4224,6 +4647,19 @@ export interface components {
             /** Format: int64 */
             sizeBytes: number | string;
             contentType: null | string;
+        };
+        RequestPayoutRequest: {
+            /** Format: int64 */
+            amountMinor: number | string;
+            /** Format: uuid */
+            bankAccountId: null | string;
+        };
+        RequestPayoutResponse: {
+            /** Format: uuid */
+            payoutId: string;
+            reference: string;
+            /** Format: int64 */
+            amountMinor: number | string;
         };
         ResendVerificationRequest: {
             email: string;
@@ -4612,6 +5048,16 @@ export interface components {
         SubAgentStandingRequest: {
             reason: string;
         };
+        SubmitDisputeEvidenceRequest: {
+            customerName: string;
+            customerEmail: string;
+            customerPhone: string;
+            serviceDetails: string;
+            /** Format: date */
+            deliveryDate: null | string;
+            note: null | string;
+            assetIds: null | string[];
+        };
         SubscriberResponse: {
             /** Format: uuid */
             agencyId: string;
@@ -4854,6 +5300,25 @@ export interface components {
             reservedMinor: number | string;
             /** Format: int64 */
             availableMinor: number | string;
+            currency: string;
+        };
+        WithdrawableBalanceResponse: {
+            /** Format: int64 */
+            balanceMinor: number | string;
+            /** Format: int64 */
+            reservedMinor: number | string;
+            /** Format: int64 */
+            availableMinor: number | string;
+            /** Format: int64 */
+            pendingSettlementMinor: number | string;
+            /** Format: int64 */
+            withdrawableMinor: number | string;
+            /** Format: int64 */
+            minimumPayoutMinor: number | string;
+            /** Format: int64 */
+            dailyCapMinor: number | string;
+            /** Format: int32 */
+            settlementWindowDays: number | string;
             currency: string;
         };
     };
@@ -6073,6 +6538,399 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["VerifyTopUpResponse"];
                 };
+            };
+        };
+    };
+    ListPayoutBanks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankResponse"][];
+                };
+            };
+        };
+    };
+    ListBankAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountResponse"][];
+                };
+            };
+        };
+    };
+    AddBankAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddBankAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddBankAccountResponse"];
+                };
+            };
+        };
+    };
+    MakeBankAccountDefault: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bankAccountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RemoveBankAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bankAccountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetWithdrawableBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawableBalanceResponse"];
+                };
+            };
+        };
+    };
+    ListPayouts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutResponse"][];
+                };
+            };
+        };
+    };
+    RequestPayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestPayoutRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestPayoutResponse"];
+                };
+            };
+        };
+    };
+    ListDisputes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisputeResponse"][];
+                };
+            };
+        };
+    };
+    GetDispute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                disputeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisputeResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SubmitDisputeEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                disputeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitDisputeEvidenceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayoutApprovalQueue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutApprovalItemResponse"][];
+                };
+            };
+        };
+    };
+    ApprovePayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RejectPayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectPayoutRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FinanceDisputeQueue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisputeResponse"][];
+                };
+            };
+        };
+    };
+    ReconciliationRuns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRunResponse"][];
+                };
+            };
+        };
+    };
+    ReconciliationExceptions: {
+        parameters: {
+            query?: {
+                includeClosed?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationExceptionResponse"][];
+                };
+            };
+        };
+    };
+    CloseReconciliationException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exceptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseReconciliationExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

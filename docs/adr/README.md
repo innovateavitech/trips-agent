@@ -54,3 +54,4 @@ afternoon.
 | [0005](0005-own-the-transactional-outbox.md) | Own the outbox table and dispatcher; MassTransit carries the messages | Proposed |
 | [0006](0006-row-level-security-backstop.md) | Enforce tenant isolation in PostgreSQL too, with row-level security | Accepted |
 | [0007](0007-generated-documents-skip-the-virus-scan.md) | Serve the documents we render without a virus scan, and nothing else | Proposed |
+| [0008](0008-never-retry-payout-transfers.md) | Never send a payout transfer twice; an unknown outcome is resolved by asking | Accepted |

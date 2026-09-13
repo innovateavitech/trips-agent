@@ -38,7 +38,10 @@ public sealed class Role : Entity, IAuditableEntity
         /// <summary>Trips staff who answer agencies' questions. Reads, never writes.</summary>
         public const string SupportAdmin = "Support Admin";
 
-        /// <summary>Trips staff who look after the money: reporting, subscriptions, the audit trail.</summary>
+        /// <summary>
+        /// Trips staff who look after the money: reporting, subscriptions, the audit trail, and
+        /// authorising withdrawals — the only role that may send money out.
+        /// </summary>
         public const string FinanceAdmin = "Finance Admin";
 
         /// <summary>The four back-office roles, in the order the console lists them.</summary>

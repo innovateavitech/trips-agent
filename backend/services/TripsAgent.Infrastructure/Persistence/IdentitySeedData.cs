@@ -22,9 +22,9 @@ public static class IdentitySeedData
     public const string DevelopmentPassword = "Password123";
 
     public const string SuperAdminEmail = "admin@tripsagent.example.com";
+    public const string FinanceAdminEmail = "finance@tripsagent.example.com";
     public const string OperationsAdminEmail = "ops@tripsagent.example.com";
     public const string SupportAdminEmail = "support@tripsagent.example.com";
-    public const string FinanceAdminEmail = "finance@tripsagent.example.com";
     public const string VerifiedAgentEmail = "owner@lagostravel.example.com";
     public const string SubAgentEmail = "owner@ikejabranch.example.com";
     public const string PendingAgentEmail = "owner@pendingtravel.example.com";
@@ -51,6 +51,9 @@ public static class IdentitySeedData
         PermissionCodes.BookingCancel,
         PermissionCodes.BookingRefund,
         PermissionCodes.WalletView,
+        PermissionCodes.PayoutView,
+        PermissionCodes.DisputeView,
+        PermissionCodes.DisputeRespond,
         PermissionCodes.MarginView,
         PermissionCodes.MarginEdit,
 
@@ -138,6 +141,12 @@ public static class IdentitySeedData
         PermissionCodes.SubscriptionManage,
         PermissionCodes.ReportView,
         PermissionCodes.ReportExport,
+
+        // Withdrawals and the money queues (F12). platform.payout.approve is the one permission that
+        // ends with money in somebody else's bank account, which is why no other back-office role
+        // holds it; PayoutService still refuses to let anyone approve a payout they requested.
+        PermissionCodes.PayoutApprove,
+        PermissionCodes.FinanceReview,
     ];
 
     /// <summary>The system roles, with their scope and description.</summary>
@@ -162,6 +171,6 @@ public static class IdentitySeedData
             "Trips staff who answer agencies' questions. Read-only.", SupportAdminPermissions),
 
         (Role.SystemRoles.FinanceAdmin, RoleScope.Platform,
-            "Trips staff who look after billing, reporting and the audit trail.", FinanceAdminPermissions),
+            "Trips staff who look after billing, reporting, withdrawals and the money queues.", FinanceAdminPermissions),
     ];
 }

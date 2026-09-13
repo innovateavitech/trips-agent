@@ -4,11 +4,13 @@ import {
   ClipboardList,
   Compass,
   Inbox,
-  Network,
+  Landmark,
   LayoutDashboard,
   LifeBuoy,
+  Network,
   Plane,
   ReceiptText,
+  ShieldAlert,
   ShieldCheck,
   Globe,
   SlidersHorizontal,
@@ -84,6 +86,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Wallet', to: '/wallet', icon: Wallet }, // #51
       { label: 'Pricing rules', to: '/pricing', icon: SlidersHorizontal }, // #55
       { label: 'Billing', to: '/billing', icon: ReceiptText }, // issues 64, 65
+      { label: 'Payouts', to: '/payouts', icon: Landmark }, // build plan F12
+      { label: 'Disputes', to: '/disputes', icon: ShieldAlert }, // build plan F12
     ],
   },
   {

@@ -159,6 +159,27 @@ public static class NotificationTemplateCatalog
     /// </summary>
     public const string BillingPlanChangeScheduled = "billing.plan-change-scheduled";
 
+    /// <summary>
+    /// A payout destination was added or changed. Sent to the agency's <b>owner</b>, whoever made
+    /// the change, because an email to the person who just changed it proves nothing.
+    /// </summary>
+    public const string PaymentsBankAccountChanged = "payments.bank-account-changed";
+
+    /// <summary>A withdrawal reached the agency's bank.</summary>
+    public const string PaymentsPayoutPaid = "payments.payout-paid";
+
+    /// <summary>A withdrawal did not happen, and the money is back in the wallet.</summary>
+    public const string PaymentsPayoutReturned = "payments.payout-returned";
+
+    /// <summary>A cardholder has disputed a payment, and the clock is running.</summary>
+    public const string PaymentsDisputeOpened = "payments.dispute-opened";
+
+    /// <summary>The evidence deadline is close and nothing has been filed.</summary>
+    public const string PaymentsDisputeReminder = "payments.dispute-reminder";
+
+    /// <summary>The bank has decided.</summary>
+    public const string PaymentsDisputeResolved = "payments.dispute-resolved";
+
     // ------------------------------------------------------------------ brand tokens
 
     /// <summary>Whose mail this appears to be: the agency's trading name, or <see cref="ProductName"/>.</summary>
@@ -864,6 +885,160 @@ public static class NotificationTemplateCatalog
                       {{quoteUrl}}
 
                   Reply to this email if you would like anything changed.
+                  """),
+
+        AgencyFacing(
+            PaymentsBankAccountChanged,
+            version: 1,
+            subject: "A payout account was added to your account",
+            tokens: ["bankName", "maskedNumber", "accountName", "nameWarning", "usableFrom"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>A bank account was added as a withdrawal destination:</p>
+                  <p><strong>{{bankName}}</strong><br>{{maskedNumber}}<br>{{accountName}}</p>
+                  <p>{{nameWarning}}</p>
+                  <p>It can receive its first withdrawal from {{usableFrom}}. The wait is deliberate:
+                     it gives you time to see this email before any money can move.</p>
+                  <p><strong>If you did not add this account, contact support now.</strong> Someone
+                     with access to your login may be trying to redirect your withdrawals.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  A bank account was added as a withdrawal destination:
+
+                      {{bankName}}
+                      {{maskedNumber}}
+                      {{accountName}}
+
+                  {{nameWarning}}
+
+                  It can receive its first withdrawal from {{usableFrom}}. The wait is deliberate: it
+                  gives you time to see this email before any money can move.
+
+                  If you did not add this account, contact support now. Someone with access to your
+                  login may be trying to redirect your withdrawals.
+                  """),
+
+        AgencyFacing(
+            PaymentsPayoutPaid,
+            version: 1,
+            subject: "{{amount}} is on its way to your bank",
+            tokens: ["amount", "bankName", "maskedNumber", "reference"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>{{amount}} has been sent to {{bankName}} {{maskedNumber}}.</p>
+                  <p>Banks usually credit this within minutes, occasionally within a few hours.
+                     Your reference is {{reference}}.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  {{amount}} has been sent to {{bankName}} {{maskedNumber}}.
+
+                  Banks usually credit this within minutes, occasionally within a few hours.
+                  Your reference is {{reference}}.
+                  """),
+
+        AgencyFacing(
+            PaymentsPayoutReturned,
+            version: 1,
+            subject: "Your {{amount}} withdrawal did not go through",
+            tokens: ["amount", "bankName", "maskedNumber", "reason", "reference"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Your withdrawal of {{amount}} to {{bankName}} {{maskedNumber}} did not go
+                     through, and the money is back in your wallet.</p>
+                  <p>{{reason}}</p>
+                  <p>You can request it again once that is sorted out. Your reference was
+                     {{reference}}.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Your withdrawal of {{amount}} to {{bankName}} {{maskedNumber}} did not go through,
+                  and the money is back in your wallet.
+
+                  {{reason}}
+
+                  You can request it again once that is sorted out. Your reference was {{reference}}.
+                  """),
+
+        AgencyFacing(
+            PaymentsDisputeOpened,
+            version: 1,
+            subject: "Action needed: {{amount}} charge disputed, evidence due {{dueBy}}",
+            tokens: ["amount", "reference", "reason", "dueBy", "holdNote"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>A customer has asked their bank to reverse a payment of {{amount}}
+                     (reference {{reference}}).</p>
+                  <p>Their stated reason: {{reason}}</p>
+                  <p>{{holdNote}}</p>
+                  <p><strong>You have until {{dueBy}} to send evidence that the booking was
+                     genuine.</strong> If nothing is filed by then, the bank decides without hearing
+                     from you and the money is usually gone.</p>
+                  <p>Open Disputes in your console to file it: the booking, the invoice and the
+                     ticket are attached automatically, and you can add anything else that helps.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  A customer has asked their bank to reverse a payment of {{amount}}
+                  (reference {{reference}}).
+
+                  Their stated reason: {{reason}}
+
+                  {{holdNote}}
+
+                  You have until {{dueBy}} to send evidence that the booking was genuine. If nothing
+                  is filed by then, the bank decides without hearing from you and the money is
+                  usually gone.
+
+                  Open Disputes in your console to file it: the booking, the invoice and the ticket
+                  are attached automatically, and you can add anything else that helps.
+                  """),
+
+        AgencyFacing(
+            PaymentsDisputeReminder,
+            version: 1,
+            subject: "Reminder: evidence for a {{amount}} dispute is due {{dueBy}}",
+            tokens: ["amount", "reference", "dueBy", "hoursLeft"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Nothing has been filed yet for the disputed payment of {{amount}}
+                     (reference {{reference}}), and the deadline is {{dueBy}} — about
+                     {{hoursLeft}} hours away.</p>
+                  <p>After that the bank decides without hearing from you.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Nothing has been filed yet for the disputed payment of {{amount}}
+                  (reference {{reference}}), and the deadline is {{dueBy}} — about {{hoursLeft}}
+                  hours away.
+
+                  After that the bank decides without hearing from you.
+                  """),
+
+        AgencyFacing(
+            PaymentsDisputeResolved,
+            version: 1,
+            subject: "The {{amount}} dispute was {{outcome}}",
+            tokens: ["amount", "reference", "outcome", "moneyNote"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>The bank has decided the dispute over {{amount}} (reference {{reference}}):
+                     <strong>{{outcome}}</strong>.</p>
+                  <p>{{moneyNote}}</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  The bank has decided the dispute over {{amount}} (reference {{reference}}):
+                  {{outcome}}.
+
+                  {{moneyNote}}
                   """),
     ];
 

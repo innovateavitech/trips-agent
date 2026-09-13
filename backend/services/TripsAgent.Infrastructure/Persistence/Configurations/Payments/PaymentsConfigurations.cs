@@ -330,6 +330,13 @@ public sealed class ReconciliationExceptionConfiguration : IEntityTypeConfigurat
         // record has to outlive the agency it mentions.
         builder.Property(exception => exception.AgencyId);
 
+        // Which run found it, for the reconcilers that run over a window. Null for the nightly
+        // ledger audit, which is a standing check rather than a windowed run.
+        builder.HasOne<ReconciliationRun>().WithMany()
+            .HasForeignKey(exception => exception.ReconciliationRunId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // One row per problem, not one per night. The audit looks the subject up before writing,
         // and this index makes that lookup cheap and the uniqueness real.
         builder.HasIndex(exception => new { exception.Check, exception.Subject })

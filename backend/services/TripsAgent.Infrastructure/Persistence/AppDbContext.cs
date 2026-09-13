@@ -182,6 +182,18 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <summary>Discrepancies the nightly integrity audit found. Not tenant-scoped; see IAppDbContext.</summary>
     public DbSet<ReconciliationException> ReconciliationExceptions => Set<ReconciliationException>();
 
+    /// <summary>One reconciliation per gateway per day. Not tenant-scoped; see IAppDbContext.</summary>
+    public DbSet<ReconciliationRun> ReconciliationRuns => Set<ReconciliationRun>();
+
+    /// <summary>Where each agency is paid, as the bank confirmed it.</summary>
+    public DbSet<AgencyBankAccount> AgencyBankAccounts => Set<AgencyBankAccount>();
+
+    /// <summary>Agencies withdrawing their own money to their own banks.</summary>
+    public DbSet<Payout> Payouts => Set<Payout>();
+
+    /// <summary>Chargebacks, and the clock each one starts.</summary>
+    public DbSet<Dispute> Disputes => Set<Dispute>();
+
     public DbSet<DocumentNumberFormat> DocumentNumberFormats => Set<DocumentNumberFormat>();
 
     public DbSet<GeneratedDocument> GeneratedDocuments => Set<GeneratedDocument>();

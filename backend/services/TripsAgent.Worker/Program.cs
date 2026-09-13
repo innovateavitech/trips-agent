@@ -34,6 +34,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // And the gateway those handlers call. The Worker verifies payments the same way the API does:
 // by asking Paystack, never by trusting a payload.
 builder.Services.AddPaystack(builder.Configuration);
+builder.Services.AddPaystackTransfers(builder.Configuration);
 
 // Consumers are registered through the callback. There are none yet — the queues are declared and
 // sit empty until the checkout saga (issue #35) and the supplier poller (issue #38) arrive.
@@ -89,6 +90,13 @@ PaymentWebhookDrainSchedule.Register(recurringJobs);
 // The nightly proof that the books balance. Everything it looks for should be impossible, which
 // is precisely why it is checked — an unverified control and a broken one look identical.
 LedgerIntegrityAuditSchedule.Register(recurringJobs);
+
+// Money out (issue 69). The sender carries out approvals; the poller is the only way a transfer
+// that timed out is ever resolved, because it is never sent again (ADR-0008).
+PayoutSenderSchedule.Register(recurringJobs);
+PayoutStatusPollSchedule.Register(recurringJobs);
+DisputeDeadlineSchedule.Register(recurringJobs);
+GatewayReconciliationSchedule.Register(recurringJobs);
 
 // Keeps the supplier call log's monthly partitions ahead of the calendar. Without it every supplier
 // call fails to record once the prepared months run out.

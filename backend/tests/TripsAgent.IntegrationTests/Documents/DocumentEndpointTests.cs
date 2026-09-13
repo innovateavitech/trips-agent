@@ -168,7 +168,7 @@ public sealed class DocumentEndpointTests : IAsyncLifetime, IDisposable
             before.StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
-        using (var wrongToken = await _api.GetAsync(new Uri(customerLink[..^4] + "AAAA", UriKind.Relative)))
+        using (var wrongToken = await _api.GetAsync(new Uri(Tampered(customerLink), UriKind.Relative)))
         {
             wrongToken.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
@@ -182,6 +182,53 @@ public sealed class DocumentEndpointTests : IAsyncLifetime, IDisposable
         using var after = await _api.GetAsync(new Uri(customerLink, UriKind.Relative));
         after.StatusCode.Should().Be(HttpStatusCode.Gone);
         (await after.Content.ReadAsStringAsync()).Should().NotContainEquivalentOf("Trips Agent");
+    }
+
+    [Fact]
+    public async Task The_customers_link_stops_working_when_it_expires()
+    {
+        var invoice = (await ListAsync()).Single(d => d.DocumentType == "Invoice");
+
+        // A link off a booking page whose own link has since lapsed (issue 174).
+        using var response = await _api.GetAsync(
+            new Uri(CustomerLinkFor(invoice.Id, TimeSpan.FromSeconds(-1)), UriKind.Relative));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task A_permanent_link_from_before_deadlines_existed_is_refused()
+    {
+        var invoice = (await ListAsync()).Single(d => d.DocumentType == "Invoice");
+        var link = CustomerLinkFor(invoice.Id);
+
+        // The shape these had until issue 174: the signature and no deadline at all.
+        var permanent = link[..link.IndexOf('?', StringComparison.Ordinal)];
+
+        using var response = await _api.GetAsync(new Uri(permanent, UriKind.Relative));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task A_suspended_agencys_documents_are_served_and_a_terminated_agencys_are_not()
+    {
+        var invoice = (await ListAsync()).Single(d => d.DocumentType == "Invoice");
+        var link = new Uri(CustomerLinkFor(invoice.Id), UriKind.Relative);
+
+        await SetAgencyStatusAsync(AgencyStatus.Suspended);
+
+        using (var suspended = await _api.GetAsync(link))
+        {
+            suspended.StatusCode.Should().Be(
+                HttpStatusCode.OK, "somebody who paid keeps their ticket while the agency's standing is argued about");
+        }
+
+        await SetAgencyStatusAsync(AgencyStatus.Terminated);
+
+        using var terminated = await _api.GetAsync(link);
+
+        terminated.StatusCode.Should().Be(HttpStatusCode.Forbidden, "a closed agency's links stop");
     }
 
     // ------------------------------------------------------------------ reissuing
@@ -249,11 +296,43 @@ public sealed class DocumentEndpointTests : IAsyncLifetime, IDisposable
         return issuer.Issue(user, ["Agent"], permissions, agencyId).Value;
     }
 
-    /// <summary>The customer's link, as the storefront will be given it — signed by the API's own key.</summary>
-    private string CustomerLinkFor(Guid documentId)
+    /// <summary>
+    /// The customer's link, as the manage-my-booking page hands it out — signed by the API's own key,
+    /// and lapsing when that page's own link would.
+    /// </summary>
+    private string CustomerLinkFor(Guid documentId, TimeSpan? lifetime = null)
     {
         using var scope = _factory.Services.CreateScope();
-        return scope.ServiceProvider.GetRequiredService<DocumentLinks>().PublicPathFor(documentId);
+
+        return scope.ServiceProvider.GetRequiredService<DocumentLinks>()
+            .PublicPathFor(documentId, DateTimeOffset.UtcNow.Add(lifetime ?? TimeSpan.FromDays(90)));
+    }
+
+    /// <summary>The same link with its signature changed and its deadline left alone.</summary>
+    private static string Tampered(string link)
+    {
+        var query = link.IndexOf('?', StringComparison.Ordinal);
+
+        return string.Concat(link[..(query - 4)], "AAAA", link[query..]);
+    }
+
+    /// <summary>
+    /// Moves the agency's lifecycle on, as a Trips admin would. Written as SQL from the schema owner's
+    /// connection because the point of the test is what the link does afterwards, not how the status
+    /// got there.
+    /// </summary>
+    private async Task SetAgencyStatusAsync(AgencyStatus status)
+    {
+        var tenancy = TestTenancy.None();
+        await using var owner = _postgres.Connect(_database, tenancy.Tenant, tenancy.Scope, asApplicationRole: false);
+
+        // status_changed_at and status_reason go together or not at all, which the database checks.
+        await owner.Database.ExecuteSqlRawAsync(
+            "update tenancy.agencies set status = {0}, status_reason = {1}, status_changed_at = {2} where id = {3}",
+            status.ToString(),
+            "Set by a document link test.",
+            DateTimeOffset.UtcNow,
+            _agencyId);
     }
 
     private async Task SeedAsync()

@@ -229,6 +229,10 @@ public class MigrationTests
         // The migrator resolves the schema owner's context by key (ADR-0006); here it is the same one.
         services.AddKeyedSingleton(AdminDbContextFactory.ServiceKey, context);
         services.AddSingleton<TripsAgent.Application.Tenancy.IPlatformScope>(TestTenancy.None().Scope);
+
+        // And the key ring, because migrating also encrypts whatever is still stored in clear (issue 104).
+        services.AddSingleton<TripsAgent.Application.Security.IFieldEncryptor>(TestFieldEncryption.Encryptor);
+
         return services.BuildServiceProvider();
     }
 }

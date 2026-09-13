@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using TripsAgent.Application.Security;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Persistence.Encryption;
+using TripsAgent.Infrastructure.Security;
 
 namespace TripsAgent.Infrastructure.Persistence;
 
@@ -125,7 +126,11 @@ public static partial class DatabaseMigrator
         var backfill = new FieldEncryptionBackfill(
             dbContext,
             platformScope,
-            services.GetRequiredService<IFieldEncryptor>(),
+
+            // GetService, not GetRequiredService: a container built by hand for a one-off migration
+            // need not know about keys, and the encryptor that refuses says exactly what is missing
+            // if it turns out there is something to encrypt.
+            services.GetService<IFieldEncryptor>() ?? UnconfiguredFieldEncryptor.Instance,
 
             // Resolved only if a row turns out to be in the pre-issue-104 format, so a database with none
             // needs no legacy key configured.

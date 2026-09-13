@@ -1,4 +1,5 @@
 using FluentAssertions;
+using TripsAgent.Application.Commerce;
 using TripsAgent.Application.Crm;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Crm;
@@ -258,10 +259,10 @@ public class CrmRuleTests
     [Fact]
     public void A_storefront_host_is_read_without_its_port_or_its_casing()
     {
-        StorefrontCrmService.NormaliseHost("Lekki-Horizon.com:443").Should().Be("lekki-horizon.com");
-        StorefrontCrmService.NormaliseHost(" lekki-horizon.com. ").Should().Be("lekki-horizon.com");
-        StorefrontCrmService.NormaliseHost("  ").Should().BeNull();
-        StorefrontCrmService.NormaliseHost(null).Should().BeNull();
+        StorefrontTenant.NormaliseHost("Lekki-Horizon.com:443").Should().Be("lekki-horizon.com");
+        StorefrontTenant.NormaliseHost(" lekki-horizon.com. ").Should().Be("lekki-horizon.com");
+        StorefrontTenant.NormaliseHost("  ").Should().BeNull();
+        StorefrontTenant.NormaliseHost(null).Should().BeNull();
     }
 
     // ------------------------------------------------------------------ samples

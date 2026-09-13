@@ -104,6 +104,11 @@ public sealed class CrmEndpointTests : IClassFixture<RedisFixture>, IAsyncLifeti
             var a = Agency.RegisterPrincipal("Lagos Travel Limited", "lagos-travel", "NG", "NGN", "Africa/Lagos");
             var b = Agency.RegisterPrincipal("Abuja Tours Limited", "abuja-tours", "NG", "NGN", "Africa/Lagos");
 
+            // Verified, which is what a live storefront belongs to: since issue 171 these public routes
+            // resolve their host through StorefrontTenant, which serves no other standing (decision 14).
+            a.MarkVerified(DateTimeOffset.UtcNow);
+            b.MarkVerified(DateTimeOffset.UtcNow);
+
             // Real user rows: a lead's owner and a task's owner are foreign keys to them, and the
             // history and the timeline show their names.
             var ada = User.ForAgency(a.Id, "ada@lagos-travel.test", "not-a-real-hash", "Ada", "Obi");
@@ -624,6 +629,76 @@ public sealed class CrmEndpointTests : IClassFixture<RedisFixture>, IAsyncLifeti
         using var response = await PostPublicAsync($"{Public}/trip-requests", HostA, Submission());
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+    }
+
+    // ------------------------------------------------------------- a shop that may not sell
+
+    [Fact]
+    public async Task A_suspended_agencys_trip_request_widget_takes_nothing()
+    {
+        await SetStatusAsync(_agencyA, AgencyStatus.Suspended);
+
+        using var response = await PostPublicAsync($"{Public}/trip-requests", HostA, Submission());
+
+        // Decision 14 takes a suspended agency's shop offline, and says so no more loudly than a host
+        // nobody answers on does. Until issue 171 this route resolved its host its own way and missed it.
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await ListAsync<LeadSummaryResponse>(Leads, _agencyA)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task A_customer_still_reads_a_quote_from_a_suspended_agency_and_cannot_answer_it()
+    {
+        var token = await SendQuoteAsync();
+
+        await SetStatusAsync(_agencyA, AgencyStatus.Suspended);
+
+        // Decision 14: whoever already holds something keeps it.
+        var quote = await ReadPublicAsync($"{Public}/quotes/{token}", HostA);
+        quote.CanRespond.Should().BeFalse("the shop is shut, so the page must not offer an answer");
+
+        using (var accepted = await PostPublicAsync($"{Public}/quotes/{token}/accept", HostA, null))
+        {
+            accepted.StatusCode.Should().Be(HttpStatusCode.NotFound, "accepting a quote is new business");
+        }
+
+        using (var declined = await PostPublicAsync(
+            $"{Public}/quotes/{token}/decline", HostA, new DeclineQuoteRequest("Not this time")))
+        {
+            declined.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        // Neither attempt touched it: it stands where the customer's reading left it.
+        (await GetAsync<QuoteResponse>($"{Quotes}/{await QuoteIdAsync()}")).Status.Should().Be("Viewed");
+    }
+
+    [Fact]
+    public async Task A_terminated_agencys_quote_link_stops_working()
+    {
+        var token = await SendQuoteAsync();
+
+        await SetStatusAsync(_agencyA, AgencyStatus.Terminated);
+
+        using var response = await GetPublicAsync($"{Public}/quotes/{token}", HostA);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound, "a terminated agency serves nobody");
+    }
+
+    /// <summary>
+    /// Moves an agency's lifecycle on, as a Trips admin would. Written as SQL from the schema owner's
+    /// connection because the point is what the public routes do afterwards, not how it got there.
+    /// </summary>
+    private async Task SetStatusAsync(Guid agencyId, AgencyStatus status)
+    {
+        await using var owner = _postgres.Connect(_database, asApplicationRole: false);
+
+        // status_reason and status_changed_at go together or not at all, which the database checks.
+        await owner.Database.ExecuteSqlRawAsync(
+            "update tenancy.agencies set status = {0}, status_reason = {1}, status_changed_at = {2} where id = {3}",
+            status.ToString(),
+            "Set by an integration test.",
+            DateTimeOffset.UtcNow,
+            agencyId);
     }
 
     // ------------------------------------------------------------------ reminders

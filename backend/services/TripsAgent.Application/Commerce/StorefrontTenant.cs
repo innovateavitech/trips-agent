@@ -8,7 +8,18 @@ namespace TripsAgent.Application.Commerce;
 
 /// <summary>The agency a storefront request turned out to be for, and the facts its answers need.</summary>
 /// <param name="Currency">What the agency sells in. One currency per agency (decision 17).</param>
-public sealed record StorefrontAgency(Guid Id, string Name, string Currency, string TimeZone, DateTimeOffset Now);
+/// <param name="CanSell">
+/// Whether the shop is open. False for a suspended agency, which still serves the travellers it
+/// already has but takes no new business (decision 14), so an answer built for one of them must not
+/// offer something the next request would refuse.
+/// </param>
+public sealed record StorefrontAgency(
+    Guid Id,
+    string Name,
+    string Currency,
+    string TimeZone,
+    DateTimeOffset Now,
+    bool CanSell);
 
 /// <summary>What a storefront request is here to do, which decides what a suspended agency may serve.</summary>
 /// <remarks>
@@ -22,6 +33,12 @@ public enum StorefrontVisit
 
     /// <summary>A traveller returning to a booking they already hold. Refused only once terminated.</summary>
     ExistingBooking = 1,
+
+    /// <summary>
+    /// A customer reading a quote they were already sent — like a booking they hold, refused only
+    /// once terminated. Answering one is new business, and so is <see cref="Shopping"/> (issue 171).
+    /// </summary>
+    ExistingQuote = 2,
 }
 
 /// <summary>
@@ -36,8 +53,9 @@ public enum StorefrontVisit
 /// Everything after it is an ordinary tenant read — never <c>IgnoreQueryFilters</c> (TRIPS002).
 /// </para>
 /// <para>
-/// The same shape the CRM's storefront side uses (<c>StorefrontCrmService</c>), lifted out so the
-/// cart, the checkout and the manage-my-booking page all resolve a host exactly one way.
+/// Every public storefront route resolves its host here — the cart, the checkout, the public
+/// departures API, the manage-my-booking page and the CRM's trip-request and quote routes — so
+/// there is one place that decides who answers, and one place that applies decision 14 (issue 171).
 /// </para>
 /// </remarks>
 public sealed class StorefrontTenant
@@ -65,10 +83,12 @@ public sealed class StorefrontTenant
     /// The agency whose storefront answers on <paramref name="host"/>, with this request moved
     /// inside it. Null when no shop answers there.
     /// </summary>
+    /// <param name="host">The host name the traveller's browser used.</param>
     /// <param name="visit">
-    /// Shopping, or a traveller coming back to a booking they already hold. A suspended agency
+    /// Shopping, or a traveller coming back to something they already hold. A suspended agency
     /// serves the second and not the first (decision 14).
     /// </param>
+    /// <param name="cancellationToken">Cancels the work.</param>
     public async Task<StorefrontAgency?> EnterAsync(
         string? host,
         StorefrontVisit visit = StorefrontVisit.Shopping,
@@ -114,7 +134,10 @@ public sealed class StorefrontTenant
         // API underneath went on selling to anyone who called them directly — a suspended agency
         // could still take a traveller's money. Found in the internal adversarial pass before the
         // penetration test (issue 110). The same "no shop here" answer, so nothing is disclosed.
-        var mayServe = visit == StorefrontVisit.ExistingBooking
+        //
+        // Anything that is not one of the two returning-traveller visits is held to the stricter
+        // rule, so a visit added later is refused by a suspended agency until somebody decides.
+        var mayServe = visit is StorefrontVisit.ExistingBooking or StorefrontVisit.ExistingQuote
             ? AgencyAccess.CanServeExistingTravellers(agency.Status)
             : AgencyAccess.CanServeStorefront(agency.Status);
 
@@ -128,7 +151,8 @@ public sealed class StorefrontTenant
             string.IsNullOrWhiteSpace(agency.TradingName) ? agency.LegalName : agency.TradingName,
             agency.BaseCurrency,
             agency.Timezone,
-            Now);
+            Now,
+            AgencyAccess.CanServeStorefront(agency.Status));
     }
 
     /// <summary>The root of an agency's own site — where a traveller is sent back to, and never ours.</summary>

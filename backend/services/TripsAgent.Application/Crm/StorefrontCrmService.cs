@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using TripsAgent.Application.Commerce;
 using TripsAgent.Application.Persistence;
-using TripsAgent.Application.Storefront;
-using TripsAgent.Application.Tenancy;
 using TripsAgent.Contracts.Crm;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Crm;
@@ -15,11 +14,17 @@ namespace TripsAgent.Application.Crm;
 /// <remarks>
 /// <para>
 /// <b>No tenant arrives with the request.</b> A traveller on an agency's site carries no token, so the
-/// agency is found from the host name they used — <see cref="IStorefrontDirectory.FindAgencyAsync"/>,
-/// which enters <see cref="IPlatformScope"/> with a reason to do it — and everything after that is
-/// read and written as that agency, back inside the tenant filter. A host that belongs to nobody is
-/// not found, and every route here says the same thing to it as to a host that exists with no such
-/// quote: an anonymous caller learns nothing about which agencies exist.
+/// agency is found from the host name they used — by <see cref="StorefrontTenant"/>, the one place every
+/// public storefront route resolves a host, which enters <c>IPlatformScope</c> with a reason to do it and
+/// then moves the request inside that agency's tenant filter. A host that belongs to nobody is not found,
+/// and every route here says the same thing to it as to a host that exists with no such quote: an
+/// anonymous caller learns nothing about which agencies exist.
+/// </para>
+/// <para>
+/// <b>A suspended agency's shop is shut</b> (decision 14, issue 171). Taking a trip request and accepting
+/// a quote are new business, so both need <c>CanServeStorefront</c>; reading a quote the customer already
+/// holds is a traveller coming back to something of theirs, which only a terminated agency refuses. This
+/// service used to resolve the host its own way and so missed the rule entirely.
 /// </para>
 /// <para>
 /// Nothing here may mention Trips (CLAUDE.md rule 4), and nothing here returns an agent-facing field:
@@ -32,23 +37,20 @@ public sealed class StorefrontCrmService
     private readonly IAppDbContext _db;
     private readonly CrmContext _crm;
     private readonly CustomerDirectory _customers;
-    private readonly IStorefrontDirectory _storefront;
-    private readonly TenantContext _tenant;
+    private readonly StorefrontTenant _storefront;
     private readonly IUniqueViolationDetector _uniqueViolations;
 
     public StorefrontCrmService(
         IAppDbContext db,
         CrmContext crm,
         CustomerDirectory customers,
-        IStorefrontDirectory storefront,
-        TenantContext tenant,
+        StorefrontTenant storefront,
         IUniqueViolationDetector uniqueViolations)
     {
         _db = db;
         _crm = crm;
         _customers = customers;
         _storefront = storefront;
-        _tenant = tenant;
         _uniqueViolations = uniqueViolations;
     }
 
@@ -67,9 +69,8 @@ public sealed class StorefrontCrmService
     {
         ArgumentNullException.ThrowIfNull(submission);
 
-        var agencyId = await AgencyForAsync(host, cancellationToken);
-
-        if (agencyId is null)
+        // A lead is new business, so a suspended or terminated agency's widget takes none.
+        if (await _storefront.EnterAsync(host, StorefrontVisit.Shopping, cancellationToken) is null)
         {
             return new CrmResult<Guid>.NotFound("We could not find that site.");
         }
@@ -84,8 +85,6 @@ public sealed class StorefrontCrmService
         {
             return new CrmResult<Guid>.Invalid("We could not send that request.", problems);
         }
-
-        EnterTenant(agencyId.Value);
 
         var agency = await _crm.AgencyAsync(cancellationToken);
 
@@ -128,7 +127,9 @@ public sealed class StorefrontCrmService
         string? token,
         CancellationToken cancellationToken = default)
     {
-        if (await FindQuoteAsync(host, token, cancellationToken) is not { } found)
+        // Reading a quote they were sent is a customer coming back to something of theirs, so it
+        // survives a suspension and stops only when the agency is terminated.
+        if (await FindQuoteAsync(host, token, StorefrontVisit.ExistingQuote, cancellationToken) is not { } found)
         {
             return new CrmResult<PublicQuoteResponse>.NotFound(NoSuchQuote);
         }
@@ -139,7 +140,8 @@ public sealed class StorefrontCrmService
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        return new CrmResult<PublicQuoteResponse>.Done(Public(found.Quote, found.Customer, found.Agency.Today));
+        return new CrmResult<PublicQuoteResponse>.Done(
+            Public(found.Quote, found.Customer, found.Agency.Today, found.CanSell));
     }
 
     /// <summary>The customer accepts their quote.</summary>
@@ -178,12 +180,15 @@ public sealed class StorefrontCrmService
                 [new CrmProblem("reason", "That message is too long.")]);
         }
 
-        if (await FindQuoteAsync(host, token, cancellationToken) is not { } found)
+        // Answering a quote is doing business with the shop, so a suspended agency's is shut: the
+        // customer gets the same "no such quote" as anybody else, and the view above says so first
+        // by answering that the quote cannot be responded to.
+        if (await FindQuoteAsync(host, token, StorefrontVisit.Shopping, cancellationToken) is not { } found)
         {
             return new CrmResult<PublicQuoteResponse>.NotFound(NoSuchQuote);
         }
 
-        var (agency, quote, customer) = found;
+        var (agency, quote, customer, _) = found;
 
         if (quote.WhyNotAnswerable(agency.Today) is { } why)
         {
@@ -230,7 +235,8 @@ public sealed class StorefrontCrmService
 
         await _db.SaveChangesAsync(cancellationToken);
 
-        return new CrmResult<PublicQuoteResponse>.Done(Public(quote, tracked, agency.Today));
+        // Reached only through a shop that may sell, so the answer it returns says so.
+        return new CrmResult<PublicQuoteResponse>.Done(Public(quote, tracked, agency.Today, canSell: true));
     }
 
     private static string Declined(string quoteNumber, string? reason)
@@ -244,11 +250,13 @@ public sealed class StorefrontCrmService
 
     /// <summary>
     /// The quote a link points at, inside its agency's tenant — or nothing, for any reason at all:
-    /// an unknown host, a token the wrong shape, a token nobody has, a quote not yet sent.
+    /// an unknown host, a shop that may not serve this kind of visit, a token the wrong shape, a
+    /// token nobody has, or a quote not yet sent.
     /// </summary>
     private async Task<PublicQuoteRecord?> FindQuoteAsync(
         string? host,
         string? token,
+        StorefrontVisit visit,
         CancellationToken cancellationToken)
     {
         // Checked before the database is asked: a token of the wrong shape is somebody probing.
@@ -257,14 +265,12 @@ public sealed class StorefrontCrmService
             return null;
         }
 
-        var agencyId = await AgencyForAsync(host, cancellationToken);
+        var shop = await _storefront.EnterAsync(host, visit, cancellationToken);
 
-        if (agencyId is null)
+        if (shop is null)
         {
             return null;
         }
-
-        EnterTenant(agencyId.Value);
 
         var agency = await _crm.AgencyAsync(cancellationToken);
 
@@ -284,61 +290,10 @@ public sealed class StorefrontCrmService
             .Join(_db.Customers.AsNoTracking(), lead => lead.CustomerId, candidate => candidate.Id, (_, candidate) => candidate)
             .FirstAsync(cancellationToken);
 
-        return new PublicQuoteRecord(agency, quote, customer);
+        return new PublicQuoteRecord(agency, quote, customer, shop.CanSell);
     }
 
-    /// <summary>
-    /// Makes this request the agency's, so every read and write after it goes through the tenant
-    /// filter as that agency's own.
-    /// </summary>
-    /// <remarks>
-    /// A storefront request arrives with no tenant, and the host name is what decides it. Set once:
-    /// a second, different agency in one request would mean rows loaded as one agency being saved as
-    /// another, and <see cref="TenantContext.SetTenant"/> refuses it loudly.
-    /// </remarks>
-    private void EnterTenant(Guid agencyId)
-    {
-        if (!_tenant.HasTenant)
-        {
-            _tenant.SetTenant(agencyId);
-        }
-        else if (_tenant.AgencyId != agencyId)
-        {
-            throw new InvalidOperationException(
-                "This request already acts for another agency. A storefront request serves one host.");
-        }
-    }
-
-    /// <summary>The agency whose storefront answers on this host, or null when none does.</summary>
-    private async Task<Guid?> AgencyForAsync(string? host, CancellationToken cancellationToken)
-    {
-        var tidy = NormaliseHost(host);
-
-        return tidy is null ? null : await _storefront.FindAgencyAsync(tidy, cancellationToken);
-    }
-
-    /// <summary>Lower-case, without the port a browser may add: <c>Lekki-Horizon.com:443</c> is one host.</summary>
-    public static string? NormaliseHost(string? host)
-    {
-        var tidy = host?.Trim().TrimEnd('.').ToLowerInvariant();
-
-        if (string.IsNullOrEmpty(tidy))
-        {
-            return null;
-        }
-
-        var colon = tidy.LastIndexOf(':');
-
-        // Only a port, never the colons of a bare IPv6 literal, which no storefront is reached by.
-        if (colon > 0 && tidy.IndexOf(':', StringComparison.Ordinal) == colon)
-        {
-            tidy = tidy[..colon];
-        }
-
-        return tidy.Length == 0 ? null : tidy;
-    }
-
-    private static PublicQuoteResponse Public(Quote quote, Customer customer, DateOnly today) =>
+    private static PublicQuoteResponse Public(Quote quote, Customer customer, DateOnly today, bool canSell) =>
         new(
             quote.QuoteNumber,
             quote.Title,
@@ -352,10 +307,14 @@ public sealed class StorefrontCrmService
             customer.Name,
             quote.SentAt!.Value,
             quote.RespondedAt,
-            quote.WhyNotAnswerable(today) is null);
+
+            // A shut shop cannot be answered, so the page is never offered a button the next
+            // request would refuse (decision 14).
+            quote.WhyNotAnswerable(today) is null && canSell);
 
     /// <summary>A quote found behind a public link, with the agency it belongs to and who it is for.</summary>
-    private sealed record PublicQuoteRecord(CrmAgency Agency, Quote Quote, Customer Customer);
+    /// <param name="CanSell">Whether that agency may take new business today.</param>
+    private sealed record PublicQuoteRecord(CrmAgency Agency, Quote Quote, Customer Customer, bool CanSell);
 
     private static LeadDetails Details(TripRequestSubmission submission) =>
         new LeadDetails(

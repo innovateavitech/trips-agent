@@ -630,6 +630,11 @@ public class WebhookIdempotencyTests
                 // processing happens is visible in the test rather than decided by Hangfire.
                 new NoOpDispatcher(),
                 verify,
+
+                // Every payment in these tests is a wallet top-up, so the booking-payment path is
+                // never taken. A stub rather than the real service, which would drag the whole
+                // checkout into a test about webhook idempotency.
+                new NoOrderPayments(),
                 new RecordingAlerter(Alerts),
                 new PostgresUniqueViolationDetector(),
                 Clock,
@@ -660,6 +665,14 @@ public class WebhookIdempotencyTests
     {
         public Task EnqueueAsync(Guid webhookEventId, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+    }
+
+    /// <summary>Stands in for the storefront's booking payments, which no test here makes.</summary>
+    private sealed class NoOrderPayments : IOrderPaymentSettlement
+    {
+        public Task<bool> SettleAsync(string reference, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException(
+                $"Payment {reference} is a wallet top-up, and nothing in these tests pays for a booking.");
     }
 
     /// <summary>A notification queue whose database has been unreachable for longer than EF will retry.</summary>

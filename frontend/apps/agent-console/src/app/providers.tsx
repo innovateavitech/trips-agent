@@ -2,7 +2,10 @@ import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { AuthApi } from '../auth/auth-api';
 import { AuthProvider } from '../auth/auth-provider';
+import { CatalogApiProvider, type CatalogApi } from '../features/catalog';
+import { CrmApiProvider, type CrmApi } from '../features/crm';
 import { DashboardApiProvider, type DashboardApi } from '../features/dashboard';
+import { DeparturesApiProvider, type DeparturesApi } from '../features/departures';
 import { SearchApiProvider, type SearchApi } from '../features/search';
 import { SubAgentsApiProvider, type SubAgentsApi } from '../features/subagents';
 import { BookingFlowApiProvider, type BookingFlowApi } from '../features/booking';
@@ -16,6 +19,9 @@ export interface AppAdapters {
   search: SearchApi;
   bookingFlow: BookingFlowApi;
   bookings: BookingsApi;
+  catalog: CatalogApi;
+  departures: DeparturesApi;
+  crm: CrmApi;
   subAgents: SubAgentsApi;
 }
 
@@ -41,7 +47,15 @@ export function AppProviders({
             <SearchApiProvider value={adapters.search}>
               <BookingFlowApiProvider value={adapters.bookingFlow}>
                 <BookingsApiProvider value={adapters.bookings}>
-                  <SubAgentsApiProvider value={adapters.subAgents}>{children}</SubAgentsApiProvider>
+                  <CatalogApiProvider value={adapters.catalog}>
+                    <DeparturesApiProvider value={adapters.departures}>
+                      <CrmApiProvider value={adapters.crm}>
+                        <SubAgentsApiProvider value={adapters.subAgents}>
+                          {children}
+                        </SubAgentsApiProvider>
+                      </CrmApiProvider>
+                    </DeparturesApiProvider>
+                  </CatalogApiProvider>
                 </BookingsApiProvider>
               </BookingFlowApiProvider>
             </SearchApiProvider>

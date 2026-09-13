@@ -1,6 +1,6 @@
 import type { ApiClient, Schemas } from '@trips/api-client';
+import { int64 } from '@trips/utils';
 import { unwrap, unwrapEmpty, unwrapOptional } from '../../api/errors';
-import { int64 } from '../../api/int64';
 import type { SubAgentsApi } from './subagents-api';
 import type {
   Allowance,

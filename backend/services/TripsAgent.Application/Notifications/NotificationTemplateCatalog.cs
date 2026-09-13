@@ -71,6 +71,13 @@ public static class NotificationTemplateCatalog
     /// </summary>
     public const string IdentityPasswordReset = "identity.password-reset";
 
+    /// <summary>
+    /// A business invited to join a principal's network (feature F10, issue 63). Rendered with the
+    /// <i>principal's</i> brand, never ours — build-plan decision 6 — and sent at once rather than
+    /// queued, because the link in it is a working credential.
+    /// </summary>
+    public const string SubAgentInvitation = "subagent.invitation";
+
     /// <summary>A traveller's invoice and vouchers, attached as PDFs (#46).</summary>
     public const string DocumentsIssued = "documents.issued";
 
@@ -107,6 +114,8 @@ public static class NotificationTemplateCatalog
     /// <summary>An agent's held booking passed its ticket time limit before it was issued (#38).</summary>
     public const string BookingExpired = "booking.expired";
 
+    /// <summary>A report that ran in the background has finished, one way or the other.</summary>
+    public const string ReportReady = "reports.ready";
     /// <summary>
     /// A seat freed up on a departure somebody is waiting for (build plan F6, plan §3 job 10). The
     /// offer has a deadline; when it passes, job 10 rolls it on to the next person.
@@ -137,6 +146,41 @@ public static class NotificationTemplateCatalog
 
     /// <summary>A follow-up task that has fallen due, to the person at the agency who owns it (#62).</summary>
     public const string CrmTaskDue = "crm.task-due";
+    /// <summary>A subscription invoice was paid. The receipt, with what it covered (issue 65).</summary>
+    public const string BillingReceipt = "billing.receipt";
+
+    /// <summary>A subscription charge failed and the dunning schedule is running (issue 65).</summary>
+    public const string BillingPaymentFailed = "billing.payment-failed";
+
+    /// <summary>Dunning ran out. Says what happened to the plan, and how to put it right (issue 65).</summary>
+    public const string BillingDunningEnded = "billing.dunning-ended";
+
+    /// <summary>
+    /// A plan change has been scheduled and has not happened yet — the advance notice a downgrade
+    /// or an admin migration owes the agency (issue 64, FRD RS-7).
+    /// </summary>
+    public const string BillingPlanChangeScheduled = "billing.plan-change-scheduled";
+
+    /// <summary>
+    /// A payout destination was added or changed. Sent to the agency's <b>owner</b>, whoever made
+    /// the change, because an email to the person who just changed it proves nothing.
+    /// </summary>
+    public const string PaymentsBankAccountChanged = "payments.bank-account-changed";
+
+    /// <summary>A withdrawal reached the agency's bank.</summary>
+    public const string PaymentsPayoutPaid = "payments.payout-paid";
+
+    /// <summary>A withdrawal did not happen, and the money is back in the wallet.</summary>
+    public const string PaymentsPayoutReturned = "payments.payout-returned";
+
+    /// <summary>A cardholder has disputed a payment, and the clock is running.</summary>
+    public const string PaymentsDisputeOpened = "payments.dispute-opened";
+
+    /// <summary>The evidence deadline is close and nothing has been filed.</summary>
+    public const string PaymentsDisputeReminder = "payments.dispute-reminder";
+
+    /// <summary>The bank has decided.</summary>
+    public const string PaymentsDisputeResolved = "payments.dispute-resolved";
 
     // ------------------------------------------------------------------ brand tokens
 
@@ -222,6 +266,35 @@ public static class NotificationTemplateCatalog
                   changed, and nobody can change it without this link.
                   """),
 
+        // The only agency-facing template whose {{brandName}} is somebody else's: the sender is
+        // the inviting principal, and the recipient must never see the Trips name.
+        AgencyFacing(
+            SubAgentInvitation,
+            version: 1,
+            subject: "{{brandName}} has invited you to sell with them",
+            tokens: ["inviteUrl", "days"],
+            html: """
+                  <p>Hello,</p>
+                  <p>{{brandName}} has set up an account for {{recipientName}} so you can search,
+                     book and sell travel alongside them.</p>
+                  <p><a href="{{inviteUrl}}">Accept the invitation and choose a password</a></p>
+                  <p>The link works once and expires in {{days}} days. If you were not expecting
+                     this, you can ignore it — nothing happens until the link is used.</p>
+                  """,
+            text: """
+                  Hello,
+
+                  {{brandName}} has set up an account for {{recipientName}} so you can search, book
+                  and sell travel alongside them.
+
+                  Accept the invitation and choose a password:
+
+                      {{inviteUrl}}
+
+                  The link works once and expires in {{days}} days. If you were not expecting this,
+                  you can ignore it — nothing happens until the link is used.
+                  """),
+
         AgencyFacing(
             KybApproved,
             version: 1,
@@ -284,6 +357,113 @@ public static class NotificationTemplateCatalog
                   You can see the full statement in your console.
                   """),
 
+        // ------------------------------------------------------------- subscriptions and billing
+        //
+        // These are agency-facing, so they carry the Trips brand. CLAUDE.md rule 4 is about what a
+        // traveller sees; this is Trips writing to its own customer about its own bill, and pretending
+        // otherwise would leave the agency with a receipt from nobody.
+        AgencyFacing(
+            BillingReceipt,
+            version: 1,
+            subject: "Your {{brandName}} receipt — {{amount}}",
+            tokens: ["amount", "planName", "receiptNumber", "invoiceNumber", "periodStart", "periodEnd"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Thank you — we've received <strong>{{amount}}</strong> for your {{planName}} plan,
+                     covering {{periodStart}} to {{periodEnd}}.</p>
+                  <p>Receipt {{receiptNumber}}, for invoice {{invoiceNumber}}.</p>
+                  <p>The full invoice, with its lines, is under Billing in your console.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Thank you — we've received {{amount}} for your {{planName}} plan, covering
+                  {{periodStart}} to {{periodEnd}}.
+
+                  Receipt {{receiptNumber}}, for invoice {{invoiceNumber}}.
+
+                  The full invoice, with its lines, is under Billing in your console.
+                  """),
+
+        AgencyFacing(
+            BillingPaymentFailed,
+            version: 1,
+            subject: "We couldn't take your {{brandName}} subscription payment",
+            tokens: ["amount", "planName", "invoiceNumber", "reason", "nextAttempt"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>We tried to charge <strong>{{amount}}</strong> for your {{planName}} plan and the
+                     payment did not go through.</p>
+                  <p>The bank said: {{reason}}</p>
+                  <p>We'll try again on {{nextAttempt}}. Nothing has changed about your account in the
+                     meantime — your bookings, your customers and your site all carry on as normal.</p>
+                  <p>If the card has expired or been replaced, you can pay invoice {{invoiceNumber}} with
+                     another card under Billing in your console, and that card will be used from then on.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  We tried to charge {{amount}} for your {{planName}} plan and the payment did not go through.
+
+                  The bank said: {{reason}}
+
+                  We'll try again on {{nextAttempt}}. Nothing has changed about your account in the meantime —
+                  your bookings, your customers and your site all carry on as normal.
+
+                  If the card has expired or been replaced, you can pay invoice {{invoiceNumber}} with another
+                  card under Billing in your console, and that card will be used from then on.
+                  """),
+
+        AgencyFacing(
+            BillingDunningEnded,
+            version: 1,
+            subject: "Your {{brandName}} plan has changed",
+            tokens: ["planName", "outcome", "invoiceNumber", "amount"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>We tried four times over a week to collect {{amount}} for your {{planName}} plan and
+                     could not. {{outcome}}</p>
+                  <p>Invoice {{invoiceNumber}} is still outstanding. Paying it under Billing in your
+                     console puts everything back as it was.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  We tried four times over a week to collect {{amount}} for your {{planName}} plan and could not.
+                  {{outcome}}
+
+                  Invoice {{invoiceNumber}} is still outstanding. Paying it under Billing in your console puts
+                  everything back as it was.
+                  """),
+
+        AgencyFacing(
+            BillingPlanChangeScheduled,
+            version: 1,
+            subject: "Your {{brandName}} plan changes on {{effectiveDate}}",
+            tokens: ["fromPlan", "toPlan", "effectiveDate", "reason"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Your plan moves from <strong>{{fromPlan}}</strong> to <strong>{{toPlan}}</strong> on
+                     {{effectiveDate}}.</p>
+                  <p>{{reason}}</p>
+                  <p>Nothing you have already set up is removed. If the new plan allows fewer of something
+                     than you are using today, you keep what you have and cannot add more until you are
+                     back inside the new limit. You can see exactly where you stand under Billing in your
+                     console.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Your plan moves from {{fromPlan}} to {{toPlan}} on {{effectiveDate}}.
+
+                  {{reason}}
+
+                  Nothing you have already set up is removed. If the new plan allows fewer of something than you
+                  are using today, you keep what you have and cannot add more until you are back inside the new
+                  limit. You can see exactly where you stand under Billing in your console.
+                  """),
+
+
         // The ticket time limit (#38). To the agent, not the traveller: the agent is the one who can
         // still act — finish the booking, or rebook and refund — and whether and how to tell their own
         // customer is theirs to decide.
@@ -332,6 +512,31 @@ public static class NotificationTemplateCatalog
                   It is waiting in your resolution queue, where you can rebook it or refund your
                   customer. Funds held in your wallet for the order are released once nothing else on
                   it still needs them.
+                  """),
+
+        AgencyFacing(
+            ReportReady,
+            version: 1,
+            subject: "Your report is {{status}}: {{reportName}}",
+            tokens: ["reportName", "rowCount", "status"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>The report you asked for — <strong>{{reportName}}</strong> — is {{status}}.</p>
+                  <p>It covers {{rowCount}} rows. Open Reports in your {{brandName}} console to
+                     download it.</p>
+                  <p>Reports that cover more than three months, or more than one agency, are
+                     produced in the background so you are not left waiting on a page.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  The report you asked for - {{reportName}} - is {{status}}.
+
+                  It covers {{rowCount}} rows. Open Reports in your {{brandName}} console to
+                  download it.
+
+                  Reports that cover more than three months, or more than one agency, are produced
+                  in the background so you are not left waiting on a page.
                   """),
 
         AgencyFacing(
@@ -707,6 +912,160 @@ public static class NotificationTemplateCatalog
                       {{quoteUrl}}
 
                   Reply to this email if you would like anything changed.
+                  """),
+
+        AgencyFacing(
+            PaymentsBankAccountChanged,
+            version: 1,
+            subject: "A payout account was added to your account",
+            tokens: ["bankName", "maskedNumber", "accountName", "nameWarning", "usableFrom"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>A bank account was added as a withdrawal destination:</p>
+                  <p><strong>{{bankName}}</strong><br>{{maskedNumber}}<br>{{accountName}}</p>
+                  <p>{{nameWarning}}</p>
+                  <p>It can receive its first withdrawal from {{usableFrom}}. The wait is deliberate:
+                     it gives you time to see this email before any money can move.</p>
+                  <p><strong>If you did not add this account, contact support now.</strong> Someone
+                     with access to your login may be trying to redirect your withdrawals.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  A bank account was added as a withdrawal destination:
+
+                      {{bankName}}
+                      {{maskedNumber}}
+                      {{accountName}}
+
+                  {{nameWarning}}
+
+                  It can receive its first withdrawal from {{usableFrom}}. The wait is deliberate: it
+                  gives you time to see this email before any money can move.
+
+                  If you did not add this account, contact support now. Someone with access to your
+                  login may be trying to redirect your withdrawals.
+                  """),
+
+        AgencyFacing(
+            PaymentsPayoutPaid,
+            version: 1,
+            subject: "{{amount}} is on its way to your bank",
+            tokens: ["amount", "bankName", "maskedNumber", "reference"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>{{amount}} has been sent to {{bankName}} {{maskedNumber}}.</p>
+                  <p>Banks usually credit this within minutes, occasionally within a few hours.
+                     Your reference is {{reference}}.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  {{amount}} has been sent to {{bankName}} {{maskedNumber}}.
+
+                  Banks usually credit this within minutes, occasionally within a few hours.
+                  Your reference is {{reference}}.
+                  """),
+
+        AgencyFacing(
+            PaymentsPayoutReturned,
+            version: 1,
+            subject: "Your {{amount}} withdrawal did not go through",
+            tokens: ["amount", "bankName", "maskedNumber", "reason", "reference"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Your withdrawal of {{amount}} to {{bankName}} {{maskedNumber}} did not go
+                     through, and the money is back in your wallet.</p>
+                  <p>{{reason}}</p>
+                  <p>You can request it again once that is sorted out. Your reference was
+                     {{reference}}.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Your withdrawal of {{amount}} to {{bankName}} {{maskedNumber}} did not go through,
+                  and the money is back in your wallet.
+
+                  {{reason}}
+
+                  You can request it again once that is sorted out. Your reference was {{reference}}.
+                  """),
+
+        AgencyFacing(
+            PaymentsDisputeOpened,
+            version: 1,
+            subject: "Action needed: {{amount}} charge disputed, evidence due {{dueBy}}",
+            tokens: ["amount", "reference", "reason", "dueBy", "holdNote"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>A customer has asked their bank to reverse a payment of {{amount}}
+                     (reference {{reference}}).</p>
+                  <p>Their stated reason: {{reason}}</p>
+                  <p>{{holdNote}}</p>
+                  <p><strong>You have until {{dueBy}} to send evidence that the booking was
+                     genuine.</strong> If nothing is filed by then, the bank decides without hearing
+                     from you and the money is usually gone.</p>
+                  <p>Open Disputes in your console to file it: the booking, the invoice and the
+                     ticket are attached automatically, and you can add anything else that helps.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  A customer has asked their bank to reverse a payment of {{amount}}
+                  (reference {{reference}}).
+
+                  Their stated reason: {{reason}}
+
+                  {{holdNote}}
+
+                  You have until {{dueBy}} to send evidence that the booking was genuine. If nothing
+                  is filed by then, the bank decides without hearing from you and the money is
+                  usually gone.
+
+                  Open Disputes in your console to file it: the booking, the invoice and the ticket
+                  are attached automatically, and you can add anything else that helps.
+                  """),
+
+        AgencyFacing(
+            PaymentsDisputeReminder,
+            version: 1,
+            subject: "Reminder: evidence for a {{amount}} dispute is due {{dueBy}}",
+            tokens: ["amount", "reference", "dueBy", "hoursLeft"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>Nothing has been filed yet for the disputed payment of {{amount}}
+                     (reference {{reference}}), and the deadline is {{dueBy}} — about
+                     {{hoursLeft}} hours away.</p>
+                  <p>After that the bank decides without hearing from you.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  Nothing has been filed yet for the disputed payment of {{amount}}
+                  (reference {{reference}}), and the deadline is {{dueBy}} — about {{hoursLeft}}
+                  hours away.
+
+                  After that the bank decides without hearing from you.
+                  """),
+
+        AgencyFacing(
+            PaymentsDisputeResolved,
+            version: 1,
+            subject: "The {{amount}} dispute was {{outcome}}",
+            tokens: ["amount", "reference", "outcome", "moneyNote"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>The bank has decided the dispute over {{amount}} (reference {{reference}}):
+                     <strong>{{outcome}}</strong>.</p>
+                  <p>{{moneyNote}}</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  The bank has decided the dispute over {{amount}} (reference {{reference}}):
+                  {{outcome}}.
+
+                  {{moneyNote}}
                   """),
     ];
 

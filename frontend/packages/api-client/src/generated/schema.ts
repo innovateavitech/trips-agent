@@ -7,6 +7,38 @@
  */
 
 export interface paths {
+    "/api/v1/my-allowance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetOwnAllowance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/network-performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetNetworkPerformance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -295,6 +327,278 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/agencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgencyDirectory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/agencies/{agencyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgencyProfile"];
+        put: operations["UpdateAgency"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/agencies/{agencyId}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["VerifyAgency"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/agencies/{agencyId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SuspendAgency"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/agencies/{agencyId}/reinstate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReinstateAgency"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/agencies/{agencyId}/terminate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TerminateAgency"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/agencies/{agencyId}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ExportAgency"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlatformUsers"];
+        put?: never;
+        post: operations["CreatePlatformUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlatformRoles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{userId}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ChangePlatformUserRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{userId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ChangePlatformUserStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OperationsDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlatformAnalyticsSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/analytics/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlatformSupplierPerformance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/analytics/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListReportExports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AuditLogSearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit-logs/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AuditLogActions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/wallet": {
         parameters: {
             query?: never;
@@ -353,6 +657,262 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["VerifyWalletTopUp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/banks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListPayoutBanks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/bank-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListBankAccounts"];
+        put?: never;
+        post: operations["AddBankAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/bank-accounts/{bankAccountId}/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MakeBankAccountDefault"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/bank-accounts/{bankAccountId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["RemoveBankAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts/balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWithdrawableBalance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListPayouts"];
+        put?: never;
+        post: operations["RequestPayout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/disputes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListDisputes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/disputes/{disputeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDispute"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/disputes/{disputeId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SubmitDisputeEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PayoutApprovalQueue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts/{payoutId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ApprovePayout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts/{payoutId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RejectPayout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/finance/disputes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FinanceDisputeQueue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/finance/reconciliation/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReconciliationRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/finance/reconciliation/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReconciliationExceptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/finance/reconciliation/exceptions/{exceptionId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CloseReconciliationException"];
         delete?: never;
         options?: never;
         head?: never;
@@ -471,6 +1031,278 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListPlans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMyPlan"];
+        put?: never;
+        post: operations["ChoosePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/entitlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMyEntitlements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSubscriptionInvoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/invoices/{invoiceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSubscriptionInvoice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscription/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CompletePlanCheckout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/subscription/scheduled-change/{migrationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["CancelScheduledPlanChange"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/entitlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["EntitlementCatalogue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSubscriptionTiers"];
+        put?: never;
+        post: operations["CreateSubscriptionTier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSubscriptionTier"];
+        put: operations["UpdateSubscriptionTier"];
+        post?: never;
+        delete: operations["DeleteSubscriptionTier"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}/price": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetSubscriptionTierPrice"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}/entitlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetSubscriptionTierEntitlements"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PublishSubscriptionTier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ArchiveSubscriptionTier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RestoreSubscriptionTier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/tiers/{tierId}/migrate-subscribers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MigrateSubscriptionTierSubscribers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/billing/subscribers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSubscribers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/search/flights": {
         parameters: {
             query?: never;
@@ -577,6 +1409,118 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["ResolveBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgencyAnalyticsSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgencyAnalyticsBookings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListReportDefinitions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RunReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListReportJobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/jobs/{jobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetReportJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/jobs/{jobId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DownloadReport"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -929,6 +1873,230 @@ export interface paths {
         get: operations["GetPublicSitemap"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSubAgents"];
+        put?: never;
+        post: operations["InviteSubAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/freeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FreezeSubAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/unfreeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UnfreezeSubAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RevokeSubAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSubAgentScopes"];
+        put?: never;
+        post: operations["GrantSubAgentScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/scopes/{scopeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["RevokeSubAgentScope"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSubAgentPermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/permissions/deny": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DenySubAgentPermission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/permissions/{permissionCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AllowSubAgentPermission"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/allowance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSubAgentAllowance"];
+        put: operations["SetSubAgentAllowance"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/allowance/freeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FreezeSubAgentAllowance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sub-agents/{subAgencyId}/allowance/unfreeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UnfreezeSubAgentAllowance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PreviewInvitation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AcceptInvitation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1627,6 +2795,33 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AcceptInvitationRequest: {
+            token: string;
+            firstName: string;
+            lastName: string;
+            password: string;
+            phoneNumber: null | string;
+        };
+        AcceptInvitationResponse: {
+            /** Format: uuid */
+            userId: string;
+            /** Format: uuid */
+            agencyId: string;
+            email: string;
+        };
+        AddBankAccountRequest: {
+            bankCode: string;
+            accountNumber: string;
+            accountName: string;
+        };
+        AddBankAccountResponse: {
+            /** Format: uuid */
+            bankAccountId: string;
+            accountName: string;
+            nameMatchesBusiness: boolean;
+            /** Format: date-time */
+            usableFrom: string;
+        };
         AddCartItemRequest: {
             /** Format: uuid */
             productId?: null | string;
@@ -1652,6 +2847,219 @@ export interface components {
         };
         AddSiteDomainRequest: {
             hostname: string;
+        };
+        AdminAlertResponse: {
+            /** Format: uuid */
+            id: string;
+            type: string;
+            severity: string;
+            status: string;
+            /** Format: uuid */
+            agencyId: null | string;
+            agencyName: null | string;
+            entityType: string;
+            /** Format: uuid */
+            entityId: null | string;
+            message: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AgencyAnalyticsResponse: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: date-time */
+            generatedAt: null | string;
+            showsMargin: boolean;
+            totals: components["schemas"]["AnalyticsTotalsResponse"];
+            days: components["schemas"]["AgencyDayResponse"][];
+            byProductType: components["schemas"]["AnalyticsBreakdownResponse"][];
+            byChannel: components["schemas"]["AnalyticsBreakdownResponse"][];
+        };
+        AgencyCountsResponse: {
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            pendingVerification: number | string;
+            /** Format: int32 */
+            verified: number | string;
+            /** Format: int32 */
+            rejected: number | string;
+            /** Format: int32 */
+            suspended: number | string;
+            /** Format: int32 */
+            terminated: number | string;
+        };
+        AgencyDayResponse: {
+            /** Format: date */
+            day: string;
+            currency: string;
+            /** Format: int32 */
+            orders: number | string;
+            /** Format: int32 */
+            bookings: number | string;
+            /** Format: int64 */
+            grossSalesMinor: number | string;
+            /** Format: int32 */
+            refunds: number | string;
+            /** Format: int64 */
+            refundedGrossMinor: number | string;
+            /** Format: int32 */
+            cancellations: number | string;
+            /** Format: int32 */
+            failures: number | string;
+            /** Format: int64 */
+            netCostMinor: null | number | string;
+            /** Format: int64 */
+            markupMinor: null | number | string;
+            /** Format: int64 */
+            marginMinor: null | number | string;
+        };
+        AgencyDirectoryResponse: {
+            items: components["schemas"]["AgencySummaryResponse"][];
+            /** Format: int32 */
+            totalCount: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+        };
+        AgencyProfileResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            legalName: string;
+            tradingName: null | string;
+            slug: string;
+            status: string;
+            type: string;
+            countryCode: string;
+            baseCurrency: string;
+            timezone: string;
+            taxId: null | string;
+            /** Format: int32 */
+            vatRateBasisPoints: number | string;
+            /** Format: uuid */
+            parentAgencyId: null | string;
+            parentAgencyName: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            verifiedAt: null | string;
+            /** Format: date-time */
+            onboardingCompletedAt: null | string;
+            /** Format: date-time */
+            statusChangedAt: null | string;
+            statusReason: null | string;
+            canTakeNewBookings: boolean;
+            storefrontIsLive: boolean;
+            /** Format: int64 */
+            walletBalanceMinor: null | number | string;
+            /** Format: int64 */
+            walletReservedMinor: null | number | string;
+            /** Format: int32 */
+            orderCount: number | string;
+            /** Format: int64 */
+            grossSalesMinor: number | string;
+            users: components["schemas"]["AgencyUserResponse"][];
+            subAgents: components["schemas"]["AgencySummaryResponse"][];
+        };
+        AgencyStatusChangeRequest: {
+            reason: string;
+        };
+        AgencyStatusResponse: {
+            /** Format: uuid */
+            agencyId: string;
+            status: string;
+            /** Format: date-time */
+            changedAt: string;
+            reason: string;
+            canTakeNewBookings: boolean;
+            storefrontIsLive: boolean;
+        };
+        AgencySummaryResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            legalName: string;
+            slug: string;
+            status: string;
+            type: string;
+            countryCode: string;
+            baseCurrency: string;
+            /** Format: uuid */
+            parentAgencyId: null | string;
+            parentAgencyName: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            verifiedAt: null | string;
+            /** Format: int64 */
+            walletBalanceMinor: null | number | string;
+            /** Format: int32 */
+            orderCount: number | string;
+        };
+        AgencyUserResponse: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            fullName: string;
+            status: string;
+            roles: string[];
+            /** Format: date-time */
+            lastLoginAt: null | string;
+        };
+        AllowanceResponse: {
+            /** Format: uuid */
+            subAgencyId: string;
+            currency: string;
+            /** Format: int64 */
+            spentMinor: number | string;
+            /** Format: int64 */
+            limitMinor: number | string;
+            /** Format: int64 */
+            remainingMinor: number | string;
+            period: string;
+            status: string;
+            /** Format: date-time */
+            resetsAt: null | string;
+        };
+        AnalyticsBreakdownResponse: {
+            label: string;
+            /** Format: int32 */
+            bookings: number | string;
+            /** Format: int64 */
+            grossSalesMinor: number | string;
+            /** Format: int64 */
+            marginMinor: null | number | string;
+        };
+        AnalyticsTotalsResponse: {
+            currency: string;
+            /** Format: int32 */
+            orders: number | string;
+            /** Format: int32 */
+            bookings: number | string;
+            /** Format: int64 */
+            grossSalesMinor: number | string;
+            /** Format: int32 */
+            refunds: number | string;
+            /** Format: int64 */
+            refundedGrossMinor: number | string;
+            /** Format: int32 */
+            cancellations: number | string;
+            /** Format: int32 */
+            failures: number | string;
+            /** Format: int64 */
+            previousGrossSalesMinor: number | string;
+            /** Format: int32 */
+            changeBasisPoints: null | number | string;
+            /** Format: int64 */
+            netCostMinor: null | number | string;
+            /** Format: int64 */
+            markupMinor: null | number | string;
+            /** Format: int64 */
+            marginMinor: null | number | string;
         };
         AssetLinkResponse: {
             kind: string;
@@ -1705,6 +3113,55 @@ export interface components {
             maxSizeBytes: number | string;
             /** Format: date-time */
             expiresAt: string;
+        };
+        AuditLogEntryResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            occurredAt: string;
+            /** Format: uuid */
+            agencyId: null | string;
+            agencyName: null | string;
+            /** Format: uuid */
+            actorUserId: null | string;
+            actorName: string;
+            actorType: string;
+            action: string;
+            entityType: string;
+            entityId: string;
+            reason: null | string;
+            beforeState: null | string;
+            afterState: null | string;
+            actorIpAddress: null | string;
+        };
+        AuditLogPageResponse: {
+            items: components["schemas"]["AuditLogEntryResponse"][];
+            /** Format: int32 */
+            totalCount: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+        };
+        BankAccountResponse: {
+            /** Format: uuid */
+            id: string;
+            bankName: string;
+            maskedNumber: string;
+            accountNameResolved: null | string;
+            accountNameProvided: string;
+            status: string;
+            rejectionReason: null | string;
+            isDefault: boolean;
+            /** Format: date-time */
+            verifiedAt: null | string;
+            /** Format: date-time */
+            usableFrom: null | string;
+            currency: string;
+        };
+        BankResponse: {
+            code: string;
+            name: string;
         };
         BeginCheckoutRequest: {
             contact: components["schemas"]["CheckoutContactRequest"];
@@ -1779,6 +3236,20 @@ export interface components {
             downloadExpiresAt: null | string;
             email: null | components["schemas"]["BookingDocumentEmailResponse"];
         };
+        BookingDrillDownResponse: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            showsMargin: boolean;
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            rows: components["schemas"]["BookingRowResponse"][];
+        };
         BookingFailureResponse: {
             reason: string;
             /** Format: int64 */
@@ -1841,6 +3312,29 @@ export interface components {
         BookingProgressResponse: {
             status: string;
             pnr: null | string;
+        };
+        BookingRowResponse: {
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            orderLineId: string;
+            orderNumber: string;
+            /** Format: date */
+            day: string;
+            /** Format: date-time */
+            occurredAt: string;
+            itemType: string;
+            channel: string;
+            title: string;
+            orderStatus: string;
+            fulfilmentStatus: string;
+            currency: string;
+            /** Format: int64 */
+            grossAmountMinor: number | string;
+            /** Format: int64 */
+            netAmountMinor: null | number | string;
+            /** Format: int64 */
+            marginMinor: null | number | string;
         };
         BookingSegmentResponse: {
             carrier: string;
@@ -1941,6 +3435,14 @@ export interface components {
             name: string;
             type: string;
         };
+        ChangePlatformUserRoleRequest: {
+            roleName: string;
+            reason: string;
+        };
+        ChangePlatformUserStatusRequest: {
+            status: string;
+            reason: string;
+        };
         CheckoutContactRequest: {
             name: string;
             email: string;
@@ -1974,6 +3476,15 @@ export interface components {
             passportExpiry?: null | string;
             nationality?: null | string;
         };
+        ChoosePlanRequest: {
+            /** Format: uuid */
+            tierId: string;
+            callbackUrl: string;
+        };
+        CloseReconciliationExceptionRequest: {
+            closure: string;
+            note: string;
+        };
         CommunicationRequest: {
             channel: string;
             direction: string;
@@ -1991,6 +3502,9 @@ export interface components {
             byName: string;
             related: components["schemas"]["RelatedRecord"];
         };
+        CompleteCheckoutRequest: {
+            reference: string;
+        };
         ConfirmPriceRequest: {
             /** Format: uuid */
             offerId: string;
@@ -2003,6 +3517,13 @@ export interface components {
             showPhone: boolean;
             showWhatsApp: boolean;
             showAddress: boolean;
+        };
+        CreatePlatformUserRequest: {
+            email: string;
+            firstName: string;
+            lastName: string;
+            roleName: string;
+            reason: string;
         };
         CreateSitePageRequest: {
             title: string;
@@ -2076,6 +3597,10 @@ export interface components {
         };
         DeclineQuoteRequest: {
             reason: null | string;
+        };
+        DenyPermissionRequest: {
+            permissionCode: string;
+            reason: string;
         };
         DeparturePaymentResponse: {
             /** Format: int32 */
@@ -2151,8 +3676,48 @@ export interface components {
             /** Format: int32 */
             version: number | string;
         };
+        DisputeEvidenceDefaults: {
+            customerName: null | string;
+            customerEmail: null | string;
+            customerPhone: null | string;
+            serviceDetails: null | string;
+        };
+        DisputeResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            agencyId: string;
+            paymentReference: string;
+            /** Format: uuid */
+            orderId: null | string;
+            /** Format: int64 */
+            amountMinor: number | string;
+            currency: string;
+            category: null | string;
+            reason: null | string;
+            status: string;
+            holdOutcome: string;
+            /** Format: date-time */
+            openedAt: string;
+            /** Format: date-time */
+            evidenceDueAt: string;
+            /** Format: date-time */
+            evidenceSubmittedAt: null | string;
+            /** Format: date-time */
+            resolvedAt: null | string;
+            resolution: null | string;
+            acceptsEvidence: boolean;
+            evidenceDefaults: null | components["schemas"]["DisputeEvidenceDefaults"];
+        };
         EmailVerifiedResponse: {
             message: string;
+        };
+        EntitlementCatalogueItem: {
+            code: string;
+            name: string;
+            description: string;
+            valueType: string;
+            defaultValue: string;
         };
         FlightJourneyResponse: {
             /** Format: int32 */
@@ -2187,6 +3752,11 @@ export interface components {
         };
         ForgotPasswordRequest: {
             email: string;
+        };
+        GrantSubAgentScopeRequest: {
+            productType: string;
+            /** Format: uuid */
+            supplierId: null | string;
         };
         HeroBlockConfig: {
             heading: string;
@@ -2271,6 +3841,24 @@ export interface components {
             dueOffsetDays: number | string;
             /** Format: int32 */
             percentOfBalanceBasisPoints: number | string;
+        };
+        InvitationPreviewResponse: {
+            email: string;
+            businessName: string;
+            invitedBy: string;
+        };
+        InviteSubAgentRequest: {
+            legalName: string;
+            tradingName: null | string;
+            email: string;
+        };
+        InviteSubAgentResponse: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            invitationToken: string;
+            /** Format: date-time */
+            expiresAt: string;
         };
         ItineraryDayRequest: {
             /** Format: int32 */
@@ -2538,9 +4126,79 @@ export interface components {
             supersededById: null | string;
             status: string;
         };
+        MigrateSubscribersRequest: {
+            /** Format: uuid */
+            toTierId: string;
+            reason: string;
+        };
         MoveLeadRequest: {
             stage: string;
             reason: null | string;
+        };
+        MyEntitlementsResponse: {
+            /** Format: uuid */
+            tierId: null | string;
+            planName: string;
+            entitlements: components["schemas"]["PlanFeatureResponse"][];
+        };
+        MyPlanResponse: {
+            /** Format: uuid */
+            subscriptionId: null | string;
+            /** Format: uuid */
+            tierId: null | string;
+            planName: string;
+            status: null | string;
+            statusReason: null | string;
+            currency: string;
+            /** Format: int64 */
+            amountMinor: null | number | string;
+            interval: null | string;
+            /** Format: date-time */
+            currentPeriodStart: null | string;
+            /** Format: date-time */
+            currentPeriodEnd: null | string;
+            /** Format: date-time */
+            trialEndsAt: null | string;
+            /** Format: date-time */
+            nextChargeAt: null | string;
+            cardOnFile: null | string;
+            /** Format: int32 */
+            dunningRetries: number | string;
+            /** Format: date-time */
+            nextDunningAttemptAt: null | string;
+            features: components["schemas"]["PlanFeatureResponse"][];
+            scheduledChange: null | components["schemas"]["ScheduledChangeResponse"];
+        };
+        NetworkMemberWithMarginResponse: {
+            /** Format: uuid */
+            agencyId: string;
+            name: string;
+            status: string;
+            isPrincipal: boolean;
+            /** Format: int32 */
+            orders: number | string;
+            /** Format: int64 */
+            salesMinor: number | string;
+            /** Format: int64 */
+            marginMinor: number | string;
+            /** Format: int64 */
+            allowanceSpentMinor: null | number | string;
+            /** Format: int64 */
+            allowanceLimitMinor: null | number | string;
+        };
+        NetworkPerformanceWithMarginResponse: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            currency: string;
+            /** Format: int32 */
+            orders: number | string;
+            /** Format: int64 */
+            salesMinor: number | string;
+            /** Format: int64 */
+            marginMinor: number | string;
+            members: components["schemas"]["NetworkMemberWithMarginResponse"][];
         };
         OfferMarginResponse: {
             /** Format: int64 */
@@ -2556,6 +4214,61 @@ export interface components {
             sellMinor: number | string;
             margin: null | components["schemas"]["OfferMarginResponse"];
         };
+        OperationsDashboardResponse: {
+            /** Format: date-time */
+            generatedAt: string;
+            /** Format: date-time */
+            staleAfter: string;
+            agencies: components["schemas"]["AgencyCountsResponse"];
+            /** Format: int32 */
+            pendingKybCount: number | string;
+            /** Format: int32 */
+            openAlertCount: number | string;
+            /** Format: int32 */
+            criticalAlertCount: number | string;
+            /** Format: int32 */
+            bookingsNeedingResolution: number | string;
+            sales: components["schemas"]["SalesWindowResponse"][];
+            alerts: components["schemas"]["AdminAlertResponse"][];
+        };
+        PayoutApprovalItemResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            agencyId: string;
+            agencyName: string;
+            reference: string;
+            /** Format: int64 */
+            amountMinor: number | string;
+            currency: string;
+            status: string;
+            bankName: string;
+            maskedNumber: string;
+            accountNameResolved: null | string;
+            /** Format: uuid */
+            requestedByUserId: string;
+            /** Format: date-time */
+            requestedAt: string;
+        };
+        PayoutResponse: {
+            /** Format: uuid */
+            id: string;
+            reference: string;
+            /** Format: int64 */
+            amountMinor: number | string;
+            currency: string;
+            status: string;
+            bankName: string;
+            maskedNumber: string;
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            approvedAt: null | string;
+            /** Format: date-time */
+            completedAt: null | string;
+            rejectionReason: null | string;
+            failureReason: null | string;
+        };
         PlaceBookingRequest: {
             reference: string;
             payment: string;
@@ -2565,6 +4278,116 @@ export interface components {
         };
         PlacedBookingResponse: {
             reference: string;
+        };
+        PlanChangeResponse: {
+            result: string;
+            plan: null | components["schemas"]["MyPlanResponse"];
+            authorizationUrl: null | string;
+            reference: null | string;
+            /** Format: int64 */
+            amountMinor: null | number | string;
+            scheduledChange: null | components["schemas"]["ScheduledChangeResponse"];
+        };
+        PlanFeatureResponse: {
+            code: string;
+            name: string;
+            display: string;
+        };
+        PlanResponse: {
+            /** Format: uuid */
+            tierId: string;
+            code: string;
+            name: string;
+            description: null | string;
+            currency: string;
+            /** Format: int64 */
+            amountMinor: null | number | string;
+            interval: string;
+            /** Format: int32 */
+            trialDays: number | string;
+            isCurrent: boolean;
+            isFallback: boolean;
+            features: components["schemas"]["PlanFeatureResponse"][];
+        };
+        PlatformAnalyticsResponse: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: date-time */
+            generatedAt: null | string;
+            currency: string;
+            /** Format: int64 */
+            gmvMinor: number | string;
+            /** Format: int64 */
+            previousGmvMinor: number | string;
+            /** Format: int32 */
+            gmvChangeBasisPoints: null | number | string;
+            /** Format: int64 */
+            platformFeeMinor: number | string;
+            /** Format: int64 */
+            markupMinor: number | string;
+            /** Format: int32 */
+            orders: number | string;
+            /** Format: int32 */
+            bookings: number | string;
+            /** Format: int32 */
+            newAgencies: number | string;
+            /** Format: int32 */
+            activeAgencies: number | string;
+            /** Format: int32 */
+            refunds: number | string;
+            /** Format: int64 */
+            refundedGrossMinor: number | string;
+            /** Format: int32 */
+            failures: number | string;
+            days: components["schemas"]["PlatformDayResponse"][];
+        };
+        PlatformDayResponse: {
+            /** Format: date */
+            day: string;
+            currency: string;
+            /** Format: int32 */
+            sellingAgencies: number | string;
+            /** Format: int32 */
+            newAgencies: number | string;
+            /** Format: int32 */
+            orders: number | string;
+            /** Format: int32 */
+            bookings: number | string;
+            /** Format: int64 */
+            gmvMinor: number | string;
+            /** Format: int64 */
+            platformFeeMinor: number | string;
+            /** Format: int64 */
+            markupMinor: number | string;
+            /** Format: int32 */
+            refunds: number | string;
+            /** Format: int64 */
+            refundedGrossMinor: number | string;
+            /** Format: int32 */
+            failures: number | string;
+        };
+        PlatformRoleResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description: string;
+            permissions: string[];
+        };
+        PlatformUserResponse: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            firstName: string;
+            lastName: string;
+            status: string;
+            roles: string[];
+            permissions: string[];
+            /** Format: date-time */
+            lastLoginAt: null | string;
+            /** Format: date-time */
+            createdAt: string;
         };
         PriceConfirmationResponse: {
             reference: string;
@@ -3066,6 +4889,62 @@ export interface components {
             /** Format: date-time */
             sentAt: null | string;
         };
+        ReconciliationExceptionResponse: {
+            /** Format: uuid */
+            id: string;
+            check: string;
+            severity: string;
+            status: string;
+            subject: string;
+            detail: string;
+            /** Format: int64 */
+            expectedMinor: number | string;
+            /** Format: int64 */
+            actualMinor: number | string;
+            /** Format: int64 */
+            differenceMinor: number | string;
+            /** Format: uuid */
+            agencyId: null | string;
+            /** Format: uuid */
+            reconciliationRunId: null | string;
+            /** Format: int32 */
+            timesSeen: number | string;
+            /** Format: date-time */
+            detectedAt: string;
+            /** Format: date-time */
+            resolvedAt: null | string;
+            resolutionNote: null | string;
+        };
+        ReconciliationRunResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            businessDate: string;
+            gateway: string;
+            status: string;
+            /** Format: int32 */
+            recordsExamined: number | string;
+            /** Format: int32 */
+            recordsMatched: number | string;
+            /** Format: int32 */
+            exceptionsRaised: number | string;
+            /** Format: int64 */
+            gatewayGrossMinor: number | string;
+            /** Format: int64 */
+            gatewayFeesMinor: number | string;
+            /** Format: int64 */
+            gatewayNetMinor: number | string;
+            /** Format: int64 */
+            ledgerGrossMinor: number | string;
+            /** Format: int64 */
+            differenceMinor: number | string;
+            currency: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+            failureReason: null | string;
+        };
         RefreshTokenRequest: {
             refreshToken: string;
         };
@@ -3084,10 +4963,64 @@ export interface components {
         RejectKybRequest: {
             reason: string;
         };
+        RejectPayoutRequest: {
+            reason: string;
+        };
         RelatedRecord: {
             type: string;
             /** Format: uuid */
             id: string;
+        };
+        ReportDefinitionResponse: {
+            code: string;
+            name: string;
+            description: string;
+            scope: string;
+            alwaysAsynchronous: boolean;
+            /** Format: int32 */
+            synchronousDayLimit: number | string;
+        };
+        ReportExportAuditResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            reportJobId: null | string;
+            definitionCode: string;
+            scope: string;
+            /** Format: uuid */
+            agencyId: null | string;
+            /** Format: uuid */
+            actorUserId: null | string;
+            actorType: string;
+            scopeDescription: string;
+            /** Format: int32 */
+            rowCount: number | string;
+            /** Format: date-time */
+            exportedAt: string;
+        };
+        ReportJobResponse: {
+            /** Format: uuid */
+            id: string;
+            definitionCode: string;
+            scope: string;
+            runMode: string;
+            status: string;
+            format: string;
+            /** Format: date */
+            fromDay: string;
+            /** Format: date */
+            toDay: string;
+            scopeDescription: string;
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+            /** Format: int32 */
+            rowCount: null | number | string;
+            /** Format: int64 */
+            resultSizeBytes: null | number | string;
+            canDownload: boolean;
+            errorMessage: null | string;
         };
         RequestAssetUploadRequest: {
             purpose: string;
@@ -3095,6 +5028,19 @@ export interface components {
             /** Format: int64 */
             sizeBytes: number | string;
             contentType: null | string;
+        };
+        RequestPayoutRequest: {
+            /** Format: int64 */
+            amountMinor: number | string;
+            /** Format: uuid */
+            bankAccountId: null | string;
+        };
+        RequestPayoutResponse: {
+            /** Format: uuid */
+            payoutId: string;
+            reference: string;
+            /** Format: int64 */
+            amountMinor: number | string;
         };
         ResendVerificationRequest: {
             email: string;
@@ -3106,6 +5052,31 @@ export interface components {
         ResolveBookingRequest: {
             action: string;
         };
+        RunReportRequest: {
+            definitionCode: string;
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+        };
+        SalesWindowResponse: {
+            label: string;
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            currency: string;
+            /** Format: int32 */
+            orderCount: number | string;
+            /** Format: int64 */
+            grossMinor: number | string;
+            /** Format: int64 */
+            netMinor: number | string;
+            /** Format: int64 */
+            markupMinor: number | string;
+            /** Format: int64 */
+            platformFeeMinor: number | string;
+        };
         SaveSitePageRequest: {
             title: string;
             slug: null | string;
@@ -3115,6 +5086,28 @@ export interface components {
             /** Format: int32 */
             revision: number | string;
             blocks: components["schemas"]["SitePageBlockRequest"][];
+        };
+        SaveTierRequest: {
+            code: string;
+            name: string;
+            customerDescription: null | string;
+            /** Format: int32 */
+            trialDays: number | string;
+            /** Format: int32 */
+            sortOrder: number | string;
+            isFallback: boolean;
+            reason: string;
+        };
+        ScheduledChangeResponse: {
+            /** Format: uuid */
+            migrationId: string;
+            fromPlan: string;
+            toPlan: string;
+            reason: string;
+            explanation: string;
+            /** Format: date-time */
+            effectiveAt: string;
+            canCancel: boolean;
         };
         SearchLegRequest: {
             origin: string;
@@ -3140,6 +5133,22 @@ export interface components {
             expiresAt: string;
             fromCache: boolean;
             offers: components["schemas"]["SearchOfferResponse"][];
+        };
+        SetAllowanceRequest: {
+            /** Format: int64 */
+            limitMinor: number | string;
+            period: string;
+        };
+        SetTierEntitlementsRequest: {
+            entitlements: components["schemas"]["TierEntitlementInput"][];
+            reason: string;
+        };
+        SetTierPriceRequest: {
+            currency: string;
+            interval: string;
+            /** Format: int64 */
+            amountMinor: number | string;
+            reason: string;
         };
         SiteBlockDto: {
             type: string;
@@ -3380,6 +5389,175 @@ export interface components {
             authorizationUrl: string;
             reference: string;
         };
+        SubAgentListResponse: {
+            subAgents: components["schemas"]["SubAgentResponse"][];
+            /** Format: int32 */
+            maxSubAgents: null | number | string;
+            canAddAnother: boolean;
+            cannotAddReason: null | string;
+        };
+        SubAgentPermissionResponse: {
+            code: string;
+            category: string;
+            description: string;
+            isDenied: boolean;
+            reason: null | string;
+        };
+        SubAgentResponse: {
+            /** Format: uuid */
+            id: string;
+            legalName: string;
+            tradingName: null | string;
+            slug: string;
+            status: string;
+            statusReason: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            hasOpenInvitation: boolean;
+            /** Format: int32 */
+            scopeCount: number | string;
+            /** Format: int32 */
+            deniedPermissionCount: number | string;
+            canSeeMargin: boolean;
+            /** Format: int64 */
+            allowanceSpentMinor: null | number | string;
+            /** Format: int64 */
+            allowanceLimitMinor: null | number | string;
+            allowanceCurrency: null | string;
+        };
+        SubAgentScopeResponse: {
+            /** Format: uuid */
+            id: string;
+            productType: string;
+            /** Format: uuid */
+            supplierId: null | string;
+            supplierName: null | string;
+        };
+        SubAgentStandingRequest: {
+            reason: string;
+        };
+        SubmitDisputeEvidenceRequest: {
+            customerName: string;
+            customerEmail: string;
+            customerPhone: string;
+            serviceDetails: string;
+            /** Format: date */
+            deliveryDate: null | string;
+            note: null | string;
+            assetIds: null | string[];
+        };
+        SubscriberResponse: {
+            /** Format: uuid */
+            agencyId: string;
+            agencyName: string;
+            agencyStatus: string;
+            /** Format: uuid */
+            subscriptionId: string;
+            tierName: string;
+            status: string;
+            currency: string;
+            /** Format: int64 */
+            amountMinor: null | number | string;
+            /** Format: date-time */
+            currentPeriodStart: string;
+            /** Format: date-time */
+            currentPeriodEnd: string;
+            /** Format: date-time */
+            trialEndsAt: null | string;
+            /** Format: int32 */
+            dunningRetries: number | string;
+            /** Format: date-time */
+            nextDunningAttemptAt: null | string;
+            /** Format: int64 */
+            outstandingMinor: number | string;
+        };
+        SubscriptionInvoiceLineResponse: {
+            description: string;
+            /** Format: int32 */
+            quantity: number | string;
+            /** Format: int64 */
+            unitAmountMinor: number | string;
+            /** Format: int64 */
+            amountMinor: number | string;
+        };
+        SubscriptionInvoiceResponse: {
+            /** Format: uuid */
+            id: string;
+            invoiceNumber: string;
+            receiptNumber: null | string;
+            status: string;
+            statusReason: null | string;
+            currency: string;
+            /** Format: int64 */
+            totalMinor: number | string;
+            /** Format: date-time */
+            issuedAt: string;
+            /** Format: date-time */
+            dueAt: string;
+            /** Format: date-time */
+            paidAt: null | string;
+            /** Format: date-time */
+            periodStart: string;
+            /** Format: date-time */
+            periodEnd: string;
+            lines: components["schemas"]["SubscriptionInvoiceLineResponse"][];
+        };
+        SupplierDayResponse: {
+            /** Format: date */
+            day: string;
+            /** Format: uuid */
+            supplierId: string;
+            /** Format: int32 */
+            searches: number | string;
+            /** Format: int32 */
+            booked: number | string;
+            /** Format: int32 */
+            totalCalls: number | string;
+            /** Format: int32 */
+            errors: number | string;
+            /** Format: int32 */
+            averageLatencyMs: number | string;
+        };
+        SupplierPerformanceResponse: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: date-time */
+            generatedAt: null | string;
+            suppliers: components["schemas"]["SupplierPerformanceRowResponse"][];
+            days: components["schemas"]["SupplierDayResponse"][];
+        };
+        SupplierPerformanceRowResponse: {
+            /** Format: uuid */
+            supplierId: string;
+            supplierCode: string;
+            supplierName: string;
+            /** Format: int32 */
+            searches: number | string;
+            /** Format: int32 */
+            priceConfirmations: number | string;
+            /** Format: int32 */
+            issueAttempts: number | string;
+            /** Format: int32 */
+            booked: number | string;
+            /** Format: int32 */
+            statusPolls: number | string;
+            /** Format: int32 */
+            totalCalls: number | string;
+            /** Format: int32 */
+            errors: number | string;
+            /** Format: int32 */
+            timeouts: number | string;
+            /** Format: int32 */
+            conversionBasisPoints: null | number | string;
+            /** Format: int32 */
+            errorRateBasisPoints: null | number | string;
+            /** Format: int32 */
+            averageLatencyMs: number | string;
+            /** Format: int32 */
+            maxLatencyMs: number | string;
+        };
         TaskRelatedResponse: {
             type: string;
             /** Format: uuid */
@@ -3406,6 +5584,59 @@ export interface components {
         TextBlockConfig: {
             heading: null | string;
             body: string;
+        };
+        TierChangeResponse: {
+            tier: components["schemas"]["TierResponse"];
+            /** Format: int32 */
+            subscribersScheduled: number | string;
+        };
+        TierEntitlementInput: {
+            code: string;
+            value: string;
+        };
+        TierEntitlementResponse: {
+            code: string;
+            name: string;
+            valueType: string;
+            value: string;
+            display: string;
+        };
+        TierPriceResponse: {
+            /** Format: uuid */
+            id: string;
+            currency: string;
+            interval: string;
+            /** Format: int64 */
+            amountMinor: number | string;
+            isPromotional: boolean;
+            /** Format: date-time */
+            effectiveFrom: string;
+            /** Format: date-time */
+            effectiveTo: null | string;
+        };
+        TierReasonRequest: {
+            reason: string;
+        };
+        TierResponse: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            customerDescription: null | string;
+            status: string;
+            /** Format: int32 */
+            trialDays: number | string;
+            /** Format: int32 */
+            sortOrder: number | string;
+            isFallback: boolean;
+            /** Format: int32 */
+            subscribers: number | string;
+            /** Format: date-time */
+            publishedAt: null | string;
+            /** Format: date-time */
+            archivedAt: null | string;
+            prices: components["schemas"]["TierPriceResponse"][];
+            entitlements: components["schemas"]["TierEntitlementResponse"][];
         };
         TokenPairResponse: {
             accessToken: string;
@@ -3438,6 +5669,15 @@ export interface components {
             /** Format: int64 */
             budgetMaxMinor: null | number | string;
             message: string;
+        };
+        UpdateAgencyRequest: {
+            legalName: string;
+            tradingName: null | string;
+            taxId: null | string;
+            timezone: string;
+            /** Format: int32 */
+            vatRateBasisPoints: number | string;
+            reason: string;
         };
         VerifyEmailRequest: {
             email: string;
@@ -3506,6 +5746,25 @@ export interface components {
             availableMinor: number | string;
             currency: string;
         };
+        WithdrawableBalanceResponse: {
+            /** Format: int64 */
+            balanceMinor: number | string;
+            /** Format: int64 */
+            reservedMinor: number | string;
+            /** Format: int64 */
+            availableMinor: number | string;
+            /** Format: int64 */
+            pendingSettlementMinor: number | string;
+            /** Format: int64 */
+            withdrawableMinor: number | string;
+            /** Format: int64 */
+            minimumPayoutMinor: number | string;
+            /** Format: int64 */
+            dailyCapMinor: number | string;
+            /** Format: int32 */
+            settlementWindowDays: number | string;
+            currency: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -3515,6 +5774,65 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    GetOwnAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowanceResponse"];
+                };
+            };
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetNetworkPerformance: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NetworkPerformanceWithMarginResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
     ServiceInfo: {
         parameters: {
             query?: never;
@@ -4021,6 +6339,654 @@ export interface operations {
             };
         };
     };
+    AgencyDirectory: {
+        parameters: {
+            query?: {
+                search?: string;
+                status?: string;
+                type?: string;
+                sort?: string;
+                page?: number | string;
+                pageSize?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgencyDirectoryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    AgencyProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgencyProfileResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateAgency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAgencyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgencyStatusResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    VerifyAgency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgencyStatusChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgencyStatusResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SuspendAgency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgencyStatusChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgencyStatusResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ReinstateAgency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgencyStatusChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgencyStatusResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    TerminateAgency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgencyStatusChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgencyStatusResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ExportAgency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    PlatformUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformUserResponse"][];
+                };
+            };
+        };
+    };
+    CreatePlatformUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePlatformUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformUserResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    PlatformRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformRoleResponse"][];
+                };
+            };
+        };
+    };
+    ChangePlatformUserRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePlatformUserRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformUserResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ChangePlatformUserStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePlatformUserStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformUserResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    OperationsDashboard: {
+        parameters: {
+            query?: {
+                refresh?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsDashboardResponse"];
+                };
+            };
+        };
+    };
+    PlatformAnalyticsSummary: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                refresh?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformAnalyticsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    PlatformSupplierPerformance: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                refresh?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierPerformanceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListReportExports: {
+        parameters: {
+            query?: {
+                limit?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportExportAuditResponse"][];
+                };
+            };
+        };
+    };
+    AuditLogSearch: {
+        parameters: {
+            query?: {
+                agencyId?: string;
+                actorUserId?: string;
+                action?: string;
+                entityType?: string;
+                entityId?: string;
+                from?: string;
+                to?: string;
+                page?: number | string;
+                pageSize?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogPageResponse"];
+                };
+            };
+        };
+    };
+    AuditLogActions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+        };
+    };
     GetWalletBalance: {
         parameters: {
             query?: never;
@@ -4104,6 +7070,399 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["VerifyTopUpResponse"];
                 };
+            };
+        };
+    };
+    ListPayoutBanks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankResponse"][];
+                };
+            };
+        };
+    };
+    ListBankAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountResponse"][];
+                };
+            };
+        };
+    };
+    AddBankAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddBankAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddBankAccountResponse"];
+                };
+            };
+        };
+    };
+    MakeBankAccountDefault: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bankAccountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RemoveBankAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bankAccountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetWithdrawableBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawableBalanceResponse"];
+                };
+            };
+        };
+    };
+    ListPayouts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutResponse"][];
+                };
+            };
+        };
+    };
+    RequestPayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestPayoutRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestPayoutResponse"];
+                };
+            };
+        };
+    };
+    ListDisputes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisputeResponse"][];
+                };
+            };
+        };
+    };
+    GetDispute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                disputeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisputeResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SubmitDisputeEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                disputeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitDisputeEvidenceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayoutApprovalQueue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutApprovalItemResponse"][];
+                };
+            };
+        };
+    };
+    ApprovePayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RejectPayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectPayoutRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FinanceDisputeQueue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DisputeResponse"][];
+                };
+            };
+        };
+    };
+    ReconciliationRuns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRunResponse"][];
+                };
+            };
+        };
+    };
+    ReconciliationExceptions: {
+        parameters: {
+            query?: {
+                includeClosed?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationExceptionResponse"][];
+                };
+            };
+        };
+    };
+    CloseReconciliationException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exceptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseReconciliationExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -4281,6 +7640,811 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PriceQuoteWithMarginResponse"];
+                };
+            };
+        };
+    };
+    ListPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanResponse"][];
+                };
+            };
+        };
+    };
+    GetMyPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyPlanResponse"];
+                };
+            };
+        };
+    };
+    ChoosePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChoosePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetMyEntitlements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyEntitlementsResponse"];
+                };
+            };
+        };
+    };
+    ListSubscriptionInvoices: {
+        parameters: {
+            query?: {
+                take?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionInvoiceResponse"][];
+                };
+            };
+        };
+    };
+    GetSubscriptionInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoiceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionInvoiceResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CompletePlanCheckout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteCheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CancelScheduledPlanChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                migrationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    EntitlementCatalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntitlementCatalogueItem"][];
+                };
+            };
+        };
+    };
+    ListSubscriptionTiers: {
+        parameters: {
+            query?: {
+                includeArchived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierResponse"][];
+                };
+            };
+        };
+    };
+    CreateSubscriptionTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveTierRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetSubscriptionTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateSubscriptionTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveTierRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeleteSubscriptionTier: {
+        parameters: {
+            query?: {
+                reason?: string;
+            };
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SetSubscriptionTierPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetTierPriceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SetSubscriptionTierEntitlements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetTierEntitlementsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    PublishSubscriptionTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TierReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ArchiveSubscriptionTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TierReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RestoreSubscriptionTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TierReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    MigrateSubscriptionTierSubscribers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrateSubscribersRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierChangeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListSubscribers: {
+        parameters: {
+            query?: {
+                tierId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriberResponse"][];
                 };
             };
         };
@@ -4666,6 +8830,210 @@ export interface operations {
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
+            };
+        };
+    };
+    AgencyAnalyticsSummary: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgencyAnalyticsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    AgencyAnalyticsBookings: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                page?: number | string;
+                pageSize?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDrillDownResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListReportDefinitions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportDefinitionResponse"][];
+                };
+            };
+        };
+    };
+    RunReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunReportRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportJobResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListReportJobs: {
+        parameters: {
+            query?: {
+                limit?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportJobResponse"][];
+                };
+            };
+        };
+    };
+    GetReportJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportJobResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DownloadReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5648,6 +10016,608 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicSitemapResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListSubAgents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubAgentListResponse"];
+                };
+            };
+        };
+    };
+    InviteSubAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteSubAgentRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteSubAgentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    FreezeSubAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubAgentStandingRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UnfreezeSubAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubAgentStandingRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RevokeSubAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubAgentStandingRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListSubAgentScopes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubAgentScopeResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GrantSubAgentScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantSubAgentScopeRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RevokeSubAgentScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+                scopeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListSubAgentPermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubAgentPermissionResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DenySubAgentPermission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DenyPermissionRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AllowSubAgentPermission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+                permissionCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetSubAgentAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowanceResponse"];
+                };
+            };
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SetSubAgentAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetAllowanceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowanceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    FreezeSubAgentAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowanceResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UnfreezeSubAgentAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subAgencyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowanceResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    PreviewInvitation: {
+        parameters: {
+            query?: {
+                token?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationPreviewResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AcceptInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptInvitationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcceptInvitationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
                 };
             };
             /** @description Not Found */

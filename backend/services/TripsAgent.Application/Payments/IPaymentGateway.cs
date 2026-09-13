@@ -44,6 +44,84 @@ public sealed record GatewayVerification(
     string? FailureReason)
 {
     public bool Succeeded => Outcome == GatewayPaymentOutcome.Succeeded;
+
+    /// <summary>
+    /// The reusable authorisation this payment left behind, when the gateway offered one.
+    /// </summary>
+    /// <remarks>
+    /// An <c>init</c> property rather than another positional parameter, so the many places that
+    /// build a verification for a one-off payment do not all have to say "and no authorisation".
+    /// Null whenever the payment did not succeed, or the payer used a method that cannot be
+    /// charged again.
+    /// </remarks>
+    public GatewayAuthorization? Authorization { get; init; }
+}
+
+/// <summary>
+/// A token a gateway will accept instead of the payer, next time.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>Nothing here is card data.</b> <paramref name="Code" /> is opaque and meaningless outside the
+/// gateway, and the rest is what a person needs to recognise which card they are looking at. There
+/// is no PAN, no CVV and no track data anywhere in this type, and there must never be: card entry
+/// happens on the gateway's hosted page, which is the whole of why we are in PCI SAQ-A.
+/// </para>
+/// </remarks>
+/// <param name="Code">The opaque token to charge against.</param>
+/// <param name="Reusable">False when the gateway says this one cannot be charged again.</param>
+/// <param name="Brand">"visa", "mastercard", "verve". For display only.</param>
+/// <param name="Last4">The last four digits. For display only.</param>
+/// <param name="ExpiryMonth">Two digits, so a console can warn before a card expires.</param>
+/// <param name="ExpiryYear">Four digits.</param>
+/// <param name="Bank">The issuing bank, when the gateway says.</param>
+public sealed record GatewayAuthorization(
+    string Code,
+    bool Reusable,
+    string? Brand,
+    string? Last4,
+    string? ExpiryMonth,
+    string? ExpiryYear,
+    string? Bank);
+
+/// <summary>
+/// Charging a payer who has already agreed, without sending them anywhere.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Separate from <see cref="IPaymentGateway"/> on purpose. That port is about a payment somebody is
+/// present for; this one is about a renewal at half past two in the morning, and the two have
+/// different risks. A gateway that cannot do recurring charges can still implement the other.
+/// </para>
+/// <para>
+/// The authorisation comes from the agency's first payment — the hosted checkout that started the
+/// subscription (build-plan decision 18). Nothing here ever accepts card details, and an
+/// implementation that did would be the first step towards taking them.
+/// </para>
+/// </remarks>
+public interface IRecurringChargeGateway
+{
+    /// <summary>
+    /// Charges <paramref name="authorizationCode"/> for <paramref name="amount"/>.
+    /// </summary>
+    /// <param name="reference">
+    /// Our own reference for the attempt, unique per attempt. The gateway rejects a reference it has
+    /// already seen, which is what makes a replayed billing run safe rather than a second charge.
+    /// </param>
+    /// <remarks>
+    /// Returns the same shape as a verification, so a caller handles a recurring charge and a hosted
+    /// payment the same way — including the important part, which is that
+    /// <see cref="GatewayPaymentOutcome.Pending" /> is not a failure and must never be treated as one.
+    /// </remarks>
+    /// <exception cref="PaymentGatewayUnavailableException">The gateway could not be asked.</exception>
+    /// <exception cref="PaymentGatewayException">It answered with something unusable.</exception>
+    public Task<GatewayVerification> ChargeAsync(
+        string reference,
+        Money amount,
+        string currency,
+        string customerEmail,
+        string authorizationCode,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>What the gateway said when asked to send money back.</summary>

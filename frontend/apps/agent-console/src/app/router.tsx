@@ -3,6 +3,7 @@ import { RedirectIfSignedIn, RequireAuth } from '../auth/guards';
 import { SignInPage } from '../auth/pages/sign-in-page';
 import { SIGN_IN_PATH } from '../auth/redirect';
 import { authRoutes } from '../features/auth/routes';
+import { analyticsRoutes } from '../features/analytics';
 import { bookingRoutes } from '../features/booking/routes';
 import { bookingsRoutes } from '../features/bookings/routes';
 import { catalogRoutes } from '../features/catalog/routes';
@@ -10,9 +11,12 @@ import { crmRoutes } from '../features/crm/routes';
 import { departuresRoutes } from '../features/departures/routes';
 import { DashboardPage } from '../features/dashboard';
 import { onboardingRoutes } from '../features/onboarding/routes';
+import { billingRoutes } from '../features/billing';
+import { payoutRoutes } from '../features/payouts/routes';
 import { pricingRoutes } from '../features/pricing/routes';
 import { searchRoutes } from '../features/search/routes';
 import { storefrontRoutes } from '../features/storefront/routes';
+import { subAgentRoutes } from '../features/subagents';
 import { walletRoutes } from '../features/wallet';
 import { AppShell } from '../shell/app-shell';
 import { PublicLayout } from '../shell/public-layout';
@@ -31,9 +35,11 @@ import { NotFoundPage, RouteErrorPage } from '../shell/route-error-page';
  *    /                      dashboard
  *    /search/flights|buses  (#52)       /book/*        (#53)
  *    /bookings[/:id]        (#54)       /resolution    (#54)
+ *    /analytics             (67)        /reports       (68)
  *    /wallet/…              (#51)       /pricing       (#55)
  *    /website/…             (#58, #59)
  *    /verification          (#50)
+ *    /sub-agents[/:id]      (issue 63)  /network       (issue 63)
  *
  * Each feature owns its `routes.tsx` and hands over an array; this file only
  * decides which group it joins. To add a screen, add it to the feature's array
@@ -63,13 +69,17 @@ export const appRoutes: RouteObject[] = [
               ...searchRoutes,
               ...bookingRoutes,
               ...bookingsRoutes,
+              ...analyticsRoutes,
               ...catalogRoutes,
               ...departuresRoutes,
               ...crmRoutes,
               ...walletRoutes,
               ...pricingRoutes,
+              ...payoutRoutes,
               ...storefrontRoutes,
+              ...billingRoutes,
               ...onboardingRoutes,
+              ...subAgentRoutes,
               { path: '*', element: <NotFoundPage /> },
             ],
           },

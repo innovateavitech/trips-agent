@@ -105,12 +105,23 @@ public static partial class RetentionCatalogue
             "Funds reserved for a booking; each explains a movement on a wallet statement."),
         new("payments.wallet_transactions", RetentionTreatment.Protected, SevenYears,
             "The agent's wallet statement."),
+        new("payments.wallet_allowances", RetentionTreatment.Protected, SevenYears,
+            "How much of a principal's money a sub-agent was allowed to spend, and how much it did. "
+            + "Read alongside the ledger when somebody asks who authorised a booking."),
         new("payments.payment_transactions", RetentionTreatment.Protected, SevenYears,
             "Every gateway payment — the evidence behind a top-up or an order payment."),
         new("payments.payment_webhook_events", RetentionTreatment.Protected, SevenYears,
             "What the gateway told us, with its signature check — the evidence in a payment dispute."),
         new("payments.reconciliation_exceptions", RetentionTreatment.Protected, SevenYears,
             "Discrepancies the ledger audit found, and how each was resolved."),
+        new("payments.reconciliation_runs", RetentionTreatment.Protected, SevenYears,
+            "One row per gateway per day of reconciliation — the proof a day was checked, not merely quiet."),
+        new("payments.agency_bank_accounts", RetentionTreatment.Protected, SevenYears,
+            "Where each payout was sent, as the bank named it. Retired, never deleted, so a payout can always be traced."),
+        new("payments.payouts", RetentionTreatment.Protected, SevenYears,
+            "Every withdrawal, who asked, who approved and what the gateway said. A financial record."),
+        new("payments.disputes", RetentionTreatment.Protected, SevenYears,
+            "Chargebacks and the evidence filed against them. Evidence names the customer; erasure anonymises it rather than deleting the financial record (decision 26)."),
         new("payments.refunds", RetentionTreatment.Protected, SevenYears,
             "Every refund, with the status poll or the agent behind it — the evidence that money went back for a reason. Append-only in the database as well."),
 
@@ -133,6 +144,35 @@ public static partial class RetentionCatalogue
         new("orders.booking_access_tokens", RetentionTreatment.Kept, "With their order",
             "The links travellers manage their bookings with. Only the hash of each secret is stored, so the row "
             + "identifies nobody; it is kept because it is the evidence of what a traveller was sent."),
+
+        // ---------------------------------------------------------------- subscriptions and billing
+        //
+        // Every one of these is Protected, and the reason is the same for all of them: this is what
+        // Trips charged its own customers. It is our revenue record and their expense record, and
+        // both sides need it for the same seven years an order needs. Nothing here is a traveller's
+        // personal data, so there is nothing to anonymise either.
+        new("billing.subscription_tiers", RetentionTreatment.Protected, SevenYears,
+            "The plans. Archived rather than deleted, because every invoice names the tier it billed for."),
+        new("billing.tier_prices", RetentionTreatment.Protected, SevenYears,
+            "What each plan cost, with history. Explains the amount on every historic subscription invoice."),
+        new("billing.entitlements", RetentionTreatment.Protected, SevenYears,
+            "The catalogue of what a plan can grant. Reference data, seeded from code."),
+        new("billing.tier_entitlements", RetentionTreatment.Protected, SevenYears,
+            "What each plan granted. Explains why an agency could do what it did."),
+        new("billing.tier_change_log", RetentionTreatment.Protected, SevenYears,
+            "What an admin changed about a plan, who was migrated and when they were told. FRD RS-6 and RS-7. Append-only in the database as well."),
+        new("billing.subscriptions", RetentionTreatment.Protected, SevenYears,
+            "Which plan each agency was on, and for which periods."),
+        new("billing.subscription_invoices", RetentionTreatment.Protected, SevenYears,
+            "What Trips charged each agency. A financial and tax record on both sides."),
+        new("billing.subscription_invoice_lines", RetentionTreatment.Protected, SevenYears,
+            "The lines that add up to each invoice's total. Without them the total is an assertion."),
+        new("billing.subscription_charge_attempts", RetentionTreatment.Protected, SevenYears,
+            "Every attempt to take a subscription payment, successful or not — the record of the dunning schedule actually running. Append-only in the database as well."),
+        new("billing.subscription_migrations", RetentionTreatment.Protected, SevenYears,
+            "Plan changes and the notice given for each. The evidence behind 'why is my bill different?'"),
+        new("billing.payment_authorizations", RetentionTreatment.Protected, SevenYears,
+            "Reusable gateway tokens, with a card's brand, last four and expiry. No card number, ever — card entry happens on the gateway's hosted page (decision 18). Kept with the payments they authorised."),
 
         // ---------------------------------------------------------------- documents and pricing
         new("documents.generated_documents", RetentionTreatment.Protected, SevenYears,
@@ -274,6 +314,14 @@ public static partial class RetentionCatalogue
         new("tenancy.kyb_documents", RetentionTreatment.Protected, SevenYears,
             "The documents that verification rested on."),
 
+        // The sub-agent network (feature F10). Configuration, not history: each row says what one
+        // agency currently allows another. A change replaces the row rather than adding one, and
+        // what changed and why is in the audit log, which has its own retention.
+        new("tenancy.sub_agent_scopes", RetentionTreatment.Kept, "While the sub-agent exists",
+            "What a sub-agent is currently allowed to sell."),
+        new("tenancy.permission_overrides", RetentionTreatment.Kept, "While the sub-agent exists",
+            "Permissions a principal has currently taken away from a sub-agent."),
+
         // ---------------------------------------------------------------- platform
         new("platform.audit_logs", RetentionTreatment.Protected,
             "84 months (AuditLog__RetentionMonths), then whole partitions dropped by audit-log-maintenance",
@@ -312,6 +360,24 @@ public static partial class RetentionCatalogue
             "Hostnames the site answers on. A removed one is deleted, with its checks."),
         new("storefront.site_domain_checks", RetentionTreatment.Kept, "With their hostname",
             "What DNS said on each check — the answer to \"why isn't my domain working?\". Small, and removed with the hostname."),
+
+        // ---------------------------------------------------------------- analytics and reports
+        new("analytics.fact_bookings", RetentionTreatment.Kept, "Derived: rebuilt from orders",
+            "A copy of order lines for counting. Deleting it deletes nothing — the rollup makes it again from orders, which are protected."),
+        new("analytics.agg_agency_daily", RetentionTreatment.Kept, "Derived: rebuilt from orders",
+            "One agency's day, summed from fact_bookings. No personal data."),
+        new("analytics.agg_platform_daily", RetentionTreatment.Kept, "Derived: rebuilt from orders",
+            "The platform's day. No personal data."),
+        new("analytics.agg_supplier_daily", RetentionTreatment.Kept, "Derived: rebuilt from the supplier call log",
+            "A supplier's day. Outlives the call log it was counted from, which is the point: the trend survives the partitions being dropped."),
+        new("analytics.rollup_runs", RetentionTreatment.NotYetEnforced, "90 days proposed",
+            "One small row per rollup — about 105,000 a year at a five-minute cadence. Only the newest successful run matters to the rollup; the rest is history. Waits for a purge rule."),
+        new("analytics.report_definitions", RetentionTreatment.Kept, "While offered",
+            "Reference data: the reports that may be run."),
+        new("analytics.report_jobs", RetentionTreatment.Protected, SevenYears,
+            "Each run of a report. Every export record points at its run, so a run lives as long as the export log does."),
+        new("analytics.report_exports_audit", RetentionTreatment.Protected, SevenYears,
+            "Who exported what, how many rows, and when (FRD 2.15 UC-1C RS-6). Append-only, like the audit log."),
     ];
 
     /// <summary>The tables no retention rule may ever target.</summary>

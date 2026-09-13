@@ -193,8 +193,8 @@ public class AgencyTests
         switch (status)
         {
             case AgencyStatus.Rejected: agency.MarkRejected(); break;
-            case AgencyStatus.Suspended: agency.Suspend(); break;
-            case AgencyStatus.Terminated: agency.Terminate(); break;
+            case AgencyStatus.Suspended: agency.Suspend("Test.", DateTimeOffset.UtcNow); break;
+            case AgencyStatus.Terminated: agency.Terminate("Test.", DateTimeOffset.UtcNow); break;
             default: break;
         }
 
@@ -207,7 +207,7 @@ public class AgencyTests
         var agency = NewPrincipal();
         agency.MarkVerified(DateTimeOffset.UtcNow);
 
-        agency.Suspend();
+        agency.Suspend("Chargebacks under investigation.", DateTimeOffset.UtcNow);
 
         agency.Status.Should().Be(AgencyStatus.Suspended);
         agency.CanTransact.Should().BeFalse();

@@ -165,6 +165,7 @@ public sealed class UserRoleConfiguration : IEntityTypeConfiguration<UserRole>
             .HasForeignKey(userRole => userRole.RoleId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Nullable: a null agency is a Trips back-office grant, which belongs to no agency.
         builder.HasOne<Agency>()
             .WithMany()
             .HasForeignKey(userRole => userRole.AgencyId)
@@ -174,10 +175,17 @@ public sealed class UserRoleConfiguration : IEntityTypeConfiguration<UserRole>
         builder.HasIndex(userRole => new { userRole.AgencyId, userRole.UserId })
             .HasDatabaseName("ix_user_roles_agency_id_user_id");
 
-        // One human holds a given role in a given agency at most once.
+        // One human holds a given role in a given agency at most once. PostgreSQL treats NULLs as
+        // distinct in a unique index, so platform grants need the filtered index below as well or
+        // the same role could be granted to the same admin twice.
         builder.HasIndex(userRole => new { userRole.UserId, userRole.RoleId, userRole.AgencyId })
             .IsUnique()
             .HasDatabaseName("ix_user_roles_user_id_role_id_agency_id");
+
+        builder.HasIndex(userRole => new { userRole.UserId, userRole.RoleId })
+            .IsUnique()
+            .HasFilter("agency_id IS NULL")
+            .HasDatabaseName("ix_user_roles_platform_user_id_role_id");
     }
 }
 

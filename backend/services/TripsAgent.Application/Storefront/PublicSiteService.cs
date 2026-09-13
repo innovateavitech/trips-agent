@@ -92,7 +92,9 @@ public sealed class PublicSiteService
 
         var status = previewing && version is not null
             ? PublicSiteStatuses.Preview
-            : agencyStatus is AgencyStatus.Suspended or AgencyStatus.Terminated
+            // Decision 14: the same rule the back office's lifecycle actions are written against, so
+            // suspending an agency takes its site offline without the storefront keeping its own list.
+            : !AgencyAccess.CanServeStorefront(agencyStatus)
                 ? PublicSiteStatuses.Offline
                 : version is null
                     ? PublicSiteStatuses.OpeningSoon

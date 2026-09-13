@@ -24,6 +24,7 @@ using TripsAgent.Application.Security;
 using TripsAgent.Application.Storefront;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Application.Tenancy.SubAgents;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Catalog;
 using TripsAgent.Domain.Common;
@@ -137,6 +138,11 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
             await setup.Database.MigrateAsync();
 
             var agency = Agency.RegisterPrincipal("Lagos Travel Limited", "lagos-travel", "NG", "NGN", "Africa/Lagos");
+
+            // Verified, because checkout refuses a new booking from an agency that may not sell
+            // (build-plan decision 14) — and because an agency with a funded wallet has been
+            // through KYB by definition: approval is what opens the wallet.
+            agency.MarkVerified(clock.GetUtcNow());
             var supplier = Supplier.Register(TripsAfricaOptions.SupplierCode, "Trips Africa", SupplierKind.Multi, stub.BaseAddress.ToString());
             setup.Agencies.Add(agency);
             // What the document numbering reads for an agency's order numbers, as registration creates it.
@@ -514,6 +520,14 @@ internal sealed class BookingPipelineHarness : IAsyncDisposable
         services.AddScoped<PlaceOrderHandler>();
         services.AddScoped<PriceConfirmationService>();
         services.AddScoped<LedgerAccounts>();
+
+        // The sub-agent network's two gates on the booking path (feature F10). Every agency in
+        // these tests is a principal, so both are no-ops here — which is the point: a principal's
+        // checkout must be exactly what it was before the network existed.
+        services.AddScoped<SubAgentScopeService>();
+        services.AddScoped<SubAgentSpending>();
+        services.AddScoped<IAllowanceReservations, PostgresAllowanceReservations>();
+
         services.AddScoped<WalletRefunds>();
         services.AddScoped<OrderRefunds>();
         services.AddScoped<SupplierLineTitles>();

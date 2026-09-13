@@ -2,8 +2,10 @@ using Hangfire;
 using TripsAgent.Application;
 using TripsAgent.Documents;
 using TripsAgent.Infrastructure;
+using TripsAgent.Infrastructure.Analytics;
 using TripsAgent.Infrastructure.Assets;
 using TripsAgent.Infrastructure.Auditing;
+using TripsAgent.Infrastructure.Billing;
 using TripsAgent.Infrastructure.Catalog;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Payments;
@@ -33,6 +35,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // And the gateway those handlers call. The Worker verifies payments the same way the API does:
 // by asking Paystack, never by trusting a payload.
 builder.Services.AddPaystack(builder.Configuration);
+builder.Services.AddPaystackTransfers(builder.Configuration);
 
 // Consumers are registered through the callback. There are none yet — the queues are declared and
 // sit empty until the checkout saga (issue #35) and the supplier poller (issue #38) arrive.
@@ -89,6 +92,13 @@ PaymentWebhookDrainSchedule.Register(recurringJobs);
 // is precisely why it is checked — an unverified control and a broken one look identical.
 LedgerIntegrityAuditSchedule.Register(recurringJobs);
 
+// Money out (issue 69). The sender carries out approvals; the poller is the only way a transfer
+// that timed out is ever resolved, because it is never sent again (ADR-0008).
+PayoutSenderSchedule.Register(recurringJobs);
+PayoutStatusPollSchedule.Register(recurringJobs);
+DisputeDeadlineSchedule.Register(recurringJobs);
+GatewayReconciliationSchedule.Register(recurringJobs);
+
 // Keeps the supplier call log's monthly partitions ahead of the calendar. Without it every supplier
 // call fails to record once the prepared months run out.
 SupplierApiCallMaintenanceSchedule.Register(recurringJobs);
@@ -97,6 +107,14 @@ SupplierApiCallMaintenanceSchedule.Register(recurringJobs);
 // set to false deliberately: it counts and records what it would delete, and deletes nothing. It never
 // touches financial records or the audit log. Runbook: docs/runbooks/data-retention.md.
 DataRetentionSchedule.Register(recurringJobs);
+
+// Subscriptions and billing (issue 65): renewals, trial expiry, the dunning schedule and the tier
+// changes that were scheduled with notice. One job rather than four, because their order matters.
+SubscriptionBillingSchedule.Register(recurringJobs);
+
+// Starts each sub-agent's allowance period again when it turns over (feature F10). Hourly, and
+// idempotent: on twenty-three of the twenty-four passes it finds nothing due.
+TripsAgent.Infrastructure.Tenancy.AllowanceResetSchedule.Register(recurringJobs);
 
 // Expires uploads that never arrived and re-enqueues processing that was lost. The complete step
 // enqueues each asset directly, so like the webhook drain this normally finds nothing.
@@ -112,6 +130,10 @@ TicketTimeLimitMonitorSchedule.Register(recurringJobs);
 // is safe — the issuer sends the supplier nothing for a booking that is already issuing.
 TripsAgent.Infrastructure.Checkout.CheckoutSweepSchedule.Register(recurringJobs);
 
+// The analytics read models (#67). Every five minutes the days whose source rows changed are
+// rebuilt; every night the whole window is rebuilt from source, whatever the watermark says.
+// Nothing here is authoritative — it is all derived from orders and thrown away on the next run.
+AnalyticsRollupSchedule.Register(recurringJobs);
 // Group departures (#57), plan §3 jobs 6, 9, 10 and 11. The seats and the status are moved by the
 // checkout that earns them; these are the clock's share of the work — the checkout that walked
 // away, the offer nobody answered, the payment nobody made, and the nightly proof that every

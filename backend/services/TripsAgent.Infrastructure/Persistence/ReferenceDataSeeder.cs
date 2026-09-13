@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Domain.Billing;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Suppliers;
 
@@ -48,8 +49,51 @@ public static class ReferenceDataSeeder
         // Website templates and the hostname denylist: every agency reads them, and the application role
         // cannot write them, so they have to come from here.
         await Storefront.StorefrontReferenceData.EnsureAsync(dbContext, cancellationToken);
+        // The entitlement catalogue. A tier can only grant an entitlement that has a row here, and
+        // the resolver falls back to the catalogue's defaults for anything a tier does not grant —
+        // so a deploy that skipped this would leave every agency on the fallback set.
+        await EnsureEntitlementsAsync(dbContext, cancellationToken);
 
         return (permissions, roles);
+    }
+
+    /// <summary>
+    /// Every entitlement a tier can grant, from <see cref="EntitlementCatalog"/>.
+    /// </summary>
+    /// <remarks>
+    /// Additive like everything else here: a code that has disappeared from the catalogue keeps its
+    /// row, because a tier may still grant it and removing the row would break that tier's foreign
+    /// key. Names and descriptions are refreshed, because those are only ever shown to an admin.
+    /// </remarks>
+    private static async Task EnsureEntitlementsAsync(AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        var existing = await dbContext.Entitlements.ToDictionaryAsync(
+            entitlement => entitlement.Code, StringComparer.Ordinal, cancellationToken);
+
+        var changed = false;
+
+        foreach (var definition in EntitlementCatalog.All)
+        {
+            if (existing.TryGetValue(definition.Code, out var entitlement))
+            {
+                if (entitlement.Name != definition.Name || entitlement.Description != definition.Description)
+                {
+                    entitlement.Describe(definition.Name, definition.Description);
+                    changed = true;
+                }
+
+                continue;
+            }
+
+            dbContext.Entitlements.Add(
+                new Entitlement(definition.Code, definition.Name, definition.Description, definition.ValueType));
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 
     /// <summary>
@@ -104,20 +148,45 @@ public static class ReferenceDataSeeder
             .Where(role => role.AgencyId == null)
             .ToDictionaryAsync(role => role.Name, role => role.Id, StringComparer.Ordinal, cancellationToken);
 
+        var roleIds = IdentitySeedData.SystemRoles.Select(seed => seed.Name)
+            .Where(existing.ContainsKey)
+            .Select(name => existing[name])
+            .ToList();
+
+        // What each system role already grants, so a role that gained a permission in code gains
+        // it in the database too. Without this an upgraded platform keeps the role it was seeded
+        // with: the Super Admin who is meant to hold everything silently does not hold the codes
+        // added since, and the endpoint behind them answers 403 to the one account that should
+        // always pass.
+        var granted = await dbContext.RolePermissions
+            .Where(grant => roleIds.Contains(grant.RoleId))
+            .ToListAsync(cancellationToken);
+
+        var grantedByRole = granted
+            .GroupBy(grant => grant.RoleId)
+            .ToDictionary(group => group.Key, group => group.Select(grant => grant.PermissionId).ToHashSet());
+
         foreach (var (name, scope, description, grantedCodes) in IdentitySeedData.SystemRoles)
         {
-            if (existing.ContainsKey(name))
+            if (!existing.TryGetValue(name, out var roleId))
             {
-                continue;
+                var role = Role.CreateSystemRole(name, scope, description);
+                dbContext.Roles.Add(role);
+                existing[name] = roleId = role.Id;
+                grantedByRole[roleId] = [];
             }
 
-            var role = Role.CreateSystemRole(name, scope, description);
-            dbContext.Roles.Add(role);
-            existing[name] = role.Id;
+            var held = grantedByRole.TryGetValue(roleId, out var ids) ? ids : [];
 
             foreach (var code in grantedCodes)
             {
-                dbContext.RolePermissions.Add(RolePermission.Create(role.Id, permissions[code]));
+                // Additive only. A permission dropped from the code but still granted here is
+                // left alone, exactly as this class's remarks promise: revoking access is a
+                // deliberate act, never a side effect of a deploy.
+                if (held.Add(permissions[code]))
+                {
+                    dbContext.RolePermissions.Add(RolePermission.Create(roleId, permissions[code]));
+                }
             }
         }
 

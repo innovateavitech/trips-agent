@@ -5,6 +5,7 @@ using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Application.Tenancy.SubAgents;
 using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Suppliers;
 
@@ -73,6 +74,7 @@ public sealed class SupplierSearchService
     private readonly ISupplierAdapterRegistry _adapters;
     private readonly ISearchResultCache _cache;
     private readonly PricingService _pricing;
+    private readonly SubAgentScopeService _scopes;
     private readonly SearchOptions _options;
     private readonly TimeProvider _clock;
 
@@ -82,6 +84,7 @@ public sealed class SupplierSearchService
         ISupplierAdapterRegistry adapters,
         ISearchResultCache cache,
         PricingService pricing,
+        SubAgentScopeService scopes,
         SearchOptions options,
         TimeProvider clock)
     {
@@ -90,6 +93,7 @@ public sealed class SupplierSearchService
         _adapters = adapters;
         _cache = cache;
         _pricing = pricing;
+        _scopes = scopes;
         _options = options;
         _clock = clock;
     }
@@ -165,6 +169,30 @@ public sealed class SupplierSearchService
             throw new InvalidOperationException(
                 $"No active supplier sells {query.ProductType}. Check that an adapter is registered and its suppliers row is active.");
         }
+
+        // Feature F10: a sub-agent sells only what its principal allows it to, so a supplier
+        // outside its scope is not asked at all — the results cannot show what it may not sell,
+        // and the quote and checkout steps refuse it again for a hand-written API call.
+        // A principal is not scoped, and this leaves its list exactly as it was.
+        var allowed = new List<(ISupplierAdapter Adapter, Guid? SupplierId)>(selling.Count);
+
+        foreach (var candidate in selling)
+        {
+            if (await _scopes.MaySellAsync(
+                    agencyId, SubAgentScopes.For(query.ProductType), candidate.SupplierId, cancellationToken))
+            {
+                allowed.Add(candidate);
+            }
+        }
+
+        if (allowed.Count == 0)
+        {
+            throw new SupplierScopeException(
+                $"This agency is not allowed to sell {query.ProductType.ToString().ToLowerInvariant()} "
+                + "through any supplier. Ask the agency that manages you to add it.");
+        }
+
+        selling = allowed;
 
         var offers = new List<NetOffer>();
 

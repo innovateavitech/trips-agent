@@ -29,11 +29,73 @@ public static class DependencyInjection
                 client.Timeout = TimeSpan.FromSeconds(20);
             })
 
-            // Retries, circuit-breaker and a per-attempt timeout. Safe for both calls we make:
-            // initialize carries our own reference so a retry returns the same attempt rather
-            // than creating a second one, and verify is a read.
+            // Retries, circuit-breaker and a per-attempt timeout. Safe for all three calls we make:
+            // initialize and charge_authorization both carry our own reference, which Paystack
+            // refuses to reuse, so a retry returns the same attempt rather than creating a second
+            // charge; and verify is a read.
             .AddStandardResilienceHandler();
 
+        // The same client, asked a different question. Resolved rather than registered separately so
+        // there is one HttpClient, one resilience pipeline and one set of credentials — two
+        // registrations would mean two circuit breakers, and a gateway that is open for renewals
+        // while closed for top-ups is a confusing thing to debug at two in the morning.
+        services.AddScoped<IRecurringChargeGateway>(provider =>
+            (PaystackGateway)provider.GetRequiredService<IPaymentGateway>());
+
+        // Disputes and settlements (issue 69). Reads, plus evidence filing that the gateway accepts
+        // again until the deadline — so, unlike transfers, these may be retried.
+        services.AddHttpClient<IGatewayBackOffice, PaystackBackOffice>(client =>
+            {
+                client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", options.SecretKey);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddStandardResilienceHandler();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers Paystack Transfers as the payout rail — <b>with no retry policy</b>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The missing <c>AddStandardResilienceHandler()</c> is the whole point of this method, and it
+    /// is why transfers are not simply hung off the payments client above.
+    /// <c>POST /transfer</c> is not idempotent in any way we can rely on, and a retry after a
+    /// timeout can send an agency's money twice — into a bank account there is no supplier to ring
+    /// about. See docs/adr/0008-never-retry-payout-transfers.md.
+    /// </para>
+    /// <para>
+    /// <b>If you are here to add a retry because transfers sometimes time out: read the ADR first.</b>
+    /// A timeout is an unknown outcome, and <c>PayoutStatusPoller</c> resolves it by asking
+    /// Paystack what became of our reference.
+    /// </para>
+    /// <para>
+    /// The timeout is longer than the payments client's 20 seconds because a transfer is worth
+    /// waiting for: every second we give up early is a payout that has to be resolved by the
+    /// poller instead of by the answer we were about to receive.
+    /// </para>
+    /// </remarks>
+    public static IServiceCollection AddPaystackTransfers(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var options = ReadOptions(configuration);
+
+        services.AddHttpClient<IBankTransfers, PaystackBankTransfers>(client =>
+        {
+            client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", options.SecretKey);
+
+            client.Timeout = TimeSpan.FromSeconds(45);
+        });
+
+        // Deliberately nothing here. No .AddStandardResilienceHandler(), no Polly pipeline, no
+        // retry of any kind. See the remarks above and ADR-0008.
         return services;
     }
 

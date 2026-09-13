@@ -17,7 +17,7 @@ interface SignInState {
 export function SignInPage() {
   useDocumentTitle('Sign in');
 
-  const { status, signIn } = useAuth();
+  const { status, session, signIn } = useAuth();
   const location = useLocation();
   const state = (location.state ?? null) as SignInState | null;
 
@@ -29,8 +29,10 @@ export function SignInPage() {
 
   if (status === 'restoring') return <FullPageLoading label="Signing you back in" />;
 
-  // Signed in — either already, or just now. Go where they were heading.
-  if (status === 'signed-in') return <Navigate to={safeRedirect(state?.from)} replace />;
+  // Signed in — either already, or just now. Go where they were heading, or to whichever screen
+  // this account's role is actually for.
+  if (status === 'signed-in')
+    return <Navigate to={safeRedirect(state?.from, session?.claims)} replace />;
 
   async function submit(event: FormEvent) {
     event.preventDefault();

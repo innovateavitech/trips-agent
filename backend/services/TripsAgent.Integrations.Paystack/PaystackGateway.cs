@@ -42,7 +42,7 @@ public sealed class PaystackOptions
 /// necessary.
 /// </para>
 /// </remarks>
-public sealed class PaystackGateway : IPaymentGateway
+public sealed class PaystackGateway : IPaymentGateway, IRecurringChargeGateway
 {
     private static readonly JsonSerializerOptions Json = new()
     {
@@ -154,8 +154,161 @@ public sealed class PaystackGateway : IPaymentGateway
             WholeMinorUnits(data.Fees) is { } fee and >= 0 ? new Money(fee) : Money.Zero,
             data.Currency ?? string.Empty,
             data.Reference,
-            null);
+            null)
+        {
+            Authorization = ToAuthorization(data.Authorization),
+        };
     }
+
+    /// <summary>
+    /// Charges a stored authorisation — how a subscription renews without the agency being there.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Unlike the supplier's ticket-issue call, this one <i>is</i> safe to repeat with the same
+    /// reference: Paystack rejects a reference it has already charged. That is why the caller's
+    /// reference is per attempt rather than per invoice — a retry of attempt 3 is refused as a
+    /// duplicate, while attempt 4 goes through, which is exactly what the dunning schedule wants.
+    /// </para>
+    /// <para>
+    /// A timeout is still an unknown outcome rather than a failure, and comes back
+    /// <see cref="GatewayPaymentOutcome.Pending"/> through the same exception handling verify uses.
+    /// Treating it as a decline would run the dunning schedule against a charge that may well have
+    /// gone through.
+    /// </para>
+    /// </remarks>
+    public async Task<GatewayVerification> ChargeAsync(
+        string reference,
+        Money amount,
+        string currency,
+        string customerEmail,
+        string authorizationCode,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reference);
+        ArgumentException.ThrowIfNullOrWhiteSpace(authorizationCode);
+
+        if (amount.AmountMinor <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), amount.AmountMinor, "A charge must be positive.");
+        }
+
+        // Minor units again, with no conversion, for the same reason as InitializeAsync.
+        var request = new
+        {
+            authorization_code = authorizationCode,
+            email = customerEmail,
+            amount = amount.AmountMinor.ToString(CultureInfo.InvariantCulture),
+            currency,
+            reference,
+        };
+
+        PaystackResponse<VerifyData> body;
+
+        try
+        {
+            using var response = await _http.PostAsJsonAsync(
+                "/transaction/charge_authorization", request, Json, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var status = (int)response.StatusCode;
+
+                if (status >= 500 || response.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests)
+                {
+                    throw new PaymentGatewayUnavailableException(
+                        $"Paystack answered HTTP {status} when asked to charge {reference}.");
+                }
+
+                // A 4xx is Paystack's verdict on the request, not on the card. It is still not a
+                // decline: nothing was charged, and the reason belongs in the attempt row.
+                throw new PaymentGatewayException(
+                    $"Paystack refused to charge {reference}: {status} "
+                    + $"{await MessageFrom(response, cancellationToken)}");
+            }
+
+            body = await response.Content.ReadFromJsonAsync<PaystackResponse<VerifyData>>(Json, cancellationToken)
+                ?? throw new PaymentGatewayException($"Paystack returned an empty charge response for {reference}.");
+        }
+        catch (JsonException ex)
+        {
+            throw new PaymentGatewayException($"Paystack's charge response for {reference} could not be read.", ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new PaymentGatewayUnavailableException($"Paystack could not be reached to charge {reference}.", ex);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new PaymentGatewayUnavailableException($"Paystack timed out charging {reference}.", ex);
+        }
+        catch (Polly.ExecutionRejectedException ex)
+        {
+            throw new PaymentGatewayUnavailableException($"Paystack calls are paused; {reference} was not charged.", ex);
+        }
+
+        if (!body.Status || body.Data is null)
+        {
+            // Paystack declined to give a verdict, which says nothing about whether the card was
+            // charged. Pending, so the caller asks again rather than charging a second time.
+            return new GatewayVerification(
+                GatewayPaymentOutcome.Pending, body.Message ?? "unknown", Money.Zero, Money.Zero,
+                currency, reference, body.Message);
+        }
+
+        var charged = body.Data;
+        var outcome = Classify(charged.Status);
+
+        if (outcome != GatewayPaymentOutcome.Succeeded)
+        {
+            return new GatewayVerification(
+                outcome,
+                charged.Status ?? "unknown",
+                Money.Zero,
+                Money.Zero,
+                charged.Currency ?? currency,
+                charged.Reference ?? reference,
+                charged.GatewayResponse ?? body.Message);
+        }
+
+        if (WholeMinorUnits(charged.Amount) is not { } chargedMinor || chargedMinor < 0)
+        {
+            throw new PaymentGatewayException(
+                $"Paystack reported {reference} charged without a usable amount ({Describe(charged.Amount)}). "
+                + "Nothing was recorded as paid.");
+        }
+
+        return new GatewayVerification(
+            GatewayPaymentOutcome.Succeeded,
+            charged.Status ?? "success",
+            new Money(chargedMinor),
+            WholeMinorUnits(charged.Fees) is { } chargeFee and >= 0 ? new Money(chargeFee) : Money.Zero,
+            charged.Currency ?? currency,
+            charged.Reference ?? reference,
+            null)
+        {
+            Authorization = ToAuthorization(charged.Authorization),
+        };
+    }
+
+    /// <summary>
+    /// Paystack's authorisation block, as the application sees it.
+    /// </summary>
+    /// <remarks>
+    /// Null unless it is reusable. A one-off authorisation stored as though it were reusable turns
+    /// every renewal into a failed charge and a dunning schedule nobody can explain.
+    /// </remarks>
+    private static GatewayAuthorization? ToAuthorization(AuthorizationData? authorization) =>
+        authorization is { AuthorizationCode: { Length: > 0 } code } && authorization.Reusable
+            ? new GatewayAuthorization(
+                code,
+                Reusable: true,
+                authorization.Brand,
+                authorization.Last4,
+                authorization.ExpiryMonth,
+                authorization.ExpiryYear,
+                authorization.Bank)
+            : null;
 
     /// <summary>
     /// Calls verify and reads the body, turning every way that can fail into one of our two
@@ -425,5 +578,24 @@ public sealed class PaystackGateway : IPaymentGateway
         [property: JsonPropertyName("amount")] JsonElement Amount,
         [property: JsonPropertyName("fees")] JsonElement Fees,
         [property: JsonPropertyName("currency")] string? Currency,
-        [property: JsonPropertyName("gateway_response")] string? GatewayResponse);
+        [property: JsonPropertyName("gateway_response")] string? GatewayResponse,
+        [property: JsonPropertyName("authorization")] AuthorizationData? Authorization = null);
+
+    /// <summary>
+    /// The reusable-token block Paystack returns on a card payment.
+    /// </summary>
+    /// <remarks>
+    /// Everything here is safe to store: <c>authorization_code</c> is opaque, and the brand, last
+    /// four and expiry are what a person needs to recognise a card. Paystack also returns a
+    /// <c>signature</c> and a <c>bin</c>, which are deliberately not read — we have no use for
+    /// them, and a field that is never read cannot leak.
+    /// </remarks>
+    private sealed record AuthorizationData(
+        [property: JsonPropertyName("authorization_code")] string? AuthorizationCode,
+        [property: JsonPropertyName("reusable")] bool Reusable,
+        [property: JsonPropertyName("brand")] string? Brand,
+        [property: JsonPropertyName("last4")] string? Last4,
+        [property: JsonPropertyName("exp_month")] string? ExpiryMonth,
+        [property: JsonPropertyName("exp_year")] string? ExpiryYear,
+        [property: JsonPropertyName("bank")] string? Bank);
 }

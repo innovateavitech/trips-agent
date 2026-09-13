@@ -67,6 +67,11 @@ public sealed class AgencyConfiguration : IEntityTypeConfiguration<Agency>
         builder.Property(agency => agency.TaxId)
             .HasMaxLength(64);
 
+        // Same ceiling as the audit log's reason column, so a reason that fits one fits the other
+        // and neither is silently truncated on its way to the other.
+        builder.Property(agency => agency.StatusReason)
+            .HasMaxLength(1000);
+
         builder.Property(agency => agency.VatRateBasisPoints)
             .IsRequired();
 

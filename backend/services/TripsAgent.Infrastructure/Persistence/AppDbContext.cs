@@ -4,8 +4,10 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TripsAgent.Application.Auditing;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Domain.Analytics;
 using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Auditing;
+using TripsAgent.Domain.Billing;
 using TripsAgent.Domain.Catalog;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Crm;
@@ -20,6 +22,7 @@ using TripsAgent.Domain.Storefront;
 using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
+using TripsAgent.Domain.Tenancy.SubAgents;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Persistence.Interceptors;
 
@@ -137,6 +140,15 @@ public class AppDbContext : DbContext, IAppDbContext
 
     public DbSet<UserInvitation> UserInvitations => Set<UserInvitation>();
 
+    /// <summary>What each sub-agent is allowed to sell. No rows means nothing. Feature F10.</summary>
+    public DbSet<SubAgentScope> SubAgentScopes => Set<SubAgentScope>();
+
+    /// <summary>Permissions a principal has taken away from a sub-agent. Deny only. Feature F10.</summary>
+    public DbSet<PermissionOverride> PermissionOverrides => Set<PermissionOverride>();
+
+    /// <summary>The hard cap on what each sub-agent may spend against its principal. Feature F10.</summary>
+    public DbSet<WalletAllowance> WalletAllowances => Set<WalletAllowance>();
+
     /// <summary>One row per attempt an agency makes at proving it is a real business.</summary>
     public DbSet<KybSubmission> KybSubmissions => Set<KybSubmission>();
 
@@ -171,6 +183,18 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <summary>Discrepancies the nightly integrity audit found. Not tenant-scoped; see IAppDbContext.</summary>
     public DbSet<ReconciliationException> ReconciliationExceptions => Set<ReconciliationException>();
 
+    /// <summary>One reconciliation per gateway per day. Not tenant-scoped; see IAppDbContext.</summary>
+    public DbSet<ReconciliationRun> ReconciliationRuns => Set<ReconciliationRun>();
+
+    /// <summary>Where each agency is paid, as the bank confirmed it.</summary>
+    public DbSet<AgencyBankAccount> AgencyBankAccounts => Set<AgencyBankAccount>();
+
+    /// <summary>Agencies withdrawing their own money to their own banks.</summary>
+    public DbSet<Payout> Payouts => Set<Payout>();
+
+    /// <summary>Chargebacks, and the clock each one starts.</summary>
+    public DbSet<Dispute> Disputes => Set<Dispute>();
+
     public DbSet<DocumentNumberFormat> DocumentNumberFormats => Set<DocumentNumberFormat>();
 
     public DbSet<GeneratedDocument> GeneratedDocuments => Set<GeneratedDocument>();
@@ -180,6 +204,39 @@ public class AppDbContext : DbContext, IAppDbContext
     /// upsert, never by loading a row and saving it back. Deliberately absent from IAppDbContext.
     /// </summary>
     public DbSet<DocumentNumberSequence> DocumentNumberSequences => Set<DocumentNumberSequence>();
+
+    /// <inheritdoc />
+    public DbSet<Entitlement> Entitlements => Set<Entitlement>();
+
+    /// <inheritdoc />
+    public DbSet<SubscriptionTier> SubscriptionTiers => Set<SubscriptionTier>();
+
+    /// <inheritdoc />
+    public DbSet<TierPrice> TierPrices => Set<TierPrice>();
+
+    /// <inheritdoc />
+    public DbSet<TierEntitlement> TierEntitlements => Set<TierEntitlement>();
+
+    /// <inheritdoc />
+    public DbSet<TierChangeLogEntry> TierChangeLog => Set<TierChangeLogEntry>();
+
+    /// <inheritdoc />
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
+
+    /// <inheritdoc />
+    public DbSet<SubscriptionInvoice> SubscriptionInvoices => Set<SubscriptionInvoice>();
+
+    /// <inheritdoc />
+    public DbSet<SubscriptionInvoiceLine> SubscriptionInvoiceLines => Set<SubscriptionInvoiceLine>();
+
+    /// <inheritdoc />
+    public DbSet<SubscriptionChargeAttempt> SubscriptionChargeAttempts => Set<SubscriptionChargeAttempt>();
+
+    /// <inheritdoc />
+    public DbSet<SubscriptionMigration> SubscriptionMigrations => Set<SubscriptionMigration>();
+
+    /// <inheritdoc />
+    public DbSet<PaymentAuthorization> PaymentAuthorizations => Set<PaymentAuthorization>();
 
     /// <inheritdoc />
     public DbSet<MarkupRule> MarkupRules => Set<MarkupRule>();
@@ -295,6 +352,31 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <summary>Addresses we no longer send to. Platform-wide.</summary>
     public DbSet<SuppressedEmailAddress> SuppressedEmailAddresses => Set<SuppressedEmailAddress>();
 
+    // -------------------------------------------------------------------- analytics read models
+
+    /// <summary>One row per order line, flattened for counting. Tenant-scoped.</summary>
+    public DbSet<BookingFact> BookingFacts => Set<BookingFact>();
+
+    /// <summary>One agency's day. Tenant-scoped.</summary>
+    public DbSet<AgencyDailyAggregate> AgencyDailyAggregates => Set<AgencyDailyAggregate>();
+
+    /// <summary>The platform's day. Platform-only — see the filter below.</summary>
+    public DbSet<PlatformDailyAggregate> PlatformDailyAggregates => Set<PlatformDailyAggregate>();
+
+    /// <summary>A supplier's day. Platform-only — see the filter below.</summary>
+    public DbSet<SupplierDailyAggregate> SupplierDailyAggregates => Set<SupplierDailyAggregate>();
+
+    /// <summary>What the rollup did. Platform-only.</summary>
+    public DbSet<RollupRun> RollupRuns => Set<RollupRun>();
+
+    /// <summary>The catalogue of reports. Reference data, readable by everybody.</summary>
+    public DbSet<ReportDefinition> ReportDefinitions => Set<ReportDefinition>();
+
+    /// <summary>One run of one report. Nullable agency: null is a platform run.</summary>
+    public DbSet<ReportJob> ReportJobs => Set<ReportJob>();
+
+    /// <summary>Every export, logged. Append-only.</summary>
+    public DbSet<ReportExportAudit> ReportExportAudits => Set<ReportExportAudit>();
     /// <summary>Starter websites. Platform reference data, not tenant-scoped.</summary>
     public DbSet<SiteTemplate> SiteTemplates => Set<SiteTemplate>();
 
@@ -463,6 +545,38 @@ public class AppDbContext : DbContext, IAppDbContext
                 .HasQueryFilter(Expression.Lambda(predicate, entity));
         }
 
+        // ---------------------------------------------------------------- the sub-agent network
+        //
+        // These three tables are written by the principal and read by both sides, so each row
+        // carries two agencies: agency_id is the principal that owns it, sub_agency_id the
+        // sub-agent it is about. The loop above has already given them the plain "agency_id is
+        // me" filter; these replace it with "…or it is about me".
+        //
+        // It is a *read* widening only. Writing is still agency_id = me, enforced twice over: the
+        // tenant stamping interceptor refuses to save a row belonging to another agency, and the
+        // row-level security policies' WITH CHECK clauses say the same thing at the database. A
+        // sub-agent can therefore read the scopes, the denied permissions and the allowance that
+        // apply to it — it has to, to show them — and can change none of them.
+        //
+        // Chosen over IPlatformScope.Enter for the principal's side of the same reads: this is
+        // ordinary business between two agencies that are already related, not a platform-admin
+        // action, and logging every "list my sub-agents" as a cross-tenant read would bury the
+        // handful of reads that genuinely are. The precedent is Agency's own filter below.
+        modelBuilder.Entity<SubAgentScope>().HasQueryFilter(scope =>
+            AllowCrossTenantAccess
+            || scope.AgencyId == CurrentAgencyId
+            || scope.SubAgencyId == CurrentAgencyId);
+
+        modelBuilder.Entity<PermissionOverride>().HasQueryFilter(entry =>
+            AllowCrossTenantAccess
+            || entry.AgencyId == CurrentAgencyId
+            || entry.SubAgencyId == CurrentAgencyId);
+
+        modelBuilder.Entity<WalletAllowance>().HasQueryFilter(allowance =>
+            AllowCrossTenantAccess
+            || allowance.AgencyId == CurrentAgencyId
+            || allowance.SubAgencyId == CurrentAgencyId);
+
         // An agency sees itself and, if it is a principal, its own sub-agents. Depth is capped at
         // 2, so "parent is me" is the whole subtree below me.
         modelBuilder.Entity<Agency>().HasQueryFilter(agency =>
@@ -485,6 +599,12 @@ public class AppDbContext : DbContext, IAppDbContext
         modelBuilder.Entity<UserInvitation>().HasQueryFilter(invitation =>
             AllowCrossTenantAccess || invitation.AgencyId == CurrentAgencyId);
 
+        // A role grant carries a nullable agency for the same reason a user does: null is a Trips
+        // back-office grant, and no agency may ever see one. Unlike Role above, there is no
+        // "visible to everybody" case here — a platform grant is read only inside a platform scope.
+        modelBuilder.Entity<UserRole>().HasQueryFilter(userRole =>
+            AllowCrossTenantAccess || userRole.AgencyId == CurrentAgencyId);
+
         // Credentials are reached through their user, so they follow that user's agency. Written
         // as a subquery rather than a join so the filter composes with any query EF builds.
         modelBuilder.Entity<RefreshToken>().HasQueryFilter(token =>
@@ -504,6 +624,36 @@ public class AppDbContext : DbContext, IAppDbContext
         // A supplier call made for no agency — a platform smoke test — is platform business only.
         modelBuilder.Entity<SupplierApiCall>().HasQueryFilter(call =>
             AllowCrossTenantAccess || call.AgencyId == CurrentAgencyId);
+
+        // ------------------------------------------------------------------ the analytics models
+        //
+        // fact_bookings and agg_agency_daily are ITenantScoped and already covered by the loop
+        // above. The three below are not, and each is written out for a different reason.
+        //
+        // The platform aggregates carry no agency at all: they ARE the cross-tenant view. There is
+        // no column to match, so the only safe filter is "a platform scope is open" — an agency
+        // session reads nothing from them, not even an empty row it might infer volume from. The
+        // rollup job that writes them opens a scope with a reason, like every other cross-tenant
+        // read; row-level security says the same thing underneath (ADR-0006).
+        modelBuilder.Entity<PlatformDailyAggregate>().HasQueryFilter(_ => AllowCrossTenantAccess);
+        modelBuilder.Entity<SupplierDailyAggregate>().HasQueryFilter(_ => AllowCrossTenantAccess);
+
+        // The rollup's own history. Platform operations, and no agency's business.
+        modelBuilder.Entity<RollupRun>().HasQueryFilter(_ => AllowCrossTenantAccess);
+
+        // A report run and an export record carry a NULLABLE agency — null means "every agency",
+        // a platform report — so they cannot implement ITenantScoped. The filter is the audit
+        // log's: my own rows, or everything inside a platform scope. A null agency never equals
+        // CurrentAgencyId, so a platform run is invisible to every agency.
+        modelBuilder.Entity<ReportJob>().HasQueryFilter(job =>
+            AllowCrossTenantAccess || job.AgencyId == CurrentAgencyId);
+
+        modelBuilder.Entity<ReportExportAudit>().HasQueryFilter(entry =>
+            AllowCrossTenantAccess || entry.AgencyId == CurrentAgencyId);
+
+        // ReportDefinition is deliberately unfiltered: it is the catalogue of what may be run,
+        // like identity.permissions, and holds no agency's data. Who may run which report is
+        // decided by the permission on its endpoint, not by hiding the menu.
 
         // Permissions are a platform-wide catalogue with no owner, and login attempts are
         // deliberately unfiltered: the ones worth investigating are against addresses that match

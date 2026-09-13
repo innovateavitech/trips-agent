@@ -24,6 +24,692 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "ltree");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.AgencyDailyAggregate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<int>("BookingsCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("bookings_count");
+
+                    b.Property<DateTimeOffset>("BuiltAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("built_at");
+
+                    b.Property<int>("CancelledCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("cancelled_count");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_count");
+
+                    b.Property<long>("GrossSalesMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("gross_sales_minor");
+
+                    b.Property<long>("MarkupMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("markup_minor");
+
+                    b.Property<long>("NetCostMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("net_cost_minor");
+
+                    b.Property<int>("OrdersCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("orders_count");
+
+                    b.Property<long>("PlatformFeeMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("platform_fee_minor");
+
+                    b.Property<int>("RefundedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("refunded_count");
+
+                    b.Property<long>("RefundedGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("refunded_gross_minor");
+
+                    b.Property<Guid>("RootAgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("root_agency_id");
+
+                    b.Property<long>("TaxMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_minor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_agg_agency_daily");
+
+                    b.HasIndex("Day")
+                        .HasDatabaseName("ix_agg_agency_daily_day");
+
+                    b.HasIndex("RootAgencyId", "Day")
+                        .HasDatabaseName("ix_agg_agency_daily_root_agency_id_day");
+
+                    b.HasIndex("AgencyId", "Day", "Currency")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agg_agency_daily_agency_id_day_currency");
+
+                    b.ToTable("agg_agency_daily", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.BookingFact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateOnly>("BookingDay")
+                        .HasColumnType("date")
+                        .HasColumnName("booking_day");
+
+                    b.Property<DateTimeOffset>("BuiltAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("built_at");
+
+                    b.Property<string>("BuyerType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("buyer_type");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("channel");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<string>("FulfilmentStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("fulfilment_status");
+
+                    b.Property<long>("GrossAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("gross_amount_minor");
+
+                    b.Property<bool>("IsCancelled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_cancelled");
+
+                    b.Property<bool>("IsFailed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_failed");
+
+                    b.Property<bool>("IsRefunded")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_refunded");
+
+                    b.Property<bool>("IsSale")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_sale");
+
+                    b.Property<string>("ItemType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("item_type");
+
+                    b.Property<long>("MarkupAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("markup_amount_minor");
+
+                    b.Property<long>("NetAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("net_amount_minor");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<Guid>("OrderLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_line_id");
+
+                    b.Property<string>("OrderStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("order_status");
+
+                    b.Property<long>("PlatformFeeMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("platform_fee_minor");
+
+                    b.Property<Guid>("RootAgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("root_agency_id");
+
+                    b.Property<DateTimeOffset>("SourceUpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("source_updated_at");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_id");
+
+                    b.Property<long>("TaxAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_amount_minor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fact_bookings");
+
+                    b.HasIndex("BookingDay")
+                        .HasDatabaseName("ix_fact_bookings_booking_day");
+
+                    b.HasIndex("OrderLineId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_fact_bookings_order_line_id");
+
+                    b.HasIndex("AgencyId", "BookingDay")
+                        .HasDatabaseName("ix_fact_bookings_agency_id_booking_day");
+
+                    b.HasIndex("RootAgencyId", "BookingDay")
+                        .HasDatabaseName("ix_fact_bookings_root_agency_id_booking_day");
+
+                    b.ToTable("fact_bookings", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.PlatformDailyAggregate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("BookingsCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("bookings_count");
+
+                    b.Property<DateTimeOffset>("BuiltAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("built_at");
+
+                    b.Property<int>("CancelledCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("cancelled_count");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_count");
+
+                    b.Property<long>("GmvMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("gmv_minor");
+
+                    b.Property<long>("MarkupMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("markup_minor");
+
+                    b.Property<long>("NetCostMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("net_cost_minor");
+
+                    b.Property<int>("NewAgenciesCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("new_agencies_count");
+
+                    b.Property<int>("OrdersCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("orders_count");
+
+                    b.Property<long>("PlatformFeeMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("platform_fee_minor");
+
+                    b.Property<int>("RefundedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("refunded_count");
+
+                    b.Property<long>("RefundedGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("refunded_gross_minor");
+
+                    b.Property<int>("SellingAgenciesCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("selling_agencies_count");
+
+                    b.Property<long>("TaxMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_minor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_agg_platform_daily");
+
+                    b.HasIndex("Day", "Currency")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agg_platform_daily_day_currency");
+
+                    b.ToTable("agg_platform_daily", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.ReportDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("RequiredPermission")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("required_permission");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("scope");
+
+                    b.HasKey("Id")
+                        .HasName("pk_report_definitions");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_report_definitions_code");
+
+                    b.ToTable("report_definitions", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.ReportExportAudit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ActorIpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("actor_ip_address");
+
+                    b.Property<string>("ActorType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("actor_type");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<Guid?>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<string>("DefinitionCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("definition_code");
+
+                    b.Property<DateTimeOffset>("ExportedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("exported_at");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("format");
+
+                    b.Property<Guid?>("ReportJobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("report_job_id");
+
+                    b.Property<int>("RowCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("row_count");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("scope");
+
+                    b.Property<string>("ScopeDescription")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("scope_description");
+
+                    b.HasKey("Id")
+                        .HasName("pk_report_exports_audit");
+
+                    b.HasIndex("ExportedAt")
+                        .HasDatabaseName("ix_report_exports_audit_exported_at");
+
+                    b.HasIndex("ReportJobId")
+                        .HasDatabaseName("ix_report_exports_audit_report_job_id");
+
+                    b.HasIndex("ActorUserId", "ExportedAt")
+                        .HasDatabaseName("ix_report_exports_audit_actor_user_id_exported_at");
+
+                    b.HasIndex("AgencyId", "ExportedAt")
+                        .HasDatabaseName("ix_report_exports_audit_agency_id_exported_at");
+
+                    b.ToTable("report_exports_audit", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.ReportJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DefinitionCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("definition_code");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("format");
+
+                    b.Property<DateOnly>("FromDay")
+                        .HasColumnType("date")
+                        .HasColumnName("from_day");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<Guid?>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<long?>("ResultSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("result_size_bytes");
+
+                    b.Property<string>("ResultStorageKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("result_storage_key");
+
+                    b.Property<int?>("RowCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("row_count");
+
+                    b.Property<string>("RunMode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("run_mode");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("scope");
+
+                    b.Property<string>("ScopeDescription")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("scope_description");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateOnly>("ToDay")
+                        .HasColumnType("date")
+                        .HasColumnName("to_day");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_report_jobs");
+
+                    b.HasIndex("RequestedByUserId")
+                        .HasDatabaseName("ix_report_jobs_requested_by_user_id");
+
+                    b.HasIndex("AgencyId", "RequestedAt")
+                        .HasDatabaseName("ix_report_jobs_agency_id_requested_at");
+
+                    b.HasIndex("Status", "RequestedAt")
+                        .HasDatabaseName("ix_report_jobs_status_requested_at");
+
+                    b.ToTable("report_jobs", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.RollupRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<int>("DaysRebuilt")
+                        .HasColumnType("integer")
+                        .HasColumnName("days_rebuilt");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<int>("FactRows")
+                        .HasColumnType("integer")
+                        .HasColumnName("fact_rows");
+
+                    b.Property<DateOnly?>("FromDay")
+                        .HasColumnType("date")
+                        .HasColumnName("from_day");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateOnly?>("ToDay")
+                        .HasColumnType("date")
+                        .HasColumnName("to_day");
+
+                    b.Property<DateTimeOffset>("WatermarkFrom")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("watermark_from");
+
+                    b.Property<DateTimeOffset>("WatermarkTo")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("watermark_to");
+
+                    b.HasKey("Id")
+                        .HasName("pk_rollup_runs");
+
+                    b.HasIndex("Status", "WatermarkTo")
+                        .HasDatabaseName("ix_rollup_runs_status_watermark_to");
+
+                    b.ToTable("rollup_runs", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.SupplierDailyAggregate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AverageLatencyMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("average_latency_ms");
+
+                    b.Property<int>("BookedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("booked_count");
+
+                    b.Property<DateTimeOffset>("BuiltAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("built_at");
+
+                    b.Property<int>("ConfirmPriceCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("confirm_price_count");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<int>("ErrorCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("error_count");
+
+                    b.Property<int>("IssueCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("issue_count");
+
+                    b.Property<int>("MaxLatencyMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_latency_ms");
+
+                    b.Property<int>("OtherCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("other_count");
+
+                    b.Property<int>("SearchCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("search_count");
+
+                    b.Property<int>("StatusCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("status_count");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_id");
+
+                    b.Property<int>("TimeoutCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("timeout_count");
+
+                    b.HasKey("Id")
+                        .HasName("pk_agg_supplier_daily");
+
+                    b.HasIndex("SupplierId")
+                        .HasDatabaseName("ix_agg_supplier_daily_supplier_id");
+
+                    b.HasIndex("Day", "SupplierId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agg_supplier_daily_day_supplier_id");
+
+                    b.ToTable("agg_supplier_daily", "analytics");
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Assets.Asset", b =>
                 {
                     b.Property<Guid>("Id")
@@ -306,6 +992,782 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_audit_logs_entity");
 
                     b.ToTable("audit_logs", "platform");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.Entitlement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("ValueType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("value_type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_entitlements");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_entitlements_code");
+
+                    b.ToTable("entitlements", "billing");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.PaymentAuthorization", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<string>("AuthorizationCode")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("authorization_code");
+
+                    b.Property<string>("Bank")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("bank");
+
+                    b.Property<DateTimeOffset>("CapturedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("captured_at");
+
+                    b.Property<string>("CardBrand")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("card_brand");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ExpiryMonth")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("expiry_month");
+
+                    b.Property<string>("ExpiryYear")
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)")
+                        .HasColumnName("expiry_year");
+
+                    b.Property<string>("Gateway")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("gateway");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default");
+
+                    b.Property<string>("Last4")
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)")
+                        .HasColumnName("last4");
+
+                    b.Property<DateTimeOffset?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payment_authorizations");
+
+                    b.HasIndex("AgencyId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_payment_authorizations_agency_id_default")
+                        .HasFilter("is_default AND revoked_at IS NULL");
+
+                    b.HasIndex("AgencyId", "AuthorizationCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_payment_authorizations_agency_id_authorization_code");
+
+                    b.ToTable("payment_authorizations", "billing");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.Subscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CurrentPeriodEnd")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("current_period_end");
+
+                    b.Property<DateTimeOffset>("CurrentPeriodStart")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("current_period_start");
+
+                    b.Property<int>("DunningRetries")
+                        .HasColumnType("integer")
+                        .HasColumnName("dunning_retries");
+
+                    b.Property<DateTimeOffset?>("DunningStartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("dunning_started_at");
+
+                    b.Property<string>("ExternalRef")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("external_ref");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StatusReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("status_reason");
+
+                    b.Property<Guid>("TierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tier_id");
+
+                    b.Property<Guid?>("TierPriceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tier_price_id");
+
+                    b.Property<DateTimeOffset?>("TrialEndsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("trial_ends_at");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_subscriptions");
+
+                    b.HasIndex("AgencyId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_subscriptions_agency_id_live")
+                        .HasFilter("status IN ('Trialing', 'Active', 'PastDue')");
+
+                    b.HasIndex("TierId")
+                        .HasDatabaseName("ix_subscriptions_tier_id");
+
+                    b.HasIndex("TierPriceId")
+                        .HasDatabaseName("ix_subscriptions_tier_price_id");
+
+                    b.HasIndex("Status", "CurrentPeriodEnd")
+                        .HasDatabaseName("ix_subscriptions_status_current_period_end");
+
+                    b.ToTable("subscriptions", "billing");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.SubscriptionChargeAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_minor");
+
+                    b.Property<int>("AttemptNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempt_number");
+
+                    b.Property<DateTimeOffset>("AttemptedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("attempted_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_subscription_charge_attempts");
+
+                    b.HasIndex("Reference")
+                        .IsUnique()
+                        .HasDatabaseName("ix_subscription_charge_attempts_reference");
+
+                    b.HasIndex("AgencyId", "AttemptedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_subscription_charge_attempts_agency_id_attempted_at");
+
+                    b.HasIndex("InvoiceId", "AttemptNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_subscription_charge_attempts_invoice_id_attempt_number");
+
+                    b.ToTable("subscription_charge_attempts", "billing");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.SubscriptionInvoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("DueAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("due_at");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("invoice_number");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at");
+
+                    b.Property<DateTimeOffset?>("PaidAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("paid_at");
+
+                    b.Property<Guid?>("PaymentTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payment_transaction_id");
+
+                    b.Property<DateTimeOffset>("PeriodEnd")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("period_end");
+
+                    b.Property<DateTimeOffset>("PeriodStart")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("period_start");
+
+                    b.Property<string>("ReceiptNumber")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("receipt_number");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StatusReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("status_reason");
+
+                    b.Property<Guid>("SubscriptionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("subscription_id");
+
+                    b.Property<long>("TotalMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_minor");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_subscription_invoices");
+
+                    b.HasIndex("InvoiceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_subscription_invoices_invoice_number");
+
+                    b.HasIndex("ReceiptNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_subscription_invoices_receipt_number")
+                        .HasFilter("receipt_number IS NOT NULL");
+
+                    b.HasIndex("SubscriptionId")
+                        .HasDatabaseName("ix_subscription_invoices_subscription_id");
+
+                    b.HasIndex("AgencyId", "IssuedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_subscription_invoices_agency_id_issued_at");
+
+                    b.HasIndex("Status", "DueAt")
+                        .HasDatabaseName("ix_subscription_invoices_status_due_at");
+
+                    b.ToTable("subscription_invoices", "billing");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.SubscriptionInvoiceLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_minor");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<long>("UnitAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unit_amount_minor");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_subscription_invoice_lines");
+
+                    b.HasIndex("InvoiceId")
+                        .HasDatabaseName("ix_subscription_invoice_lines_invoice_id");
+
+                    b.HasIndex("AgencyId", "InvoiceId")
+                        .HasDatabaseName("ix_subscription_invoice_lines_agency_id_invoice_id");
+
+                    b.ToTable("subscription_invoice_lines", "billing");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.SubscriptionMigration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset?>("AppliedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("applied_at");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<string>("ChangeReason")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("change_reason");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("FromTierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("from_tier_id");
+
+                    b.Property<DateTimeOffset?>("NotifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("notified_at");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset>("ScheduledFor")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scheduled_for");
+
+                    b.Property<Guid>("SubscriptionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("subscription_id");
+
+                    b.Property<Guid>("ToTierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("to_tier_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_subscription_migrations");
+
+                    b.HasIndex("AgencyId")
+                        .HasDatabaseName("ix_subscription_migrations_agency_id");
+
+                    b.HasIndex("SubscriptionId")
+                        .HasDatabaseName("ix_subscription_migrations_subscription_id");
+
+                    b.HasIndex("ScheduledFor", "AppliedAt")
+                        .HasDatabaseName("ix_subscription_migrations_scheduled_for_applied_at");
+
+                    b.ToTable("subscription_migrations", "billing");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.SubscriptionTier", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("archived_at");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CustomerDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("customer_description");
+
+                    b.Property<bool>("IsFallback")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_fallback");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("TrialDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("trial_days");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_subscription_tiers");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_subscription_tiers_code");
+
+                    b.HasIndex("IsFallback")
+                        .IsUnique()
+                        .HasDatabaseName("ix_subscription_tiers_fallback")
+                        .HasFilter("is_fallback");
+
+                    b.HasIndex("Status", "SortOrder")
+                        .HasDatabaseName("ix_subscription_tiers_status_sort_order");
+
+                    b.ToTable("subscription_tiers", "billing");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.TierChangeLogEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("action");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<string>("After")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("after");
+
+                    b.Property<string>("Before")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("before");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("MigrationPolicy")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("migration_policy");
+
+                    b.Property<DateTimeOffset?>("NoticeSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("notice_sent_at");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason");
+
+                    b.Property<int>("SubscribersAffected")
+                        .HasColumnType("integer")
+                        .HasColumnName("subscribers_affected");
+
+                    b.Property<Guid>("TierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tier_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tier_change_log");
+
+                    b.HasIndex("TierId", "OccurredAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_tier_change_log_tier_id_occurred_at");
+
+                    b.ToTable("tier_change_log", "billing");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.TierEntitlement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EntitlementId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("entitlement_id");
+
+                    b.Property<Guid>("TierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tier_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("value");
+
+                    b.Property<string>("ValueType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("value_type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tier_entitlements");
+
+                    b.HasIndex("EntitlementId")
+                        .HasDatabaseName("ix_tier_entitlements_entitlement_id");
+
+                    b.HasIndex("TierId", "EntitlementId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_tier_entitlements_tier_id_entitlement_id");
+
+                    b.ToTable("tier_entitlements", "billing");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.TierPrice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_minor");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("EffectiveFrom")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("effective_from");
+
+                    b.Property<DateTimeOffset?>("EffectiveTo")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("effective_to");
+
+                    b.Property<string>("Interval")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("interval");
+
+                    b.Property<bool>("IsPromotional")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_promotional");
+
+                    b.Property<Guid>("TierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tier_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tier_prices");
+
+                    b.HasIndex("TierId", "Currency", "Interval", "EffectiveTo")
+                        .HasDatabaseName("ix_tier_prices_tier_id_currency_interval_effective_to");
+
+                    b.ToTable("tier_prices", "billing");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Catalog.BookingInstallment", b =>
@@ -2660,7 +4122,7 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<Guid>("AgencyId")
+                    b.Property<Guid?>("AgencyId")
                         .HasColumnType("uuid")
                         .HasColumnName("agency_id");
 
@@ -2688,6 +4150,11 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("AgencyId", "UserId")
                         .HasDatabaseName("ix_user_roles_agency_id_user_id");
+
+                    b.HasIndex("UserId", "RoleId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_roles_platform_user_id_role_id")
+                        .HasFilter("agency_id IS NULL");
 
                     b.HasIndex("UserId", "RoleId", "AgencyId")
                         .IsUnique()
@@ -3535,6 +5002,258 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.ToTable("order_travellers", "orders");
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Payments.AgencyBankAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccountNameProvided")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("account_name_provided");
+
+                    b.Property<string>("AccountNameResolved")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("account_name_resolved");
+
+                    b.Property<string>("AccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character(10)")
+                        .HasColumnName("account_number")
+                        .IsFixedLength();
+
+                    b.Property<Guid?>("AddedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("added_by_user_id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<string>("BankCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("bank_code");
+
+                    b.Property<string>("BankName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("bank_name");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<string>("GatewayRecipientCode")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("gateway_recipient_code");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTimeOffset?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("verified_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_agency_bank_accounts");
+
+                    b.HasIndex("AgencyId", "Currency")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agency_bank_accounts_one_default")
+                        .HasFilter("is_default");
+
+                    b.HasIndex("AgencyId", "BankCode", "AccountNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agency_bank_accounts_agency_bank_number");
+
+                    b.ToTable("agency_bank_accounts", "payments");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Payments.Dispute", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_minor");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<string>("EvidenceAssetIds")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("evidence_asset_ids");
+
+                    b.Property<DateTimeOffset>("EvidenceDueAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("evidence_due_at");
+
+                    b.Property<string>("EvidenceNote")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("evidence_note");
+
+                    b.Property<string>("EvidencePayload")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("evidence_payload");
+
+                    b.Property<DateTimeOffset?>("EvidenceSubmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("evidence_submitted_at");
+
+                    b.Property<Guid?>("EvidenceSubmittedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("evidence_submitted_by_user_id");
+
+                    b.Property<string>("GatewayDisputeId")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("gateway_dispute_id");
+
+                    b.Property<string>("HoldFailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("hold_failure_reason");
+
+                    b.Property<Guid?>("HoldLedgerTransactionGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("hold_ledger_transaction_group_id");
+
+                    b.Property<string>("HoldOutcome")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("hold_outcome");
+
+                    b.Property<DateTimeOffset?>("LastReminderAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_reminder_at");
+
+                    b.Property<DateTimeOffset>("OpenedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("opened_at");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<string>("PaymentReference")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("payment_reference");
+
+                    b.Property<Guid>("PaymentTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payment_transaction_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("Resolution")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("resolution");
+
+                    b.Property<Guid?>("ResolutionLedgerTransactionGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resolution_ledger_transaction_group_id");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_disputes");
+
+                    b.HasIndex("GatewayDisputeId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_disputes_gateway_dispute_id");
+
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("ix_disputes_order_id");
+
+                    b.HasIndex("PaymentTransactionId")
+                        .HasDatabaseName("ix_disputes_payment_transaction_id");
+
+                    b.HasIndex("AgencyId", "OpenedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_disputes_agency_id_opened_at");
+
+                    b.HasIndex("Status", "EvidenceDueAt")
+                        .HasDatabaseName("ix_disputes_status_evidence_due_at");
+
+                    b.ToTable("disputes", "payments");
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Payments.LedgerAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3853,6 +5572,144 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.ToTable("payment_webhook_events", "payments");
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Payments.Payout", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_minor");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("approved_at");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approved_by_user_id");
+
+                    b.Property<Guid>("BankAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bank_account_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by_user_id");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<string>("GatewayStatus")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("gateway_status");
+
+                    b.Property<string>("GatewayTransferCode")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("gateway_transfer_code");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("reference");
+
+                    b.Property<DateTimeOffset?>("RejectedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("rejected_at");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<Guid>("RequestLedgerTransactionGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("request_ledger_transaction_group_id");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<Guid?>("ReturnLedgerTransactionGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("return_ledger_transaction_group_id");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<Guid?>("SettlementLedgerTransactionGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("settlement_ledger_transaction_group_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("StatusQueries")
+                        .HasColumnType("integer")
+                        .HasColumnName("status_queries");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payouts");
+
+                    b.HasIndex("BankAccountId")
+                        .HasDatabaseName("ix_payouts_bank_account_id");
+
+                    b.HasIndex("Reference")
+                        .IsUnique()
+                        .HasDatabaseName("ix_payouts_reference");
+
+                    b.HasIndex("AgencyId", "RequestedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_payouts_agency_id_requested_at");
+
+                    b.HasIndex("Status", "RequestedAt")
+                        .HasDatabaseName("ix_payouts_status_requested_at");
+
+                    b.ToTable("payouts", "payments");
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Payments.ReconciliationException", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3895,6 +5752,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_seen_at");
 
+                    b.Property<Guid?>("ReconciliationRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reconciliation_run_id");
+
                     b.Property<string>("ResolutionNote")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
@@ -3903,6 +5764,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("ResolvedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("resolved_at");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resolved_by_user_id");
 
                     b.Property<string>("Severity")
                         .IsRequired()
@@ -3933,6 +5798,9 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_reconciliation_exceptions");
 
+                    b.HasIndex("ReconciliationRunId")
+                        .HasDatabaseName("ix_reconciliation_exceptions_reconciliation_run_id");
+
                     b.HasIndex("Check", "Subject")
                         .IsUnique()
                         .HasDatabaseName("ix_reconciliation_exceptions_check_name_subject");
@@ -3941,6 +5809,112 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_reconciliation_exceptions_status_severity_detected_at");
 
                     b.ToTable("reconciliation_exceptions", "payments");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Payments.ReconciliationRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("BusinessDate")
+                        .HasColumnType("date")
+                        .HasColumnName("business_date");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<int>("ExceptionsRaised")
+                        .HasColumnType("integer")
+                        .HasColumnName("exceptions_raised");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<string>("Gateway")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("gateway");
+
+                    b.Property<long>("GatewayFeesMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("gateway_fees_minor");
+
+                    b.Property<long>("GatewayGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("gateway_gross_minor");
+
+                    b.Property<long>("GatewayNetMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("gateway_net_minor");
+
+                    b.Property<long>("LedgerGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ledger_gross_minor");
+
+                    b.Property<int>("RecordsExamined")
+                        .HasColumnType("integer")
+                        .HasColumnName("records_examined");
+
+                    b.Property<int>("RecordsMatched")
+                        .HasColumnType("integer")
+                        .HasColumnName("records_matched");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTimeOffset>("WindowEnd")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("window_end");
+
+                    b.Property<DateTimeOffset>("WindowStart")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("window_start");
+
+                    b.HasKey("Id")
+                        .HasName("pk_reconciliation_runs");
+
+                    b.HasIndex("Status", "BusinessDate")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_reconciliation_runs_status_business_date");
+
+                    b.HasIndex("Type", "Gateway", "BusinessDate")
+                        .IsUnique()
+                        .HasDatabaseName("ix_reconciliation_runs_type_gateway_business_date");
+
+                    b.ToTable("reconciliation_runs", "payments");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Payments.Refund", b =>
@@ -4084,6 +6058,80 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_wallets_agency_id_currency");
 
                     b.ToTable("wallets", "payments");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Payments.WalletAllowance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<long>("LimitMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("limit_minor");
+
+                    b.Property<string>("Period")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("period");
+
+                    b.Property<DateTimeOffset?>("ResetsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resets_at");
+
+                    b.Property<long>("SpentMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("spent_minor");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("SubAgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sub_agency_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_wallet_allowances");
+
+                    b.HasIndex("AgencyId")
+                        .HasDatabaseName("ix_wallet_allowances_agency_id");
+
+                    b.HasIndex("ResetsAt")
+                        .HasDatabaseName("ix_wallet_allowances_resets_at");
+
+                    b.HasIndex("SubAgencyId", "Currency")
+                        .IsUnique()
+                        .HasDatabaseName("ix_wallet_allowances_sub_agency_id_currency");
+
+                    b.ToTable("wallet_allowances", "payments");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Payments.WalletHold", b =>
@@ -6287,6 +8335,15 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("status");
 
+                    b.Property<DateTimeOffset?>("StatusChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("status_changed_at");
+
+                    b.Property<string>("StatusReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("status_reason");
+
                     b.Property<string>("TaxId")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
@@ -6591,6 +8648,103 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.ToTable("kyb_submissions", "tenancy");
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Tenancy.SubAgents.PermissionOverride", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("PermissionCode")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("permission_code");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("SubAgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sub_agency_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_permission_overrides");
+
+                    b.HasIndex("AgencyId")
+                        .HasDatabaseName("ix_permission_overrides_agency_id");
+
+                    b.HasIndex("SubAgencyId", "PermissionCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_permission_overrides_sub_agency_id_permission_code");
+
+                    b.ToTable("permission_overrides", "tenancy");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Tenancy.SubAgents.SubAgentScope", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ProductType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("product_type");
+
+                    b.Property<Guid>("SubAgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sub_agency_id");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sub_agent_scopes");
+
+                    b.HasIndex("AgencyId")
+                        .HasDatabaseName("ix_sub_agent_scopes_agency_id");
+
+                    b.HasIndex("SupplierId")
+                        .HasDatabaseName("ix_sub_agent_scopes_supplier_id");
+
+                    b.HasIndex("SubAgencyId", "ProductType", "SupplierId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sub_agent_scopes_sub_agency_id_product_type_supplier_id");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("SubAgencyId", "ProductType", "SupplierId"), false);
+
+                    b.ToTable("sub_agent_scopes", "tenancy");
+                });
+
             modelBuilder.Entity("TripsAgent.Infrastructure.Messaging.InboxMessage", b =>
                 {
                     b.Property<Guid>("MessageId")
@@ -6682,6 +8836,60 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.AgencyDailyAggregate", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_agg_agency_daily_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.BookingFact", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_fact_bookings_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.ReportExportAudit", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Analytics.ReportJob", null)
+                        .WithMany()
+                        .HasForeignKey("ReportJobId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_report_exports_audit_report_jobs_report_job_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.ReportJob", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_report_jobs_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("RequestedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_report_jobs_users_requested_by_user_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.SupplierDailyAggregate", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Suppliers.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_agg_supplier_daily_suppliers_supplier_id");
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Assets.Asset", b =>
                 {
                     b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
@@ -6707,6 +8915,113 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_asset_variants_assets_asset_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.PaymentAuthorization", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_payment_authorizations_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.Subscription", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_subscriptions_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Billing.SubscriptionTier", null)
+                        .WithMany()
+                        .HasForeignKey("TierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_subscriptions_subscription_tiers_tier_id");
+
+                    b.HasOne("TripsAgent.Domain.Billing.TierPrice", null)
+                        .WithMany()
+                        .HasForeignKey("TierPriceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_subscriptions_tier_prices_tier_price_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.SubscriptionChargeAttempt", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Billing.SubscriptionInvoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_subscription_charge_attempts_subscription_invoices_invoice_");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.SubscriptionInvoice", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_subscription_invoices_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Billing.Subscription", null)
+                        .WithMany()
+                        .HasForeignKey("SubscriptionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_subscription_invoices_subscriptions_subscription_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.SubscriptionInvoiceLine", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Billing.SubscriptionInvoice", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_subscription_invoice_lines_subscription_invoices_invoice_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.SubscriptionMigration", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Billing.Subscription", null)
+                        .WithMany()
+                        .HasForeignKey("SubscriptionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_subscription_migrations_subscriptions_subscription_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.TierEntitlement", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Billing.Entitlement", null)
+                        .WithMany()
+                        .HasForeignKey("EntitlementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_tier_entitlements_entitlements_entitlement_id");
+
+                    b.HasOne("TripsAgent.Domain.Billing.SubscriptionTier", null)
+                        .WithMany("Entitlements")
+                        .HasForeignKey("TierId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tier_entitlements_subscription_tiers_tier_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.TierPrice", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Billing.SubscriptionTier", null)
+                        .WithMany("Prices")
+                        .HasForeignKey("TierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_tier_prices_subscription_tiers_tier_id");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Catalog.BookingInstallment", b =>
@@ -7373,7 +9688,6 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("AgencyId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
                         .HasConstraintName("fk_user_roles_agencies_agency_id");
 
                     b.HasOne("TripsAgent.Domain.Identity.Role", null)
@@ -7533,6 +9847,39 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_order_travellers_order_lines_order_line_id");
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Payments.AgencyBankAccount", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_agency_bank_accounts_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Payments.Dispute", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_disputes_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Orders.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_disputes_orders_order_id");
+
+                    b.HasOne("TripsAgent.Domain.Payments.PaymentTransaction", null)
+                        .WithMany()
+                        .HasForeignKey("PaymentTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_disputes_payment_transactions_payment_transaction_id");
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Payments.LedgerAccount", b =>
                 {
                     b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
@@ -7560,6 +9907,32 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_payment_transactions_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Payments.Payout", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_payouts_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Payments.AgencyBankAccount", null)
+                        .WithMany()
+                        .HasForeignKey("BankAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_payouts_agency_bank_accounts_bank_account_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Payments.ReconciliationException", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Payments.ReconciliationRun", null)
+                        .WithMany()
+                        .HasForeignKey("ReconciliationRunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_reconciliation_exceptions_reconciliation_runs_reconciliatio");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Payments.Refund", b =>
@@ -7606,6 +9979,23 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_wallets_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Payments.WalletAllowance", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_wallet_allowances_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("SubAgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_wallet_allowances_agencies_sub_agency_id");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Payments.WalletHold", b =>
@@ -8002,6 +10392,58 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_kyb_submissions_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Tenancy.SubAgents.PermissionOverride", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_permission_overrides_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("SubAgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_permission_overrides_agencies_sub_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Tenancy.SubAgents.SubAgentScope", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sub_agent_scopes_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("SubAgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sub_agent_scopes_agencies_sub_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Suppliers.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_sub_agent_scopes_suppliers_supplier_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.SubscriptionInvoice", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Billing.SubscriptionTier", b =>
+                {
+                    b.Navigation("Entitlements");
+
+                    b.Navigation("Prices");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Catalog.BookingPaymentSchedule", b =>

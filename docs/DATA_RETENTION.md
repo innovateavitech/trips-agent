@@ -54,9 +54,14 @@ The source of truth is `RetentionCatalogue.Tables` in
 | `payments.wallets` | No | At least 7 years | Protected | Balances the nightly audit reconciles against the ledger |
 | `payments.wallet_holds` | No | At least 7 years | Protected | Funds reserved for a booking; each explains a statement line |
 | `payments.wallet_transactions` | No | At least 7 years | Protected | The agent's wallet statement |
+| `payments.wallet_allowances` | No | At least 7 years | Protected | How much of a principal's money a sub-agent was allowed to spend, and how much it did — read alongside the ledger when somebody asks who authorised a booking |
 | `payments.payment_transactions` | Some (gateway references) | At least 7 years | Protected | The evidence behind every top-up and order payment |
 | `payments.payment_webhook_events` | Yes (payer details in payloads) | At least 7 years | Protected | What the gateway told us, with its signature check — the evidence in a dispute |
 | `payments.reconciliation_exceptions` | No | At least 7 years | Protected | What the ledger audit found and how it was resolved |
+| `payments.reconciliation_runs` | No | At least 7 years | Protected | One row per gateway per day of reconciliation — proof a day was checked |
+| `payments.agency_bank_accounts` | No | At least 7 years | Protected | Where each payout was sent, as the bank named it; retired, never deleted |
+| `payments.payouts` | No | At least 7 years | Protected | Every withdrawal, who asked, who approved and what the gateway said |
+| `payments.disputes` | Yes | At least 7 years | Protected | Chargebacks and the evidence filed; the customer's details in evidence are anonymised on erasure, the financial record kept |
 | `payments.refunds` | No | At least 7 years | Protected | Every refund, with the status poll or agent behind it — the evidence that money went back for a reason. Append-only in the database too |
 
 ### Sales
@@ -126,6 +131,26 @@ erasing a person (#106) one row anonymised in place rather than a sweep of five 
 | `crm.tasks` | No | While the agency exists | Kept | Follow-up work: a title, a date and what it is about |
 | `crm.communications` | Some (what was said) | With their customer | Kept | Each customer's timeline, so an agent can pick a conversation back up. Append-only in the database too |
 
+### Subscriptions and billing
+
+What Trips charged its own customers. Every row here is Protected for the same reason: it is our
+revenue record and the agency's expense record, and both sides need it for the same seven years an
+order needs. None of it is a traveller's personal data, so there is nothing to anonymise.
+
+| Table | Personal data | Kept for | Treatment | Why |
+|---|---|---|---|---|
+| `billing.subscription_tiers` | No | At least 7 years | Protected | The plans. Archived rather than deleted — every invoice names the tier it billed for |
+| `billing.tier_prices` | No | At least 7 years | Protected | What each plan cost, with history; explains the amount on every historic invoice |
+| `billing.entitlements` | No | At least 7 years | Protected | The catalogue of what a plan can grant. Reference data, seeded from code |
+| `billing.tier_entitlements` | No | At least 7 years | Protected | What each plan granted; explains why an agency could do what it did |
+| `billing.tier_change_log` | No | At least 7 years | Protected | What an admin changed, who was migrated and when they were told (FRD RS-6, RS-7). Append-only |
+| `billing.subscriptions` | No | At least 7 years | Protected | Which plan each agency was on, and for which periods |
+| `billing.subscription_invoices` | No | At least 7 years | Protected | What Trips charged each agency — a tax record on both sides |
+| `billing.subscription_invoice_lines` | No | At least 7 years | Protected | The lines that add up to each total; without them the total is an assertion |
+| `billing.subscription_charge_attempts` | No | At least 7 years | Protected | Every attempt to take a payment, successful or not — the record of dunning actually running. Append-only |
+| `billing.subscription_migrations` | No | At least 7 years | Protected | Plan changes and the notice given for each |
+| `billing.payment_authorizations` | No | At least 7 years | Protected | Gateway tokens with a card's brand, last four and expiry. **No card number, ever** — card entry happens on Paystack's hosted page |
+
 ### Supplier bookings
 
 | Table | Personal data | Kept for | Treatment | Why |
@@ -174,6 +199,8 @@ erasing a person (#106) one row anonymised in place rather than a sweep of five 
 | `tenancy.agency_branding` | Some (contact address) | While the agency exists | Kept | Configuration |
 | `tenancy.kyb_submissions` | Yes (directors) | At least 7 years | Protected | Proof the agency was verified before it could transact |
 | `tenancy.kyb_documents` | Yes | At least 7 years | Protected | The documents that verification rested on |
+| `tenancy.sub_agent_scopes` | No | While the sub-agent exists | Kept | What a sub-agent is currently allowed to sell. Configuration, not history — what changed and why is in the audit log |
+| `tenancy.permission_overrides` | No | While the sub-agent exists | Kept | Permissions a principal has currently taken away from a sub-agent |
 
 ### Platform
 
@@ -207,6 +234,19 @@ erasing a person (#106) one row anonymised in place rather than a sweep of five 
 | `storefront.site_themes` | No | While the site exists | Kept | The site's typography |
 | `storefront.site_domains` | No | While connected | Kept | Hostnames the site answers on; a removed one is deleted with its checks |
 | `storefront.site_domain_checks` | No | With their hostname | Kept | What DNS said on each check — the answer to "why isn't my domain working?" |
+
+### Analytics and reports
+
+| Table | Personal data | Kept for | Treatment | Why |
+|---|---|---|---|---|
+| `analytics.fact_bookings` | No | Derived: rebuilt from orders | Kept | A copy of order lines for counting. Deleting it deletes nothing — the rollup makes it again from orders |
+| `analytics.agg_agency_daily` | No | Derived: rebuilt from orders | Kept | One agency's day, summed from `fact_bookings` |
+| `analytics.agg_platform_daily` | No | Derived: rebuilt from orders | Kept | The platform's day |
+| `analytics.agg_supplier_daily` | No | Derived: rebuilt from the supplier call log | Kept | A supplier's day. Outlives the call log's dropped partitions, which is the point |
+| `analytics.rollup_runs` | No | 90 days proposed | Not yet enforced | About 105,000 small rows a year. Only the newest successful run matters; waits for a purge rule |
+| `analytics.report_definitions` | No | While offered | Kept | Reference data: the reports that may be run |
+| `analytics.report_jobs` | Some (who asked) | At least 7 years | Protected | Every export record points at its run |
+| `analytics.report_exports_audit` | Yes (actors, IPs) | At least 7 years | Protected | Who exported what, how many rows, and when (FRD 2.15 UC-1C RS-6). Append-only |
 
 ---
 
@@ -297,6 +337,9 @@ Honest gaps, so nobody assumes they are handled:
   blocked on the same question. This job only clears travel documents after the trip.
 - **Supplier search tables.** Proposed periods are above; enforcement lands with the search work,
   which owns those tables.
+- **Finished report files.** A report's CSV lives in blob storage under `reports/`, and nothing
+  expires it yet. It carries the same data the export log says left the system; its retention
+  should follow the log's, and lands with the storage adapter once a cloud is chosen.
 - **Outside the database.** Application logs (the rate limiter logs the address or user it refuses),
   database backups, Redis and blob storage all hold personal data too. Their retention is set by
   the hosting platform, and the cloud has not been chosen yet. Rate-limit counters in Redis expire

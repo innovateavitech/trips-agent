@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Analytics;
 using TripsAgent.Application.Assets;
+using TripsAgent.Application.Billing;
 using TripsAgent.Application.Catalog;
 using TripsAgent.Application.Commerce;
 using TripsAgent.Application.Crm;
@@ -9,6 +11,7 @@ using TripsAgent.Application.Identity.Registration;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Orders;
 using TripsAgent.Application.Payments;
+using TripsAgent.Application.Platform;
 using TripsAgent.Application.Pricing;
 using TripsAgent.Application.Search;
 using TripsAgent.Application.Storefront;
@@ -43,6 +46,30 @@ public static class DependencyInjection
         services.AddScoped<KybReviewHandler>();
         services.AddScoped<KybDocumentLink>();
 
+        // The Trips back office (epic 66). Each reads across agencies through IPlatformScope,
+        // and each endpoint above them requires its own platform permission.
+        services.AddScoped<Tenancy.StorefrontAvailability>();
+        services.AddScoped<AgencyDirectoryService>();
+        services.AddScoped<AgencyLifecycleService>();
+        services.AddScoped<AgencyExportService>();
+        services.AddScoped<OperationsDashboardService>();
+        services.AddScoped<AuditLogQueryService>();
+        services.AddScoped<PlatformUserService>();
+
+        // The sub-agent network (feature F10, issue 63).
+        services.AddScoped<Tenancy.SubAgents.SubAgentNetworkService>();
+        services.AddScoped<Tenancy.SubAgents.SubAgentScopeService>();
+        services.AddScoped<Tenancy.SubAgents.SubAgentPermissionService>();
+        services.AddScoped<Tenancy.SubAgents.SubAgentAllowanceService>();
+        services.AddScoped<Tenancy.SubAgents.SubAgentNetworkReport>();
+        services.AddScoped<Tenancy.SubAgents.SubAgentSpending>();
+        services.AddScoped<Tenancy.SubAgents.AcceptInvitationHandler>();
+        services.AddScoped<Tenancy.SubAgents.IAllowanceResetJob, Tenancy.SubAgents.AllowanceResetJob>();
+
+        // How many sub-agents an agency may have is its plan's max_sub_agents entitlement (F9).
+        services.AddScoped<Tenancy.SubAgents.ISubAgentEntitlement>(
+            provider => provider.GetRequiredService<Billing.SubAgentAllowance>());
+
         services.AddScoped<WalletTopUpService>();
         services.AddScoped<StartTopUpHandler>();
         services.AddScoped<VerifyTopUpHandler>();
@@ -54,6 +81,41 @@ public static class DependencyInjection
 
         services.AddScoped<ILedgerIntegrityAudit, LedgerIntegrityAudit>();
 
+        // Money out (build plan F12, issue 69). The request moves the ledger, the approval is a
+        // second person, and the sender is a dumb executor of instructions somebody already
+        // checked. The poller is the only way out of an unknown outcome — see ADR-0008.
+        services.AddScoped<PayoutBalances>();
+        services.AddScoped<BankAccountService>();
+        services.AddScoped<PayoutService>();
+        services.AddScoped<PayoutSettlements>();
+        services.AddScoped<IPayoutTransferService, PayoutTransferService>();
+        services.AddScoped<IPayoutStatusPoller, PayoutStatusPoller>();
+
+        // Chargebacks: the webhook hands them over, the deadline monitor chases the evidence.
+        services.AddScoped<DisputeService>();
+        services.AddScoped<IDisputeWebhookSink>(sp => sp.GetRequiredService<DisputeService>());
+        services.AddScoped<IDisputeDeadlineMonitor>(sp => sp.GetRequiredService<DisputeService>());
+
+        // The daily match of the gateway's settlements against the books. Reads and reports; never corrects.
+        services.AddScoped<IGatewayReconciliation, GatewayReconciliation>();
+        services.AddScoped<ReconciliationTriage>();
+
+        // The analytics read models (#67). Hangfire resolves the rollup by interface when the
+        // incremental and nightly jobs run; the dashboards read what it leaves behind and never
+        // the OLTP tables.
+        services.AddScoped<IAnalyticsRollup, AnalyticsRollup>();
+
+        // The dashboards on top of them. The agency's own reads under the tenant filter; the
+        // platform's opens a scope with a reason, like every cross-tenant read.
+        services.AddScoped<AgencyAnalyticsService>();
+        services.AddScoped<PlatformAnalyticsService>();
+
+        // Reporting and exports (#68). The runner is resolved by the job runner when a queued
+        // report comes up, which is why it is registered behind its interface.
+        services.AddScoped<ReportGenerator>();
+        services.AddScoped<ReportService>();
+        services.AddScoped<IReportRunner, ReportRunner>();
+
         services.AddScoped<DocumentIssuer>();
 
         // Records what was sold, at the price the quote froze. The saga (#42) takes it from there.
@@ -64,7 +126,19 @@ public static class DependencyInjection
         services.AddScoped<MarkupRuleService>();
 
         // Zero until subscription tiers (#64) supply each agency's transaction fee.
-        services.AddSingleton<IPlatformFeePolicy, NoPlatformFeePolicy>();
+        // Subscriptions and billing (issues 64 and 65). Scoped like everything else here: each
+        // works through the request's DbContext, and the entitlement resolver remembers what it
+        // resolved for the length of one request rather than across them.
+        services.AddScoped<IEntitlements, Billing.EntitlementService>();
+        services.AddScoped<Billing.SubAgentAllowance>();
+        services.AddScoped<Billing.TierAdminService>();
+        services.AddScoped<Billing.SubscriptionService>();
+        services.AddScoped<ISubscriptionBillingRun, Billing.SubscriptionBillingRun>();
+
+        // The seam NoPlatformFeePolicy was standing in for: the platform's share of a sale is now
+        // the agency tier's transaction_fee_bps entitlement. Scoped rather than singleton, because
+        // it reads the database through the request's context.
+        services.AddScoped<IPlatformFeePolicy, Billing.EntitlementPlatformFeePolicy>();
 
         // Picks the adapter for a supplier and product from whatever adapters the host registered.
         // Adding an aggregator is a new ISupplierAdapter registration, never a change here.

@@ -3,8 +3,10 @@ using System.Text;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using TripsAgent.Api.Analytics;
 using TripsAgent.Api.Assets;
 using TripsAgent.Api.Authorization;
+using TripsAgent.Api.Billing;
 using TripsAgent.Api.Bookings;
 using TripsAgent.Api.Catalog;
 using TripsAgent.Api.Commerce;
@@ -13,6 +15,7 @@ using TripsAgent.Api.Documents;
 using TripsAgent.Api.Identity;
 using TripsAgent.Api.Networking;
 using TripsAgent.Api.Payments;
+using TripsAgent.Api.Platform;
 using TripsAgent.Api.Pricing;
 using TripsAgent.Api.RateLimiting;
 using TripsAgent.Api.Scheduling;
@@ -33,6 +36,10 @@ using TripsAgent.Integrations.TripsAfrica;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+
+// One in-process cache, used today by the operations dashboard so counting the whole platform
+// happens once every five minutes rather than on every admin's page load.
+builder.Services.AddMemoryCache();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -42,6 +49,7 @@ builder.Services.AddMessagePublishing(builder.Configuration);
 
 // Paystack behind IPaymentGateway. Nothing above this line knows which gateway is in use.
 builder.Services.AddPaystack(builder.Configuration);
+builder.Services.AddPaystackTransfers(builder.Configuration);
 builder.Services.AddTripsAfrica(builder.Configuration);
 
 // Storage and client only. AddJobProcessing — the part that actually executes jobs — is called by
@@ -96,6 +104,7 @@ builder.Services
 // catalogue rather than listed by hand, so a new permission cannot end up with no policy.
 builder.Services.AddAuthorizationBuilder().AddPermissionPolicies();
 
+
 // The outbox check reports Degraded, never Unhealthy, when messages are piling up: restarting the
 // API cannot fix a backlog the Worker or the broker is causing. See OutboxBacklogHealthCheck.
 builder.Services.AddHealthChecks()
@@ -139,16 +148,22 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 
+// Resolves the caller's agency for the rest of the request, from the claims the token carries.
+// It has to run after UseAuthentication — before that there is no identity to read — and before
+// UseAuthorization, so the sub-agent permission middleware below can query as the caller.
+app.UseTenantContext();
+
+// Feature F10: a sub-agent's token loses any permission its principal has denied it, so taking one
+// away bites on the next request rather than when the access token expires. Between UseTenantContext,
+// whose tenant it queries as, and UseAuthorization, whose policies read the claims it leaves behind.
+app.UseSubAgentPermissions();
+
 // After authentication, so a signed-in caller is counted as themselves and their agency rather than
 // as the address their office shares; before authorisation, so a flood of forbidden requests is
 // still counted.
 app.UseSharedRateLimiting();
 
 app.UseAuthorization();
-
-// Resolves the caller's agency for the rest of the request, from the claims the token carries.
-// It has to run after UseAuthentication — before that there is no identity to read.
-app.UseTenantContext();
 
 // Tells the audit log who is acting. Without it every audited change is attributed to nobody,
 // which is exactly the question the log exists to answer.
@@ -182,12 +197,27 @@ app.MapRegistrationEndpoints();
 app.MapAuthenticationEndpoints();
 app.MapKybEndpoints();
 app.MapKybReviewEndpoints();
+app.MapAgencyAdminEndpoints();
+app.MapPlatformUserEndpoints();
+app.MapOperationsDashboardEndpoints();
+app.MapPlatformAnalyticsEndpoints();
+app.MapAuditLogEndpoints();
 app.MapWalletEndpoints();
+app.MapPayoutEndpoints();
 app.MapPricingEndpoints();
+app.MapSubscriptionEndpoints();
+app.MapTierAdminEndpoints();
 app.MapSearchEndpoints();
 app.MapBookingEndpoints();
+app.MapAnalyticsEndpoints();
+app.MapReportEndpoints();
 app.MapStorefrontEndpoints();
 app.MapPublicStorefrontEndpoints();
+
+// The sub-agent network (feature F10, issue 63): a principal's agents, what each may sell and see,
+// what each may spend, and the network's consolidated figures. The invitation routes in it are
+// anonymous, because whoever holds the link has no account yet.
+app.MapSubAgentEndpoints();
 
 app.MapAssetEndpoints();
 app.MapCatalogEndpoints();

@@ -18,9 +18,9 @@ Where each part of the system is designed — tables, jobs, the money path — i
 
 | PR | Features | Boxes ticked |
 |---|---|---|
-| **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (in progress); F2 Notifications and documents (in progress) | 9 of 72 |
-| **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog (in progress); F4 Storefront (queued); F5 Customer commerce (queued); F6 Group tours (queued); F7 CRM (queued) | 0 of 74 |
-| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (queued); F9 Subscriptions and billing (queued); F10 Sub-agent network (queued); F11 Analytics and reporting (queued); F12 Payouts, disputes and reconciliation (queued); F13 Loyalty and reviews (queued (flag only)) | 0 of 42 |
+| **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (merged, #167); F2 Notifications and documents (merged, #167) | 66 of 72 |
+| **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog; F4 Storefront; F5 Customer commerce; F6 Group tours; F7 CRM — all merged, #168 | 75 of 75 |
+| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (done); F10 Sub-agent network (done); F11 Analytics and reporting (done, less XLSX and scheduled reports); F12 Payouts, disputes and reconciliation (done); F13 Loyalty and reviews (flag shipped with F9) | 36 of 42 |
 | **PR 4** · Launch readiness | F14 Security and launch readiness (queued) | 0 of 50 |
 
 
@@ -34,17 +34,29 @@ The first place to look when picking this up again. Update it whenever a branch 
 |---|---|---|---|
 | `feat/M1-ticket-issuance` | 1 | F1: ticket issuance, the status poller, the time-limit monitor, the checkout saga, payment reversals and the resolution backend (#36-#38, #42-#44); the booking screens on the real API | pushed, merged into the PR 1 branch |
 | `feat/M1-notifications-documents` | 1 | **The PR 1 branch:** F1 merged in, plus F2 - notifications (#45), branded invoice and voucher PDFs (#46), the traveller's emails wired to the pipeline's events, and documents with download and reissue in the booking screens | pushed, PR open |
-| `feat/M2-catalog-api` | 2 | F3 backend: catalog schema, publish rules, product API (#160, #161), ClamAV scanning (#18), the Package pricing type | merged into the PR 2 branch |
-| `feat/M2-catalog-screens` | 2 | Console: catalog list and editor, the pricing product picker (#162-#164), group departure and CRM screens, catalog on the real API | merged into the PR 2 branch |
-| `feat/M2-storefront` | 2 | F4: site builder, custom domains and certificates, the public host-resolved API and the Next.js site (#58-#60) | merged into the PR 2 branch |
-| `feat/M2-crm` | 2 | F7: leads, quotes, tasks, timeline, customer 360, the public trip-request and quote endpoints (#62) | merged into the PR 2 branch |
-| `feat/M2-departures` | 2 | F6 (#57) whole: the departures schema and API, seat holds and the no-oversell CHECK, status from the seats, the waitlist with timed offers, installment schedules and reminders, decision 12's refunds, and the console on the real API | pushed |
-| `feat/M2-commerce` | 2 | F5 whole (#61): the cart, guest checkout, card payment through the gateway, the magic link to manage a booking, partial failures routed to the resolution queue and refunds to a traveller's card. The storefront and CRM branches are merged in, so it also holds the storefront's cart, checkout and departure pages — the departure detail page F4 could not build without group departures | pushed, done |
-| `feat/M3-admin-console` | 3 | F8: agency directory, lifecycle with reasons and audit, back-office roles, operations dashboard (#66) | pushed |
-| `feat/M3-billing` | 3 | F9: tiers, entitlements, recurring billing and dunning (#64, #65) | agent working |
-| — | 3, 4 | F10-F14 | not started |
+| `feat/M2-catalog-api` | 2 | F3 backend: catalog schema, publish rules, product API (#160, #161), ClamAV scanning (#18), the Package pricing type | merged to main |
+| `feat/M2-catalog-screens` | 2 | Console: catalog list and editor, the pricing product picker (#162-#164), group departure and CRM screens, catalog on the real API | merged to main |
+| `feat/M2-storefront` | 2 | F4: site builder, custom domains and certificates, the public host-resolved API and the Next.js site (#58-#60) | merged to main |
+| `feat/M2-crm` | 2 | F7: leads, quotes, tasks, timeline, customer 360, the public trip-request and quote endpoints (#62) | merged to main |
+| `feat/M2-departures` | 2 | F6 (#57) whole: the departures schema and API, seat holds and the no-oversell CHECK, status from the seats, the waitlist with timed offers, installment schedules and reminders, decision 12's refunds, and the console on the real API | merged to main |
+| `feat/M2-commerce` | 2 | **PR 2, merged.** F5 whole (#61) plus every branch above it | merged to main |
+| `feat/M3-admin-console` | 3 | F8: agency directory, lifecycle with reasons and audit, back-office roles, operations dashboard (#66) | pushed, done |
+| `feat/M3-billing` | 3 | F9: tiers, entitlements, recurring billing and dunning (#64, #65), and F13's loyalty entitlement flag (#70). Built on the admin console branch, with main merged in | pushed, done |
+| `feat/M3-subagents` | 3 | F10 whole (#63): invitations, scopes, permission overrides and margin visibility, race-free wallet allowances, freeze and revoke, consolidated network reporting, and four console screens, with main merged in | pushed, done |
+| `feat/M3-analytics` | 3 | F11 (#67, #68): the analytics schema and read models, the five-minute and nightly rollups, the agency and platform dashboards with drill-down, synchronous and queued CSV reports, the export log, and the console screens. Merged with `main` after PR 2 | pushed, done |
+| `feat/M3-payouts` | 3 | F12 (#69): bank accounts verified through Paystack, payouts with Finance approval and a never-retried transfer (ADR-0008), chargebacks held and settled, daily gateway reconciliation; agent-console Payouts and Disputes screens | pushed, done |
+| — | 4 | F14 security and launch readiness (#71, #104-#110) | not started |
 
-**Next:** PR 2 is open from `feat/M2-commerce`. When it merges, re-check decision 14's storefront half (the admin console's `StorefrontAvailability` belongs in `PublicSiteResolver`), then assemble PR 3 from the admin console and billing branches, with sub-agents, analytics, payouts and the loyalty flag still to build. `feat/M2-commerce` already carries the storefront and CRM merges, so it is the branch to merge the others into.
+**Next:** PR 2 is merged, and every issue it carried is closed. #18 is closed too, with the
+S3 adapter deferred until a cloud is chosen. All five `feat/M3-*` branches are merged into
+`feat/M3-platform`, which is PR 3: run every gate on it, then open it with `Closes` for #63-#70.
+Then PR 4 is all that is left.
+
+**The plan's limits are enforced where they apply.** Publishing a product asks `max_catalog_listings`
+and reports a refusal on the editor's own checklist; connecting a domain asks `custom_domain`; inviting
+a sub-agent asks `max_sub_agents`; and a storefront serves only while `AgencyAccess.CanServeStorefront`
+says so (decision 14). Each has a test proving it refuses. What is already live stays live after a
+downgrade (decision 15) — only adding more is refused.
 
 ## Decisions for the MVP
 
@@ -92,6 +104,43 @@ Decided during the build:
   storefront is refunded to that card through the gateway (F5). Money goes back the way it came.
 - **Resolving a failed booking:** "retry" means booking again from search; escalating slow resolutions waits until after the MVP.
 - **To check on Trips Africa staging:** a bus booking with no PNR is polled with the flight status endpoint, which their documentation does not cover for buses.
+- **Sub-agent rows are owned by the principal.** `sub_agent_scopes`, `permission_overrides` and
+  `wallet_allowances` each carry two agencies: `agency_id` is the principal that writes the row and
+  `sub_agency_id` the sub-agent it is about. Writes therefore stay the ordinary `agency_id = me`
+  rule, and only reads are widened — as a separate `FOR SELECT` policy, because `DELETE` has no
+  `WITH CHECK` and a single widened policy would have let a sub-agent delete its own cap. A
+  composite foreign key onto `agencies (parent_agency_id, id)` makes the database check that the
+  pair really is a principal and its own sub-agent.
+- **Reading across the network:** an explicit, tested hierarchy rule rather than `IPlatformScope`,
+  because a principal listing its own sub-agents is ordinary business and logging it as a
+  cross-tenant read would bury the handful that genuinely are. The scope is still used for the
+  three places that are cross-tenant in substance: creating the sub-agency's own rows, the
+  consolidated money report, and the anonymous invitation lookup.
+- **Margin visibility** is the `margin.view` permission and nothing else, so the two cannot
+  disagree. The response comes in two shapes chosen at the projection — the pattern
+  `PriceQuoteResponse` already set — so net and markup are absent from the JSON rather than null in
+  it, and a denied permission bites on the next request rather than when the token expires.
+- **A sub-agent's allowance is a per-period cap, not a second wallet.** It is consumed by one
+  conditional `UPDATE` through a `SECURITY DEFINER` function, which is the only write a sub-agent's
+  request makes to a row its principal owns; it moves with the wallet hold, so "spent this period"
+  and "held or spent" cannot drift. What the MVP leaves out is below.
+- **Freeze and revoke reuse the agency lifecycle** — suspended and terminated — so the storefront,
+  the checkout and the sign-in path need no new rule and cannot disagree about one.
+- **The agency export** is JSON rather than CSV: an agency is a tree — profile, staff, wallet, ledger, orders and their lines — and flattening it to one table would lose the shape somebody receiving it needs.
+- **The admin console's landing page** follows the account's permissions rather than being fixed. A Support account holds `agency.view` and nothing else, so a fixed home page sent them to a refusal at every sign-in.
+
+Decided for F12 (payouts, disputes and reconciliation):
+
+- **Payouts are agent-initiated**, never scheduled. Minimum ₦5,000, and at most ₦5,000,000 requested per agency per day in the agency's own time zone, counting rejected requests too.
+- **Withdrawable = available (balance less booking holds) less card money paid in within the last 2 days**, which has not yet settled from Paystack. It never goes below zero. Payouts already requested need no subtraction: a request debits the wallet at once.
+- **The ledger moves at request, not at approval.** Money leaves the wallet into a new `PayoutPayable` account; paid moves it to gateway clearing; rejected, failed and reversed each post their own return. Two simultaneous requests cannot both pass, because the wallet's version token refuses the second save.
+- **Approval is a second person** holding `platform.payout.approve`, which only the new Finance Admin role (and Super Admin) holds. The requester can never approve their own request.
+- **A transfer is never retried** (ADR-0008). A timeout becomes `OutcomeUnknown`; a poller asks Paystack for the transfer's status every 15 minutes and hands it to a person after 96 unanswered queries.
+- **New bank accounts wait 24 hours** before their first withdrawal, and the agency's first-registered active user is emailed whoever made the change.
+- **The agency bears a lost chargeback** (decision 2 makes the platform merchant of record, and the money settled into the agency's wallet). The disputed amount is held into a new `DisputeHeld` account when the dispute opens; if the wallet cannot cover it, the dispute is recorded as uncovered with a P1 exception and alert, and the amount is taken at resolution if the wallet can cover it by then.
+- **A dispute on a payment we have no record of** is recorded as a reconciliation exception rather than a dispute row, because a dispute row needs an agency.
+- **Reconciliation runs each morning for the previous Lagos day**, reads every page of that day's Paystack settlements, matches lines to payments by reference to the kobo, and raises a payment as unsettled only once it is 3 days old. It reads and reports; it never corrects the ledger. One run row per gateway per day; exceptions are keyed on check and subject, so a re-run duplicates nothing. The existing `reconciliation_exceptions` table is shared with the nightly ledger audit, gaining a run link and a written-off status.
+- **To check on Paystack test mode before launch:** whether a dispute's `refund_amount` is in kobo, the field name of a settlement's date, and that transfer OTP is switched off on the account — otherwise every transfer waits on a code and stays `OutcomeUnknown`.
 
 ## What the MVP leaves out
 
@@ -106,8 +155,14 @@ Each feature meets its criteria the simplest safe way. These wait until after th
 - **F7:** SMS and WhatsApp are logged, not sent.
 - **F8:** the dashboard shows core counts and sales; the top-agent leaderboard and feature flags wait.
 - **F9:** monthly billing only; promotions wait.
+- **F10:** a sub-agent's bookings are funded from its own wallet, with the allowance enforced as a
+  per-period cap on top. Drawing directly on the principal's wallet needs open question 3 answered
+  (who fronts the money), which §7 lists as blocking this piece. Network reporting sums `orders`
+  over a date range rather than F11's read models, which do not exist yet; the method's shape does
+  not change when they do. Catalog product types can be scoped but not yet enforced, because the
+  catalog is F3.
 - **F11:** CSV exports only, no XLSX; scheduled reports wait.
-- **F12:** bank accounts verified by hand; reconciliation from Paystack's settlement export.
+- **F12:** scheduled automatic payouts; the Finance back-office screens for payout approval, disputes and reconciliation (the API exists; the screens belong in F8's admin console); forwarding uploaded evidence files to Paystack; posting gateway fees to the ledger; encrypting stored account numbers (F14).
 - **F14:** a written penetration-test scope and an internal checklist run, with the external test after launch; one recorded load-test run.
 
 ## PR 1 · Milestone 1: the money path
@@ -402,7 +457,7 @@ The pricing screen takes a product ID for a product-scoped rule, because there w
 
 ### F4 · Storefront
 
-**M2 · Done** · 18 of 19 boxes ticked · `feat/M2-storefront`
+**M2 · Done** · 19 of 19 boxes ticked · `feat/M2-storefront`
 
 Every agent gets a branded website: built from templates and blocks in the console, published with rollback, served on their own domain with SSL, showing their catalog to travellers. Nothing on it may mention Trips.
 
@@ -629,7 +684,7 @@ POST /api/v1/public/crm/quotes/{token}/decline  → PublicQuoteResponse: {reason
 
 ### F8 · Admin console
 
-**M3 · Queued** · 0 of 6 boxes ticked
+**M3 · Done** · branch `feat/M3-admin-console` · 5 of 6 boxes ticked
 
 How Trips runs the platform: agent search and profiles, verify, suspend and terminate with an audit trail, back-office roles, and an operations dashboard.
 
@@ -643,16 +698,32 @@ FRD §2.15 — how we operate the platform.
 
 **Tables:** `admin_alerts, disputes`
 
-- [ ] Agent list with search and filters.
-- [ ] Agent profile view and edit with mandatory reason and audit.
-- [ ] Verify, suspend and terminate with data export.
-- [ ] Back-office users with role-scoped permissions (Super Admin, Support, Operations, Finance).
-- [ ] Dashboard with metrics no more than 10 minutes stale, operational alerts and a top-agent leaderboard.
-- [ ] Open question 14: what happens to travellers with forward bookings when an agent is suspended.
+- [x] Agent list with search and filters.
+- [x] Agent profile view and edit with mandatory reason and audit.
+- [x] Verify, suspend and terminate with data export.
+- [x] Back-office users with role-scoped permissions (Super Admin, Support, Operations, Finance).
+- [ ] Dashboard with metrics no more than 10 minutes stale, operational alerts and a top-agent leaderboard. *Metrics and alerts done; the leaderboard waits, per "what the MVP leaves out".*
+- [x] Open question 14: what happens to travellers with forward bookings when an agent is suspended.
+
+**What landed.** Four back-office roles rather than two — Support reads and changes nothing, and
+suspending, terminating and exporting are Super Admin only. `user_roles.agency_id` is nullable now,
+so a platform grant belongs to no agency and is invisible to every one of them; cross-agency reads
+go through `IPlatformScope.Enter(reason)` and nothing calls `IgnoreQueryFilters`. Row-level security
+reached `platform.audit_logs`, which had only the EF filter in front of it. Terminating exports the
+agency as JSON — profile, staff, wallet, ledger, orders and lines, and no secrets — and the export
+is itself audited. The console carries the dashboard, the directory and profile, the suspend and
+terminate dialogs, the audit viewer and back-office user management.
+
+**Decision 14, as built.** `AgencyAccess` is the single place the rule lives. Checkout asks it
+before confirming a price or placing an order, so a suspended agency takes no new bookings while
+everything it already sold stands. The traveller's magic-link document route is deliberately not
+gated — they keep their invoice and voucher. `StorefrontAvailability` answers the site-serving
+half and is ready for `PublicSiteResolver`, which lives on the F4 branch: **wire it in there when
+PR 2 merges**, since there is no host resolution on this branch to call it from.
 
 ### F9 · Subscriptions and billing
 
-**M3 · Queued** · 0 of 10 boxes ticked
+**M3 · Done** · branch `feat/M3-billing` · 10 of 10 boxes ticked
 
 Plans with entitlements the platform enforces at runtime, configured by admins, and recurring billing with dunning.
 
@@ -664,31 +735,34 @@ Plans with entitlements the platform enforces at runtime, configured by admins, 
 
 FRD §2.15 UC-1E — admin-configurable plans.
 
-**Tables:** `subscription_tiers, tier_prices, entitlements, tier_entitlements, subscriptions, subscription_invoices, tier_change_log, subscription_migrations`
+**Tables:** `subscription_tiers, tier_prices, entitlements, tier_entitlements, subscriptions, subscription_invoices, subscription_invoice_lines, subscription_charge_attempts, payment_authorizations, tier_change_log, subscription_migrations`
 
-- [ ] Admin tier CRUD.
-- [ ] Entitlements (max sub-agents, custom domain, transaction fee %, catalog limits, loyalty, API access).
-- [ ] Pricing per interval.
-- [ ] Trials and promos.
-- [ ] Archive-not-delete when subscribers exist.
-- [ ] Migration with advance notice.
-- [ ] Full change audit.
-- [ ] Entitlement enforcement middleware.
-- [ ] See open question 15 on downgrades while entitlements are in use.
+- [x] Admin tier CRUD — the plan builder in the admin console, behind `subscription.manage`.
+- [x] Entitlements (max sub-agents, custom domain, transaction fee, catalog limits, loyalty, API access). The fee entitlement is named `transaction_fee_bps`: the value is basis points, and calling it `_pct` is how somebody stores 2.5 where 250 belongs.
+- [x] Pricing per interval — monthly and annual are both modelled; only monthly is billed, and the renewal job refuses an annual price rather than guessing a proration rule.
+- [x] Trials. **Promotions wait** — the MVP decision above. `tier_prices.is_promotional` is carried so a promotion needs no schema change.
+- [x] Archive-not-delete when subscribers exist — refused by the service and again by a database trigger. The only delete allowed is an unpublished draft nobody has ever been on.
+- [x] Migration with advance notice — 30 days, one `subscription_migrations` row per subscriber, each visible on the agency's own plan screen before it lands.
+- [x] Full change audit — the save interceptor's before/after diff, plus `tier_change_log` for the migration policy and the notice date, which a diff cannot express.
+- [x] Entitlement enforcement — `IEntitlements`, one place that answers "may this agency do this?". Wired to the platform fee on every quote and to the sub-agent ceiling; F3's publish handler and F4's domain claim call the same two methods when they land.
+- [x] Open question 15 on downgrades: existing usage kept, new usage blocked, notice given. Nothing is ever deleted by a plan change.
 
 #### #65 · Recurring billing and dunning
 
 Charging agents on a schedule.
 
-- [ ] Renewals, trial expiry, dunning retries at 1/3/5/7 days, downgrade or suspend on failure, entitlement re-evaluation, subscription invoices and receipts.
+- [x] Renewals, trial expiry, dunning retries at 1/3/5/7 days, downgrade or suspend on failure, entitlement re-evaluation, subscription invoices and receipts. One nightly job, in that order — a migration landing today changes what today's renewal charges. Each attempt carries a reference unique to itself, so replaying the job cannot charge a card twice. An unreachable gateway is an unknown outcome and does not spend a retry.
+
+**Left out, deliberately:** a PDF for a subscription invoice. The invoice and its receipt are first-class records with lines that the database holds to their total, and the agent console shows them; rendering them through QuestPDF needs a Trips-branded template that the traveller-facing brand guard would reject, and no one has asked to print one.
 
 ### F10 · Sub-agent network
 
-**M3 · Queued** · 0 of 7 boxes ticked
+**M3 · Done** · branch `feat/M3-subagents` · 7 of 7 boxes ticked
 
 Agencies invite agents beneath them, choose what each may sell and whether they see margins, and give them wallet allowances they cannot exceed.
 
-- **Needs:** F9 (the number of sub-agents is an entitlement).
+- **Needs:** F9 (the number of sub-agents is an entitlement). Built against a named seam,
+  `ISubAgentEntitlement`, which allows everything until F9 answers it — see the decisions below.
 - **Issues:** #63
 - **Open questions it meets:** 6, 7, 8 — see [§7 of the architecture plan](ARCHITECTURE_AND_DELIVERY_PLAN.md#7-open-questions-for-the-client)
 
@@ -698,17 +772,17 @@ FRD §2.7 — an agency onboards agents beneath it.
 
 **Tables:** `sub_agent_scopes, permission_overrides, wallet_allowances`
 
-- [ ] Invitation flow.
-- [ ] Scoped permissions (which product types and suppliers a sub-agent may sell).
-- [ ] Margin visibility control.
-- [ ] Wallet allowances with race-free consumption.
-- [ ] Freeze and revoke.
-- [ ] Consolidated network reporting.
-- [ ] Key test: a sub-agent with margin visibility off receives DTOs where net and markup are structurally ABSENT from the JSON, not merely null.
+- [x] Invitation flow.
+- [x] Scoped permissions (which product types and suppliers a sub-agent may sell).
+- [x] Margin visibility control.
+- [x] Wallet allowances with race-free consumption.
+- [x] Freeze and revoke.
+- [x] Consolidated network reporting.
+- [x] Key test: a sub-agent with margin visibility off receives DTOs where net and markup are structurally ABSENT from the JSON, not merely null.
 
 ### F11 · Analytics and reporting
 
-**M3 · Queued** · 0 of 11 boxes ticked
+**M3 · Done** · branch `feat/M3-analytics` · 9 of 11 boxes ticked
 
 Dashboards from read models rather than live tables, and reports — synchronous for small scopes, asynchronous for large ones — with every export logged.
 
@@ -721,11 +795,11 @@ Dashboards that do not query the OLTP tables live.
 
 **Tables:** `fact_bookings, agg_agency_daily, agg_platform_daily, agg_supplier_daily`
 
-- [ ] Incremental rollup every 5–10 minutes plus a nightly full rebuild.
-- [ ] Agent sales/revenue/margin dashboard.
-- [ ] Platform GMV and growth.
-- [ ] Supplier search-to-book conversion and error rate.
-- [ ] Rebuilding from source must reproduce identical numbers — analytics is derived, never authoritative.
+- [x] Incremental rollup every 5–10 minutes plus a nightly full rebuild.
+- [x] Agent sales/revenue/margin dashboard.
+- [x] Platform GMV and growth.
+- [x] Supplier search-to-book conversion and error rate.
+- [x] Rebuilding from source must reproduce identical numbers — analytics is derived, never authoritative.
 
 #### #68 · Reporting and exports
 
@@ -733,16 +807,58 @@ FRD §2.15 UC-1C.
 
 **Tables:** `report_definitions, report_jobs, report_schedules, report_exports_audit`
 
-- [ ] Sync for small scopes.
-- [ ] ASYNC when over 90 days or cross-tenant, notifying on completion.
-- [ ] CSV/XLSX export.
-- [ ] Scheduled recurring reports emailed to a distribution list.
-- [ ] Drill-down from aggregate to transaction.
-- [ ] EVERY export logged with actor, scope, row count and timestamp — the FRD requires this explicitly given cross-tenant sensitivity.
+- [x] Sync for small scopes.
+- [x] ASYNC when over 90 days or cross-tenant, notifying on completion.
+- [ ] CSV/XLSX export. *CSV done; XLSX waits, per "what the MVP leaves out".*
+- [ ] Scheduled recurring reports emailed to a distribution list. *Waits, per "what the MVP leaves out"; `report_schedules` arrives with it.*
+- [x] Drill-down from aggregate to transaction.
+- [x] EVERY export logged with actor, scope, row count and timestamp — the FRD requires this explicitly given cross-tenant sensitivity.
+
+**What landed.** Everything is a rebuild of whole Lagos days: a day is read from source, its rows
+deleted and inserted again in one save, so nothing is ever incremented and a second run cannot
+double anything. The incremental run rebuilds the days whose orders, lines or supplier calls
+changed since the newest successful run (rewound fifteen minutes, since a late-committing
+transaction carries an older timestamp) — including the day an order *used* to be on, so an order
+created Monday and paid Tuesday moves rather than being counted twice. The nightly run ignores the
+watermark and rebuilds 425 days. Tests prove a rebuild reproduces identical numbers, and that a day
+of incremental runs lands exactly where a full rebuild does.
+
+Three tenancy shapes in one schema: `fact_bookings` and `agg_agency_daily` take the ordinary tenant
+policy; `agg_platform_daily`, `agg_supplier_daily` and `rollup_runs` have no agency and are
+readable only inside a platform scope; `report_jobs` and `report_exports_audit` carry a nullable
+agency where NULL means every agency. Tests assert both the EF filter and, with it out of the way,
+row-level security. `report_exports_audit` is append-only by grant and trigger.
+
+**Decided for F11:**
+
+- **Days are Lagos days** (fixed UTC+1 — West Africa Time has no daylight saving). `LagosDay` is the
+  only place an instant becomes a day.
+- **A sale** is a line whose order's money landed and was not given back: `PendingPayment`,
+  cancelled and refunded lines are facts but not revenue. The rule is `BookingFactRules`.
+- **Ratios and growth are basis points**, computed in integers on the server; a change from zero,
+  or conversion with no searches, is null rather than a number.
+- **Margin withheld is absent from the JSON**, not null, for anyone without `margin.view` — in
+  dashboards, drill-down rows and report columns. A queued report re-checks the requester's
+  permission when it runs.
+- **One set of report endpoints for both scopes**; the permission a report needs is on its
+  `report_definitions` row. A queued report adopts its agency as the job's tenant, so no generator
+  filters by agency itself.
+- **An export is logged each time rows leave** — when the file is produced and on every download.
+  A failed report logs nothing. Report files go straight to `IBlobStorage`, not `assets`, which
+  belong to one agency and exist for uploads.
+- **Back-office accounts are not emailed** when a queued report finishes (they belong to no agency,
+  and every notification row does); they collect it from the list.
+- **Merge fix:** `AddAdminConsole` redefined `ck_admin_alerts_type` without the storefront's
+  `HostnameReview` and `SiteCertificate`, and runs after `AddStorefront`. `AddAnalyticsAndReporting`
+  restores the full list.
+
+**Left for later:** a purge rule for `rollup_runs` (about 105,000 rows a year; "not yet enforced"
+in docs/DATA_RETENTION.md), expiry of finished report files in blob storage, and a latency
+percentile rather than an average and maximum.
 
 ### F12 · Payouts, disputes and reconciliation
 
-**M3 · Queued** · 0 of 4 boxes ticked
+**M3 · Done** · branch `feat/M3-payouts` · 4 of 4 boxes ticked
 
 Money out to agents' banks, a dispute workflow with evidence, and a daily reconciliation of Paystack settlements against the ledger.
 
@@ -756,14 +872,14 @@ Getting money out and keeping the books straight.
 
 **Tables:** `payouts, agency_bank_accounts, disputes, reconciliation_runs, reconciliation_exceptions`
 
-- [ ] Agent bank account capture and verification.
-- [ ] Payout scheduling and settlement.
-- [ ] Chargeback and dispute workflow with evidence.
-- [ ] Daily gateway reconciliation matching Paystack settlements to our ledger, flagging mismatches.
+- [x] Agent bank account capture and verification. *(the NUBAN is resolved with Paystack and the bank's name is stored; a name unlike the agency's is flagged, not refused; 24-hour cooling-off; the owner is emailed. The number is stored in plain text and shown as the last four digits — field encryption waits for the security work in F14)*
+- [x] Payout scheduling and settlement. *(agent-initiated, not scheduled; ledger first, then a Paystack transfer that is never retried (ADR-0008) and resolved by status polling; approval by a platform Finance user through the API — the back-office screen for it waits for F8's admin console)*
+- [x] Chargeback and dispute workflow with evidence. *(Paystack dispute webhooks through the existing idempotent path; money held on open, released or sent on at resolution; text evidence filed with Paystack before the deadline, reminders and missed deadlines alerted. Uploaded files are not forwarded to Paystack in the MVP)*
+- [x] Daily gateway reconciliation matching Paystack settlements to our ledger, flagging mismatches. *(runs and exceptions on the API for Finance; the triage screen waits for F8. Gateway fees are recorded on the run but not posted to the ledger)*
 
 ### F13 · Loyalty and reviews
 
-**M3 · Queued (flag only)** · 0 of 4 boxes ticked
+**M3 · Flag shipped with F9** · 1 of 4 boxes ticked
 
 The entitlement flag for loyalty now, so tiers can carry it. Points, redemption and reviews wait on requirements: the FRD lists both with no use case written (open question 24).
 
@@ -780,7 +896,7 @@ FRD §1.2 lists both in scope with no use case written.
 - [ ] Points earn and redeem.
 - [ ] Verified-purchase reviews with agent moderation and platform override.
 - [ ] BLOCKED on requirements — see open questions 24.
-- [ ] Model the entitlement flag now, build the feature once specified.
+- [x] Model the entitlement flag now, build the feature once specified. **Only the flag shipped**, with F9: `loyalty_program` is an entitlement a tier can carry, off by default, answered by the same runtime check as every other flag. Nothing is built behind it.
 
 ## PR 4 · Launch readiness
 

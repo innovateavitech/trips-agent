@@ -5,7 +5,7 @@ import type { SVGProps } from 'react';
  * round caps, and `currentColor` so every icon takes its colour from the text around it (and so
  * from the design tokens — there is no colour in this file).
  *
- * Hand-drawn rather than a dependency because we need eight, not eight hundred. When the console
+ * Hand-drawn rather than a dependency because we need a dozen, not eight hundred. When the console
  * needs many more, swap this file for a proper icon library in one go rather than mixing the two.
  */
 type IconProps = SVGProps<SVGSVGElement>;
@@ -26,6 +26,18 @@ function Icon({ children, className = 'h-4 w-4', ...props }: IconProps) {
     >
       {children}
     </svg>
+  );
+}
+
+/** Analytics: three bars of different heights. */
+export function ChartIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 20h16" />
+      <path d="M7 20v-6" />
+      <path d="M12 20V8" />
+      <path d="M17 20v-9" />
+    </Icon>
   );
 }
 
@@ -103,6 +115,101 @@ export function CheckIcon(props: IconProps) {
   return (
     <Icon {...props}>
       <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </Icon>
+  );
+}
+
+/** The operations dashboard: a gauge. */
+export function DashboardIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3 13a9 9 0 0 1 18 0" />
+      <path d="M12 13 16 9" />
+      <path d="M3 13h2M19 13h2M12 4v2" />
+    </Icon>
+  );
+}
+
+/** The agency directory: a building. */
+export function BuildingIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16" />
+      <path d="M15 9h4a1 1 0 0 1 1 1v11" />
+      <path d="M2 21h20M8 8h3M8 12h3M8 16h3" />
+    </Icon>
+  );
+}
+
+/** Back-office users: two people. */
+export function PeopleIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1" />
+      <circle cx="9" cy="7" r="3.25" />
+      <path d="M22 19v-1a4 4 0 0 0-3-3.87M16.5 4.2a3.25 3.25 0 0 1 0 5.6" />
+    </Icon>
+  );
+}
+
+/** Plans: a price tag. */
+export function TagIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3 12.5V4a1 1 0 0 1 1-1h8.5a1 1 0 0 1 .7.3l7.5 7.5a1 1 0 0 1 0 1.4l-8.5 8.5a1 1 0 0 1-1.4 0L3.3 13.2a1 1 0 0 1-.3-.7Z" />
+      <path d="M7.5 7.5h.01" />
+    </Icon>
+  );
+}
+
+/** Subscribers: a card on file. */
+export function CardIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="2.5" y="5" width="19" height="14" rx="2" />
+      <path d="M2.5 10h19M6 15h4" />
+    </Icon>
+  );
+}
+
+/** The audit trail: a list with a clock on it. */
+export function HistoryIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3.5 9a9 9 0 1 1 .6 6" />
+      <path d="M3 4v5h5" />
+      <path d="M12 8v4.5l3 1.8" />
+    </Icon>
+  );
+}
+
+/** A warning, for a suspended agency and a critical alert. */
+export function AlertIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 4.5 2.8 20a1 1 0 0 0 .87 1.5h16.66A1 1 0 0 0 21.2 20Z" />
+      <path d="M12 10v4.5M12 18h.01" />
+    </Icon>
+  );
+}
+
+/** Searching the directory. */
+export function SearchIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </Icon>
+  );
+}
+
+/** Taking an export away with you. */
+export function DownloadIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3v12" />
+      <path d="m7.5 10.5 4.5 4.5 4.5-4.5" />
+      <path d="M4 19h16" />
     </Icon>
   );
 }

@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using TripsAgent.Domain.Analytics;
 using TripsAgent.Domain.Assets;
+using TripsAgent.Domain.Auditing;
+using TripsAgent.Domain.Billing;
 using TripsAgent.Domain.Catalog;
 using TripsAgent.Domain.Crm;
 using TripsAgent.Domain.Documents;
@@ -14,6 +17,7 @@ using TripsAgent.Domain.Storefront;
 using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
+using TripsAgent.Domain.Tenancy.SubAgents;
 
 namespace TripsAgent.Application.Persistence;
 
@@ -59,6 +63,18 @@ public interface IAppDbContext
     /// <summary>The audit trail behind the lockout rule.</summary>
     public DbSet<LoginAttempt> LoginAttempts { get; }
 
+    /// <summary>Outstanding invitations to join an agency, or to join Trips staff.</summary>
+    public DbSet<UserInvitation> UserInvitations { get; }
+
+    /// <summary>What each sub-agent may sell. No rows means nothing is allowed. Feature F10.</summary>
+    public DbSet<SubAgentScope> SubAgentScopes { get; }
+
+    /// <summary>Permissions a principal has taken away from a sub-agent. Deny only. Feature F10.</summary>
+    public DbSet<PermissionOverride> PermissionOverrides { get; }
+
+    /// <summary>The hard cap on what each sub-agent may spend against its principal. Feature F10.</summary>
+    public DbSet<WalletAllowance> WalletAllowances { get; }
+
     public DbSet<KybSubmission> KybSubmissions { get; }
 
     public DbSet<KybDocument> KybDocuments { get; }
@@ -68,6 +84,15 @@ public interface IAppDbContext
     /// the queue across all of them.
     /// </summary>
     public DbSet<AdminAlert> AdminAlerts { get; }
+
+    /// <summary>
+    /// Who did what, when, and why. Append-only and partitioned by month.
+    /// </summary>
+    /// <remarks>
+    /// Exposed so the back office's audit viewer can read it. Nothing writes through this set:
+    /// rows are written by the save interceptor, and the table refuses updates and deletes.
+    /// </remarks>
+    public DbSet<AuditLogEntry> AuditLogs { get; }
 
     public DbSet<LedgerAccount> LedgerAccounts { get; }
 
@@ -101,6 +126,24 @@ public interface IAppDbContext
     /// own books, which an agency must never see. Permission controls access, not a filter.
     /// </remarks>
     public DbSet<ReconciliationException> ReconciliationExceptions { get; }
+
+    /// <summary>
+    /// One row per reconciler per gateway per day.
+    /// </summary>
+    /// <remarks>
+    /// Platform-wide for the same reason the exceptions are: a settlement that matches nothing
+    /// belongs to no agency. Reached only inside an <c>IPlatformScope</c>.
+    /// </remarks>
+    public DbSet<ReconciliationRun> ReconciliationRuns { get; }
+
+    /// <summary>Where each agency is paid. Verified against the bank before anything is sent.</summary>
+    public DbSet<AgencyBankAccount> AgencyBankAccounts { get; }
+
+    /// <summary>Agencies withdrawing their own money to their own banks.</summary>
+    public DbSet<Payout> Payouts { get; }
+
+    /// <summary>Chargebacks: a cardholder's bank taking money back, on a deadline we do not set.</summary>
+    public DbSet<Dispute> Disputes { get; }
 
     /// <summary>Uploaded files, from the moment a slot is reserved to the moment they are servable.</summary>
     public DbSet<Asset> Assets { get; }
@@ -181,6 +224,47 @@ public interface IAppDbContext
     public DbSet<SiteDomainCheck> SiteDomainChecks { get; }
 
     /// <summary>
+    /// The catalogue of things a subscription tier can grant.
+    /// </summary>
+    /// <remarks>
+    /// Not tenant-scoped: the catalogue is the platform's, not any agency's, and every agency
+    /// resolves its entitlements against the same rows.
+    /// </remarks>
+    public DbSet<Entitlement> Entitlements { get; }
+
+    /// <summary>
+    /// The plans an agency can be on. Platform-owned, and archived rather than deleted.
+    /// </summary>
+    public DbSet<SubscriptionTier> SubscriptionTiers { get; }
+
+    /// <summary>What each tier has cost, with history. A closed row is never edited.</summary>
+    public DbSet<TierPrice> TierPrices { get; }
+
+    /// <summary>What each tier grants.</summary>
+    public DbSet<TierEntitlement> TierEntitlements { get; }
+
+    /// <summary>What admins changed about a tier, with the migration policy and the notice sent.</summary>
+    public DbSet<TierChangeLogEntry> TierChangeLog { get; }
+
+    /// <summary>Each agency's plan. At most one live per agency, enforced by a partial unique index.</summary>
+    public DbSet<Subscription> Subscriptions { get; }
+
+    /// <summary>What Trips charged each agency. The one invoice that carries our name, not theirs.</summary>
+    public DbSet<SubscriptionInvoice> SubscriptionInvoices { get; }
+
+    /// <summary>The lines whose sum is an invoice's total — always, and checked by the database.</summary>
+    public DbSet<SubscriptionInvoiceLine> SubscriptionInvoiceLines { get; }
+
+    /// <summary>Every try at taking a subscription payment, successful or not. Append-only.</summary>
+    public DbSet<SubscriptionChargeAttempt> SubscriptionChargeAttempts { get; }
+
+    /// <summary>Tier changes that have been agreed but have not landed yet.</summary>
+    public DbSet<SubscriptionMigration> SubscriptionMigrations { get; }
+
+    /// <summary>Reusable gateway authorisations. Opaque tokens, never card numbers.</summary>
+    public DbSet<PaymentAuthorization> PaymentAuthorizations { get; }
+
+    /// <summary>
     /// Each agency's markup rules. Never edited in place — see <see cref="MarkupRule"/> — so the rule
     /// id stored on a quote always explains the markup on it.
     /// </summary>
@@ -239,6 +323,9 @@ public interface IAppDbContext
     public DbSet<SupplierStatusPoll> SupplierStatusPolls { get; }
 
     /// <summary>
+    /// Every HTTP call made to a supplier. The supplier-performance aggregate is built from it.
+    /// </summary>
+    public DbSet<SupplierApiCall> SupplierApiCalls { get; }
     /// Each agency's own customers. Personal data: the name, email and phone live here and nowhere
     /// else in the CRM, so erasing a person is one row anonymised in place.
     /// </summary>
@@ -275,6 +362,36 @@ public interface IAppDbContext
 
     /// <summary>Issued documents, and the gapless numbers they own.</summary>
     public DbSet<GeneratedDocument> GeneratedDocuments { get; }
+
+    // ------------------------------------------------------------------------- analytics (#67, #68)
+    //
+    // Read models, not sources. Everything below is derived from the tables above by the rollup
+    // job and can be thrown away and rebuilt; nothing in the system decides anything by reading
+    // one of them. If one ever disagrees with orders, orders is right.
+
+    /// <summary>One row per order line, flattened. The grain every aggregate is built from.</summary>
+    public DbSet<BookingFact> BookingFacts { get; }
+
+    /// <summary>One agency's sales, cost and margin for one Lagos day.</summary>
+    public DbSet<AgencyDailyAggregate> AgencyDailyAggregates { get; }
+
+    /// <summary>The platform's GMV and growth for one day. No agency column: platform staff only.</summary>
+    public DbSet<PlatformDailyAggregate> PlatformDailyAggregates { get; }
+
+    /// <summary>A supplier's calls, conversion and errors for one day. Platform staff only.</summary>
+    public DbSet<SupplierDailyAggregate> SupplierDailyAggregates { get; }
+
+    /// <summary>What the rollup did, and the watermark the next incremental run starts from.</summary>
+    public DbSet<RollupRun> RollupRuns { get; }
+
+    /// <summary>The catalogue of reports that may be run.</summary>
+    public DbSet<ReportDefinition> ReportDefinitions { get; }
+
+    /// <summary>One run of one report, synchronous or queued.</summary>
+    public DbSet<ReportJob> ReportJobs { get; }
+
+    /// <summary>Every export, with actor, scope, row count and timestamp. Append-only.</summary>
+    public DbSet<ReportExportAudit> ReportExportAudits { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

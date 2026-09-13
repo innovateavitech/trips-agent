@@ -22,7 +22,9 @@ public static class IdentitySeedData
     public const string DevelopmentPassword = "Password123";
 
     public const string SuperAdminEmail = "admin@tripsagent.example.com";
+    public const string FinanceAdminEmail = "finance@tripsagent.example.com";
     public const string OperationsAdminEmail = "ops@tripsagent.example.com";
+    public const string SupportAdminEmail = "support@tripsagent.example.com";
     public const string VerifiedAgentEmail = "owner@lagostravel.example.com";
     public const string SubAgentEmail = "owner@ikejabranch.example.com";
     public const string PendingAgentEmail = "owner@pendingtravel.example.com";
@@ -39,7 +41,7 @@ public static class IdentitySeedData
 
     /// <summary>
     /// A Manager runs the day-to-day business but does not restructure it: no sub-agents, no
-    /// team changes beyond inviting, and no wallet top-ups.
+    /// team changes beyond inviting, no wallet top-ups, and no changing the plan Trips bills for.
     /// </summary>
     public static IReadOnlyList<string> ManagerPermissions { get; } =
     [
@@ -49,8 +51,15 @@ public static class IdentitySeedData
         PermissionCodes.BookingCancel,
         PermissionCodes.BookingRefund,
         PermissionCodes.WalletView,
+        PermissionCodes.PayoutView,
+        PermissionCodes.DisputeView,
+        PermissionCodes.DisputeRespond,
         PermissionCodes.MarginView,
         PermissionCodes.MarginEdit,
+
+        // Sees the plan and its invoices, because knowing what the agency is paying for is part of
+        // running it. Changing the plan is billing.manage and stays with the Owner.
+        PermissionCodes.BillingView,
         PermissionCodes.CatalogView,
         PermissionCodes.CatalogEdit,
         PermissionCodes.CatalogPublish,
@@ -82,16 +91,62 @@ public static class IdentitySeedData
         PermissionCodes.All.Select(permission => permission.Code).ToList();
 
     /// <summary>
-    /// Operations staff review KYB and support agencies. Deliberately without
-    /// <c>agency.suspend</c> or <c>subscription.manage</c> — those are commercial decisions.
+    /// Operations staff review KYB, edit agencies and read the audit trail.
     /// </summary>
+    /// <remarks>
+    /// Deliberately without <c>agency.suspend</c>, <c>agency.terminate</c>, <c>agency.export</c>
+    /// or <c>subscription.manage</c> — ending or pausing a customer relationship is a commercial
+    /// decision, and an export is the most concentrated read of one agency's data there is. All
+    /// four are Super Admin only.
+    /// </remarks>
     public static IReadOnlyList<string> OperationsAdminPermissions { get; } =
     [
         PermissionCodes.KybReview,
+        PermissionCodes.AgencyView,
         PermissionCodes.AgencyManage,
+        PermissionCodes.AuditView,
         PermissionCodes.PlatformReportView,
         PermissionCodes.CustomerView,
         PermissionCodes.ReportView,
+    ];
+
+    /// <summary>
+    /// Support staff answer agencies' questions. They read, and that is all.
+    /// </summary>
+    /// <remarks>
+    /// No <c>agency.manage</c>: a support conversation ends in an operations ticket, not in
+    /// somebody editing a legal name on the phone. No <c>audit.view</c> either — the audit trail
+    /// records what colleagues did, and reading it is an oversight job, not a support one.
+    /// This is the role the "a support user must not see more than their role allows" test pins.
+    /// </remarks>
+    public static IReadOnlyList<string> SupportAdminPermissions { get; } =
+    [
+        PermissionCodes.AgencyView,
+        PermissionCodes.CustomerView,
+        PermissionCodes.ReportView,
+    ];
+
+    /// <summary>
+    /// Finance staff look after the money: platform reporting, subscriptions and the audit trail.
+    /// </summary>
+    /// <remarks>
+    /// They can see every agency's standing, because an unpaid subscription is their business,
+    /// but they cannot change one — suspending a late payer is still a decision somebody signs.
+    /// </remarks>
+    public static IReadOnlyList<string> FinanceAdminPermissions { get; } =
+    [
+        PermissionCodes.AgencyView,
+        PermissionCodes.AuditView,
+        PermissionCodes.PlatformReportView,
+        PermissionCodes.SubscriptionManage,
+        PermissionCodes.ReportView,
+        PermissionCodes.ReportExport,
+
+        // Withdrawals and the money queues (F12). platform.payout.approve is the one permission that
+        // ends with money in somebody else's bank account, which is why no other back-office role
+        // holds it; PayoutService still refuses to let anyone approve a payout they requested.
+        PermissionCodes.PayoutApprove,
+        PermissionCodes.FinanceReview,
     ];
 
     /// <summary>The system roles, with their scope and description.</summary>
@@ -111,5 +166,11 @@ public static class IdentitySeedData
 
         (Role.SystemRoles.OperationsAdmin, RoleScope.Platform,
             "Trips staff who review KYB and support agencies.", OperationsAdminPermissions),
+
+        (Role.SystemRoles.SupportAdmin, RoleScope.Platform,
+            "Trips staff who answer agencies' questions. Read-only.", SupportAdminPermissions),
+
+        (Role.SystemRoles.FinanceAdmin, RoleScope.Platform,
+            "Trips staff who look after billing, reporting, withdrawals and the money queues.", FinanceAdminPermissions),
     ];
 }

@@ -23,6 +23,39 @@ public enum ReconciliationCheck
     /// held for review. Somebody was charged and has not been credited.
     /// </summary>
     PaymentNotPosted = 5,
+
+    /// <summary>
+    /// The gateway settled a transaction we have no record of. Money arrived that our books
+    /// cannot explain.
+    /// </summary>
+    GatewayTransactionUnknown = 6,
+
+    /// <summary>The gateway and our books disagree about what a payment was worth.</summary>
+    GatewayAmountMismatch = 7,
+
+    /// <summary>
+    /// We recorded a payment as succeeded and the gateway never settled it in the window it
+    /// should have.
+    /// </summary>
+    GatewayPaymentUnsettled = 8,
+
+    /// <summary>
+    /// A settlement's own arithmetic does not hold: gross less fees is not the net it paid, or
+    /// its constituent transactions do not add up to its total.
+    /// </summary>
+    GatewaySettlementUnbalanced = 9,
+
+    /// <summary>
+    /// A chargeback landed on an agency that could not cover it. Whatever the bank decides, the
+    /// platform is exposed for the amount.
+    /// </summary>
+    DisputeUncovered = 10,
+
+    /// <summary>
+    /// A payout was sent and the gateway will not say what became of it. Somebody has to look in
+    /// the gateway's dashboard, because nothing here may send it again.
+    /// </summary>
+    PayoutOutcomeUnknown = 11,
 }
 
 /// <summary>How much attention a discrepancy needs.</summary>
@@ -54,6 +87,13 @@ public enum ReconciliationStatus
 
     /// <summary>Dealt with, with a note saying how.</summary>
     Resolved = 3,
+
+    /// <summary>
+    /// Accepted as a loss and closed, with a stated reason. Not the same as resolved: nothing was
+    /// put right, somebody decided it was not worth putting right, and that decision is a fact
+    /// about the books that a reader deserves to see.
+    /// </summary>
+    WrittenOff = 4,
 }
 
 /// <summary>Which checks mean a number is wrong, and which mean work is merely behind.</summary>
@@ -76,6 +116,21 @@ public static class ReconciliationCheckExtensions
         ReconciliationCheck.OrphanedLedgerEntry => ReconciliationSeverity.P1,
         ReconciliationCheck.ExpiredHoldOutstanding => ReconciliationSeverity.P2,
         ReconciliationCheck.PaymentNotPosted => ReconciliationSeverity.P1,
+
+        // The gateway's money and ours disagreeing is a wrong figure by definition, and an
+        // uncovered chargeback is money the platform is on the hook for. Both are P1.
+        ReconciliationCheck.GatewayTransactionUnknown => ReconciliationSeverity.P1,
+        ReconciliationCheck.GatewayAmountMismatch => ReconciliationSeverity.P1,
+        ReconciliationCheck.GatewaySettlementUnbalanced => ReconciliationSeverity.P1,
+        ReconciliationCheck.DisputeUncovered => ReconciliationSeverity.P1,
+
+        // A payment the gateway has not settled yet is usually the settlement lag, not a wrong
+        // figure — the reconciler already skips the days still in flight, so one that reaches here
+        // is late rather than missing. A payout with no answer is the same shape: the money is
+        // accounted for on both sides, and what is outstanding is somebody looking it up.
+        ReconciliationCheck.GatewayPaymentUnsettled => ReconciliationSeverity.P2,
+        ReconciliationCheck.PayoutOutcomeUnknown => ReconciliationSeverity.P2,
+
         _ => throw new ArgumentOutOfRangeException(nameof(check), check, "Unknown reconciliation check."),
     };
 }
@@ -118,6 +173,7 @@ public sealed class ReconciliationException : Entity, IAuditableEntity, IAuditLo
     /// <param name="actualMinor">What it was.</param>
     /// <param name="agencyId">Whose it is, where that is meaningful.</param>
     /// <param name="detectedAt">When the audit ran.</param>
+    /// <param name="reconciliationRunId">The run that found it, where one reconciler owns it.</param>
     public static ReconciliationException Record(
         ReconciliationCheck check,
         string subject,
@@ -125,12 +181,14 @@ public sealed class ReconciliationException : Entity, IAuditableEntity, IAuditLo
         Money expectedMinor,
         Money actualMinor,
         Guid? agencyId,
-        DateTimeOffset detectedAt)
+        DateTimeOffset detectedAt,
+        Guid? reconciliationRunId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(subject);
 
         return new ReconciliationException
         {
+            ReconciliationRunId = reconciliationRunId,
             Check = check,
             Severity = check.Severity(),
             Subject = subject,
@@ -161,6 +219,15 @@ public sealed class ReconciliationException : Entity, IAuditableEntity, IAuditLo
 
     /// <summary>A hint about whose it is. Not a partition key — see the class remarks.</summary>
     public Guid? AgencyId { get; private set; }
+
+    /// <summary>
+    /// The run that raised it, for the reconcilers that have runs. Null for the nightly ledger
+    /// audit, which is a check rather than a windowed run.
+    /// </summary>
+    public Guid? ReconciliationRunId { get; private set; }
+
+    /// <summary>Who closed it, for the two closing states that need a person behind them.</summary>
+    public Guid? ResolvedByUserId { get; private set; }
 
     public DateTimeOffset DetectedAt { get; private set; }
 
@@ -193,23 +260,54 @@ public sealed class ReconciliationException : Entity, IAuditableEntity, IAuditLo
         ExpectedMinor = expectedMinor;
         ActualMinor = actualMinor;
 
-        if (Status == ReconciliationStatus.Resolved)
+        if (Status is ReconciliationStatus.Resolved or ReconciliationStatus.WrittenOff)
         {
-            // It was declared fixed and it is back. That is worse than never having been closed.
+            // It was closed and it is back. That is worse than never having been closed.
             Status = ReconciliationStatus.Open;
             ResolvedAt = null;
             ResolutionNote = null;
+            ResolvedByUserId = null;
+        }
+    }
+
+    /// <summary>Records that the run found it again, and which run that was.</summary>
+    public void SeenAgain(Money expectedMinor, Money actualMinor, DateTimeOffset at, Guid? reconciliationRunId)
+    {
+        SeenAgain(expectedMinor, actualMinor, at);
+
+        if (reconciliationRunId is not null)
+        {
+            ReconciliationRunId = reconciliationRunId;
         }
     }
 
     public void Acknowledge() => Status = ReconciliationStatus.Acknowledged;
 
-    public void Resolve(string note, DateTimeOffset at)
+    public void Resolve(string note, DateTimeOffset at, Guid? resolvedByUserId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(note);
 
         Status = ReconciliationStatus.Resolved;
         ResolutionNote = note;
         ResolvedAt = at;
+        ResolvedByUserId = resolvedByUserId;
+    }
+
+    /// <summary>
+    /// Closes it as a loss rather than as a fix.
+    /// </summary>
+    /// <remarks>
+    /// Kept distinct from <see cref="Resolve"/> because they are different facts. "We found the
+    /// missing entry and posted it" and "we gave up on ₦40" both empty the queue, and only one of
+    /// them means the books are now right.
+    /// </remarks>
+    public void WriteOff(string note, DateTimeOffset at, Guid? resolvedByUserId = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(note);
+
+        Status = ReconciliationStatus.WrittenOff;
+        ResolutionNote = note;
+        ResolvedAt = at;
+        ResolvedByUserId = resolvedByUserId;
     }
 }

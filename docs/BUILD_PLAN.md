@@ -20,7 +20,7 @@ Where each part of the system is designed — tables, jobs, the money path — i
 |---|---|---|
 | **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (in progress); F2 Notifications and documents (in progress) | 9 of 72 |
 | **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog (in progress); F4 Storefront (queued); F5 Customer commerce (queued); F6 Group tours (queued); F7 CRM (queued) | 0 of 74 |
-| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (done); F10 Sub-agent network (done); F11 Analytics and reporting (queued); F12 Payouts, disputes and reconciliation (done); F13 Loyalty and reviews (flag shipped with F9) | 16 of 42 |
+| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (done); F10 Sub-agent network (done); F11 Analytics and reporting (done, less XLSX and scheduled reports); F12 Payouts, disputes and reconciliation (done); F13 Loyalty and reviews (flag shipped with F9) | 16 of 42 |
 | **PR 4** · Launch readiness | F14 Security and launch readiness (queued) | 0 of 50 |
 
 
@@ -43,14 +43,14 @@ The first place to look when picking this up again. Update it whenever a branch 
 | `feat/M3-admin-console` | 3 | F8: agency directory, lifecycle with reasons and audit, back-office roles, operations dashboard (#66) | pushed, done |
 | `feat/M3-billing` | 3 | F9: tiers, entitlements, recurring billing and dunning (#64, #65), and F13's loyalty entitlement flag (#70). Built on the admin console branch, with main merged in | pushed, done |
 | `feat/M3-subagents` | 3 | F10 whole (#63): invitations, scopes, permission overrides and margin visibility, race-free wallet allowances, freeze and revoke, consolidated network reporting, and four console screens, with main merged in | pushed, done |
-| `feat/M3-analytics` | 3 | F11: read models, rollups, dashboards, reporting and exports (#67, #68) | agent working |
+| `feat/M3-analytics` | 3 | F11 (#67, #68): the analytics schema and read models, the five-minute and nightly rollups, the agency and platform dashboards with drill-down, synchronous and queued CSV reports, the export log, and the console screens. Merged with `main` after PR 2 | pushed, done |
 | `feat/M3-payouts` | 3 | F12 (#69): bank accounts verified through Paystack, payouts with Finance approval and a never-retried transfer (ADR-0008), chargebacks held and settled, daily gateway reconciliation; agent-console Payouts and Disputes screens | pushed, done |
 | — | 4 | F14 security and launch readiness (#71, #104-#110) | not started |
 
 **Next:** PR 2 is merged, and every issue it carried is closed. #18 is closed too, with the
-S3 adapter deferred until a cloud is chosen. PR 3 is being assembled from the five `feat/M3-*`
-branches: merge them into one, regenerate the API client, run every gate, tick F8-F13 here, and
-open it with `Closes` for #63-#70. Then PR 4 is all that is left.
+S3 adapter deferred until a cloud is chosen. All five `feat/M3-*` branches are merged into
+`feat/M3-platform`, which is PR 3: run every gate on it, then open it with `Closes` for #63-#70.
+Then PR 4 is all that is left.
 
 **The plan's limits are enforced where they apply.** Publishing a product asks `max_catalog_listings`
 and reports a refusal on the editor's own checklist; connecting a domain asks `custom_domain`; inviting
@@ -782,7 +782,7 @@ FRD §2.7 — an agency onboards agents beneath it.
 
 ### F11 · Analytics and reporting
 
-**M3 · Queued** · 0 of 11 boxes ticked
+**M3 · Done** · branch `feat/M3-analytics` · 9 of 11 boxes ticked
 
 Dashboards from read models rather than live tables, and reports — synchronous for small scopes, asynchronous for large ones — with every export logged.
 
@@ -795,11 +795,11 @@ Dashboards that do not query the OLTP tables live.
 
 **Tables:** `fact_bookings, agg_agency_daily, agg_platform_daily, agg_supplier_daily`
 
-- [ ] Incremental rollup every 5–10 minutes plus a nightly full rebuild.
-- [ ] Agent sales/revenue/margin dashboard.
-- [ ] Platform GMV and growth.
-- [ ] Supplier search-to-book conversion and error rate.
-- [ ] Rebuilding from source must reproduce identical numbers — analytics is derived, never authoritative.
+- [x] Incremental rollup every 5–10 minutes plus a nightly full rebuild.
+- [x] Agent sales/revenue/margin dashboard.
+- [x] Platform GMV and growth.
+- [x] Supplier search-to-book conversion and error rate.
+- [x] Rebuilding from source must reproduce identical numbers — analytics is derived, never authoritative.
 
 #### #68 · Reporting and exports
 
@@ -807,12 +807,54 @@ FRD §2.15 UC-1C.
 
 **Tables:** `report_definitions, report_jobs, report_schedules, report_exports_audit`
 
-- [ ] Sync for small scopes.
-- [ ] ASYNC when over 90 days or cross-tenant, notifying on completion.
-- [ ] CSV/XLSX export.
-- [ ] Scheduled recurring reports emailed to a distribution list.
-- [ ] Drill-down from aggregate to transaction.
-- [ ] EVERY export logged with actor, scope, row count and timestamp — the FRD requires this explicitly given cross-tenant sensitivity.
+- [x] Sync for small scopes.
+- [x] ASYNC when over 90 days or cross-tenant, notifying on completion.
+- [ ] CSV/XLSX export. *CSV done; XLSX waits, per "what the MVP leaves out".*
+- [ ] Scheduled recurring reports emailed to a distribution list. *Waits, per "what the MVP leaves out"; `report_schedules` arrives with it.*
+- [x] Drill-down from aggregate to transaction.
+- [x] EVERY export logged with actor, scope, row count and timestamp — the FRD requires this explicitly given cross-tenant sensitivity.
+
+**What landed.** Everything is a rebuild of whole Lagos days: a day is read from source, its rows
+deleted and inserted again in one save, so nothing is ever incremented and a second run cannot
+double anything. The incremental run rebuilds the days whose orders, lines or supplier calls
+changed since the newest successful run (rewound fifteen minutes, since a late-committing
+transaction carries an older timestamp) — including the day an order *used* to be on, so an order
+created Monday and paid Tuesday moves rather than being counted twice. The nightly run ignores the
+watermark and rebuilds 425 days. Tests prove a rebuild reproduces identical numbers, and that a day
+of incremental runs lands exactly where a full rebuild does.
+
+Three tenancy shapes in one schema: `fact_bookings` and `agg_agency_daily` take the ordinary tenant
+policy; `agg_platform_daily`, `agg_supplier_daily` and `rollup_runs` have no agency and are
+readable only inside a platform scope; `report_jobs` and `report_exports_audit` carry a nullable
+agency where NULL means every agency. Tests assert both the EF filter and, with it out of the way,
+row-level security. `report_exports_audit` is append-only by grant and trigger.
+
+**Decided for F11:**
+
+- **Days are Lagos days** (fixed UTC+1 — West Africa Time has no daylight saving). `LagosDay` is the
+  only place an instant becomes a day.
+- **A sale** is a line whose order's money landed and was not given back: `PendingPayment`,
+  cancelled and refunded lines are facts but not revenue. The rule is `BookingFactRules`.
+- **Ratios and growth are basis points**, computed in integers on the server; a change from zero,
+  or conversion with no searches, is null rather than a number.
+- **Margin withheld is absent from the JSON**, not null, for anyone without `margin.view` — in
+  dashboards, drill-down rows and report columns. A queued report re-checks the requester's
+  permission when it runs.
+- **One set of report endpoints for both scopes**; the permission a report needs is on its
+  `report_definitions` row. A queued report adopts its agency as the job's tenant, so no generator
+  filters by agency itself.
+- **An export is logged each time rows leave** — when the file is produced and on every download.
+  A failed report logs nothing. Report files go straight to `IBlobStorage`, not `assets`, which
+  belong to one agency and exist for uploads.
+- **Back-office accounts are not emailed** when a queued report finishes (they belong to no agency,
+  and every notification row does); they collect it from the list.
+- **Merge fix:** `AddAdminConsole` redefined `ck_admin_alerts_type` without the storefront's
+  `HostnameReview` and `SiteCertificate`, and runs after `AddStorefront`. `AddAnalyticsAndReporting`
+  restores the full list.
+
+**Left for later:** a purge rule for `rollup_runs` (about 105,000 rows a year; "not yet enforced"
+in docs/DATA_RETENTION.md), expiry of finished report files in blob storage, and a latency
+percentile rather than an average and maximum.
 
 ### F12 · Payouts, disputes and reconciliation
 

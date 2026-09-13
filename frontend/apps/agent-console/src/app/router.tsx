@@ -3,6 +3,7 @@ import { RedirectIfSignedIn, RequireAuth } from '../auth/guards';
 import { SignInPage } from '../auth/pages/sign-in-page';
 import { SIGN_IN_PATH } from '../auth/redirect';
 import { authRoutes } from '../features/auth/routes';
+import { analyticsRoutes } from '../features/analytics';
 import { bookingRoutes } from '../features/booking/routes';
 import { bookingsRoutes } from '../features/bookings/routes';
 import { catalogRoutes } from '../features/catalog/routes';
@@ -34,6 +35,7 @@ import { NotFoundPage, RouteErrorPage } from '../shell/route-error-page';
  *    /                      dashboard
  *    /search/flights|buses  (#52)       /book/*        (#53)
  *    /bookings[/:id]        (#54)       /resolution    (#54)
+ *    /analytics             (67)        /reports       (68)
  *    /wallet/…              (#51)       /pricing       (#55)
  *    /website/…             (#58, #59)
  *    /verification          (#50)
@@ -67,6 +69,7 @@ export const appRoutes: RouteObject[] = [
               ...searchRoutes,
               ...bookingRoutes,
               ...bookingsRoutes,
+              ...analyticsRoutes,
               ...catalogRoutes,
               ...departuresRoutes,
               ...crmRoutes,

@@ -360,6 +360,24 @@ public static partial class RetentionCatalogue
             "Hostnames the site answers on. A removed one is deleted, with its checks."),
         new("storefront.site_domain_checks", RetentionTreatment.Kept, "With their hostname",
             "What DNS said on each check — the answer to \"why isn't my domain working?\". Small, and removed with the hostname."),
+
+        // ---------------------------------------------------------------- analytics and reports
+        new("analytics.fact_bookings", RetentionTreatment.Kept, "Derived: rebuilt from orders",
+            "A copy of order lines for counting. Deleting it deletes nothing — the rollup makes it again from orders, which are protected."),
+        new("analytics.agg_agency_daily", RetentionTreatment.Kept, "Derived: rebuilt from orders",
+            "One agency's day, summed from fact_bookings. No personal data."),
+        new("analytics.agg_platform_daily", RetentionTreatment.Kept, "Derived: rebuilt from orders",
+            "The platform's day. No personal data."),
+        new("analytics.agg_supplier_daily", RetentionTreatment.Kept, "Derived: rebuilt from the supplier call log",
+            "A supplier's day. Outlives the call log it was counted from, which is the point: the trend survives the partitions being dropped."),
+        new("analytics.rollup_runs", RetentionTreatment.NotYetEnforced, "90 days proposed",
+            "One small row per rollup — about 105,000 a year at a five-minute cadence. Only the newest successful run matters to the rollup; the rest is history. Waits for a purge rule."),
+        new("analytics.report_definitions", RetentionTreatment.Kept, "While offered",
+            "Reference data: the reports that may be run."),
+        new("analytics.report_jobs", RetentionTreatment.Protected, SevenYears,
+            "Each run of a report. Every export record points at its run, so a run lives as long as the export log does."),
+        new("analytics.report_exports_audit", RetentionTreatment.Protected, SevenYears,
+            "Who exported what, how many rows, and when (FRD 2.15 UC-1C RS-6). Append-only, like the audit log."),
     ];
 
     /// <summary>The tables no retention rule may ever target.</summary>

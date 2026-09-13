@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using TripsAgent.Domain.Analytics;
 using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Billing;
@@ -322,6 +323,9 @@ public interface IAppDbContext
     public DbSet<SupplierStatusPoll> SupplierStatusPolls { get; }
 
     /// <summary>
+    /// Every HTTP call made to a supplier. The supplier-performance aggregate is built from it.
+    /// </summary>
+    public DbSet<SupplierApiCall> SupplierApiCalls { get; }
     /// Each agency's own customers. Personal data: the name, email and phone live here and nowhere
     /// else in the CRM, so erasing a person is one row anonymised in place.
     /// </summary>
@@ -358,6 +362,36 @@ public interface IAppDbContext
 
     /// <summary>Issued documents, and the gapless numbers they own.</summary>
     public DbSet<GeneratedDocument> GeneratedDocuments { get; }
+
+    // ------------------------------------------------------------------------- analytics (#67, #68)
+    //
+    // Read models, not sources. Everything below is derived from the tables above by the rollup
+    // job and can be thrown away and rebuilt; nothing in the system decides anything by reading
+    // one of them. If one ever disagrees with orders, orders is right.
+
+    /// <summary>One row per order line, flattened. The grain every aggregate is built from.</summary>
+    public DbSet<BookingFact> BookingFacts { get; }
+
+    /// <summary>One agency's sales, cost and margin for one Lagos day.</summary>
+    public DbSet<AgencyDailyAggregate> AgencyDailyAggregates { get; }
+
+    /// <summary>The platform's GMV and growth for one day. No agency column: platform staff only.</summary>
+    public DbSet<PlatformDailyAggregate> PlatformDailyAggregates { get; }
+
+    /// <summary>A supplier's calls, conversion and errors for one day. Platform staff only.</summary>
+    public DbSet<SupplierDailyAggregate> SupplierDailyAggregates { get; }
+
+    /// <summary>What the rollup did, and the watermark the next incremental run starts from.</summary>
+    public DbSet<RollupRun> RollupRuns { get; }
+
+    /// <summary>The catalogue of reports that may be run.</summary>
+    public DbSet<ReportDefinition> ReportDefinitions { get; }
+
+    /// <summary>One run of one report, synchronous or queued.</summary>
+    public DbSet<ReportJob> ReportJobs { get; }
+
+    /// <summary>Every export, with actor, scope, row count and timestamp. Append-only.</summary>
+    public DbSet<ReportExportAudit> ReportExportAudits { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

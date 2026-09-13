@@ -24,6 +24,692 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "ltree");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.AgencyDailyAggregate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<int>("BookingsCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("bookings_count");
+
+                    b.Property<DateTimeOffset>("BuiltAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("built_at");
+
+                    b.Property<int>("CancelledCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("cancelled_count");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_count");
+
+                    b.Property<long>("GrossSalesMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("gross_sales_minor");
+
+                    b.Property<long>("MarkupMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("markup_minor");
+
+                    b.Property<long>("NetCostMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("net_cost_minor");
+
+                    b.Property<int>("OrdersCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("orders_count");
+
+                    b.Property<long>("PlatformFeeMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("platform_fee_minor");
+
+                    b.Property<int>("RefundedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("refunded_count");
+
+                    b.Property<long>("RefundedGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("refunded_gross_minor");
+
+                    b.Property<Guid>("RootAgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("root_agency_id");
+
+                    b.Property<long>("TaxMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_minor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_agg_agency_daily");
+
+                    b.HasIndex("Day")
+                        .HasDatabaseName("ix_agg_agency_daily_day");
+
+                    b.HasIndex("RootAgencyId", "Day")
+                        .HasDatabaseName("ix_agg_agency_daily_root_agency_id_day");
+
+                    b.HasIndex("AgencyId", "Day", "Currency")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agg_agency_daily_agency_id_day_currency");
+
+                    b.ToTable("agg_agency_daily", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.BookingFact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateOnly>("BookingDay")
+                        .HasColumnType("date")
+                        .HasColumnName("booking_day");
+
+                    b.Property<DateTimeOffset>("BuiltAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("built_at");
+
+                    b.Property<string>("BuyerType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("buyer_type");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("channel");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<string>("FulfilmentStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("fulfilment_status");
+
+                    b.Property<long>("GrossAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("gross_amount_minor");
+
+                    b.Property<bool>("IsCancelled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_cancelled");
+
+                    b.Property<bool>("IsFailed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_failed");
+
+                    b.Property<bool>("IsRefunded")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_refunded");
+
+                    b.Property<bool>("IsSale")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_sale");
+
+                    b.Property<string>("ItemType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("item_type");
+
+                    b.Property<long>("MarkupAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("markup_amount_minor");
+
+                    b.Property<long>("NetAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("net_amount_minor");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<Guid>("OrderLineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_line_id");
+
+                    b.Property<string>("OrderStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("order_status");
+
+                    b.Property<long>("PlatformFeeMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("platform_fee_minor");
+
+                    b.Property<Guid>("RootAgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("root_agency_id");
+
+                    b.Property<DateTimeOffset>("SourceUpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("source_updated_at");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_id");
+
+                    b.Property<long>("TaxAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_amount_minor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_fact_bookings");
+
+                    b.HasIndex("BookingDay")
+                        .HasDatabaseName("ix_fact_bookings_booking_day");
+
+                    b.HasIndex("OrderLineId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_fact_bookings_order_line_id");
+
+                    b.HasIndex("AgencyId", "BookingDay")
+                        .HasDatabaseName("ix_fact_bookings_agency_id_booking_day");
+
+                    b.HasIndex("RootAgencyId", "BookingDay")
+                        .HasDatabaseName("ix_fact_bookings_root_agency_id_booking_day");
+
+                    b.ToTable("fact_bookings", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.PlatformDailyAggregate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("BookingsCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("bookings_count");
+
+                    b.Property<DateTimeOffset>("BuiltAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("built_at");
+
+                    b.Property<int>("CancelledCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("cancelled_count");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_count");
+
+                    b.Property<long>("GmvMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("gmv_minor");
+
+                    b.Property<long>("MarkupMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("markup_minor");
+
+                    b.Property<long>("NetCostMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("net_cost_minor");
+
+                    b.Property<int>("NewAgenciesCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("new_agencies_count");
+
+                    b.Property<int>("OrdersCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("orders_count");
+
+                    b.Property<long>("PlatformFeeMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("platform_fee_minor");
+
+                    b.Property<int>("RefundedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("refunded_count");
+
+                    b.Property<long>("RefundedGrossMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("refunded_gross_minor");
+
+                    b.Property<int>("SellingAgenciesCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("selling_agencies_count");
+
+                    b.Property<long>("TaxMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_minor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_agg_platform_daily");
+
+                    b.HasIndex("Day", "Currency")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agg_platform_daily_day_currency");
+
+                    b.ToTable("agg_platform_daily", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.ReportDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("RequiredPermission")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("required_permission");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("scope");
+
+                    b.HasKey("Id")
+                        .HasName("pk_report_definitions");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_report_definitions_code");
+
+                    b.ToTable("report_definitions", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.ReportExportAudit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ActorIpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("actor_ip_address");
+
+                    b.Property<string>("ActorType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("actor_type");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<Guid?>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<string>("DefinitionCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("definition_code");
+
+                    b.Property<DateTimeOffset>("ExportedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("exported_at");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("format");
+
+                    b.Property<Guid?>("ReportJobId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("report_job_id");
+
+                    b.Property<int>("RowCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("row_count");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("scope");
+
+                    b.Property<string>("ScopeDescription")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("scope_description");
+
+                    b.HasKey("Id")
+                        .HasName("pk_report_exports_audit");
+
+                    b.HasIndex("ExportedAt")
+                        .HasDatabaseName("ix_report_exports_audit_exported_at");
+
+                    b.HasIndex("ReportJobId")
+                        .HasDatabaseName("ix_report_exports_audit_report_job_id");
+
+                    b.HasIndex("ActorUserId", "ExportedAt")
+                        .HasDatabaseName("ix_report_exports_audit_actor_user_id_exported_at");
+
+                    b.HasIndex("AgencyId", "ExportedAt")
+                        .HasDatabaseName("ix_report_exports_audit_agency_id_exported_at");
+
+                    b.ToTable("report_exports_audit", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.ReportJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DefinitionCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("definition_code");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("format");
+
+                    b.Property<DateOnly>("FromDay")
+                        .HasColumnType("date")
+                        .HasColumnName("from_day");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<Guid?>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<long?>("ResultSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("result_size_bytes");
+
+                    b.Property<string>("ResultStorageKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("result_storage_key");
+
+                    b.Property<int?>("RowCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("row_count");
+
+                    b.Property<string>("RunMode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("run_mode");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("scope");
+
+                    b.Property<string>("ScopeDescription")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("scope_description");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateOnly>("ToDay")
+                        .HasColumnType("date")
+                        .HasColumnName("to_day");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_report_jobs");
+
+                    b.HasIndex("RequestedByUserId")
+                        .HasDatabaseName("ix_report_jobs_requested_by_user_id");
+
+                    b.HasIndex("AgencyId", "RequestedAt")
+                        .HasDatabaseName("ix_report_jobs_agency_id_requested_at");
+
+                    b.HasIndex("Status", "RequestedAt")
+                        .HasDatabaseName("ix_report_jobs_status_requested_at");
+
+                    b.ToTable("report_jobs", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.RollupRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<int>("DaysRebuilt")
+                        .HasColumnType("integer")
+                        .HasColumnName("days_rebuilt");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<int>("FactRows")
+                        .HasColumnType("integer")
+                        .HasColumnName("fact_rows");
+
+                    b.Property<DateOnly?>("FromDay")
+                        .HasColumnType("date")
+                        .HasColumnName("from_day");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateOnly?>("ToDay")
+                        .HasColumnType("date")
+                        .HasColumnName("to_day");
+
+                    b.Property<DateTimeOffset>("WatermarkFrom")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("watermark_from");
+
+                    b.Property<DateTimeOffset>("WatermarkTo")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("watermark_to");
+
+                    b.HasKey("Id")
+                        .HasName("pk_rollup_runs");
+
+                    b.HasIndex("Status", "WatermarkTo")
+                        .HasDatabaseName("ix_rollup_runs_status_watermark_to");
+
+                    b.ToTable("rollup_runs", "analytics");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.SupplierDailyAggregate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AverageLatencyMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("average_latency_ms");
+
+                    b.Property<int>("BookedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("booked_count");
+
+                    b.Property<DateTimeOffset>("BuiltAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("built_at");
+
+                    b.Property<int>("ConfirmPriceCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("confirm_price_count");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<int>("ErrorCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("error_count");
+
+                    b.Property<int>("IssueCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("issue_count");
+
+                    b.Property<int>("MaxLatencyMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_latency_ms");
+
+                    b.Property<int>("OtherCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("other_count");
+
+                    b.Property<int>("SearchCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("search_count");
+
+                    b.Property<int>("StatusCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("status_count");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_id");
+
+                    b.Property<int>("TimeoutCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("timeout_count");
+
+                    b.HasKey("Id")
+                        .HasName("pk_agg_supplier_daily");
+
+                    b.HasIndex("SupplierId")
+                        .HasDatabaseName("ix_agg_supplier_daily_supplier_id");
+
+                    b.HasIndex("Day", "SupplierId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agg_supplier_daily_day_supplier_id");
+
+                    b.ToTable("agg_supplier_daily", "analytics");
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Assets.Asset", b =>
                 {
                     b.Property<Guid>("Id")
@@ -8148,6 +8834,60 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_outbox_messages_status", "status IN ('pending', 'dispatched', 'failed')");
                         });
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.AgencyDailyAggregate", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_agg_agency_daily_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.BookingFact", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_fact_bookings_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.ReportExportAudit", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Analytics.ReportJob", null)
+                        .WithMany()
+                        .HasForeignKey("ReportJobId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_report_exports_audit_report_jobs_report_job_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.ReportJob", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_report_jobs_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("RequestedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_report_jobs_users_requested_by_user_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Analytics.SupplierDailyAggregate", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Suppliers.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_agg_supplier_daily_suppliers_supplier_id");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Assets.Asset", b =>

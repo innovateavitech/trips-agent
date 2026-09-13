@@ -5,6 +5,7 @@ import { BrandMark } from '../components/brand-mark';
 import {
   BuildingIcon,
   CardIcon,
+  ChartIcon,
   DashboardIcon,
   HistoryIcon,
   PeopleIcon,
@@ -80,6 +81,12 @@ const NAV: { to: string; label: string; permission: string; icon: ReactNode }[] 
     label: 'Dashboard',
     permission: PLATFORM_REPORT_PERMISSION,
     icon: <DashboardIcon />,
+  },
+  {
+    to: '/analytics',
+    label: 'Analytics',
+    permission: PLATFORM_REPORT_PERMISSION,
+    icon: <ChartIcon />,
   },
   {
     to: '/agencies',

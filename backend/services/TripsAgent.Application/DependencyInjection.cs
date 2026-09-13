@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Analytics;
 using TripsAgent.Application.Assets;
 using TripsAgent.Application.Billing;
 using TripsAgent.Application.Catalog;
@@ -98,6 +99,22 @@ public static class DependencyInjection
         // The daily match of the gateway's settlements against the books. Reads and reports; never corrects.
         services.AddScoped<IGatewayReconciliation, GatewayReconciliation>();
         services.AddScoped<ReconciliationTriage>();
+
+        // The analytics read models (#67). Hangfire resolves the rollup by interface when the
+        // incremental and nightly jobs run; the dashboards read what it leaves behind and never
+        // the OLTP tables.
+        services.AddScoped<IAnalyticsRollup, AnalyticsRollup>();
+
+        // The dashboards on top of them. The agency's own reads under the tenant filter; the
+        // platform's opens a scope with a reason, like every cross-tenant read.
+        services.AddScoped<AgencyAnalyticsService>();
+        services.AddScoped<PlatformAnalyticsService>();
+
+        // Reporting and exports (#68). The runner is resolved by the job runner when a queued
+        // report comes up, which is why it is registered behind its interface.
+        services.AddScoped<ReportGenerator>();
+        services.AddScoped<ReportService>();
+        services.AddScoped<IReportRunner, ReportRunner>();
 
         services.AddScoped<DocumentIssuer>();
 

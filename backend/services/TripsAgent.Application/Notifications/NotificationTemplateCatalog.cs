@@ -114,6 +114,8 @@ public static class NotificationTemplateCatalog
     /// <summary>An agent's held booking passed its ticket time limit before it was issued (#38).</summary>
     public const string BookingExpired = "booking.expired";
 
+    /// <summary>A report that ran in the background has finished, one way or the other.</summary>
+    public const string ReportReady = "reports.ready";
     /// <summary>
     /// A seat freed up on a departure somebody is waiting for (build plan F6, plan §3 job 10). The
     /// offer has a deadline; when it passes, job 10 rolls it on to the next person.
@@ -510,6 +512,31 @@ public static class NotificationTemplateCatalog
                   It is waiting in your resolution queue, where you can rebook it or refund your
                   customer. Funds held in your wallet for the order are released once nothing else on
                   it still needs them.
+                  """),
+
+        AgencyFacing(
+            ReportReady,
+            version: 1,
+            subject: "Your report is {{status}}: {{reportName}}",
+            tokens: ["reportName", "rowCount", "status"],
+            html: """
+                  <p>Hello {{recipientName}},</p>
+                  <p>The report you asked for — <strong>{{reportName}}</strong> — is {{status}}.</p>
+                  <p>It covers {{rowCount}} rows. Open Reports in your {{brandName}} console to
+                     download it.</p>
+                  <p>Reports that cover more than three months, or more than one agency, are
+                     produced in the background so you are not left waiting on a page.</p>
+                  """,
+            text: """
+                  Hello {{recipientName}},
+
+                  The report you asked for - {{reportName}} - is {{status}}.
+
+                  It covers {{rowCount}} rows. Open Reports in your {{brandName}} console to
+                  download it.
+
+                  Reports that cover more than three months, or more than one agency, are produced
+                  in the background so you are not left waiting on a page.
                   """),
 
         AgencyFacing(

@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   Bus,
   CalendarDays,
   ClipboardList,
@@ -12,6 +13,7 @@ import {
   ReceiptText,
   ShieldAlert,
   ShieldCheck,
+  FileSpreadsheet,
   Globe,
   SlidersHorizontal,
   Ticket,
@@ -95,6 +97,13 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Sub-agents', to: '/sub-agents', icon: Users, principalsOnly: true }, // issue 63
       { label: 'Network performance', to: '/network', icon: Network }, // issue 63
+    ],
+  },
+  {
+    label: 'Insight',
+    items: [
+      { label: 'Analytics', to: '/analytics', icon: BarChart3 }, // issue 67
+      { label: 'Reports', to: '/reports', icon: FileSpreadsheet }, // issue 68
     ],
   },
   {

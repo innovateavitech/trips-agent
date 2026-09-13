@@ -519,6 +519,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlatformAnalyticsSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/analytics/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlatformSupplierPerformance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/analytics/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListReportExports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/audit-logs": {
         parameters: {
             query?: never;
@@ -1361,6 +1409,118 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["ResolveBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgencyAnalyticsSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgencyAnalyticsBookings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListReportDefinitions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RunReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListReportJobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/jobs/{jobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetReportJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/jobs/{jobId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DownloadReport"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2704,6 +2864,19 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        AgencyAnalyticsResponse: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: date-time */
+            generatedAt: null | string;
+            showsMargin: boolean;
+            totals: components["schemas"]["AnalyticsTotalsResponse"];
+            days: components["schemas"]["AgencyDayResponse"][];
+            byProductType: components["schemas"]["AnalyticsBreakdownResponse"][];
+            byChannel: components["schemas"]["AnalyticsBreakdownResponse"][];
+        };
         AgencyCountsResponse: {
             /** Format: int32 */
             total: number | string;
@@ -2717,6 +2890,31 @@ export interface components {
             suspended: number | string;
             /** Format: int32 */
             terminated: number | string;
+        };
+        AgencyDayResponse: {
+            /** Format: date */
+            day: string;
+            currency: string;
+            /** Format: int32 */
+            orders: number | string;
+            /** Format: int32 */
+            bookings: number | string;
+            /** Format: int64 */
+            grossSalesMinor: number | string;
+            /** Format: int32 */
+            refunds: number | string;
+            /** Format: int64 */
+            refundedGrossMinor: number | string;
+            /** Format: int32 */
+            cancellations: number | string;
+            /** Format: int32 */
+            failures: number | string;
+            /** Format: int64 */
+            netCostMinor: null | number | string;
+            /** Format: int64 */
+            markupMinor: null | number | string;
+            /** Format: int64 */
+            marginMinor: null | number | string;
         };
         AgencyDirectoryResponse: {
             items: components["schemas"]["AgencySummaryResponse"][];
@@ -2826,6 +3024,42 @@ export interface components {
             status: string;
             /** Format: date-time */
             resetsAt: null | string;
+        };
+        AnalyticsBreakdownResponse: {
+            label: string;
+            /** Format: int32 */
+            bookings: number | string;
+            /** Format: int64 */
+            grossSalesMinor: number | string;
+            /** Format: int64 */
+            marginMinor: null | number | string;
+        };
+        AnalyticsTotalsResponse: {
+            currency: string;
+            /** Format: int32 */
+            orders: number | string;
+            /** Format: int32 */
+            bookings: number | string;
+            /** Format: int64 */
+            grossSalesMinor: number | string;
+            /** Format: int32 */
+            refunds: number | string;
+            /** Format: int64 */
+            refundedGrossMinor: number | string;
+            /** Format: int32 */
+            cancellations: number | string;
+            /** Format: int32 */
+            failures: number | string;
+            /** Format: int64 */
+            previousGrossSalesMinor: number | string;
+            /** Format: int32 */
+            changeBasisPoints: null | number | string;
+            /** Format: int64 */
+            netCostMinor: null | number | string;
+            /** Format: int64 */
+            markupMinor: null | number | string;
+            /** Format: int64 */
+            marginMinor: null | number | string;
         };
         AssetLinkResponse: {
             kind: string;
@@ -3002,6 +3236,20 @@ export interface components {
             downloadExpiresAt: null | string;
             email: null | components["schemas"]["BookingDocumentEmailResponse"];
         };
+        BookingDrillDownResponse: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            showsMargin: boolean;
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            rows: components["schemas"]["BookingRowResponse"][];
+        };
         BookingFailureResponse: {
             reason: string;
             /** Format: int64 */
@@ -3064,6 +3312,29 @@ export interface components {
         BookingProgressResponse: {
             status: string;
             pnr: null | string;
+        };
+        BookingRowResponse: {
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            orderLineId: string;
+            orderNumber: string;
+            /** Format: date */
+            day: string;
+            /** Format: date-time */
+            occurredAt: string;
+            itemType: string;
+            channel: string;
+            title: string;
+            orderStatus: string;
+            fulfilmentStatus: string;
+            currency: string;
+            /** Format: int64 */
+            grossAmountMinor: number | string;
+            /** Format: int64 */
+            netAmountMinor: null | number | string;
+            /** Format: int64 */
+            marginMinor: null | number | string;
         };
         BookingSegmentResponse: {
             carrier: string;
@@ -4038,6 +4309,65 @@ export interface components {
             isFallback: boolean;
             features: components["schemas"]["PlanFeatureResponse"][];
         };
+        PlatformAnalyticsResponse: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: date-time */
+            generatedAt: null | string;
+            currency: string;
+            /** Format: int64 */
+            gmvMinor: number | string;
+            /** Format: int64 */
+            previousGmvMinor: number | string;
+            /** Format: int32 */
+            gmvChangeBasisPoints: null | number | string;
+            /** Format: int64 */
+            platformFeeMinor: number | string;
+            /** Format: int64 */
+            markupMinor: number | string;
+            /** Format: int32 */
+            orders: number | string;
+            /** Format: int32 */
+            bookings: number | string;
+            /** Format: int32 */
+            newAgencies: number | string;
+            /** Format: int32 */
+            activeAgencies: number | string;
+            /** Format: int32 */
+            refunds: number | string;
+            /** Format: int64 */
+            refundedGrossMinor: number | string;
+            /** Format: int32 */
+            failures: number | string;
+            days: components["schemas"]["PlatformDayResponse"][];
+        };
+        PlatformDayResponse: {
+            /** Format: date */
+            day: string;
+            currency: string;
+            /** Format: int32 */
+            sellingAgencies: number | string;
+            /** Format: int32 */
+            newAgencies: number | string;
+            /** Format: int32 */
+            orders: number | string;
+            /** Format: int32 */
+            bookings: number | string;
+            /** Format: int64 */
+            gmvMinor: number | string;
+            /** Format: int64 */
+            platformFeeMinor: number | string;
+            /** Format: int64 */
+            markupMinor: number | string;
+            /** Format: int32 */
+            refunds: number | string;
+            /** Format: int64 */
+            refundedGrossMinor: number | string;
+            /** Format: int32 */
+            failures: number | string;
+        };
         PlatformRoleResponse: {
             /** Format: uuid */
             id: string;
@@ -4641,6 +4971,57 @@ export interface components {
             /** Format: uuid */
             id: string;
         };
+        ReportDefinitionResponse: {
+            code: string;
+            name: string;
+            description: string;
+            scope: string;
+            alwaysAsynchronous: boolean;
+            /** Format: int32 */
+            synchronousDayLimit: number | string;
+        };
+        ReportExportAuditResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            reportJobId: null | string;
+            definitionCode: string;
+            scope: string;
+            /** Format: uuid */
+            agencyId: null | string;
+            /** Format: uuid */
+            actorUserId: null | string;
+            actorType: string;
+            scopeDescription: string;
+            /** Format: int32 */
+            rowCount: number | string;
+            /** Format: date-time */
+            exportedAt: string;
+        };
+        ReportJobResponse: {
+            /** Format: uuid */
+            id: string;
+            definitionCode: string;
+            scope: string;
+            runMode: string;
+            status: string;
+            format: string;
+            /** Format: date */
+            fromDay: string;
+            /** Format: date */
+            toDay: string;
+            scopeDescription: string;
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+            /** Format: int32 */
+            rowCount: null | number | string;
+            /** Format: int64 */
+            resultSizeBytes: null | number | string;
+            canDownload: boolean;
+            errorMessage: null | string;
+        };
         RequestAssetUploadRequest: {
             purpose: string;
             fileName: null | string;
@@ -4670,6 +5051,13 @@ export interface components {
         };
         ResolveBookingRequest: {
             action: string;
+        };
+        RunReportRequest: {
+            definitionCode: string;
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
         };
         SalesWindowResponse: {
             label: string;
@@ -5113,6 +5501,62 @@ export interface components {
             /** Format: date-time */
             periodEnd: string;
             lines: components["schemas"]["SubscriptionInvoiceLineResponse"][];
+        };
+        SupplierDayResponse: {
+            /** Format: date */
+            day: string;
+            /** Format: uuid */
+            supplierId: string;
+            /** Format: int32 */
+            searches: number | string;
+            /** Format: int32 */
+            booked: number | string;
+            /** Format: int32 */
+            totalCalls: number | string;
+            /** Format: int32 */
+            errors: number | string;
+            /** Format: int32 */
+            averageLatencyMs: number | string;
+        };
+        SupplierPerformanceResponse: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: date-time */
+            generatedAt: null | string;
+            suppliers: components["schemas"]["SupplierPerformanceRowResponse"][];
+            days: components["schemas"]["SupplierDayResponse"][];
+        };
+        SupplierPerformanceRowResponse: {
+            /** Format: uuid */
+            supplierId: string;
+            supplierCode: string;
+            supplierName: string;
+            /** Format: int32 */
+            searches: number | string;
+            /** Format: int32 */
+            priceConfirmations: number | string;
+            /** Format: int32 */
+            issueAttempts: number | string;
+            /** Format: int32 */
+            booked: number | string;
+            /** Format: int32 */
+            statusPolls: number | string;
+            /** Format: int32 */
+            totalCalls: number | string;
+            /** Format: int32 */
+            errors: number | string;
+            /** Format: int32 */
+            timeouts: number | string;
+            /** Format: int32 */
+            conversionBasisPoints: null | number | string;
+            /** Format: int32 */
+            errorRateBasisPoints: null | number | string;
+            /** Format: int32 */
+            averageLatencyMs: number | string;
+            /** Format: int32 */
+            maxLatencyMs: number | string;
         };
         TaskRelatedResponse: {
             type: string;
@@ -6401,6 +6845,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OperationsDashboardResponse"];
+                };
+            };
+        };
+    };
+    PlatformAnalyticsSummary: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                refresh?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformAnalyticsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    PlatformSupplierPerformance: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                refresh?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierPerformanceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListReportExports: {
+        parameters: {
+            query?: {
+                limit?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportExportAuditResponse"][];
                 };
             };
         };
@@ -8298,6 +8830,210 @@ export interface operations {
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
+            };
+        };
+    };
+    AgencyAnalyticsSummary: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgencyAnalyticsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    AgencyAnalyticsBookings: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                page?: number | string;
+                pageSize?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDrillDownResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListReportDefinitions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportDefinitionResponse"][];
+                };
+            };
+        };
+    };
+    RunReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunReportRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportJobResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListReportJobs: {
+        parameters: {
+            query?: {
+                limit?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportJobResponse"][];
+                };
+            };
+        };
+    };
+    GetReportJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportJobResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DownloadReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

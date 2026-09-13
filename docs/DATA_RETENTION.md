@@ -235,6 +235,19 @@ order needs. None of it is a traveller's personal data, so there is nothing to a
 | `storefront.site_domains` | No | While connected | Kept | Hostnames the site answers on; a removed one is deleted with its checks |
 | `storefront.site_domain_checks` | No | With their hostname | Kept | What DNS said on each check — the answer to "why isn't my domain working?" |
 
+### Analytics and reports
+
+| Table | Personal data | Kept for | Treatment | Why |
+|---|---|---|---|---|
+| `analytics.fact_bookings` | No | Derived: rebuilt from orders | Kept | A copy of order lines for counting. Deleting it deletes nothing — the rollup makes it again from orders |
+| `analytics.agg_agency_daily` | No | Derived: rebuilt from orders | Kept | One agency's day, summed from `fact_bookings` |
+| `analytics.agg_platform_daily` | No | Derived: rebuilt from orders | Kept | The platform's day |
+| `analytics.agg_supplier_daily` | No | Derived: rebuilt from the supplier call log | Kept | A supplier's day. Outlives the call log's dropped partitions, which is the point |
+| `analytics.rollup_runs` | No | 90 days proposed | Not yet enforced | About 105,000 small rows a year. Only the newest successful run matters; waits for a purge rule |
+| `analytics.report_definitions` | No | While offered | Kept | Reference data: the reports that may be run |
+| `analytics.report_jobs` | Some (who asked) | At least 7 years | Protected | Every export record points at its run |
+| `analytics.report_exports_audit` | Yes (actors, IPs) | At least 7 years | Protected | Who exported what, how many rows, and when (FRD 2.15 UC-1C RS-6). Append-only |
+
 ---
 
 ## The purge job
@@ -324,6 +337,9 @@ Honest gaps, so nobody assumes they are handled:
   blocked on the same question. This job only clears travel documents after the trip.
 - **Supplier search tables.** Proposed periods are above; enforcement lands with the search work,
   which owns those tables.
+- **Finished report files.** A report's CSV lives in blob storage under `reports/`, and nothing
+  expires it yet. It carries the same data the export log says left the system; its retention
+  should follow the log's, and lands with the storage adapter once a cloud is chosen.
 - **Outside the database.** Application logs (the rate limiter logs the address or user it refuses),
   database backups, Redis and blob storage all hold personal data too. Their retention is set by
   the hosting platform, and the cloud has not been chosen yet. Rate-limit counters in Redis expire

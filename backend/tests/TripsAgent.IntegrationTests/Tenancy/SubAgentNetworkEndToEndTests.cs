@@ -7,9 +7,11 @@ using DotNet.Testcontainers.Containers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Billing;
+using TripsAgent.Application.Identity;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Contracts.Identity;
 using TripsAgent.Contracts.Tenancy;
@@ -399,6 +401,55 @@ public sealed class SubAgentNetworkEndToEndTests : IAsyncLifetime, IDisposable
             new SetAllowanceRequest(9_999_999, "Monthly"));
 
         attempt.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    /// <summary>
+    /// Issue 173. Argon2id is expensive on purpose, so posting any string as a token must not be able
+    /// to spend it: the link is looked up first, and only one that turns out to be real is paid for.
+    /// </summary>
+    [Fact]
+    public async Task An_unusable_invitation_link_is_refused_before_any_password_is_hashed()
+    {
+        await SignInAsPrincipalAsync();
+        var invited = await InviteAsync();
+
+        var hasher = new CountingPasswordHasher();
+
+        using var counted = _factory.WithWebHostBuilder(
+            host => host.ConfigureTestServices(services => services.AddSingleton<IPasswordHasher>(hasher)));
+        using var anonymous = counted.CreateClient();
+
+        using (var refused = await anonymous.PostAsJsonAsync("/api/v1/invitations/accept", Accept("not-a-real-token")))
+        {
+            refused.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        hasher.Calls.Should().Be(0, "a link nobody holds must cost nothing to turn away");
+
+        // The control: a real link does pay for the hash, so this is about the order of the two steps
+        // rather than about the hasher having been left out of the request altogether.
+        using (var accepted = await anonymous.PostAsJsonAsync(
+            "/api/v1/invitations/accept", Accept(invited.InvitationToken)))
+        {
+            accepted.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        hasher.Calls.Should().Be(1);
+    }
+
+    /// <summary>Counts what Argon2id would have cost, without paying it.</summary>
+    private sealed class CountingPasswordHasher : IPasswordHasher
+    {
+        public int Calls { get; private set; }
+
+        public string Hash(string password)
+        {
+            Calls++;
+            return $"counted:{password}";
+        }
+
+        public (bool Verified, bool NeedsRehash) Verify(string password, string hash) =>
+            (hash == $"counted:{password}", false);
     }
 
     // ------------------------------------------------------------------ helpers

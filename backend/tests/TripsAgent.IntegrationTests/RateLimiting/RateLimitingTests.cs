@@ -89,6 +89,11 @@ public sealed class RateLimitingTests : IClassFixture<RedisFixture>, IAsyncLifet
             ("RateLimiting__Policies__Agency__Window", "00:05:00"),
             ("RateLimiting__Policies__Search__PermitLimit", SearchLimit.ToString(CultureInfo.InvariantCulture)),
             ("RateLimiting__Policies__Search__Window", "00:05:00"),
+
+            // Two, so the third accept inside the window shows the route is counted under a policy of
+            // its own rather than the default one (issue 173).
+            ("RateLimiting__Policies__InvitationAccept__PermitLimit", "2"),
+            ("RateLimiting__Policies__InvitationAccept__Window", "00:05:00"),
             ("ForwardedHeaders__KnownProxies", TrustedProxy),
         ];
 
@@ -288,6 +293,57 @@ public sealed class RateLimitingTests : IClassFixture<RedisFixture>, IAsyncLifet
         // The same user's other requests are counted separately, under the default policy.
         using var elsewhere = await MeAsync(api, token, "203.0.113.81");
         elsewhere.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// Issue 173. The accept route is anonymous and a link that turns out to be real ends in an
+    /// Argon2id hash, so it is counted under a policy of its own and not the default per-address one.
+    /// </summary>
+    [Fact]
+    public async Task Accepting_an_invitation_is_counted_under_its_own_policy()
+    {
+        // The limit configured for this policy in InitializeAsync.
+        const int limit = 2;
+
+        var api = StartInstance().CreateClient();
+        const string client = "203.0.113.91";
+
+        // A token nobody holds: refused as unusable, and counted all the same.
+        for (var attempt = 1; attempt <= limit; attempt++)
+        {
+            using var counted = await AcceptInvitationAsync(api, client);
+
+            counted.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            Header(counted, RateLimitHeaders.Limit).Should().Be(limit.ToString(CultureInfo.InvariantCulture));
+            Header(counted, RateLimitHeaders.Policy).Should().Be($"{limit};w=300");
+        }
+
+        using var refused = await AcceptInvitationAsync(api, client);
+        refused.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+
+        // Another address is untouched: one caller cannot use up everybody else's invitations.
+        using var neighbour = await AcceptInvitationAsync(api, "203.0.113.92");
+        neighbour.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    /// <summary>An accept with a well-formed body and a token nobody holds.</summary>
+    private static async Task<HttpResponseMessage> AcceptInvitationAsync(HttpClient api, string peer)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/invitations/accept")
+        {
+            Content = JsonContent.Create(new
+            {
+                token = $"{Guid.NewGuid():N}",
+                firstName = "Bola",
+                lastName = "Adeyemi",
+                password = "Password123",
+                phoneNumber = (string?)null,
+            }),
+        };
+
+        request.Headers.Add(PeerAddressFilter.Header, peer);
+
+        return await api.SendAsync(request);
     }
 
     [Fact]

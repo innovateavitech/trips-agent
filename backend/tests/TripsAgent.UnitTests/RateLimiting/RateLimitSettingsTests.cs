@@ -38,6 +38,7 @@ public class RateLimitSettingsTests
                      RateLimitPolicyNames.Registration,
                      RateLimitPolicyNames.OtpResend,
                      RateLimitPolicyNames.ForgotPassword,
+                     RateLimitPolicyNames.InvitationAccept,
                      RateLimitPolicyNames.Search,
                  })
         {

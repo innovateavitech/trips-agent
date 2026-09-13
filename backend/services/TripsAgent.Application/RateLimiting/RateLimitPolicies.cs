@@ -25,6 +25,12 @@ public static class RateLimitPolicyNames
     /// <summary>Asking for a password reset link. Each one sends an email.</summary>
     public const string ForgotPassword = "ForgotPassword";
 
+    /// <summary>
+    /// Accepting a sub-agent invitation. Anonymous, and an accepted link ends in an Argon2id hash,
+    /// which is expensive on purpose (issue 173).
+    /// </summary>
+    public const string InvitationAccept = "InvitationAccept";
+
     /// <summary>Flight and bus search. Each one can cost a call to the supplier.</summary>
     public const string Search = "Search";
 
@@ -46,7 +52,7 @@ public static class RateLimitPolicyNames
 
     /// <summary>Every policy, in the order configuration documents them.</summary>
     public static IReadOnlyList<string> All { get; } =
-        [Default, Login, Registration, OtpResend, ForgotPassword, Search, Storefront, Agency];
+        [Default, Login, Registration, OtpResend, ForgotPassword, InvitationAccept, Search, Storefront, Agency];
 
     /// <summary>True for a policy an endpoint may name. <see cref="Agency"/> is not one.</summary>
     public static bool IsEndpointPolicy(string? name) =>
@@ -103,6 +109,10 @@ public sealed class RateLimitSettings
             // Each one sends an email, on our sending reputation. A person needs one or two.
             [RateLimitPolicyNames.OtpResend] = new(5, TimeSpan.FromMinutes(15)),
             [RateLimitPolicyNames.ForgotPassword] = new(5, TimeSpan.FromMinutes(15)),
+
+            // Per address. Somebody joining a network accepts once, and perhaps corrects a weak
+            // password twice; ten in a quarter of an hour from one address is not that.
+            [RateLimitPolicyNames.InvitationAccept] = new(10, TimeSpan.FromMinutes(15)),
 
             // Per user. The one request that can cost us a supplier call, so the tightest of the
             // signed-in policies: one search every two seconds, sustained, is still a busy agent.

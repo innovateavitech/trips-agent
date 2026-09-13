@@ -140,9 +140,6 @@ public sealed class AcceptInvitationHandler
             return new AcceptInvitationOutcome.Invalid(errors);
         }
 
-        // Hashed before the lookup, so the response time does not say whether the token was real.
-        var passwordHash = _passwords.Hash(password);
-
         using var scope = _platformScope.Enter(
             "sub-agent invitation — the invitee has no account yet, so there is no tenant to scope this to");
 
@@ -169,6 +166,13 @@ public sealed class AcceptInvitationHandler
         {
             return new AcceptInvitationOutcome.NotUsable();
         }
+
+        // Only now, with every cheap check passed and an account about to exist. Argon2id is expensive
+        // on purpose, and hashing before the lookup let an anonymous caller spend that CPU by posting
+        // any string at all (issue 173). The timing gives nothing away here, unlike at registration or
+        // sign-in: the secret is 256 bits of randomness rather than a guessable address, and whoever
+        // holds a real one already knows that it is real.
+        var passwordHash = _passwords.Hash(password);
 
         var now = _clock.GetUtcNow();
 

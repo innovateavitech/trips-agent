@@ -202,6 +202,7 @@ app.MapPlatformUserEndpoints();
 app.MapOperationsDashboardEndpoints();
 app.MapPlatformAnalyticsEndpoints();
 app.MapAuditLogEndpoints();
+app.MapErasureEndpoints();
 app.MapWalletEndpoints();
 app.MapPayoutEndpoints();
 app.MapPricingEndpoints();

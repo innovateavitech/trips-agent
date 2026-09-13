@@ -85,6 +85,9 @@ public interface IAppDbContext
     /// </summary>
     public DbSet<AdminAlert> AdminAlerts { get; }
 
+    /// <summary>Every request to erase a person's details, and what each one changed (issue 106).</summary>
+    public DbSet<ErasureRequest> ErasureRequests { get; }
+
     /// <summary>
     /// Who did what, when, and why. Append-only and partitioned by month.
     /// </summary>
@@ -315,6 +318,12 @@ public interface IAppDbContext
 
     /// <summary>The travellers on a supplier booking. The lead one's surname identifies it to the supplier.</summary>
     public DbSet<SupplierBookingPassenger> SupplierBookingPassengers { get; }
+
+    /// <summary>
+    /// The travel documents a passenger was ticketed on. Numbers and expiries are encrypted at rest
+    /// (issue 104), and the rows go a set interval after the trip (issue 105).
+    /// </summary>
+    public DbSet<PassengerDocument> PassengerDocuments { get; }
 
     /// <summary>
     /// Every status poll and what was done about it: the evidence a payment reversal rests on.

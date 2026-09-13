@@ -212,6 +212,7 @@ order needs. None of it is a traveller's personal data, so there is nothing to a
 | Table | Personal data | Kept for | Treatment | Why |
 |---|---|---|---|---|
 | `platform.audit_logs` | Yes (actors, IPs, redacted before/after state) | 84 months, then whole monthly partitions dropped by `audit-log-maintenance` | Protected | Who did what, when. This job never touches it — see [runbooks/audit-log.md](runbooks/audit-log.md) |
+| `platform.erasure_requests` | No | At least 7 years | Protected | The record that a person's details were erased on request ([#106](https://github.com/innovateavitech/trips-agent/issues/106)): who asked, when, why, and counts per table. It holds no name, email or phone — it outlives the details, so a copy here would be a copy of what was erased |
 | `platform.admin_alerts` | No | Indefinitely, for now | Kept | Small, and a resolved alert records how an incident was handled. Revisit if it grows |
 | `platform.outbox_messages` | Some (event payloads) | 30 days after dispatch; failed messages kept | Purged | Delivered events. A failed one waits for a person |
 | `platform.inbox_messages` | No | 30 days after processing — never under 7 | Purged | Deduplication, only useful while a broker might redeliver |

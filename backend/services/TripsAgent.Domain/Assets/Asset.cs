@@ -48,6 +48,12 @@ public enum AssetStatus
 
     /// <summary>Something about this file could not be processed. Never served.</summary>
     Failed = 6,
+
+    /// <summary>
+    /// The person this file was about asked to be erased (issue 106). The bytes are deleted from
+    /// storage and the row is kept, so the trail still shows a file was there and is not.
+    /// </summary>
+    Erased = 7,
 }
 
 /// <summary>The virus scanner's answer. Nothing is served until this is <see cref="Clean"/>.</summary>
@@ -396,6 +402,23 @@ public sealed class Asset : Entity, IAuditableEntity, ITenantScoped, IAuditLogge
         ScannedAt = at;
         Status = AssetStatus.Quarantined;
         FailureReason = "This file was rejected by the virus scanner.";
+        ProcessingClaimedUntil = null;
+    }
+
+    /// <summary>
+    /// The bytes have been deleted from storage because the person they were about was erased.
+    /// </summary>
+    /// <remarks>
+    /// Not a delete of the row: an evidence file that simply vanished would leave a dispute pointing at
+    /// nothing, with no way to tell a lost file from an erased one. Irreversible — there is no copy.
+    /// </remarks>
+    public void EraseContent(DateTimeOffset at)
+    {
+        Status = AssetStatus.Erased;
+        SizeBytes = 0;
+        Checksum = null;
+        FailureReason = "Deleted at the request of the person this file was about (NDPA erasure).";
+        ProcessedAt = at;
         ProcessingClaimedUntil = null;
     }
 

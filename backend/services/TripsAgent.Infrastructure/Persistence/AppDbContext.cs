@@ -161,6 +161,9 @@ public class AppDbContext : DbContext, IAppDbContext
     /// <summary>Things in the platform that need a person to act. Read across agencies.</summary>
     public DbSet<AdminAlert> AdminAlerts => Set<AdminAlert>();
 
+    /// <summary>Every request to erase a person's details, and what each one changed (issue 106).</summary>
+    public DbSet<ErasureRequest> ErasureRequests => Set<ErasureRequest>();
+
     /// <summary>The double-entry ledger — the source of truth for money.</summary>
     public DbSet<LedgerAccount> LedgerAccounts => Set<LedgerAccount>();
 

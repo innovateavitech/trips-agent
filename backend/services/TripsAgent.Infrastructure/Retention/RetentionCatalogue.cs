@@ -328,6 +328,9 @@ public static partial class RetentionCatalogue
         new("platform.audit_logs", RetentionTreatment.Protected,
             "84 months (AuditLog__RetentionMonths), then whole partitions dropped by audit-log-maintenance",
             "Who did what, when. This job never touches it; its own maintenance job ages it out."),
+        new("platform.erasure_requests", RetentionTreatment.Protected, SevenYears,
+            "The record that somebody's details were erased on request (issue 106): who asked, when, why, and how "
+            + "many rows changed. It holds no personal detail itself, and it is the evidence the erasure happened."),
         new("platform.admin_alerts", RetentionTreatment.Kept, "Indefinitely, for now",
             "Small, and a resolved alert is the record of how an incident was handled. Revisit if it grows."),
         new("platform.outbox_messages", RetentionTreatment.Purged,

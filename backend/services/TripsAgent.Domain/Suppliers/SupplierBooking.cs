@@ -712,7 +712,7 @@ public sealed class PassengerDocument : Entity, IAuditableEntity, ITenantScoped
 {
     private PassengerDocument()
     {
-        DocNumberEncrypted = [];
+        DocNumber = string.Empty;
         IssuingCountry = string.Empty;
     }
 
@@ -721,7 +721,7 @@ public sealed class PassengerDocument : Entity, IAuditableEntity, ITenantScoped
         Guid passengerId,
         TravelDocumentRecord docType,
         TravelDocumentKind innerDocType,
-        byte[] docNumberEncrypted,
+        string docNumber,
         string issuingCountry,
         string? nationalityCountry = null,
         DateOnly? issuedOn = null,
@@ -729,12 +729,7 @@ public sealed class PassengerDocument : Entity, IAuditableEntity, ITenantScoped
     {
         ArgumentOutOfRangeException.ThrowIfEqual(agencyId, Guid.Empty);
         ArgumentOutOfRangeException.ThrowIfEqual(passengerId, Guid.Empty);
-        ArgumentNullException.ThrowIfNull(docNumberEncrypted);
-
-        if (docNumberEncrypted.Length == 0)
-        {
-            throw new ArgumentException("The encrypted document number is empty.", nameof(docNumberEncrypted));
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(docNumber);
 
         if (issuedOn is { } issued && expiresOn is { } expires && expires < issued)
         {
@@ -747,7 +742,7 @@ public sealed class PassengerDocument : Entity, IAuditableEntity, ITenantScoped
             PassengerId = passengerId,
             DocType = docType,
             InnerDocType = innerDocType,
-            DocNumberEncrypted = docNumberEncrypted,
+            DocNumber = docNumber.Trim(),
             IssuingCountry = Country(issuingCountry, nameof(issuingCountry)),
             NationalityCountry = nationalityCountry is null ? null : Country(nationalityCountry, nameof(nationalityCountry)),
             IssuedOn = issuedOn,
@@ -763,7 +758,8 @@ public sealed class PassengerDocument : Entity, IAuditableEntity, ITenantScoped
 
     public TravelDocumentKind InnerDocType { get; private set; }
 
-    public byte[] DocNumberEncrypted { get; private set; }
+    /// <summary>The document's number. Encrypted at rest (issue 104); never logged, audited or searchable.</summary>
+    public string DocNumber { get; private set; }
 
     /// <summary>ISO 3166-1 alpha-2.</summary>
     public string IssuingCountry { get; private set; }
@@ -772,6 +768,7 @@ public sealed class PassengerDocument : Entity, IAuditableEntity, ITenantScoped
 
     public DateOnly? IssuedOn { get; private set; }
 
+    /// <summary>When the document expires. Encrypted at rest, like the number.</summary>
     public DateOnly? ExpiresOn { get; private set; }
 
     public DateTimeOffset CreatedAt { get; set; }

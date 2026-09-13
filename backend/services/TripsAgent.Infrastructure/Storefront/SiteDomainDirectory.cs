@@ -94,8 +94,14 @@ public sealed class SiteDomainDirectory : IStorefrontDirectory
                    "Storefront host resolution — finds which agency's site answers on a hostname an "
                    + "anonymous caller used, before anything is read under that agency."))
         {
+            // Verified first. Several agencies may hold a pending claim on one hostname — only
+            // verifying it is exclusive — so without an order the row that answers is whichever
+            // PostgreSQL returned first, and an agency that claimed a rival's domain and never
+            // proved it could take that rival's storefront offline (issue 110).
             var match = await _db.SiteDomains.AsNoTracking()
                 .Where(domain => domain.Hostname == hostname)
+                .OrderByDescending(domain => domain.VerificationStatus == DomainVerificationStatus.Verified)
+                .ThenBy(domain => domain.Id)
                 .Select(domain => new
                 {
                     domain.AgencyId,

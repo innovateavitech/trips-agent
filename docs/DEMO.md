@@ -88,8 +88,15 @@ Password for all of them: **`Password123`**
 | Trips staff (super admin) | :5174 | `admin@tripsagent.example.com` |
 | Trips staff (operations) | :5174 | `ops@tripsagent.example.com` |
 | A verified agency | :5173 | `owner@lagostravel.example.com` |
+| A counter agent at that agency (no `margin.view`) | :5173 | `agent@lagostravel.example.com` |
 | Its sub-agent | :5173 | `owner@ikejabranch.example.com` |
+| A second, unrelated verified agency | :5173 | `owner@kanojourneys.example.com` |
 | An agency still awaiting KYB | :5173 | `owner@pendingtravel.example.com` |
+
+> The unrelated second agency and the counter agent are there for security testing: two agencies
+> with nothing in common is what a tenant-isolation test needs, and an account without
+> `margin.view` is what a margin-leak test needs. See
+> [docs/security/TEST_ENVIRONMENT.md](security/TEST_ENVIRONMENT.md).
 
 > The addresses are subdomains of `example.com`, which is reserved by RFC 2606 — mail to them
 > cannot reach anyone, and Paystack's validator still accepts them. Addresses ending in `.test`

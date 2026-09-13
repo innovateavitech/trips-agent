@@ -3,6 +3,7 @@ using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Contracts.Identity;
 using TripsAgent.Domain.Identity;
+using TripsAgent.Domain.Tenancy;
 
 namespace TripsAgent.Application.Identity.Authentication;
 
@@ -109,6 +110,26 @@ public sealed class LoginHandler
         {
             await RecordAttemptAsync(email, succeeded: false, now, ipAddress, userAgent, user.Id, cancellationToken);
             return new LoginOutcome.AccountUnavailable();
+        }
+
+        // The agency's standing as well as the user's. Terminating an agency — or a principal
+        // revoking a sub-agent, which is the same state — changes one column on the agency and
+        // leaves its staff Active, so without this they sign back in with the password they have
+        // always had and go on reading the agency's customers. Found in the internal adversarial
+        // pass before the penetration test (issue 110). Suspension is deliberately not refused:
+        // AgencyAccess.CanSignIn says a suspended agency may still read, but not sell.
+        if (user.AgencyId is { } agencyId)
+        {
+            var status = await _db.Agencies
+                .Where(agency => agency.Id == agencyId)
+                .Select(agency => agency.Status)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (!AgencyAccess.CanSignIn(status))
+            {
+                await RecordAttemptAsync(email, succeeded: false, now, ipAddress, userAgent, user.Id, cancellationToken);
+                return new LoginOutcome.AccountUnavailable();
+            }
         }
 
         if (needsRehash)

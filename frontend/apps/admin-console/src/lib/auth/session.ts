@@ -1,16 +1,16 @@
 import { readClaims, type StaffClaims } from './claims';
 
-/** What `/auth/login` and `/auth/refresh` return — TokenPairResponse in TripsAgent.Contracts. */
+/**
+ * What `/auth/login` and `/auth/refresh` return — TokenPairResponse in TripsAgent.Contracts. The
+ * refresh token is not in it: it arrives as an HttpOnly cookie this code never sees.
+ */
 export interface TokenPairResponse {
   accessToken: string;
   expiresInSeconds: number;
-  refreshToken: string;
 }
 
 export interface Session {
   accessToken: string;
-  /** Single use: exchanging it returns a new one and the old one stops working. */
-  refreshToken: string;
   /** Epoch milliseconds, on the browser's clock. */
   accessExpiresAt: number;
   claims: StaffClaims;
@@ -37,7 +37,6 @@ export function sessionFromTokens(pair: TokenPairResponse, now: number): Session
 
   return {
     accessToken: pair.accessToken,
-    refreshToken: pair.refreshToken,
     accessExpiresAt: now + pair.expiresInSeconds * 1000,
     claims,
   };

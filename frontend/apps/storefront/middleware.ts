@@ -1,7 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { contentSecurityPolicy, createNonce } from './lib/security-headers';
 
 /**
- * Carries a preview link's token from the URL into every request of that visit (issue 58's staging
+ * Two jobs on every page request.
+ *
+ * **The Content-Security-Policy** (issue 107), with a nonce made for this response. The policy goes on
+ * the request as well as the response: Next.js reads the nonce from the request's copy and stamps it
+ * on every script tag it renders, so its own scripts run and nothing injected does.
+ *
+ * **Carries a preview link's token** from the URL into every request of that visit (issue 58's staging
  * preview).
  *
  * A preview link is `https://their-site.example/?preview=<token>`, but only the first page load
@@ -26,6 +33,9 @@ export function middleware(request: NextRequest): NextResponse {
 
   const headers = new Headers(request.headers);
 
+  const policy = contentSecurityPolicy(createNonce(), process.env.NODE_ENV === 'development');
+  headers.set('Content-Security-Policy', policy);
+
   // Never trust an inbound header of this name: only this middleware may set it, from the URL or
   // from the cookie it wrote. Otherwise anyone could send one and ask for a draft.
   headers.delete(PREVIEW_HEADER);
@@ -35,6 +45,7 @@ export function middleware(request: NextRequest): NextResponse {
   }
 
   const response = NextResponse.next({ request: { headers } });
+  response.headers.set('Content-Security-Policy', policy);
 
   if (fromUrl) {
     response.cookies.set(PREVIEW_COOKIE, fromUrl, {

@@ -20,6 +20,7 @@ using TripsAgent.Api.Pricing;
 using TripsAgent.Api.RateLimiting;
 using TripsAgent.Api.Scheduling;
 using TripsAgent.Api.Search;
+using TripsAgent.Api.Security;
 using TripsAgent.Api.Storage;
 using TripsAgent.Api.Storefront;
 using TripsAgent.Api.Tenancy;
@@ -34,6 +35,10 @@ using TripsAgent.Integrations.Paystack;
 using TripsAgent.Integrations.TripsAfrica;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// No "Server: Kestrel" banner. It tells a scanner which exploits to try, and a storefront's traveller
+// has no business learning what the platform behind their agency runs on (issue 107).
+builder.WebHost.ConfigureKestrel(kestrel => kestrel.AddServerHeader = false);
 
 builder.Services.AddOpenApi();
 
@@ -60,6 +65,10 @@ builder.Services.AddJobScheduling(builder.Configuration);
 // claim the caller made about itself, and believing it would let them pick the address the rate
 // limiter counts. See ForwardedHeadersSetup.
 builder.Services.AddTrustedProxies(builder.Configuration);
+
+// Which browser origins may read a response: the consoles, with credentials, and verified storefront
+// domains, on the anonymous traveller routes only. Never a wildcard. See TripsCorsPolicyProvider.
+builder.Services.AddTripsCors(builder.Configuration);
 
 // Per address, per user and per agency, counted in Redis so every instance shares one count
 // (issue #102). Refuses to start when switched on with no Redis to count in. See RateLimitingSetup.
@@ -141,6 +150,14 @@ if (DatabaseSeeder.IsSeedCommand(args))
 // audit log all do, and until this runs they would all see the load balancer instead.
 app.UseForwardedHeaders();
 
+// Before anything that can answer, so a 401, a 429 and a preflight all carry the headers. After the
+// forwarded headers, because whether to send HSTS depends on the scheme the client really used.
+app.UseSecurityHeaders(app.Services.GetRequiredService<CorsSettings>().ConsoleOrigins);
+
+// Before authentication and the rate limiter: a preflight carries no token, and answering it here
+// means it is neither refused as anonymous nor counted against anyone's limit.
+app.UseCors();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -202,6 +219,7 @@ app.MapPlatformUserEndpoints();
 app.MapOperationsDashboardEndpoints();
 app.MapPlatformAnalyticsEndpoints();
 app.MapAuditLogEndpoints();
+app.MapErasureEndpoints();
 app.MapWalletEndpoints();
 app.MapPayoutEndpoints();
 app.MapPricingEndpoints();

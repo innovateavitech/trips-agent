@@ -185,6 +185,40 @@ public class AuthenticationTests
         (await world.Login(world.OwnerEmail, Password)).Should().BeOfType<LoginOutcome.AccountUnavailable>();
     }
 
+    [Fact]
+    public async Task A_terminated_agencys_staff_cannot_sign_in_even_with_the_right_password()
+    {
+        await using var world = await WorldAsync();
+
+        using (var _ = world.Tenancy.Scope.Enter("test — terminating the agency"))
+        {
+            (await world.Db.Agencies.SingleAsync(agency => agency.Id == world.AgencyId))
+                .Terminate("Adversarial test: the agency is closed.", world.Clock.GetUtcNow());
+            await world.Db.SaveChangesAsync();
+        }
+
+        // Ending an agency — which is also what revoking a sub-agent does — leaves its people
+        // Active, so without the agency check they signed straight back in (issue 110).
+        (await world.Login(world.OwnerEmail, Password)).Should().BeOfType<LoginOutcome.AccountUnavailable>();
+    }
+
+    [Fact]
+    public async Task A_suspended_agencys_staff_can_still_sign_in_to_look_after_travellers()
+    {
+        await using var world = await WorldAsync();
+
+        using (var _ = world.Tenancy.Scope.Enter("test — suspending the agency"))
+        {
+            (await world.Db.Agencies.SingleAsync(agency => agency.Id == world.AgencyId))
+                .Suspend("Adversarial test: the agency is suspended.", world.Clock.GetUtcNow());
+            await world.Db.SaveChangesAsync();
+        }
+
+        // Decision 14: suspension stops them selling, not reading. AgencyAccess.CanSignIn is the
+        // one rule, and this is the half of it that must not turn into a lock-out.
+        (await world.Login(world.OwnerEmail, Password)).Should().BeOfType<LoginOutcome.Succeeded>();
+    }
+
     // --------------------------------------------------------------------------- rotation
 
     [Fact]
@@ -269,6 +303,23 @@ public class AuthenticationTests
         }
 
         // The short access-token lifetime exists so this check gets a chance to run.
+        (await world.Refresh(tokens.RefreshTokenValue)).Should().BeOfType<RefreshOutcome.Rejected>();
+    }
+
+    [Fact]
+    public async Task An_agency_terminated_after_sign_in_cannot_refresh_its_way_back()
+    {
+        await using var world = await WorldAsync();
+
+        var tokens = (await world.Login(world.OwnerEmail, Password) as LoginOutcome.Succeeded)!.Tokens;
+
+        using (var _ = world.Tenancy.Scope.Enter("test — terminating after sign-in"))
+        {
+            (await world.Db.Agencies.SingleAsync(agency => agency.Id == world.AgencyId))
+                .Terminate("Adversarial test: the agency is closed.", world.Clock.GetUtcNow());
+            await world.Db.SaveChangesAsync();
+        }
+
         (await world.Refresh(tokens.RefreshTokenValue)).Should().BeOfType<RefreshOutcome.Rejected>();
     }
 

@@ -55,3 +55,4 @@ afternoon.
 | [0006](0006-row-level-security-backstop.md) | Enforce tenant isolation in PostgreSQL too, with row-level security | Accepted |
 | [0007](0007-generated-documents-skip-the-virus-scan.md) | Serve the documents we render without a virus scan, and nothing else | Proposed |
 | [0008](0008-never-retry-payout-transfers.md) | Never send a payout transfer twice; an unknown outcome is resolved by asking | Accepted |
+| [0009](0009-ndpa-erasure-as-anonymisation.md) | NDPA erasure is anonymisation in place; the financial and audit record is kept | Accepted for the MVP, pending the client's DPO |

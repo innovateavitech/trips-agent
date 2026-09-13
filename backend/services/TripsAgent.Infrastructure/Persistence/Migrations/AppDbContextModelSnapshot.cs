@@ -4969,11 +4969,11 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("order_line_id");
 
-                    b.Property<DateOnly?>("PassportExpiry")
-                        .HasColumnType("date")
-                        .HasColumnName("passport_expiry");
+                    b.Property<byte[]>("PassportExpiry")
+                        .HasColumnType("bytea")
+                        .HasColumnName("passport_expiry_encrypted");
 
-                    b.Property<byte[]>("PassportNumberEncrypted")
+                    b.Property<byte[]>("PassportNumber")
                         .HasColumnType("bytea")
                         .HasColumnName("passport_number_encrypted");
 
@@ -5019,12 +5019,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(160)")
                         .HasColumnName("account_name_resolved");
 
-                    b.Property<string>("AccountNumber")
+                    b.Property<byte[]>("AccountNumber")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character(10)")
-                        .HasColumnName("account_number")
-                        .IsFixedLength();
+                        .HasColumnType("bytea")
+                        .HasColumnName("account_number_encrypted");
 
                     b.Property<Guid?>("AddedByUserId")
                         .HasColumnType("uuid")
@@ -5092,10 +5090,6 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_agency_bank_accounts_one_default")
                         .HasFilter("is_default");
-
-                    b.HasIndex("AgencyId", "BankCode", "AccountNumber")
-                        .IsUnique()
-                        .HasDatabaseName("ix_agency_bank_accounts_agency_bank_number");
 
                     b.ToTable("agency_bank_accounts", "payments");
                 });
@@ -6347,6 +6341,76 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.ToTable("admin_alerts", "platform");
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Platform.ErasureRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<string>("Outcome")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("RefusalReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("refusal_reason");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<Guid?>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_erasure_requests");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("ix_erasure_requests_customer_id");
+
+                    b.HasIndex("AgencyId", "RequestedAt")
+                        .HasDatabaseName("ix_erasure_requests_agency_id_requested_at");
+
+                    b.ToTable("erasure_requests", "platform", t =>
+                        {
+                            t.HasCheckConstraint("ck_erasure_requests_finished_is_explained", "(status = 'Requested' AND completed_at IS NULL) OR (status = 'Completed' AND completed_at IS NOT NULL AND outcome IS NOT NULL) OR (status = 'Refused' AND completed_at IS NOT NULL AND refusal_reason IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Pricing.MarkupRule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7359,7 +7423,7 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<byte[]>("DocNumberEncrypted")
+                    b.Property<byte[]>("DocNumber")
                         .IsRequired()
                         .HasColumnType("bytea")
                         .HasColumnName("doc_number_encrypted");
@@ -7370,9 +7434,9 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(10)")
                         .HasColumnName("doc_type");
 
-                    b.Property<DateOnly?>("ExpiresOn")
-                        .HasColumnType("date")
-                        .HasColumnName("expires_on");
+                    b.Property<byte[]>("ExpiresOn")
+                        .HasColumnType("bytea")
+                        .HasColumnName("expires_on_encrypted");
 
                     b.Property<string>("InnerDocType")
                         .IsRequired()
@@ -10016,6 +10080,23 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_wallet_transactions_wallets_wallet_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Platform.ErasureRequest", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_erasure_requests_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Crm.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_erasure_requests_customers_customer_id");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Pricing.MarkupRule", b =>

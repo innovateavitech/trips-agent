@@ -121,7 +121,9 @@ public static partial class DatabaseSeeder
 
         // A principal with one sub-agent beneath it: the smallest dataset that exercises the
         // hierarchy, so a subtree query has something to return. Plus a third, unverified agency
-        // so the KYB review queue has something waiting in it.
+        // so the KYB review queue has something waiting in it, and a fourth that is verified and
+        // entirely unrelated — two agencies with nothing in common is what a tenant-isolation test
+        // needs, and a sub-agent is not that (docs/security/PENETRATION_TEST_SCOPE.md).
         var principal = Agency.RegisterPrincipal(
             legalName: "Lagos Travel Services Limited",
             slug: PrincipalSlug,
@@ -136,6 +138,14 @@ public static partial class DatabaseSeeder
             slug: SubAgentSlug,
             tradingName: "Ikeja Branch");
 
+        var rival = Agency.RegisterPrincipal(
+            legalName: "Kano Journeys Limited",
+            slug: IdentitySeedData.RivalAgencySlug,
+            countryCode: "NG",
+            baseCurrency: "NGN",
+            timezone: "Africa/Lagos",
+            tradingName: "Kano Journeys");
+
         var pendingAgency = Agency.RegisterPrincipal(
             legalName: "Pending Travel Limited",
             slug: IdentitySeedData.PendingAgencySlug,
@@ -148,26 +158,27 @@ public static partial class DatabaseSeeder
         var now = DateTimeOffset.UtcNow;
         principal.MarkVerified(now);
         subAgent.MarkVerified(now);
+        rival.MarkVerified(now);
 
-        dbContext.Agencies.AddRange(principal, subAgent, pendingAgency);
+        dbContext.Agencies.AddRange(principal, subAgent, rival, pendingAgency);
 
-        foreach (var agency in new[] { principal, subAgent, pendingAgency })
+        foreach (var agency in new[] { principal, subAgent, rival, pendingAgency })
         {
             dbContext.AgencySettings.Add(AgencySettings.CreateDefault(agency));
             dbContext.AgencyBranding.Add(AgencyBranding.CreateDefault(agency));
         }
 
-        SeedUsers(dbContext, passwordHasher, roles, principal, subAgent, pendingAgency, now);
+        SeedUsers(dbContext, passwordHasher, roles, principal, subAgent, rival, pendingAgency, now);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
     /// Creates one account per role worth demonstrating: the four Trips back-office roles, an
-    /// owner at a verified agency, an owner at its sub-agent, and an owner at an agency still
-    /// awaiting KYB.
+    /// owner at a verified agency, a counter agent beside them, an owner at its sub-agent, an owner
+    /// at an unrelated second agency, and an owner at an agency still awaiting KYB.
     /// </summary>
     private static void SeedUsers(
         AppDbContext dbContext,
@@ -175,6 +186,7 @@ public static partial class DatabaseSeeder
         Dictionary<string, Guid> roles,
         Agency principal,
         Agency subAgent,
+        Agency rival,
         Agency pendingAgency,
         DateTimeOffset now)
     {
@@ -205,17 +217,26 @@ public static partial class DatabaseSeeder
         var pendingAgentOwner = User.ForAgency(
             pendingAgency.Id, IdentitySeedData.PendingAgentEmail, passwordHash, "Folake", "Adebayo");
 
+        // The unrelated agency's owner, and a counter agent at the first agency who holds no
+        // margin.view. Between them they are the two questions a tenant test asks: can one agency
+        // reach another's rows, and can a colleague see the agency's own cost price.
+        var rivalOwner = User.ForAgency(
+            rival.Id, IdentitySeedData.RivalAgentEmail, passwordHash, "Amina", "Bello");
+
+        var counterAgent = User.ForAgency(
+            principal.Id, IdentitySeedData.CounterAgentEmail, passwordHash, "Segun", "Oyelaran");
+
         // Everyone except the pending owner has confirmed their address. Leaving that one
         // unverified is the point: it is the state the onboarding screens have to handle.
         var platformStaff = new[] { superAdmin, operationsAdmin, supportAdmin, financeAdmin };
 
-        foreach (var user in platformStaff.Concat([verifiedAgentOwner, subAgentOwner]))
+        foreach (var user in platformStaff.Concat([verifiedAgentOwner, subAgentOwner, rivalOwner, counterAgent]))
         {
             user.MarkEmailVerified(now);
         }
 
         dbContext.Users.AddRange(
-            [.. platformStaff, verifiedAgentOwner, subAgentOwner, pendingAgentOwner]);
+            [.. platformStaff, verifiedAgentOwner, subAgentOwner, rivalOwner, counterAgent, pendingAgentOwner]);
 
         // Platform staff belong to no agency, and now neither do their grants: a platform grant
         // carries a null agency_id, which row-level security makes visible only inside a platform
@@ -228,7 +249,9 @@ public static partial class DatabaseSeeder
             UserRole.GrantPlatform(financeAdmin.Id, roles[Role.SystemRoles.FinanceAdmin]),
             UserRole.Grant(verifiedAgentOwner.Id, roles[Role.SystemRoles.Owner], principal.Id),
             UserRole.Grant(subAgentOwner.Id, roles[Role.SystemRoles.Owner], subAgent.Id),
-            UserRole.Grant(pendingAgentOwner.Id, roles[Role.SystemRoles.Owner], pendingAgency.Id));
+            UserRole.Grant(pendingAgentOwner.Id, roles[Role.SystemRoles.Owner], pendingAgency.Id),
+            UserRole.Grant(rivalOwner.Id, roles[Role.SystemRoles.Owner], rival.Id),
+            UserRole.Grant(counterAgent.Id, roles[Role.SystemRoles.Agent], principal.Id));
     }
 
     [LoggerMessage(

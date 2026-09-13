@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using TripsAgent.Application.Security;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Infrastructure.Persistence.Encryption;
+using TripsAgent.Infrastructure.Security;
 
 namespace TripsAgent.Infrastructure.Persistence;
 
@@ -26,13 +29,14 @@ public sealed class AdminDbContextFactory
     private readonly DbContextOptions<AppDbContext> _options;
     private readonly TimeProvider _clock;
 
-    public AdminDbContextFactory(string connectionString, TimeProvider clock)
+    public AdminDbContextFactory(string connectionString, TimeProvider clock, IFieldEncryptor? fieldEncryptor = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
         _options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName))
             .UseSnakeCaseNamingConvention()
+            .UseFieldEncryption(fieldEncryptor ?? UnconfiguredFieldEncryptor.Instance)
             .Options;
 
         _clock = clock;

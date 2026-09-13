@@ -21,7 +21,7 @@ Where each part of the system is designed — tables, jobs, the money path — i
 | **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (merged, #167); F2 Notifications and documents (merged, #167) | 66 of 72 |
 | **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog; F4 Storefront; F5 Customer commerce; F6 Group tours; F7 CRM — all merged, #168 | 75 of 75 |
 | **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (done); F10 Sub-agent network (done); F11 Analytics and reporting (done, less XLSX and scheduled reports); F12 Payouts, disputes and reconciliation (done); F13 Loyalty and reviews (flag shipped with F9) | 36 of 42 |
-| **PR 4** · Launch readiness | F14 Security and launch readiness (queued) | 0 of 50 |
+| **PR 4** · Launch readiness | F14 Security and launch readiness (in progress) | 46 of 50 |
 
 
 ## Where things stand
@@ -45,9 +45,16 @@ The first place to look when picking this up again. Update it whenever a branch 
 | `feat/M3-subagents` | 3 | F10 whole (#63): invitations, scopes, permission overrides and margin visibility, race-free wallet allowances, freeze and revoke, consolidated network reporting, and four console screens, with main merged in | pushed, done |
 | `feat/M3-analytics` | 3 | F11 (#67, #68): the analytics schema and read models, the five-minute and nightly rollups, the agency and platform dashboards with drill-down, synchronous and queued CSV reports, the export log, and the console screens. Merged with `main` after PR 2 | pushed, done |
 | `feat/M3-payouts` | 3 | F12 (#69): bank accounts verified through Paystack, payouts with Finance approval and a never-retried transfer (ADR-0008), chargebacks held and settled, daily gateway reconciliation; agent-console Payouts and Disputes screens | pushed, done |
-| — | 4 | F14 security and launch readiness (#71, #104-#110) | not started |
+| `feat/M4-load-and-pentest` | 4 | F14: the search load test against a WireMock stub, cold and warm, with the numbers written up (#109); the penetration-test scope, its seeded environment, and the internal adversarial pass that fixed six holes and opened six issues (#110) | merged into PR 4 |
+| `feat/M4-data-protection` | 4 | F14's data protection: PII encryption at rest with a key ring and a rotation pass (#104), the three things #105 still owed, and NDPA erasure as anonymisation with its admin screen and ADR-0009 (#106) | merged into PR 4 |
+| `feat/M4-edge-hardening` | 4 | F14: security headers, a CORS policy from the verified domain table, the refresh token in an HttpOnly cookie (#107); dependency and secret scanning confirmed in CI (#108) | merged into PR 4 |
 
-**Next:** PR 2 is merged, and every issue it carried is closed. #18 is closed too, with the
+**Next:** PRs 1 to 3 are merged (#167, #168, #169) and PR 4 is open from `feat/M4-launch`, carrying
+F14 at 46 of 50. What is left after it is in **[docs/HANDOVER.md](HANDOVER.md)**: the four F14 boxes
+that wait on people outside the code, the decisions waiting on the client, the six security issues
+the internal pass opened (#170-#175), and the scope the MVP deliberately left out.
+
+Before that: PR 2 is merged, and every issue it carried is closed. #18 is closed too, with the
 S3 adapter deferred until a cloud is chosen. All five `feat/M3-*` branches are merged into
 `feat/M3-platform`, which is PR 3: run every gate on it, then open it with `Closes` for #63-#70.
 Then PR 4 is all that is left.
@@ -77,7 +84,7 @@ The client questions in [§7 of the architecture plan](ARCHITECTURE_AND_DELIVERY
 13. **Unpaid installments:** never cancelled automatically; flagged to the agency at T+7 with a suggested action.
 14. **Suspended agencies:** existing bookings stand, travellers keep their documents through their magic link, and support services them; no new bookings, and the storefront goes offline.
 15. **Downgrades:** existing usage is kept, new usage is blocked, and the agency gets 30 days' notice to put it right.
-16. **Search speed:** the 5-second target is measured on cached results; a live supplier search is bounded by its 20-second timeout.
+16. **Search speed:** the 5-second target is measured on cached results; a live supplier search is bounded by its 20-second timeout. **Measured** (issue 109, [docs/LOAD_TEST_SEARCH.md](LOAD_TEST_SEARCH.md)): warm, 36 ms at p95 at 20 searches a second; cold, 4.3 s at p95, of which 5 ms is ours. A cold search is the supplier's latency and nothing else, so post-cache is the only measurement the target can be held to.
 17. **Currency:** each agency sells in its own base currency only (NGN for now).
 18. **Card data:** never touches our servers; cards are entered only on Paystack's hosted page (PCI SAQ-A).
 19. **Email sender:** a neutral sending domain with no Trips branding, the agency's name as the display name and its address as reply-to. Per-agency sending domains come after the MVP.
@@ -129,6 +136,62 @@ Decided during the build:
 - **The agency export** is JSON rather than CSV: an agency is a tree — profile, staff, wallet, ledger, orders and their lines — and flattening it to one table would lose the shape somebody receiving it needs.
 - **The admin console's landing page** follows the account's permissions rather than being fixed. A Support account holds `agency.view` and nothing else, so a fixed home page sent them to a refusal at every sign-in.
 
+Decided for F14 (data protection — encryption, retention and erasure):
+
+- **One key ring in configuration, no cloud KMS.** `Security__FieldEncryption__ActiveKeyId` plus one
+  base64 key per id, read at startup and held behind `IFieldEncryptor`. A KMS-backed implementation
+  replaces it when a cloud is chosen; choosing one now would choose the cloud.
+- **Encrypted columns cannot be searched, and that is the design.** A fresh nonce per value, so equal
+  values encrypt differently; deterministic encryption would make equality search possible and leak
+  equality at the same time. The bank account duplicate check moved into `BankAccountService` and the
+  unique index on the number went with it — an agency has a handful of accounts, compared in memory.
+- **Bank account numbers are encrypted too**, which F12 deferred. The same converter, the same key
+  ring; the last four digits are still shown, from the decrypted value.
+- **With no key configured, those columns refuse.** `migrate` and `seed` still run, and the first
+  read or write of an encrypted column fails with a message naming the settings. A missing key is an
+  outage for those columns, never a reason to store a passport number in clear.
+- **Encrypting the columns is a data migration, in three steps in one command.** Add the ciphertext
+  columns, run `FieldEncryptionBackfill`, then drop the plaintext columns — and that last migration
+  refuses while any row is still unencrypted. The same backfill is the key rotation pass.
+- **Travel documents on a product with no travel date** — a visa, or a tour sold without a dated
+  departure — are cleared a year after the sale (`DataRetention__UndatedTravelDocumentDays`) rather
+  than never. Flights and buses keep the older rule: no dates means the data never arrived, and
+  unknown means keep.
+- **The supplier call log's partition job gets its own dry run**, on by default, for the same reason
+  the purge has one: it drops a month of history in one statement, unattended.
+- **Erasure is anonymisation, and it is a platform operation** behind `platform.erasure.execute`
+  (Super Admin only), not something an agency does for itself: it cannot be undone.
+- **An erasure is refused while an order is still being paid for or a chargeback is still open**,
+  and the refusal is recorded with its reason. Both resolve in days.
+- **An issued invoice or voucher keeps the bytes that were issued.** The file is the tax record as it
+  was sent. What is anonymised is the recipient on the row, so a search cannot find the person and a
+  document rendered later prints the placeholder. ADR-0009 lists this among what erasure leaves.
+- **Counsel's review is recorded as outstanding, not as a blocker.** Open question 26 is the
+  client's to answer; the retention schedule and ADR-0009 both say what is still to be confirmed.
+
+Decided for F14 (security and launch readiness):
+
+- **Expected peak is 20 searches a second.** Nobody had given a number, and the load test needs one:
+  300 active agencies at launch, three people signed in at each in the busy hour, each searching
+  about every 45 seconds. The test also runs a minute at twice that. Replace it the day the client
+  gives a real figure.
+- **The load test is run by hand, never in CI.** Four minutes of load on every pull request costs
+  four minutes and measures whatever else the runner was doing.
+- **Rate limiting is configured for a load test, not switched off.** One signed-in user stands in
+  for hundreds, so the profile raises the per-user search limit and the per-agency ceiling and
+  changes nothing else; the limiter still runs, and its Redis round trips are in every number.
+- **The supplier stub's latency is an assumption, written down.** Log-normal, median 1.5 s domestic
+  and 3 s international. The first week of real `supplier_api_calls.latency_ms` replaces it.
+- **The penetration test is commissioned after the MVP is finished, and it is a launch gate.**
+  Testing a system you know is unfinished buys a report you could have written. What this PR
+  delivers instead is the scope, the seeded environment and an internal adversarial pass whose
+  findings are fixed with tests.
+- **A finding is an issue, not a paragraph.** `module:security` plus a `severity:*` label, one per
+  finding, whether we found it or a vendor did.
+- **Two agencies are seeded, not one.** A sub-agent will not do for a tenant-isolation test — a
+  principal is meant to see some of its sub-agent's rows — so the seeder creates an unrelated
+  second agency, and a counter agent without `margin.view` beside the first agency's owner.
+
 Decided for F12 (payouts, disputes and reconciliation):
 
 - **Payouts are agent-initiated**, never scheduled. Minimum ₦5,000, and at most ₦5,000,000 requested per agency per day in the agency's own time zone, counting rejected requests too.
@@ -141,6 +204,42 @@ Decided for F12 (payouts, disputes and reconciliation):
 - **A dispute on a payment we have no record of** is recorded as a reconciliation exception rather than a dispute row, because a dispute row needs an agency.
 - **Reconciliation runs each morning for the previous Lagos day**, reads every page of that day's Paystack settlements, matches lines to payments by reference to the kobo, and raises a payment as unsettled only once it is 3 days old. It reads and reports; it never corrects the ledger. One run row per gateway per day; exceptions are keyed on check and subject, so a re-run duplicates nothing. The existing `reconciliation_exceptions` table is shared with the nightly ledger audit, gaining a run link and a written-off status.
 - **To check on Paystack test mode before launch:** whether a dispute's `refund_amount` is in kobo, the field name of a settlement's date, and that transfer OTP is switched off on the account — otherwise every transfer waits on a code and stays `OutcomeUnknown`.
+
+Decided for F14 (the edge: headers, CORS and cookies — issue 107):
+
+- **HSTS a year on the API, thirty days on a storefront**, neither with `includeSubDomains` or
+  `preload`. The API's host is ours; an agency's domain is not, its other subdomains are none of our
+  business, and a certificate that lapses there should not lock its travellers out for a year.
+- **The API sends no `Content-Security-Policy` beyond `frame-ancestors`.** It answers JSON, and the
+  two things it does hand a browser directly — a signed PDF, the Hangfire dashboard — break under a
+  policy written for JSON. Framing is allowed from itself and the configured console origins, because
+  the admin console shows KYB documents in an `iframe`.
+- **The storefront's policy is nonce-based**, built per request in `middleware.ts`; Next.js stamps the
+  nonce on its own scripts, so an injected one does not run. `style-src` keeps `'unsafe-inline'`
+  because the agency's brand colour is a `style` attribute on `<body>`, and styles run no code.
+  `img-src` allows any `https:` origin rather than naming the asset host — naming it would print our
+  domain on the agency's own site (CLAUDE.md rule 4). `form-action` names the gateway's hosted page,
+  which is where a checkout without JavaScript is redirected.
+- **The refresh token moves into an `HttpOnly`, `Secure`, `SameSite=Strict` cookie** scoped to
+  `/api/v1/auth`, and leaves the JSON body entirely; the access token stays a module variable in each
+  console. `SameSite=Strict` is also the CSRF defence for refresh and sign-out, and it means a console
+  must be served same-site with the API.
+- **One cookie name per console** (`refresh_token`, `admin_refresh_token`), chosen by an
+  `X-Session-Client` header. Cookies belong to a host, not a port, so on a developer's machine the two
+  consoles would otherwise overwrite each other's session.
+- **A console refreshes under a Web Locks lock**, because the cookie is shared by every tab and a
+  refresh token is single use: two tabs refreshing at the same instant would look like theft and sign
+  the agent out everywhere.
+- **CORS is decided per request**, not a named policy: a configured console origin gets credentials; a
+  hostname that is verified and not held for review in `site_domains`, written exactly as that site's
+  address, gets the anonymous `/api/v1/public/` routes without credentials; everything else gets no
+  header at all. A storefront never gets credentials — an agency controls what is on its own pages,
+  and a subdomain storefront is same-site with the API. The answer comes from the storefront host
+  cache, so it is cached and already dropped whenever a domain is verified, reviewed or removed.
+- **No server banner:** Kestrel's `Server` header is off and Next's `X-Powered-By` is off, so nothing
+  traveller-facing says what built the site.
+- **Secret scanning stays a request, not a change.** It is a repository setting and nobody on the
+  build has admin rights; the command is in [BRANCH_PROTECTION.md](BRANCH_PROTECTION.md) Step 3a.
 
 ## What the MVP leaves out
 
@@ -163,7 +262,7 @@ Each feature meets its criteria the simplest safe way. These wait until after th
   catalog is F3.
 - **F11:** CSV exports only, no XLSX; scheduled reports wait.
 - **F12:** scheduled automatic payouts; the Finance back-office screens for payout approval, disputes and reconciliation (the API exists; the screens belong in F8's admin console); forwarding uploaded evidence files to Paystack; posting gateway fees to the ledger; encrypting stored account numbers (F14).
-- **F14:** a written penetration-test scope and an internal checklist run, with the external test after launch; one recorded load-test run.
+- **F14:** the external penetration test itself — the scope, the seeded environment and an internal adversarial pass of our own are done, and the test and its retest are a launch gate rather than a box this PR can tick. One recorded load-test run, on a laptop, against a stubbed supplier.
 
 ## PR 1 · Milestone 1: the money path
 
@@ -173,8 +272,7 @@ Each feature meets its criteria the simplest safe way. These wait until after th
 
 ### F1 · Booking pipeline and checkout
 
-**M1 · In progress** · branch `feat/M1-ticket-issuance` · 9 of 58 boxes ticked
-
+**M1 · Merged in #167** · 53 of 58 boxes ticked
 A booking placed in the console ends in a real ticket issued exactly once, or in money provably returned. The ticket-issue call is never retried; the poller learns every outcome; the time-limit monitor fails bookings that ran out of time; the checkout saga holds the wallet before the supplier confirms, captures it on Ticketed and releases it on failure; failed lines land in the agent's resolution queue. The booking and bookings screens already exist against stand-ins, and switch to these endpoints in the same PR.
 
 - **Needs:** Built: price confirmation (#35), orders (#41), wallet and ledger (#22–#27), outbox and messaging (#30, #31).
@@ -311,8 +409,7 @@ Where an agent manages what they have sold — including the things that went wr
 
 ### F2 · Notifications and documents
 
-**M1 · In progress** · branch `feat/M1-notifications-documents` · 0 of 14 boxes ticked
-
+**M1 · Merged in #167** · 13 of 14 boxes ticked
 Every booking produces the paperwork a traveller expects, in the agent's brand: an invoice and a voucher as PDFs, numbered without gaps, emailed to the customer and downloadable from the console; and the emails that tell agents and customers what happened.
 
 - **Needs:** F1, for the booking events that trigger them. Built: gapless numbering (#47), the asset pipeline to store PDFs.
@@ -358,8 +455,7 @@ FRD §2.9 — QuestPDF documents produced when an order line reaches Confirmed.
 
 ### F3 · Product catalog
 
-**M2 · In progress** · branch `feat/M2-catalog-api (backend) and feat/M2-catalog-screens (console), landing as one PR` · 0 of 36 boxes ticked
-
+**M2 · Merged in #168** · 36 of 36 boxes ticked
 Agents build tours, packages and visa listings — itinerary, inclusions, prices by room, age and group size, images, categories and themes — and publish them once they pass the publish rules. The pricing screen then picks a product by name instead of an ID.
 
 - **Needs:** Built: the asset pipeline (#120), pricing (#28).
@@ -457,7 +553,7 @@ The pricing screen takes a product ID for a product-scoped rule, because there w
 
 ### F4 · Storefront
 
-**M2 · Done** · 19 of 19 boxes ticked · `feat/M2-storefront`
+**M2 · Merged in #168** · 19 of 19 boxes ticked
 
 Every agent gets a branded website: built from templates and blocks in the console, published with rollback, served on their own domain with SSL, showing their catalog to travellers. Nothing on it may mention Trips.
 
@@ -505,8 +601,7 @@ The Next.js traveller-facing site.
 
 ### F5 · Customer commerce
 
-**M2 · Done** · 7 of 7 boxes ticked
-
+**M2 · Merged in #168** · 7 of 7 boxes ticked
 Travellers buy on the agent's storefront: a cart mixing flights, buses, tours and visas, guest checkout, card payment, a magic link to manage the booking, and partial failures routed to the agent's resolution queue.
 
 - **Needs:** F1 (the saga, extended to multi-line carts) and F4 (the storefront it runs on).
@@ -559,8 +654,7 @@ The traveller's buying flow.
 
 ### F6 · Group tours
 
-**M2 · Done** · branch `feat/M2-departures` · 7 of 7 boxes ticked
-
+**M2 · Merged in #168** · 7 of 7 boxes ticked
 Fixed-date departures sold by the seat, with deposits, installment plans, a waitlist and manifests — and a database that makes overselling impossible.
 
 - **Needs:** F3 (a departure belongs to a product); F5 for travellers to buy seats.
@@ -611,8 +705,7 @@ without which nothing could join a waitlist at all. The storefront needs it too 
 
 ### F7 · CRM
 
-**M2 · In progress** · branch `feat/M2-crm` · 6 of 6 boxes ticked
-
+**M2 · Merged in #168** · 6 of 6 boxes ticked
 Leads from the storefront's trip-request widget, a pipeline from New to Won, quotes with a public accept link, follow-up tasks, and a customer record built from every inquiry, quote and booking.
 
 - **Needs:** F2 (emails) and F4 (the widget lives on the storefront).
@@ -684,8 +777,7 @@ POST /api/v1/public/crm/quotes/{token}/decline  → PublicQuoteResponse: {reason
 
 ### F8 · Admin console
 
-**M3 · Done** · branch `feat/M3-admin-console` · 5 of 6 boxes ticked
-
+**M3 · Merged in #169** · 5 of 6 boxes ticked
 How Trips runs the platform: agent search and profiles, verify, suspend and terminate with an audit trail, back-office roles, and an operations dashboard.
 
 - **Needs:** Built: KYB review (#20, #131).
@@ -723,8 +815,7 @@ PR 2 merges**, since there is no host resolution on this branch to call it from.
 
 ### F9 · Subscriptions and billing
 
-**M3 · Done** · branch `feat/M3-billing` · 10 of 10 boxes ticked
-
+**M3 · Merged in #169** · 10 of 10 boxes ticked
 Plans with entitlements the platform enforces at runtime, configured by admins, and recurring billing with dunning.
 
 - **Needs:** F8, where admins configure tiers.
@@ -757,8 +848,7 @@ Charging agents on a schedule.
 
 ### F10 · Sub-agent network
 
-**M3 · Done** · branch `feat/M3-subagents` · 7 of 7 boxes ticked
-
+**M3 · Merged in #169** · 7 of 7 boxes ticked
 Agencies invite agents beneath them, choose what each may sell and whether they see margins, and give them wallet allowances they cannot exceed.
 
 - **Needs:** F9 (the number of sub-agents is an entitlement). Built against a named seam,
@@ -782,8 +872,7 @@ FRD §2.7 — an agency onboards agents beneath it.
 
 ### F11 · Analytics and reporting
 
-**M3 · Done** · branch `feat/M3-analytics` · 9 of 11 boxes ticked
-
+**M3 · Merged in #169** · 9 of 11 boxes ticked
 Dashboards from read models rather than live tables, and reports — synchronous for small scopes, asynchronous for large ones — with every export logged.
 
 - **Needs:** F1, so there are bookings to count.
@@ -858,8 +947,7 @@ percentile rather than an average and maximum.
 
 ### F12 · Payouts, disputes and reconciliation
 
-**M3 · Done** · branch `feat/M3-payouts` · 4 of 4 boxes ticked
-
+**M3 · Merged in #169** · 4 of 4 boxes ticked
 Money out to agents' banks, a dispute workflow with evidence, and a daily reconciliation of Paystack settlements against the ledger.
 
 - **Needs:** F5, so travellers' card payments exist.
@@ -879,8 +967,7 @@ Getting money out and keeping the books straight.
 
 ### F13 · Loyalty and reviews
 
-**M3 · Flag shipped with F9** · 1 of 4 boxes ticked
-
+**M3 · Merged in #169** · 1 of 4 boxes ticked
 The entitlement flag for loyalty now, so tiers can carry it. Points, redemption and reviews wait on requirements: the FRD lists both with no use case written (open question 24).
 
 - **Needs:** F9, where entitlements live.
@@ -906,8 +993,7 @@ FRD §1.2 lists both in scope with no use case written.
 
 ### F14 · Security and launch readiness
 
-**M3 · Queued** · 0 of 50 boxes ticked
-
+**M4 · In PR 4** · 46 of 50 boxes ticked
 What must be true before real travellers and real money: encrypted traveller documents, retention and erasure, hardened headers and cookies, scanning in CI, a load test and a penetration test.
 
 - **Needs:** Each item names its own; the penetration test comes last.
@@ -920,91 +1006,136 @@ Pre-launch readiness.
 
 > The epic. Rate limiting (#102) and the RLS test suite (#103) are done.
 
-- [ ] Rate limiting per user, IP and endpoint.
-- [ ] RLS enforcement test suite.
-- [ ] PII encryption and retention policy.
-- [ ] NDPA erasure as anonymisation preserving financial and audit records.
-- [ ] Penetration test remediation.
-- [ ] Load test of the search endpoint at expected peak, cold and warm cache.
+- [x] Rate limiting per user, IP and endpoint. *(#102, merged in #165: per user, per address, per endpoint policy and a per-agency ceiling on top, all in Redis)*
+- [x] RLS enforcement test suite. *(#103, merged: the suite runs as `tripsagent_app`, which the policies bind)*
+- [x] PII encryption and retention policy. *(#104: AES-256-GCM behind `IFieldEncryptor`, existing rows encrypted before the plaintext is dropped; #105: the retention table and purge, plus travel dates for tours, visas and departures)*
+- [x] NDPA erasure as anonymisation preserving financial and audit records. *(#106, ADR-0009: the books and paperwork still balance after an erasure; the interpretation awaits the client DPO's sign-off)*
+- [ ] Penetration test remediation. *(the **internal** adversarial pass is done — six holes found and fixed with tests, six issues opened: [docs/security/INTERNAL_ADVERSARIAL_PASS.md](security/INTERNAL_ADVERSARIAL_PASS.md). The external test has not been commissioned, and its findings are what this box is about)*
+- [x] Load test of the search endpoint at expected peak, cold and warm cache. *(#109: 20 searches a second, cold and warm, written up in [docs/LOAD_TEST_SEARCH.md](LOAD_TEST_SEARCH.md))*
 
 #### #104 · PII encryption at rest for traveller documents
 
-- [ ] An `IFieldEncryptor` port with the key source behind it — **no cloud KMS SDK**, because the
-- [ ] AES-256-GCM, a fresh IV per value, and the key id stored alongside the ciphertext so keys
-- [ ] Applied through an EF Core value converter, so encryption is not something a developer has
-- [ ] Plaintext never reaches logs, `audit_logs` before/after state, or `supplier_api_calls`
-- [ ] A documented rotation path: re-encrypt on write under the new key id, retain old keys for
-- [ ] Searching or filtering on these columns is explicitly **not** supported, and the issue says
-- [ ] Test: a raw SQL `SELECT` against the column returns ciphertext, not a passport number
+> Built here. The columns are passport number and expiry on `order_travellers`, document number and expiry on `passenger_documents`, and — new to the issue — the agency bank account numbers F12 stored in clear. Two migrations with a data backfill between them encrypt what was already stored; the second refuses to drop a plaintext column while anything in it is unencrypted.
+
+- [x] An `IFieldEncryptor` port with the key source behind it — **no cloud KMS SDK**, because the
+- [x] AES-256-GCM, a fresh IV per value, and the key id stored alongside the ciphertext so keys
+- [x] Applied through an EF Core value converter, so encryption is not something a developer has
+- [x] Plaintext never reaches logs, `audit_logs` before/after state, or `supplier_api_calls` — the
+      audit log recognises an encrypted column by its converter rather than by its name, and the
+      supplier call log now redacts a document's expiry as well as its number
+- [x] A documented rotation path: re-encrypt on write under the new key id, retain old keys for
+      decrypt only. `migrate` runs the re-encryption pass; the runbook is
+      [docs/runbooks/field-encryption.md](runbooks/field-encryption.md)
+- [x] Searching or filtering on these columns is explicitly **not** supported, and the issue says
+      why — said again on the port, in the runbook and in the retention schedule. The bank account
+      duplicate check moved into `BankAccountService` because of it, and its unique index went
+- [x] Test: a raw SQL `SELECT` against the column returns ciphertext, not a passport number
 
 *Needs first:* #32, #41
 
 #### #105 · Data retention policy and the purge job
 
-> Built in #165: the retention table and catalogue, a daily purge that is a dry run by default and cannot touch financial or audit tables, an audit row per table, and a runbook. Left: counsel's review of the retention table (open question 26), travel dates for tours and visas, and a dry run for the supplier call log's partition job.
+> Built in #165: the retention table and catalogue, a daily purge that is a dry run by default and cannot touch financial or audit tables, an audit row per table, and a runbook. The three things left are done here: travel dates for tours, visas and departures; a dry run for the supplier call log's partition job; and the schedule brought up to date.
 
-- [ ] A retention table in `docs/` — every table that holds personal or operational data, how
-- [ ] Financial records, `audit_logs` and anything supporting them: **7 years, never touched by
-- [ ] `supplier_api_calls`: 90-day hot retention by dropping monthly partitions — this is job 30
-- [ ] Traveller documents purged or anonymised a defined interval after travel completes
-- [ ] Implemented as a Hangfire job with a **dry-run mode** that reports what it would delete
-- [ ] Every run writes an audit row: table, row count, window
-- [ ] Idempotent — running it twice in a day deletes nothing extra and errors nowhere
+- [x] A retention table in `docs/` — every table that holds personal or operational data, how
+      long it is kept, and the reason. **Counsel's review is outstanding** and recorded as
+      outstanding: open question 26 is the client's to answer, and both jobs stay in dry run until
+      it is
+- [x] Financial records, `audit_logs` and anything supporting them: **7 years, never touched by
+- [x] `supplier_api_calls`: 90-day hot retention by dropping monthly partitions — this is job 30
+      in the plan. It now has a dry run of its own (`SupplierApiCalls__DryRun`, on by default): the
+      months it would drop and the months it does drop come from the same database function
+- [x] Traveller documents purged or anonymised a defined interval after travel completes — a
+      flight's or bus's arrival, a departure's date plus the product's duration, or, for a visa or
+      an undated tour, a year after the sale. A flight with no dates is still kept
+- [x] Implemented as a Hangfire job with a **dry-run mode** that reports what it would delete
+- [x] Every run writes an audit row: table, row count, window
+- [x] Idempotent — running it twice in a day deletes nothing extra and errors nowhere
 
 *Needs first:* #21, #31, #32
 
 #### #106 · NDPA erasure as anonymisation
 
-- [ ] An erasure request is recorded, audited, and requires a stated reason
-- [ ] Anonymisation replaces PII in place: name → a placeholder, email and phone → null or an
-- [ ] Ledger entries, order lines, invoices and audit rows survive **and still balance** — the
-- [ ] Uploaded documents removed from blob storage through `IBlobStorage`
-- [ ] Irreversible: no shadow copy, no "archived" table holding what was erased
-- [ ] Test: after erasure the nightly ledger integrity audit still passes and a historical invoice
-- [ ] An ADR records the interpretation, who approved it, and when
+> The issue was labelled blocked on counsel. Built anyway, under decision 26, because nothing it destroys is data anybody claims we must keep and nothing it keeps is data anybody claims we must destroy: if counsel reads it more strictly, what changes is the list of columns, not the mechanism. [ADR-0009](adr/0009-ndpa-erasure-as-anonymisation.md) says so, and says what is still to be confirmed.
+
+- [x] An erasure request is recorded, audited, and requires a stated reason — and recorded when it
+      is **refused**, too, with the reason it was
+- [x] Anonymisation replaces PII in place: name → a placeholder, email and phone → null or an
+      unreachable address. A customer's email becomes one in the reserved `.invalid` domain rather
+      than null, because the table's own rule is that a customer is contactable
+- [x] Ledger entries, order lines, invoices and audit rows survive **and still balance** — the
+- [x] Uploaded documents removed from blob storage through `IBlobStorage`; the asset row stays,
+      marked erased, so the trail shows a file was there and is not
+- [x] Irreversible: no shadow copy, no "archived" table holding what was erased
+- [x] Test: after erasure the nightly ledger integrity audit still passes and a historical invoice
+      still renders — and a document rendered *after* the erasure prints the placeholder
+- [x] An ADR records the interpretation, who approved it, and when — as the MVP decision taken
+      under this plan, **pending the client's DPO**, which the ADR states rather than inventing an
+      approver
 
 *Needs first:* #21, #22, #62
 
 #### #107 · Security headers, CORS and cookie hardening
 
-- [ ] HSTS with a sensible `max-age`; **preload only after** custom domains are proven, since
-- [ ] `Content-Security-Policy` on the storefront, `X-Content-Type-Options: nosniff`,
-- [ ] Refresh token in an `HttpOnly`, `Secure`, `SameSite` cookie; the access token never in
-- [ ] CORS driven by the **verified custom-domain table**, not a wildcard — `*` with credentials
-- [ ] A test asserting the headers are present on both API and storefront responses, so a later
+- [x] HSTS with a sensible `max-age`; **preload only after** custom domains are proven, since
+      *(a year on the API, thirty days on a storefront — an agency's own domain, where a lapsed
+      certificate should not lock travellers out for a year. No `includeSubDomains`, no preload.)*
+- [x] `Content-Security-Policy` on the storefront, `X-Content-Type-Options: nosniff`,
+      `Referrer-Policy`, `frame-ancestors`, `Permissions-Policy` *(the storefront's policy carries a
+      per-response nonce and names no host of ours; the API sends the rest plus `frame-ancestors`,
+      and no `Server` banner)*
+- [x] Refresh token in an `HttpOnly`, `Secure`, `SameSite` cookie; the access token never in
+      `localStorage` *(both consoles: the access token is a module variable, the refresh token is a
+      cookie neither console can read, one cookie name per console)*
+- [x] CORS driven by the **verified custom-domain table**, not a wildcard — `*` with credentials
+      *(console origins from configuration get credentials; a verified storefront domain gets the
+      anonymous `/api/v1/public/` routes and never credentials; everything else gets no header at
+      all, and a wildcard origin refuses to start)*
+- [x] A test asserting the headers are present on both API and storefront responses, so a later
+      middleware reordering cannot silently drop them *(`EdgeHardeningTests` through the real API
+      pipeline; `security-headers.test.ts` over the storefront's middleware and config)*
 
 *Needs first:* #16, #59, #60
 
 #### #108 · Dependency and secret scanning in CI
 
-- [ ] `dotnet list package --vulnerable --include-transitive` fails the build on High or Critical
-- [ ] `pnpm audit` at the same threshold
-- [ ] Dependabot (or Renovate) for NuGet, pnpm **and GitHub Actions** — a compromised action is a
-- [ ] CodeQL for C# and TypeScript on pull requests targeting `main`
-- [ ] GitHub secret scanning with push protection enabled — this complements
-- [ ] A documented triage path for the case that will definitely happen: a High advisory on a
+- [x] `dotnet list package --vulnerable --include-transitive` fails the build on High or Critical
+      *(shipped in #141: `dependency-audit.yml` → `scripts/audit_dependencies.py`, with an expiring
+      allowlist)*
+- [x] `pnpm audit` at the same threshold
+- [x] Dependabot (or Renovate) for NuGet, pnpm **and GitHub Actions** — a compromised action is a
+      supply-chain path straight into CI
+- [x] CodeQL for C# and TypeScript on pull requests targeting `main`
+- [ ] GitHub secret scanning with push protection enabled — this complements `.githooks/pre-commit`
+      *(a repository **setting**, not a file, and nobody on the build has admin rights: the account
+      that reads the API sees no `security_and_analysis` block at all. An admin turns it on with
+      the command in [BRANCH_PROTECTION.md](BRANCH_PROTECTION.md) Step 3a; the repository is public,
+      so it costs nothing.)*
+- [x] A documented triage path for the case that will definitely happen: a High advisory on a
+      transitive dependency with no fix available *(§2 of
+      [docs/runbooks/vulnerable-dependency.md](runbooks/vulnerable-dependency.md))*
 
 *Needs first:* #7
 
 #### #109 · Load test the search endpoint, cold and warm cache
 
-- [ ] A k6 (or NBomber) scenario checked into `backend/tests/load/`, runnable locally against Docker
-- [ ] Two runs reported separately: **cold** (every request reaches the supplier stub) and
-- [ ] The supplier is a WireMock stub with realistic injected latency. **Never load-test against
-- [ ] Reports p50/p95/p99 and error rate against the FRD §2.3 target of 5s p95, and states
-- [ ] Measures what the load does to Postgres and Redis: connection pool saturation, cache hit
-- [ ] Written up with the actual numbers, feeding open question 16 (is the SLA measured
+- [x] A k6 (or NBomber) scenario checked into `backend/tests/load/`, runnable locally against Docker *(`run.sh cold|warm`, with a stack of its own — its own database, Redis, RabbitMQ and the stub. Not a CI job: four minutes on every PR would prove nothing repeatable)*
+- [x] Two runs reported separately: **cold** (every request reaches the supplier stub) and warm *(6,002 searches each, no errors)*
+- [x] The supplier is a WireMock stub with realistic injected latency. **Never load-test against the real API** *(log-normal, median 1.5 s domestic and 3 s international; the profile cannot reach Trips Africa)*
+- [x] Reports p50/p95/p99 and error rate against the FRD §2.3 target of 5s p95, and states whether it is met *(warm 36 ms p95; cold 4,299 ms p95 — met, but only because the stub was told to answer in 3 s. Met **warm**, in substance)*
+- [x] Measures what the load does to Postgres and Redis: connection pool saturation, cache hit ratio, memory *(peak 29 of 100 connections cold; 98 % cache hit rate warm; Redis 143 MB for one agency's four minutes of cold searches)*
+- [x] Written up with the actual numbers, feeding open question 16 *(**[docs/LOAD_TEST_SEARCH.md](LOAD_TEST_SEARCH.md)**, with the laptop caveat stated. Our own time is 5 ms p50 of a cold search: the SLA is the supplier's, and is only meetable post-cache — which settles decision 16)*
 
 *Needs first:* #33, #40
 
 #### #110 · Penetration test — scope, execution and remediation
 
-- [ ] A written scope: which environments, which surfaces (agent console, storefront, API, admin
-- [ ] Non-production credentials and seeded test data prepared. The tester must not be able to
-- [ ] **Multi-tenancy is in scope explicitly.** Give the tester two agencies and ask them to
-- [ ] Findings land as **individual issues** labelled `module:security` with a severity label —
-- [ ] Critical and High remediated and retested before launch; Medium and Low triaged with the
-- [ ] A retest confirms the fixes actually landed
+- [x] A written scope: which environments, which surfaces, and what is explicitly **out** *([docs/security/PENETRATION_TEST_SCOPE.md](security/PENETRATION_TEST_SCOPE.md): agent console, admin console, storefront, public and authenticated API, webhooks, magic links, the Hangfire dashboard. Out: the real Trips Africa API, Paystack live, volumetric load, anything outside the named environment)*
+- [x] Non-production credentials and seeded test data prepared *([docs/security/TEST_ENVIRONMENT.md](security/TEST_ENVIRONMENT.md): a stubbed supplier, Paystack test mode, a mail catcher, the app role so row-level security is really on, and nine seeded accounts whose password grants nothing real)*
+- [x] **Multi-tenancy is in scope explicitly** *(the seeder now creates a second verified agency unrelated to the first, plus a counter agent with no `margin.view`; §3 of the scope tells the tester what to try)*
+- [x] Findings land as **individual issues** labelled `module:security` with a severity label *(the `severity:*` labels now exist; the internal pass opened #170-#175 that way. The external test's findings land the same way)*
+- [ ] Critical and High remediated and retested before launch; Medium and Low triaged with the decision recorded *(the internal pass's Critical and High are fixed with tests; the external test's are the ones this box waits for)*
+- [ ] A retest confirms the fixes actually landed *(**launch gate** — no external test has been run)*
 
 *Needs first:* #102, #103, #104, #105, #106, #107, #108, #109 (S1–S8)
 

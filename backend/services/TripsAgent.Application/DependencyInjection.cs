@@ -51,6 +51,9 @@ public static class DependencyInjection
         services.AddScoped<Tenancy.StorefrontAvailability>();
         services.AddScoped<AgencyDirectoryService>();
         services.AddScoped<AgencyLifecycleService>();
+
+        // Erasing a person on request (issue 106). Platform-only, behind platform.erasure.execute.
+        services.AddScoped<CustomerErasureService>();
         services.AddScoped<AgencyExportService>();
         services.AddScoped<OperationsDashboardService>();
         services.AddScoped<AuditLogQueryService>();

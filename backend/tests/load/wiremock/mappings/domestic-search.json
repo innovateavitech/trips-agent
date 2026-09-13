@@ -1,0 +1,14 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/api/Flight/Domestic/SearchFlight",
+    "headers": { "Authorization": { "matches": "Bearer .+" }, "MerchantCode": { "matches": ".+" } }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json; charset=utf-8" },
+    "bodyFileName": "domestic-search.json",
+    "delayDistribution": { "type": "lognormal", "median": 1500, "sigma": 0.35 }
+  }
+}

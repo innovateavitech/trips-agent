@@ -9,6 +9,7 @@ using Npgsql;
 using TripsAgent.Application.Retention;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Auditing;
+using TripsAgent.Domain.Catalog;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Orders;
@@ -258,7 +259,7 @@ public sealed class DataRetentionPurgeTests
         // The traveller stays with the order; only the document details are cleared.
         (await world.CountAsync(
                 "orders.order_travellers",
-                $"t.id = '{over.TravellerId}' AND t.passport_number_encrypted IS NULL AND t.passport_expiry IS NULL AND t.first_name = 'Ngozi'"))
+                $"t.id = '{over.TravellerId}' AND t.passport_number_encrypted IS NULL AND t.passport_expiry_encrypted IS NULL AND t.first_name = 'Ngozi'"))
             .Should().Be(1);
         (await world.CountAsync("orders.order_travellers", $"t.id IN ('{ahead.TravellerId}', '{unknown.TravellerId}') AND t.passport_number_encrypted IS NOT NULL"))
             .Should().Be(2);
@@ -295,7 +296,76 @@ public sealed class DataRetentionPurgeTests
         (await world.PartitionExistsAsync(partition)).Should().BeFalse("a live run calls the partition maintenance, which drops it");
     }
 
+    [Fact]
+    public async Task The_partition_job_has_a_dry_run_of_its_own()
+    {
+        await using var world = await WorldAsync();
+        var supplierId = await world.SupplierIdAsync();
+
+        var month = new DateOnly(Now.Year, Now.Month, 1).AddMonths(-6);
+        var partition = await world.CreateSupplierApiCallPartitionAsync(month);
+        await world.AddSupplierApiCallAsync(supplierId, new DateTimeOffset(month.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero).AddDays(2));
+
+        // Live retention, but the partition job itself is still reporting rather than dropping — which is
+        // how it ships (SupplierApiCalls__DryRun), because a dropped partition is a month of history gone.
+        var options = new SupplierApiCallOptions { RetentionMonths = 3, PartitionsCreatedAhead = 1, DryRun = true };
+        var run = await world.Purge(Live, supplierApiCalls: options).RunAsync();
+
+        run.For(DataRetentionPurge.SupplierApiCallsTable).Rows.Should().Be(1, "it still reports what is expired");
+        (await world.PartitionExistsAsync(partition)).Should().BeTrue("the partition job's own dry run keeps it");
+
+        var audit = await world.Owner.AuditLogs.AsNoTracking()
+            .Where(entry => entry.CorrelationId == run.RunId.ToString()
+                            && entry.EntityId == DataRetentionPurge.SupplierApiCallsTable)
+            .SingleAsync();
+
+        audit.Action.Should().Be("retention.dry_run", "the audit row says what actually happened, not what was asked for");
+    }
+
+    // ------------------------------------------------------------------ tours, visas and departures
+
+    [Fact]
+    public async Task Travel_documents_go_after_a_departure_has_run_and_a_year_after_an_undated_sale()
+    {
+        await using var world = await WorldAsync();
+
+        // A tour on a dated departure that ran last year, and one on a departure still to come.
+        var past = await world.PlaceCatalogOrderAsync("ORD-2026-000010", Now.AddDays(-400), PricedProductType.Tour);
+        var pastTraveller = await world.AddTravellerAsync(past, Now.AddDays(-400));
+        await world.PutOnDepartureAsync(past, pastTraveller, DateOnly.FromDateTime(Now.AddDays(-300).UtcDateTime), Now.AddDays(-400));
+
+        var upcoming = await world.PlaceCatalogOrderAsync("ORD-2026-000011", Now.AddDays(-400), PricedProductType.Tour);
+        var upcomingTraveller = await world.AddTravellerAsync(upcoming, Now.AddDays(-400));
+        await world.PutOnDepartureAsync(upcoming, upcomingTraveller, DateOnly.FromDateTime(Now.AddDays(60).UtcDateTime), Now.AddDays(-400));
+
+        // A visa has no travel date at all, so it is counted from the sale: one bought long ago, one recent.
+        var oldVisa = await world.PlaceCatalogOrderAsync("ORD-2026-000012", Now.AddDays(-400), PricedProductType.Visa);
+        var oldVisaTraveller = await world.AddTravellerAsync(oldVisa, Now.AddDays(-400));
+
+        var recentVisa = await world.PlaceCatalogOrderAsync("ORD-2026-000013", Now.AddDays(-30), PricedProductType.Visa);
+        var recentVisaTraveller = await world.AddTravellerAsync(recentVisa, Now.AddDays(-30));
+
+        var result = await world.Purge(Live).RunAsync();
+
+        result.For("orders.order_travellers").Rows.Should().Be(2);
+
+        (await world.CountAsync("orders.order_travellers", Cleared(pastTraveller))).Should().Be(1, "the departure has run");
+        (await world.CountAsync("orders.order_travellers", Cleared(oldVisaTraveller))).Should().Be(1, "the visa was bought over a year ago");
+
+        (await world.CountAsync("orders.order_travellers", Held(upcomingTraveller))).Should().Be(1, "the departure is still ahead");
+        (await world.CountAsync("orders.order_travellers", Held(recentVisaTraveller))).Should().Be(1, "the application may still be running");
+
+        var again = await world.Purge(Live).RunAsync();
+        again.For("orders.order_travellers").Rows.Should().Be(0, "a cleared traveller no longer matches");
+    }
+
     // ------------------------------------------------------------------ helpers
+
+    private static string Cleared(Guid travellerId) =>
+        $"t.id = '{travellerId}' AND t.passport_number_encrypted IS NULL AND t.passport_expiry_encrypted IS NULL AND t.first_name = 'Ngozi'";
+
+    private static string Held(Guid travellerId) =>
+        $"t.id = '{travellerId}' AND t.passport_number_encrypted IS NOT NULL AND t.passport_expiry_encrypted IS NOT NULL";
 
     private static async Task<Dictionary<string, string>> ProtectedFingerprintsAsync(World world)
     {
@@ -394,10 +464,9 @@ public sealed class DataRetentionPurgeTests
     {
         public const string Empty = "empty";
 
-        private static readonly AesGcmSecretProtector Protector =
-            new(RandomNumberGenerator.GetBytes(AesGcmSecretProtector.KeyBytes));
-
-        private static readonly SupplierApiCallOptions SupplierApiCalls = new() { RetentionMonths = 3, PartitionsCreatedAhead = 1 };
+        /// <summary>The partition job as a deployment that has switched its own dry run off runs it.</summary>
+        private static readonly SupplierApiCallOptions SupplierApiCalls =
+            new() { RetentionMonths = 3, PartitionsCreatedAhead = 1, DryRun = false };
 
         private readonly PostgresFixture _postgres;
         private readonly List<AppDbContext> _contexts = [];
@@ -425,18 +494,22 @@ public sealed class DataRetentionPurgeTests
         /// The job as the Worker builds it: the policed application role, no tenant, its own platform
         /// scope — and the real supplier call log maintenance on the owner's connection.
         /// </summary>
-        public DataRetentionPurge Purge(DataRetentionOptions options, IReadOnlyList<RetentionRule>? rules = null)
+        public DataRetentionPurge Purge(
+            DataRetentionOptions options,
+            IReadOnlyList<RetentionRule>? rules = null,
+            SupplierApiCallOptions? supplierApiCalls = null)
         {
             var none = TestTenancy.None();
             var db = Track(_postgres.Connect(Database, none.Tenant, none.Scope));
-            var maintenance = new SupplierApiCallPartitionMaintenance(Owner, Options.Create(SupplierApiCalls));
+            var callOptions = supplierApiCalls ?? SupplierApiCalls;
+            var maintenance = new SupplierApiCallPartitionMaintenance(Owner, Options.Create(callOptions));
 
             return new DataRetentionPurge(
                 db,
                 none.Scope,
                 maintenance,
                 options,
-                SupplierApiCalls,
+                callOptions,
                 TimeProvider.System,
                 NullLogger<DataRetentionPurge>.Instance,
                 rules);
@@ -458,7 +531,11 @@ public sealed class DataRetentionPurgeTests
 
         // -------------------------------------------------------------- sales and bookings
 
-        public async Task<Order> PlaceOrderAsync(string orderNumber, DateTimeOffset at)
+        public Task<Order> PlaceOrderAsync(string orderNumber, DateTimeOffset at) =>
+            PlaceCatalogOrderAsync(orderNumber, at, PricedProductType.Flight);
+
+        /// <summary>An order for one of the agency's own products — a tour, a package or a visa.</summary>
+        public async Task<Order> PlaceCatalogOrderAsync(string orderNumber, DateTimeOffset at, PricedProductType productType)
         {
             var db = AsAgency(at);
 
@@ -478,7 +555,7 @@ public sealed class DataRetentionPurgeTests
 
             var quote = PriceQuote.Record(
                 AgencyId,
-                new PricingSubject(PricedProductType.Flight, "NGN"),
+                new PricingSubject(productType, "NGN"),
                 new PriceBreakdown(
                     new Money(100_000), new Money(10_000), new Money(750), new Money(500), new Money(110_750),
                     "NGN", new MarkupRuleDefinition(_rule.Id, AgencyId, _rule.Terms), false, 750, 0),
@@ -487,12 +564,77 @@ public sealed class DataRetentionPurgeTests
             db.PriceQuotes.Add(quote);
             await db.SaveChangesAsync();
 
-            var line = OrderLine.FromQuote(quote, "LOS → ABV, Air Peace", """{"adults":1}""", at);
+            var line = OrderLine.FromQuote(quote, $"{productType}, one traveller", """{"adults":1}""", at);
             var order = Order.Place(AgencyId, orderNumber, "NGN", BuyerType.AgentAssisted, OrderChannel.Console, null, [line], at);
             db.Orders.Add(order);
             await db.SaveChangesAsync();
 
             return order;
+        }
+
+        /// <summary>A traveller on the order's first line, holding a passport number and its expiry.</summary>
+        public async Task<Guid> AddTravellerAsync(Order order, DateTimeOffset at)
+        {
+            var db = AsAgency(at);
+
+            var traveller = OrderTraveller.Record(
+                AgencyId, order.Lines[0].Id, TravellerType.Adult, "Ngozi", "Adeyemi",
+                passportNumber: "A01234567",
+                passportExpiry: new DateOnly(2031, 5, 17),
+                nationality: "NG");
+
+            db.OrderTravellers.Add(traveller);
+            await db.SaveChangesAsync();
+
+            return traveller.Id;
+        }
+
+        /// <summary>A dated departure of a five-day tour, with the traveller on its manifest.</summary>
+        public async Task<Guid> PutOnDepartureAsync(Order order, Guid travellerId, DateOnly departureDate, DateTimeOffset at)
+        {
+            var db = AsAgency(at);
+
+            var product = Product.CreateDraft(
+                AgencyId,
+                new ProductContent
+                {
+                    ProductType = ProductType.Tour,
+                    Title = "Kilimanjaro, five days",
+                    Summary = "Five days on the mountain.",
+                    Description = "Five days on the mountain, guided.",
+                    DestinationCountry = "TZ",
+                    DurationDays = 5,
+                    Currency = "NGN",
+                    BasePriceMinor = new Money(100_000),
+                },
+                $"kilimanjaro-{Guid.NewGuid():N}"[..20]);
+
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+
+            var departure = Departure.Create(
+                AgencyId,
+                product.Id,
+                new DepartureTerms
+                {
+                    DepartureDate = departureDate,
+                    IsGroupDeparture = true,
+                    MinPax = 1,
+                    CapacityTotal = 10,
+                    CutoffDaysBefore = 7,
+                    DepositType = DepositType.None,
+                    PriceTiers = [new PriceTierTerms(1, null, new Money(100_000))],
+                },
+                at,
+                at);
+
+            db.Departures.Add(departure);
+            await db.SaveChangesAsync();
+
+            db.PaxManifests.Add(PaxManifestEntry.Create(AgencyId, departure.Id, order.Lines[0].Id, travellerId, null, at));
+            await db.SaveChangesAsync();
+
+            return departure.Id;
         }
 
         /// <summary>An offer whose last flight lands at <paramref name="arrival"/>, or null for a trip with no known dates.</summary>
@@ -547,13 +689,13 @@ public sealed class DataRetentionPurgeTests
 
             var document = PassengerDocument.Add(
                 AgencyId, passenger.Id, TravelDocumentRecord.Docs, TravelDocumentKind.Passport,
-                Protector.Protect("A01234567", "supplier.passenger_documents.doc_number"),
+                "A01234567",
                 "NG", "NG", new DateOnly(2020, 1, 1), new DateOnly(2030, 1, 1));
             db.PassengerDocuments.Add(document);
 
             var traveller = OrderTraveller.Record(
                 AgencyId, line.Id, TravellerType.Adult, "Ngozi", "Adeyemi",
-                passportNumberEncrypted: Protector.Protect("A01234567", "orders.order_travellers.passport_number"),
+                passportNumber: "A01234567",
                 passportExpiry: new DateOnly(2030, 1, 1),
                 nationality: "NG");
             db.OrderTravellers.Add(traveller);

@@ -70,7 +70,7 @@ public sealed class ReportRunner : IReportRunner
             return;
         }
 
-        var showMargin = await HoldsMarginViewAsync(header.RequestedByUserId, cancellationToken);
+        var showMargin = await HoldsMarginViewAsync(header.RequestedByUserId, header.AgencyId, cancellationToken);
 
         ReportJob? finished;
 
@@ -103,7 +103,7 @@ public sealed class ReportRunner : IReportRunner
     /// user's role grants are tenant-scoped rows. False when there is no requester at all — a run
     /// with nobody behind it gets the cautious answer.
     /// </remarks>
-    private async Task<bool> HoldsMarginViewAsync(Guid? userId, CancellationToken cancellationToken)
+    private async Task<bool> HoldsMarginViewAsync(Guid? userId, Guid? agencyId, CancellationToken cancellationToken)
     {
         if (userId is null)
         {
@@ -113,12 +113,29 @@ public sealed class ReportRunner : IReportRunner
         using var scope = _platformScope.Enter(
             "Report worker — checks whether the requester may see margin before writing it into a file");
 
-        return await (
+        var granted = await (
             from userRole in _db.UserRoles
             join rolePermission in _db.RolePermissions on userRole.RoleId equals rolePermission.RoleId
             join permission in _db.Permissions on rolePermission.PermissionId equals permission.Id
             where userRole.UserId == userId && permission.Code == PermissionCodes.MarginView
             select permission.Id).AnyAsync(cancellationToken);
+
+        if (!granted || agencyId is not { } agency)
+        {
+            return granted;
+        }
+
+        // A sub-agent's principal can deny margin.view on top of whatever role the sub-agent's own
+        // staff hold, and the request path strips the claim for exactly that reason. The worker has
+        // no claims to strip, so it asks the same table: without this, a denied sub-agent queued a
+        // long report and got net rate and markup in the file (issue 110).
+        var denied = await _db.PermissionOverrides
+            .AsNoTracking()
+            .AnyAsync(
+                entry => entry.SubAgencyId == agency && entry.PermissionCode == PermissionCodes.MarginView,
+                cancellationToken);
+
+        return !denied;
     }
 
     /// <summary>

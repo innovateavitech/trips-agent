@@ -235,12 +235,21 @@ public sealed partial class ReportService
         return new ReportRequestResult(ReportRequestOutcome.Accepted, job, content);
     }
 
-    /// <summary>The caller's own report runs, newest first.</summary>
+    /// <summary>
+    /// The caller's own report runs, newest first.
+    /// </summary>
+    /// <remarks>
+    /// <b>Their own, and nobody else's.</b> The tenant filter keeps another agency's runs out; this
+    /// keeps a colleague's out too. A finished report can carry net rate and markup, and whether the
+    /// person who asked for it was allowed to see those was decided when they asked — so handing the
+    /// file to anyone else in the agency hands it to somebody that decision was never made about.
+    /// Found in the internal adversarial pass before the penetration test (issue 110).
+    /// </remarks>
     public async Task<IReadOnlyList<ReportJobResponse>> JobsAsync(
         int limit = 25,
         CancellationToken cancellationToken = default)
     {
-        var jobs = await _db.ReportJobs.AsNoTracking()
+        var jobs = await MineAsync()
             .OrderByDescending(job => job.RequestedAt)
             .Take(Math.Clamp(limit, 1, 100))
             .ToListAsync(cancellationToken);
@@ -251,10 +260,22 @@ public sealed partial class ReportService
     /// <summary>One run, or null when the caller may not see it.</summary>
     public async Task<ReportJobResponse?> JobAsync(Guid jobId, CancellationToken cancellationToken = default)
     {
-        var job = await _db.ReportJobs.AsNoTracking()
+        var job = await MineAsync()
             .FirstOrDefaultAsync(candidate => candidate.Id == jobId, cancellationToken);
 
         return job is null ? null : ToResponseCore(job);
+    }
+
+    /// <summary>
+    /// The report runs this caller asked for. Nobody signed in has no runs, which is the safe
+    /// answer for a call with no user behind it at all.
+    /// </summary>
+    private IQueryable<ReportJob> MineAsync()
+    {
+        var userId = _tenant.UserId;
+
+        return _db.ReportJobs.AsNoTracking()
+            .Where(job => userId != null && job.RequestedByUserId == userId);
     }
 
     /// <summary>
@@ -263,7 +284,12 @@ public sealed partial class ReportService
     /// <returns>The bytes, or null when there is no such finished job for this caller.</returns>
     public async Task<ReportDownload?> DownloadAsync(Guid jobId, CancellationToken cancellationToken = default)
     {
+        // Tracked, because the download is recorded on the job, but still only the caller's own run
+        // (issue 110) — a file is the one place margin sits at rest.
+        var userId = _tenant.UserId;
+
         var job = await _db.ReportJobs
+            .Where(candidate => userId != null && candidate.RequestedByUserId == userId)
             .FirstOrDefaultAsync(candidate => candidate.Id == jobId, cancellationToken);
 
         if (job is null || !job.HasResult)

@@ -1,5 +1,6 @@
 import { createApiClient } from '@trips/api-client';
-import { getAccessToken, getRefreshToken, notifySessionExpired, storeTokenPair } from './tokens';
+import { sessionFetch, withRefreshLock } from './session-fetch';
+import { getAccessToken, notifySessionExpired, storeAccessToken } from './tokens';
 
 /**
  * ============================================================================
@@ -18,9 +19,9 @@ import { getAccessToken, getRefreshToken, notifySessionExpired, storeTokenPair }
  *
  * The part that matters most: ONE refresh at a time.
  *
- * The refresh token is single use, and the API (#16) treats a reused one as
- * theft — it revokes the whole token family and signs the agent out on every
- * device. A dashboard fires five queries at once; when the token expires they
+ * The refresh token (an HttpOnly cookie this code never sees) is single use,
+ * and the API (#16) treats a reused one as theft — it revokes the whole token
+ * family and signs the agent out on every device. A dashboard fires five queries at once; when the token expires they
  * all come back 401 together. Five parallel refreshes would spend the token
  * once and "reuse" it four times, and the agent would be thrown out for having
  * too many widgets. So every caller that needs a refresh shares one promise.
@@ -49,41 +50,35 @@ export interface SessionTransport {
 
 export function createSessionTransport({
   baseUrl,
-  fetch: send = (request) => globalThis.fetch(request),
+  fetch: send = sessionFetch,
 }: SessionTransportOptions): SessionTransport {
-  // Deliberately NOT authenticated: the refresh call carries its credential in
-  // the body, and a 401 from it means "session over", never "refresh again".
+  // Deliberately NOT authenticated: the refresh call's credential is the
+  // cookie, and a 401 from it means "session over", never "refresh again".
   const unauthenticated = createApiClient({ baseUrl, fetch: send });
 
   let inFlight: Promise<boolean> | null = null;
 
-  async function exchangeRefreshToken(failedToken: string | null): Promise<boolean> {
-    const refreshToken = getRefreshToken();
-    if (!refreshToken) {
-      // A request was rejected and there is nothing to renew it with: the
-      // session is over. With no failed token this is just "never signed in".
-      if (failedToken !== null) notifySessionExpired();
-      return false;
-    }
-
+  async function exchangeRefreshCookie(failedToken: string | null): Promise<boolean> {
     let result;
     try {
-      result = await unauthenticated.POST('/api/v1/auth/refresh', { body: { refreshToken } });
+      result = await unauthenticated.POST('/api/v1/auth/refresh');
     } catch {
-      // The network, not the session. Keep the tokens: the agent is still
-      // signed in, and the next request can try again once the line is back.
+      // The network, not the session. The agent may well still be signed in,
+      // and the next request can try again once the line is back.
       return false;
     }
 
     if (result.data) {
-      storeTokenPair(result.data);
+      storeAccessToken(result.data);
       return true;
     }
 
     if (result.response.status === 401 || result.response.status === 400) {
-      // Expired, revoked, or caught by reuse detection. Nothing in the browser
-      // can recover from that — sign in again.
-      notifySessionExpired();
+      // No cookie, or one that is expired, revoked, or caught by reuse
+      // detection. With no failed token this is just "not signed in"; after a
+      // rejected request it means the session is over.
+      if (failedToken !== null) notifySessionExpired();
+      return false;
     }
     // Anything else (a 500, a gateway timeout) is our problem, not theirs.
     // Keep the session and let the caller's error state say so.
@@ -97,7 +92,7 @@ export function createSessionTransport({
     }
 
     if (!inFlight) {
-      inFlight = exchangeRefreshToken(failedToken).finally(() => {
+      inFlight = withRefreshLock(() => exchangeRefreshCookie(failedToken)).finally(() => {
         inFlight = null;
       });
     }
@@ -115,16 +110,20 @@ export function createSessionTransport({
     // must carry the same body as the original.
     const retryable = request.clone();
 
-    // After a reload the access token is gone (it lives in memory) but the
-    // refresh token survives. Renew first rather than sending a request we
+    // After a reload the access token is gone (it lives in memory), but the
+    // refresh cookie may survive. Renew first rather than sending a request we
     // already know will bounce.
-    if (getAccessToken() === null && getRefreshToken() !== null) {
+    if (getAccessToken() === null) {
       await refresh(null);
     }
 
     const usedToken = getAccessToken();
     const response = await send(withBearer(request, usedToken));
     if (response.status !== 401) return response;
+
+    // Sent with no token because the refresh above just failed: asking again
+    // would get the same answer.
+    if (usedToken === null) return response;
 
     const renewed = await refresh(usedToken);
     if (!renewed) return response;

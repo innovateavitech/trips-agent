@@ -60,7 +60,7 @@ public sealed class PublicDepartureQueries
         PartySize party,
         CancellationToken cancellationToken = default)
     {
-        if (await _storefront.EnterAsync(host, cancellationToken) is null)
+        if (await _storefront.EnterAsync(host, StorefrontVisit.Shopping, cancellationToken) is null)
         {
             return Store.NotFound<IReadOnlyList<PublicDepartureResponse>>(NoSuchTrip);
         }
@@ -103,7 +103,7 @@ public sealed class PublicDepartureQueries
         PartySize party,
         CancellationToken cancellationToken = default)
     {
-        if (await _storefront.EnterAsync(host, cancellationToken) is null)
+        if (await _storefront.EnterAsync(host, StorefrontVisit.Shopping, cancellationToken) is null)
         {
             return Store.NotFound<PublicDepartureResponse>(NoSuchTrip);
         }

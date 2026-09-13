@@ -121,7 +121,7 @@ public sealed partial class StorefrontCheckoutService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var agency = await _storefront.EnterAsync(host, cancellationToken);
+        var agency = await _storefront.EnterAsync(host, StorefrontVisit.Shopping, cancellationToken);
 
         if (agency is null)
         {
@@ -167,26 +167,57 @@ public sealed partial class StorefrontCheckoutService
 
     /// <summary>Where a payment has got to, for the page the gateway returns the traveller to.</summary>
     /// <remarks>
+    /// <para>
     /// Read-only and idempotent. It reports what the database says; the gateway's own answer is
     /// taken by <see cref="CustomerOrderPayments"/>, through the webhook and the verify path, so a
     /// traveller refreshing this page can never move any money.
+    /// </para>
+    /// <para>
+    /// <b>Only for the browser that bought it.</b> Order numbers are gapless per agency, so anyone
+    /// can count through them; the answer is given only to the cart session that became the order.
+    /// Without that check this page handed a manage-booking link — the traveller's name, their PNR,
+    /// their invoice — to whoever asked for ORD-2026-000001 and counted up. Found in the internal
+    /// adversarial pass before the penetration test (issue 110).
+    /// </para>
     /// </remarks>
+    /// <param name="sessionToken">
+    /// The browser's cart session. The cart that converted into the order keeps it, so it is what
+    /// tells this browser apart from everybody else's.
+    /// </param>
     public async Task<StoreResult<CheckoutStatusResponse>> StatusAsync(
         string? host,
         string reference,
+        string? sessionToken,
         CancellationToken cancellationToken = default)
     {
-        var agency = await _storefront.EnterAsync(host, cancellationToken);
+        // The traveller has already been sent to the gateway, so this is their own booking coming
+        // back rather than a new sale: a suspension between the two must not lose their receipt.
+        var agency = await _storefront.EnterAsync(host, StorefrontVisit.ExistingBooking, cancellationToken);
 
         if (agency is null)
         {
             return Store.NotFound<CheckoutStatusResponse>("We could not find that site.");
         }
 
+        // The same words as an unknown order, so a guess cannot be told apart from a miss.
+        if (string.IsNullOrWhiteSpace(sessionToken))
+        {
+            return Store.NotFound<CheckoutStatusResponse>("We could not find that booking.");
+        }
+
         var order = await _db.Orders.AsNoTracking()
             .FirstOrDefaultAsync(candidate => candidate.OrderNumber == reference, cancellationToken);
 
         if (order is null)
+        {
+            return Store.NotFound<CheckoutStatusResponse>("We could not find that booking.");
+        }
+
+        var boughtHere = await _db.Carts.AsNoTracking().AnyAsync(
+            cart => cart.ConvertedOrderId == order.Id && cart.SessionToken == sessionToken,
+            cancellationToken);
+
+        if (!boughtHere)
         {
             return Store.NotFound<CheckoutStatusResponse>("We could not find that booking.");
         }

@@ -44,11 +44,11 @@ export interface ApiClient {
    * whether the account belongs in this console before anything is stored — see AuthProvider.
    */
   signIn(email: string, password: string): Promise<Session>;
-  /** Ends the session locally at once, then revokes the refresh token on the server. */
+  /** Ends the session locally at once, then revokes the refresh cookie on the server. */
   signOut(): Promise<void>;
-  /** Revokes one refresh token on the server. Best effort: never throws. */
-  revoke(refreshToken: string): Promise<void>;
-  /** After a page reload: trades the stored refresh token for a fresh session, if there is one. */
+  /** Revokes the refresh cookie on the server and clears it. Best effort: never throws. */
+  revoke(): Promise<void>;
+  /** After a page reload: trades the refresh cookie for a fresh session, if there is one. */
   restore(): Promise<Session | null>;
 }
 
@@ -77,20 +77,18 @@ export function createApiClient({
   let refreshing: Promise<Session | null> | null = null;
 
   function refresh(): Promise<Session | null> {
-    refreshing ??= exchangeRefreshToken().finally(() => {
+    refreshing ??= withRefreshLock(exchangeRefreshCookie).finally(() => {
       refreshing = null;
     });
     return refreshing;
   }
 
-  async function exchangeRefreshToken(): Promise<Session | null> {
-    const refreshToken = store.getRefreshToken();
-    if (refreshToken === null) return null;
-
-    const response = await send('POST', '/api/v1/auth/refresh', { refreshToken }, null);
+  async function exchangeRefreshCookie(): Promise<Session | null> {
+    // No body: the credential is the HttpOnly cookie, which the browser attaches by itself.
+    const response = await send('POST', '/api/v1/auth/refresh', undefined, null);
 
     if (response.status === 401 || response.status === 400) {
-      // Expired, revoked, or already used. There is no recovering this session.
+      // No cookie, or one that is expired, revoked, or already used. There is no session to keep.
       store.clear();
       return null;
     }
@@ -109,7 +107,6 @@ export function createApiClient({
   async function currentAccessToken(): Promise<string | null> {
     const session = store.getSession();
     if (session && !needsRefresh(session, now())) return session.accessToken;
-    if (store.getRefreshToken() === null) return null;
 
     const renewed = await refresh();
     return renewed?.accessToken ?? null;
@@ -121,7 +118,12 @@ export function createApiClient({
     body: unknown,
     accessToken: string | null,
   ): Promise<Response> {
-    const headers: Record<string, string> = { Accept: 'application/json' };
+    // X-Session-Client: cookies belong to a host, not a port, so on localhost this console and the
+    // agent console share a cookie jar. The API gives each console a refresh cookie of its own.
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'X-Session-Client': 'admin',
+    };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
@@ -129,6 +131,9 @@ export function createApiClient({
       return await fetchImpl(path, {
         method,
         headers,
+        // Sends and accepts the refresh cookie even when the API is on another origin. Through the
+        // dev proxy the page and the API share an origin, and this changes nothing.
+        credentials: 'include',
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     } catch (error) {
@@ -163,9 +168,9 @@ export function createApiClient({
     return readBody<T>(response);
   }
 
-  async function revoke(refreshToken: string): Promise<void> {
+  async function revoke(): Promise<void> {
     try {
-      await send('POST', '/api/v1/auth/logout', { refreshToken }, null);
+      await send('POST', '/api/v1/auth/logout', undefined, null);
     } catch {
       // Unreachable server: the refresh token still expires on its own schedule.
     }
@@ -211,13 +216,11 @@ export function createApiClient({
     },
 
     async signOut() {
-      const refreshToken = store.getRefreshToken();
-
       // Local first. Signing out has to work even when the API is unreachable — a reviewer
       // walking away from a shared machine must not be left signed in because a request failed.
       store.clear();
 
-      if (refreshToken !== null) await revoke(refreshToken);
+      await revoke();
     },
 
     revoke,
@@ -227,6 +230,20 @@ export function createApiClient({
       return session ? Promise.resolve(session) : refresh();
     },
   };
+}
+
+/**
+ * Runs `task` while holding a lock every tab of this console shares.
+ *
+ * The refresh cookie is shared by every tab and is single use. Two tabs refreshing at the same
+ * instant would present the same token twice, which the API treats as theft and answers by revoking
+ * the session everywhere. With the lock the second tab waits, and by then the browser holds the
+ * rotated cookie. Browsers without the Web Locks API just run the task.
+ */
+async function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
+  const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+  if (!locks) return task();
+  return await locks.request('admin-console-session-refresh', task);
 }
 
 async function readBody<T>(response: Response): Promise<T> {

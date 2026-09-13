@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { staffToken } from '../../../test/fake-jwt';
-import { createSessionStore, type TokenStorage } from '../../auth/session-store';
+import {
+  createSessionStore,
+  LEGACY_REFRESH_TOKEN_KEY,
+  type TokenStorage,
+} from '../../auth/session-store';
 import { sessionFromTokens } from '../../auth/session';
 import { createApiClient } from '../client';
 import { ApiError, NetworkError } from '../problem';
@@ -35,7 +39,6 @@ function tokenPair(expiresInSeconds = 900) {
   issued += 1;
   return {
     accessToken: staffToken({ jti: `token-${issued}` }),
-    refreshToken: `refresh-${issued}`,
     expiresInSeconds,
   };
 }
@@ -53,6 +56,8 @@ interface Call {
   path: string;
   method: string;
   authorization: string | null;
+  sessionClient: string | null;
+  credentials: RequestCredentials | undefined;
   body: unknown;
 }
 
@@ -66,6 +71,8 @@ function fakeApi(handlers: Record<string, (call: Call) => Response | Promise<Res
       path: String(input),
       method: init?.method ?? 'GET',
       authorization: headers.Authorization ?? null,
+      sessionClient: headers['X-Session-Client'] ?? null,
+      credentials: init?.credentials,
       body: init?.body ? JSON.parse(String(init.body)) : undefined,
     };
     calls.push(call);
@@ -98,7 +105,16 @@ describe('signing in', () => {
 
     expect(session.claims.email).toBe('ops@tripsagent.test');
     expect(store.getSession()).toBeNull();
-    expect(store.getRefreshToken()).toBeNull();
+  });
+
+  it('sends and accepts the refresh cookie, named for this console', async () => {
+    const { fetchImpl, calls } = fakeApi({ [`POST ${LOGIN}`]: () => json(200, tokenPair()) });
+    const client = createApiClient({ store: createSessionStore(memoryStorage()), fetchImpl });
+
+    await client.signIn('ops@tripsagent.test', 'password');
+
+    expect(calls[0]?.credentials).toBe('include');
+    expect(calls[0]?.sessionClient).toBe('admin');
   });
 
   it('reports a refusal as an ApiError carrying the server’s wording', async () => {
@@ -170,7 +186,9 @@ describe('refreshing', () => {
 
     expect(countOf(`POST ${REFRESH}`)).toBe(1);
     expect(calls.at(0)?.body).toBeUndefined();
-    expect(calls.at(1)?.body).toEqual({ refreshToken: first.refreshToken });
+    // The credential is the HttpOnly cookie, which the browser attaches; nothing is in the body.
+    expect(calls.at(1)?.body).toBeUndefined();
+    expect(calls.at(1)?.credentials).toBe('include');
     expect(calls.at(2)?.authorization).toBe(`Bearer ${second.accessToken}`);
     expect(store.getSession()?.accessToken).toBe(second.accessToken);
   });
@@ -216,20 +234,36 @@ describe('refreshing', () => {
     expect(calls[1]?.authorization).toBe(`Bearer ${fresh.accessToken}`);
   });
 
-  it('restores a session from the stored refresh token after a page reload', async () => {
+  it('restores a session from the refresh cookie after a page reload', async () => {
     const stored = tokenPair();
     const { fetchImpl, calls } = fakeApi({ [`POST ${REFRESH}`]: () => json(200, stored) });
-    // A fresh store, as it is on boot: no session in memory, a refresh token on disk.
-    const store = createSessionStore(
-      memoryStorage({ 'trips.admin.refreshToken': 'from-last-boot' }),
-    );
+    // A fresh store, as it is on boot: no session in memory, only the browser's cookie.
+    const store = createSessionStore(memoryStorage());
     const client = createApiClient({ store, fetchImpl, now: () => 0 });
 
     const session = await client.restore();
 
-    expect(calls[0]?.body).toEqual({ refreshToken: 'from-last-boot' });
+    expect(calls[0]?.body).toBeUndefined();
     expect(session?.accessToken).toBe(stored.accessToken);
     expect(store.getSession()).not.toBeNull();
+  });
+
+  it('restores nothing when there is no cookie', async () => {
+    const { fetchImpl } = fakeApi({
+      [`POST ${REFRESH}`]: () => problem(401, 'That session has expired.'),
+    });
+    const client = createApiClient({ store: createSessionStore(memoryStorage()), fetchImpl });
+
+    await expect(client.restore()).resolves.toBeNull();
+  });
+
+  it('forgets a refresh token an earlier version left in sessionStorage', () => {
+    const storage = memoryStorage();
+    storage.setItem(LEGACY_REFRESH_TOKEN_KEY, 'left over');
+
+    createSessionStore(storage);
+
+    expect(storage.getItem(LEGACY_REFRESH_TOKEN_KEY)).toBeNull();
   });
 
   it('ends the session when the refresh token is refused', async () => {
@@ -243,7 +277,6 @@ describe('refreshing', () => {
     await expect(client.get(QUEUE)).rejects.toMatchObject({ status: 401 });
 
     expect(store.getSession()).toBeNull();
-    expect(store.getRefreshToken()).toBeNull();
   });
 
   it('keeps the session when refreshing fails for a reason other than the token', async () => {
@@ -258,12 +291,12 @@ describe('refreshing', () => {
 
     await expect(client.get(QUEUE)).rejects.toMatchObject({ status: 503 });
 
-    expect(store.getRefreshToken()).not.toBeNull();
+    expect(store.getSession()).not.toBeNull();
   });
 });
 
 describe('signing out', () => {
-  it('revokes the refresh token and clears the session', async () => {
+  it('revokes the refresh cookie and clears the session', async () => {
     const pair = tokenPair();
     const { fetchImpl, calls } = fakeApi({
       [`POST ${LOGOUT}`]: () => new Response(null, { status: 204 }),
@@ -273,7 +306,9 @@ describe('signing out', () => {
 
     await client.signOut();
 
-    expect(calls[0]?.body).toEqual({ refreshToken: pair.refreshToken });
+    expect(calls[0]?.path).toBe(LOGOUT);
+    expect(calls[0]?.body).toBeUndefined();
+    expect(calls[0]?.credentials).toBe('include');
     expect(store.getSession()).toBeNull();
   });
 
@@ -287,6 +322,5 @@ describe('signing out', () => {
     await expect(client.signOut()).resolves.toBeUndefined();
 
     expect(store.getSession()).toBeNull();
-    expect(store.getRefreshToken()).toBeNull();
   });
 });

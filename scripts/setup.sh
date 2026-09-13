@@ -101,6 +101,23 @@ fi
 if [ -f .env.example ] && [ ! -f .env ]; then
   cp .env.example .env
   printf '%s\n' "${GREEN}✓${NC} Created .env from .env.example ${DIM}— fill in the secrets${NC}"
+
+  # The two encryption keys are the ones nothing works without, and nobody can guess
+  # what "32 random bytes, base64" means on the first day. Generated here, into the
+  # developer's own .env, which is git-ignored: no key is ever committed, and each
+  # machine's is its own.
+  if command -v openssl >/dev/null 2>&1; then
+    tmp_env="$(mktemp)"
+    awk -v secret="$(openssl rand -base64 32)" -v field="$(openssl rand -base64 32)" '
+      /^Security__SecretEncryptionKey=$/ { print "Security__SecretEncryptionKey=" secret; next }
+      /^Security__FieldEncryption__Keys__key2026_09=$/ { print "Security__FieldEncryption__Keys__key2026_09=" field; next }
+      { print }
+    ' .env > "$tmp_env" && mv "$tmp_env" .env
+    printf '%s\n' "${GREEN}✓${NC} Generated this machine's encryption keys ${DIM}— local only, never commit .env${NC}"
+  else
+    printf '%s\n' "${YELLOW}!${NC} openssl not found — set Security__SecretEncryptionKey and Security__FieldEncryption__Keys__* by hand"
+  fi
+
   printf '\n'
 fi
 

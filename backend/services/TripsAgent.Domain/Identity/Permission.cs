@@ -130,6 +130,15 @@ public static class PermissionCodes
     /// <summary>Work the reconciliation queue and the dispute queue across every agency.</summary>
     public const string FinanceReview = "platform.finance.review";
 
+    /// <summary>
+    /// Erase a person's details on request (NDPA, issue 106). Super Admin only.
+    /// </summary>
+    /// <remarks>
+    /// It cannot be undone and there is no copy of what it destroys, so it sits on its own rather than
+    /// arriving with the support permissions somebody needs to answer a question about a booking.
+    /// </remarks>
+    public const string ErasureExecute = "platform.erasure.execute";
+
     /// <summary>Categories used to group permissions on the role editor.</summary>
     public static class Categories
     {
@@ -198,6 +207,7 @@ public static class PermissionCodes
         (PlatformUserManage, Categories.Platform, "Manage Trips back-office users"),
         (PayoutApprove, Categories.Platform, "Approve a withdrawal — this sends real money"),
         (FinanceReview, Categories.Platform, "Work the reconciliation and dispute queues"),
+        (ErasureExecute, Categories.Platform, "Erase a person's details on request — this cannot be undone"),
     ];
 
     /// <summary>Codes that only Trips staff may ever hold.</summary>
@@ -215,5 +225,6 @@ public static class PermissionCodes
         PlatformUserManage,
         PayoutApprove,
         FinanceReview,
+        ErasureExecute,
     ];
 }

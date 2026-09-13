@@ -254,11 +254,24 @@ public static class PublicStorefrontEndpoints
     /// Lets the storefront and anything in front of it reuse this response, and keep serving the old
     /// one while it fetches a new one. Varies on Host, because the whole answer depends on it.
     /// </summary>
+    /// <remarks>
+    /// <b>Never a preview.</b> A preview answer is the agency's unpublished draft — prices and pages
+    /// nobody outside the agency is meant to see — and marking it <c>public</c> invites a CDN to
+    /// serve it to every visitor of that host. A request that carried a preview token is not cached
+    /// at all, and Vary names the header so no cache mixes the two up (issue 110).
+    /// </remarks>
     private static void Cache(HttpContext http)
     {
+        if (PreviewTokenOf(http) is { Length: > 0 })
+        {
+            http.Response.Headers.CacheControl = "private, no-store";
+            http.Response.Headers[HeaderNames.Vary] = $"{HeaderNames.Host}, {PreviewTokenHeader}";
+            return;
+        }
+
         http.Response.Headers.CacheControl =
             $"public, max-age={CacheSeconds}, stale-while-revalidate={StaleSeconds}";
 
-        http.Response.Headers[HeaderNames.Vary] = HeaderNames.Host;
+        http.Response.Headers[HeaderNames.Vary] = $"{HeaderNames.Host}, {PreviewTokenHeader}";
     }
 }

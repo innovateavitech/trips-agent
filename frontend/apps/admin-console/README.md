@@ -167,7 +167,5 @@ Piece A1 of the #66 breakdown is what exists. Deliberately out of scope:
 - **Decision history**, and **"take up for review"** (A2). The queue only ever returns undecided
   submissions, and no endpoint calls `KybSubmission.BeginReview` — so nothing is ever *Under
   review*, and the filter for it is honest about being empty.
-- **Session hardening** (A3): the refresh token is in `sessionStorage`, readable by script on the
-  page. The fix is an httpOnly cookie the API issues, alongside issue 107.
 - The agency directory, profiles, suspend/terminate, back-office users, and the dashboard — A4
   onwards in the breakdown on #66.

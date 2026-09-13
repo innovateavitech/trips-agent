@@ -20,6 +20,12 @@ The plan's features stand at: F1 53 of 58 boxes, F2 13 of 14, F3–F7 all, F8 5 
 all, F11 9 of 11, F12 all, F13 1 of 4, F14 46 of 50. Every unticked box is listed below with the
 reason it is unticked.
 
+## Running it locally
+
+[README §7](../README.md#7-local-setup) has the steps: `./scripts/setup.sh`, `docker compose up -d`,
+`migrate` and `seed`, then three processes — the API, the Worker and `pnpm dev`. The Worker is not
+optional: bookings, emails, billing and payouts all run there. §9 lists the seeded accounts.
+
 ## 1. Launch gates — must happen before real money or real travellers
 
 These are not code. Each needs a person outside the codebase.

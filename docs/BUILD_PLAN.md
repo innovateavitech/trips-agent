@@ -52,13 +52,11 @@ S3 adapter deferred until a cloud is chosen. PR 3 is being assembled from the fi
 branches: merge them into one, regenerate the API client, run every gate, tick F8-F13 here, and
 open it with `Closes` for #63-#70. Then PR 4 is all that is left.
 
-**Three one-line calls still owed**, each waiting on a branch that now exists. The catalog's publish
-handler needs `IEntitlements.MayAddAsync(agencyId, EntitlementCodes.MaxCatalogListings, published)`,
-and the storefront's domain claim needs the matching one for `custom_domain`; the ceilings are built
-and tested, and nothing counted published products until F3 landed. Decision 14's storefront half is
-the third: the admin console's `StorefrontAvailability` belongs in `PublicSiteResolver`. All three
-belong in PR 3's assembly. (The sub-agent ceiling was the fourth, and is done: F10 asks F9's
-`max_sub_agents` through `ISubAgentEntitlement`.)
+**The plan's limits are enforced where they apply.** Publishing a product asks `max_catalog_listings`
+and reports a refusal on the editor's own checklist; connecting a domain asks `custom_domain`; inviting
+a sub-agent asks `max_sub_agents`; and a storefront serves only while `AgencyAccess.CanServeStorefront`
+says so (decision 14). Each has a test proving it refuses. What is already live stays live after a
+downgrade (decision 15) — only adding more is refused.
 
 ## Decisions for the MVP
 

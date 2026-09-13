@@ -15,6 +15,7 @@ using TripsAgent.Contracts.Identity;
 using TripsAgent.Contracts.Tenancy;
 using TripsAgent.Domain.Billing;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.IntegrationTests.Billing;
 using TripsAgent.IntegrationTests.Persistence;
 
 namespace TripsAgent.IntegrationTests.Tenancy;
@@ -410,36 +411,19 @@ public sealed class SubAgentNetworkEndToEndTests : IAsyncLifetime, IDisposable
         }
     }
 
-    /// <summary>
-    /// Subscribes the principal to a plan that allows sub-agents.
-    /// </summary>
-    /// <remarks>
-    /// How many sub-agents an agency may have is its plan's <c>max_sub_agents</c> entitlement, and an
-    /// agency with no plan gets the most restrictive answer: none. So a principal that is going to
-    /// invite anybody needs a plan first, exactly as it would in production.
-    /// </remarks>
+    /// <summary>Subscribes the principal to a plan that allows sub-agents. See <see cref="TestPlans"/>.</summary>
     private async Task PutPrincipalOnAPlanWithSubAgentsAsync()
     {
-        const string Reason = "Set up by an integration test.";
+        Guid principalId;
 
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var tiers = scope.ServiceProvider.GetRequiredService<TierAdminService>();
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            using var _ = scope.ServiceProvider.GetRequiredService<IPlatformScope>().Enter("test setup — finds the principal");
+            principalId = (await db.Agencies.SingleAsync(candidate => candidate.ParentAgencyId == null)).Id;
+        }
 
-        var created = await tiers.CreateAsync(new TierDraft("network", "Network", null, 0, 0, false), Reason);
-        var tierId = ((TierChangeOutcome.Saved)created).Tier.Id;
-        await tiers.SetEntitlementsAsync(tierId, [new EntitlementGrant(EntitlementCodes.MaxSubAgents, "5")], Reason);
-        await tiers.PublishAsync(tierId, Reason);
-
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        using var _ = scope.ServiceProvider.GetRequiredService<IPlatformScope>().Enter(
-            "test setup — subscribes the principal to a plan that allows sub-agents");
-
-        var principal = await db.Agencies.SingleAsync(candidate => candidate.ParentAgencyId == null);
-        var tier = await db.SubscriptionTiers.Include(candidate => candidate.Prices).SingleAsync(candidate => candidate.Id == tierId);
-        var now = DateTimeOffset.UtcNow;
-
-        db.Subscriptions.Add(Subscription.Start(principal.Id, tier, tier.PriceAt("NGN", BillingInterval.Monthly, now), "NGN", now));
-        await db.SaveChangesAsync();
+        await TestPlans.SubscribeAsync(_factory.Services, principalId, new EntitlementGrant(EntitlementCodes.MaxSubAgents, "5"));
     }
 
     private async Task<InviteSubAgentResponse> InviteAsync()

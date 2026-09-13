@@ -192,6 +192,32 @@ public sealed class CatalogEndpointTests : IAsyncLifetime, IDisposable
         (await StatusOf(HttpMethod.Post, $"{Products}/{product.Id}/archive", null, PermissionCodes.CatalogPublish)).Should().Be(HttpStatusCode.OK);
     }
 
+    [Fact]
+    public async Task A_plan_allowing_one_listing_refuses_a_second_and_says_so_on_the_checklist()
+    {
+        // Agency A has no plan, so it gets the most restrictive listing limit: one live product.
+        var first = await CreateAsync(FullTour());
+        var second = await CreateAsync(FullTour("Lamu Retreat"));
+
+        (await StatusOf(HttpMethod.Post, $"{Products}/{first.Id}/publish", null, Everything)).Should().Be(HttpStatusCode.OK);
+
+        using (var refused = await SendAsync(HttpMethod.Post, $"{Products}/{second.Id}/publish", null, _agencyA, Everything))
+        {
+            refused.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+
+            var problems = (await JsonAsync(refused)).GetProperty("publishProblems").EnumerateArray()
+                .Select(problem => problem.GetProperty("field").GetString());
+
+            problems.Should().Contain("plan");
+        }
+
+        (await GetAsync(second.Id)).Status.Should().Be("Draft");
+
+        // Taking the first down frees the slot, and republishing a product never counts against itself.
+        (await StatusOf(HttpMethod.Post, $"{Products}/{first.Id}/unpublish", null, Everything)).Should().Be(HttpStatusCode.OK);
+        (await StatusOf(HttpMethod.Post, $"{Products}/{second.Id}/publish", null, Everything)).Should().Be(HttpStatusCode.OK);
+    }
+
     // ------------------------------------------------------------------ tenant isolation
 
     [Fact]

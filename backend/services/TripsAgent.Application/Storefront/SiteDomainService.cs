@@ -1,10 +1,12 @@
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using TripsAgent.Application.Auditing;
+using TripsAgent.Application.Billing;
 using TripsAgent.Application.Messaging;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Contracts.Storefront;
+using TripsAgent.Domain.Billing;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Storefront;
 
@@ -50,6 +52,8 @@ public sealed class SiteDomainService
     private readonly StorefrontOptions _options;
     private readonly TimeProvider _clock;
 
+    private readonly IEntitlements _entitlements;
+
     public SiteDomainService(
         IAppDbContext db,
         ITransactionRunner transactions,
@@ -60,8 +64,10 @@ public sealed class SiteDomainService
         IAuditContext audit,
         DomainVerifier verifier,
         StorefrontOptions options,
-        TimeProvider clock)
+        TimeProvider clock,
+        IEntitlements entitlements)
     {
+        _entitlements = entitlements;
         _db = db;
         _transactions = transactions;
         _siteLock = siteLock;
@@ -151,8 +157,17 @@ public sealed class SiteDomainService
                 "If the domain is yours, remove it from the other website first, or contact support.");
         }
 
-        // The M3 subscription plans (issue 64) will gate this on their custom-domain entitlement. Until plans
-        // exist, every agency with a website may connect its own domain.
+        // An address of the agency's own is the plan's custom_domain entitlement (F9). Asked only when
+        // connecting a new one: a domain already connected keeps working after a downgrade (decision 15).
+        var entitled = await _entitlements.MayUseAsync(site.AgencyId, EntitlementCodes.CustomDomain, cancellationToken);
+
+        if (!entitled.IsAllowed)
+        {
+            return new StorefrontResult<SiteDomainResponse>.Conflict(
+                "Your plan does not include your own domain.",
+                "Your website stays on its free address. Change plan to connect a domain of your own.");
+        }
+
         var token = RandomNumberGenerator.GetHexString(TokenLength, lowercase: true);
         var domain = SiteDomain.ForCustom(site, hostname, token, _clock.GetUtcNow());
 

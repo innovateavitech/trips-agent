@@ -6,14 +6,18 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Billing;
 using TripsAgent.Application.Identity;
 using TripsAgent.Application.Storefront;
+using TripsAgent.Application.Tenancy;
 using TripsAgent.Contracts.Storefront;
+using TripsAgent.Domain.Billing;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Platform;
 using TripsAgent.Domain.Storefront;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.IntegrationTests.Billing;
 using TripsAgent.IntegrationTests.Persistence;
 
 namespace TripsAgent.IntegrationTests.Storefront;
@@ -80,6 +84,12 @@ public sealed class SiteDomainEndpointTests : IAsyncLifetime, IDisposable
 
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(host => host.UseEnvironment("Development"));
         _api = _factory.CreateClient();
+
+        // Connecting a domain of your own is a plan entitlement; both agencies here are on a plan with it.
+        foreach (var agencyId in new[] { _lagosId, _abujaId })
+        {
+            await TestPlans.SubscribeAsync(_factory.Services, agencyId, new EntitlementGrant(EntitlementCodes.CustomDomain, "true"));
+        }
     }
 
     public async Task DisposeAsync()
@@ -127,6 +137,32 @@ public sealed class SiteDomainEndpointTests : IAsyncLifetime, IDisposable
         all.Select(entry => entry.Hostname).Should().Equal("lagos-travel.localhost", "www.lagostravel.test");
         all[0].IsPrimary.Should().BeTrue();
         all[0].CanRemove.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task An_agency_whose_plan_has_no_custom_domain_keeps_its_free_address_only()
+    {
+        Guid unplannedId;
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            using var _ = scope.ServiceProvider.GetRequiredService<IPlatformScope>().Enter("test setup — an agency with no plan");
+
+            var unplanned = Agency.RegisterPrincipal("Kano Trips Limited", "kano-trips", "NG", "NGN", "Africa/Lagos");
+            unplanned.MarkVerified(DateTimeOffset.UtcNow);
+            db.Agencies.Add(unplanned);
+            await db.SaveChangesAsync();
+            unplannedId = unplanned.Id;
+        }
+
+        await CreateSiteAsync(unplannedId);
+
+        using var refused = await SendAsync(HttpMethod.Post, Domains, new AddSiteDomainRequest("www.kanotrips.test"), unplannedId, Publish);
+        refused.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var all = await GetAsync<List<SiteDomainResponse>>(Domains, unplannedId, Edit);
+        all.Select(entry => entry.Hostname).Should().Equal("kano-trips.localhost");
     }
 
     [Fact]

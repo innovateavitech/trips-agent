@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using TripsAgent.Application.Assets;
+using TripsAgent.Application.Billing;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Assets;
+using TripsAgent.Domain.Billing;
 using TripsAgent.Domain.Catalog;
 using TripsAgent.Domain.Tenancy;
 
@@ -98,19 +100,22 @@ public sealed class ProductCatalogService
     private readonly IUniqueViolationDetector _uniqueViolations;
     private readonly AssetDelivery _delivery;
     private readonly TimeProvider _clock;
+    private readonly IEntitlements _entitlements;
 
     public ProductCatalogService(
         IAppDbContext db,
         ITenantContext tenant,
         IUniqueViolationDetector uniqueViolations,
         AssetDelivery delivery,
-        TimeProvider clock)
+        TimeProvider clock,
+        IEntitlements entitlements)
     {
         _db = db;
         _tenant = tenant;
         _uniqueViolations = uniqueViolations;
         _delivery = delivery;
         _clock = clock;
+        _entitlements = entitlements;
     }
 
     /// <summary>The agency's products, most recently changed first.</summary>
@@ -269,13 +274,46 @@ public sealed class ProductCatalogService
     }
 
     /// <summary>Puts a draft on the storefront, or says every reason it cannot go yet.</summary>
-    public Task<ProductChangeOutcome> PublishAsync(Guid productId, CancellationToken cancellationToken = default) =>
-        ChangeStatusAsync(
+    /// <remarks>
+    /// How many products may be live at once is the plan's <c>max_catalog_listings</c> entitlement
+    /// (F9). A plan limit is reported as one more reason on the same checklist as the product's own
+    /// problems, so the editor shows it where the agent is already looking. Products already live
+    /// stay live after a downgrade (decision 15); only publishing another is refused.
+    /// </remarks>
+    public async Task<ProductChangeOutcome> PublishAsync(Guid productId, CancellationToken cancellationToken = default)
+    {
+        var planProblem = await PlanLimitProblemAsync(productId, cancellationToken);
+
+        return await ChangeStatusAsync(
             productId,
-            (product, today) => product.TryPublish(_clock.GetUtcNow(), today, out var problems)
-                ? null
-                : new ProductChangeOutcome.NotPublishable(problems),
+            (product, today) =>
+            {
+                var publishable = product.TryPublish(_clock.GetUtcNow(), today, out var problems);
+
+                if (planProblem is null)
+                {
+                    return publishable ? null : new ProductChangeOutcome.NotPublishable(problems);
+                }
+
+                return new ProductChangeOutcome.NotPublishable([.. problems, planProblem]);
+            },
             cancellationToken);
+    }
+
+    private async Task<ProductProblem?> PlanLimitProblemAsync(Guid productId, CancellationToken cancellationToken)
+    {
+        var agencyId = _tenant.AgencyId ?? throw new InvalidOperationException(
+            "Products belong to an agency, and none is resolved for this request.");
+
+        var published = await _db.Products.CountAsync(
+            product => product.Status == ProductStatus.Published && product.Id != productId,
+            cancellationToken);
+
+        var decision = await _entitlements.MayAddAsync(
+            agencyId, EntitlementCodes.MaxCatalogListings, published, 1, cancellationToken);
+
+        return decision.IsAllowed ? null : new ProductProblem("plan", decision.Detail);
+    }
 
     /// <summary>Takes a published product off the storefront, or restores an archived one, as a draft.</summary>
     public Task<ProductChangeOutcome> UnpublishAsync(Guid productId, CancellationToken cancellationToken = default) =>

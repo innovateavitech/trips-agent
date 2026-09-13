@@ -170,7 +170,7 @@ public sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
         builder.Property(quote => quote.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(quote => quote.Currency).HasMaxLength(3).IsFixedLength().IsRequired();
         builder.Property(quote => quote.Notes).HasMaxLength(CrmLimits.MaxNotesLength).IsRequired();
-        builder.Property(quote => quote.PublicToken).HasMaxLength(64);
+        builder.Property(quote => quote.PublicTokenHash).HasMaxLength(64);
 
         // Optimistic concurrency. A save of a draft that races the send of the same quote must not
         // win: the customer would be holding a quote that changed after it was sent. Both bump the
@@ -206,11 +206,12 @@ public sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
             .IsUnique()
             .HasDatabaseName("ix_quotes_agency_id_number");
 
-        // The customer's link. Looked up by token, always inside the agency its host resolved to.
-        builder.HasIndex(quote => quote.PublicToken)
+        // The customer's link, by the keyed hash that is all we keep of it (issue 175). Looked up
+        // always inside the agency its host resolved to.
+        builder.HasIndex(quote => quote.PublicTokenHash)
             .IsUnique()
-            .HasFilter("public_token IS NOT NULL")
-            .HasDatabaseName("ix_quotes_public_token");
+            .HasFilter("public_token_hash IS NOT NULL")
+            .HasDatabaseName("ix_quotes_public_token_hash");
     }
 }
 

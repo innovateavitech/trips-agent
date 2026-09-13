@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Persistence;
+using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Identity;
 
 namespace TripsAgent.Application.Identity.Registration;
@@ -11,8 +12,8 @@ namespace TripsAgent.Application.Identity.Registration;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Shared by registration and "resend code", so both obey one throttle rather than two that
-/// drift apart.
+/// Shared by registration, "resend code" and accepting a sub-agent invitation (issue 170), so all
+/// three obey one throttle rather than several that drift apart.
 /// </para>
 /// <para>
 /// The throttle is per email address and is enforced by counting rows in <c>otp_codes</c>, which
@@ -33,17 +34,20 @@ public sealed partial class VerificationCodeIssuer
     private readonly IAppDbContext _db;
     private readonly ITokenHasher _tokenHasher;
     private readonly IEmailSender _emailSender;
+    private readonly IPlatformScope _platformScope;
     private readonly ILogger<VerificationCodeIssuer> _logger;
 
     public VerificationCodeIssuer(
         IAppDbContext db,
         ITokenHasher tokenHasher,
         IEmailSender emailSender,
+        IPlatformScope platformScope,
         ILogger<VerificationCodeIssuer> logger)
     {
         _db = db;
         _tokenHasher = tokenHasher;
         _emailSender = emailSender;
+        _platformScope = platformScope;
         _logger = logger;
     }
 
@@ -96,16 +100,59 @@ public sealed partial class VerificationCodeIssuer
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        var message = VerificationEmail.Create(user.Email, user.FirstName, code, OtpCode.Lifetime);
-
         try
         {
+            var brand = await PrincipalBrandAsync(user, cancellationToken);
+            var message = VerificationEmail.Create(user.Email, user.FirstName, code, OtpCode.Lifetime, brand);
+
             await _emailSender.SendAsync(message, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             LogSendFailed(_logger, ex, user.Id);
         }
+    }
+
+    /// <summary>
+    /// The principal's brand when <paramref name="user"/> works for a sub-agent, and null — ours — otherwise.
+    /// </summary>
+    /// <remarks>
+    /// Build-plan decision 6: a sub-agent works under its principal's name, and the invitation its first
+    /// user joined through carried that name. The code that user is sent next (issue 170) arrives seconds
+    /// later and must not be the first thing to name the platform. The principal is another agency's row,
+    /// so it is read in the platform scope, whichever scope the caller was in.
+    /// </remarks>
+    private async Task<NotificationBrand?> PrincipalBrandAsync(User user, CancellationToken cancellationToken)
+    {
+        if (user.AgencyId is not { } agencyId)
+        {
+            return null;
+        }
+
+        using var scope = _platformScope.Enter(
+            "verification email — a sub-agent's code carries its principal's brand, which is another agency's row");
+
+        var principalId = await _db.Agencies.AsNoTracking()
+            .Where(agency => agency.Id == agencyId)
+            .Select(agency => agency.ParentAgencyId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (principalId is not { } id)
+        {
+            return null;
+        }
+
+        // A foreign key guarantees the row. Should it ever be unreadable, sending nothing is the safe
+        // failure: the fallback, our own brand, is exactly what this method exists to avoid.
+        var principal = await _db.Agencies.AsNoTracking()
+            .FirstOrDefaultAsync(agency => agency.Id == id, cancellationToken)
+            ?? throw new InvalidOperationException(
+                $"Sub-agent {agencyId} names principal {id}, which cannot be read, so its brand is unknown.");
+
+        var branding = await _db.AgencyBranding.AsNoTracking()
+            .FirstOrDefaultAsync(candidate => candidate.AgencyId == id, cancellationToken);
+
+        return NotificationBrand.OfPrincipal(principal, branding);
     }
 
     [LoggerMessage(Level = LogLevel.Information,

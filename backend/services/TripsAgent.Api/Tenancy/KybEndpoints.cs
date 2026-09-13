@@ -1,5 +1,7 @@
+using TripsAgent.Api.Authorization;
 using TripsAgent.Application.Tenancy.Kyb;
 using TripsAgent.Contracts.Tenancy;
+using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Tenancy.Kyb;
 
 namespace TripsAgent.Api.Tenancy;
@@ -17,7 +19,12 @@ public static class KybEndpoints
             // Every route here reads or writes the caller's own agency. Without authentication
             // there is no tenant, and the query filters would return nothing — a confusing empty
             // screen rather than an honest 401.
-            .RequireAuthorization();
+            //
+            // And not merely signed in. KYB is the agency's legal identity, and these four routes
+            // are the one submission Trips verifies it on: until issue 172 any user of the agency —
+            // a counter agent who can change nothing else about it — could replace a document or
+            // send the whole thing back for review. kyb.submit is owner-level, beside billing.manage.
+            .RequireAuthorization(PermissionPolicies.For(PermissionCodes.KybSubmit));
 
         group.MapGet("/status", async (GetKybStatusHandler handler, CancellationToken cancellationToken) =>
                 Results.Ok(await handler.HandleAsync(cancellationToken)))

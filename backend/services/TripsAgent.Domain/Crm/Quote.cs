@@ -101,10 +101,15 @@ public sealed class Quote : Entity, IAuditableEntity, ITenantScoped
     public Money TotalMinor { get; private set; }
 
     /// <summary>
-    /// The secret in the customer's link, set when the quote is sent. Anyone holding the link can view
-    /// and answer the quote, so it is 256 random bits — never an id, never guessable.
+    /// The keyed hash of the secret in the customer's link, set when the quote is sent.
     /// </summary>
-    public string? PublicToken { get; private set; }
+    /// <remarks>
+    /// Anyone holding the link can view and answer the quote, which makes it a bearer token — so only
+    /// its hash is stored, as for refresh tokens, reset tokens and booking links, and a leaked database
+    /// backup is not a set of live links (issue 175). The link itself is a signature over this quote's
+    /// id under the server's key: see <c>QuoteLinks</c>.
+    /// </remarks>
+    public string? PublicTokenHash { get; private set; }
 
     public DateTimeOffset? SentAt { get; private set; }
 
@@ -155,10 +160,15 @@ public sealed class Quote : Entity, IAuditableEntity, ITenantScoped
     }
 
     /// <summary>Sends the draft: from now on it has a link, and it never changes.</summary>
+    /// <param name="publicTokenHash">
+    /// The keyed hash of the link's token, which is all that is kept of it — see <c>QuoteLinks</c>.
+    /// </param>
+    /// <param name="today">Today in the agency's time zone.</param>
+    /// <param name="now">When it was sent.</param>
     /// <exception cref="InvalidOperationException">Why it cannot be sent — see <see cref="QuoteRules.WhyNotSendable"/>.</exception>
-    public void Send(string publicToken, DateOnly today, DateTimeOffset now)
+    public void Send(string publicTokenHash, DateOnly today, DateTimeOffset now)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(publicToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(publicTokenHash);
 
         if (QuoteRules.WhyNotSendable(this, today) is { } reason)
         {
@@ -166,7 +176,7 @@ public sealed class Quote : Entity, IAuditableEntity, ITenantScoped
         }
 
         Status = QuoteStatus.Sent;
-        PublicToken = publicToken;
+        PublicTokenHash = publicTokenHash;
         SentAt = now.ToUniversalTime();
         Version++;
     }
@@ -175,7 +185,7 @@ public sealed class Quote : Entity, IAuditableEntity, ITenantScoped
     /// <returns>True when this was the first view.</returns>
     public bool RecordView(DateTimeOffset now)
     {
-        if (PublicToken is null || ViewedAt is not null)
+        if (PublicTokenHash is null || ViewedAt is not null)
         {
             return false;
         }

@@ -7,9 +7,11 @@ using DotNet.Testcontainers.Containers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Billing;
+using TripsAgent.Application.Identity;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Contracts.Identity;
 using TripsAgent.Contracts.Tenancy;
@@ -47,6 +49,9 @@ public sealed class SubAgentNetworkEndToEndTests : IAsyncLifetime, IDisposable
     private const string PrincipalEmail = "owner@lagostravel.example.com";
     private const string SubAgentEmail = "owner@ikejabranch.example.com";
     private const string Password = "Password123";
+
+    /// <summary>What every verification email's subject says, whoever's brand it is in.</summary>
+    private const string VerificationSubject = "verification code";
 
     private readonly PostgresFixture _postgres;
 
@@ -164,6 +169,51 @@ public sealed class SubAgentNetworkEndToEndTests : IAsyncLifetime, IDisposable
         // Single use. The second attempt is refused without saying which of the reasons it was.
         var again = await anonymous.PostAsJsonAsync("/api/v1/invitations/accept", Accept(invited.InvitationToken));
         again.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    /// <summary>
+    /// Issue 170. The principal's console shows it the link, so accepting proves only that somebody had
+    /// the link. The account must not count as verified until its address has answered — the same code,
+    /// and the same rule, as a self-registered account.
+    /// </summary>
+    [Fact]
+    public async Task An_accepted_invitation_is_not_a_verified_address_until_the_code_comes_back()
+    {
+        await SignInAsPrincipalAsync();
+        var invited = await InviteAsync();
+
+        // Whoever holds the link — here it could as well be the principal itself — sets a password.
+        using var anonymous = _factory.CreateClient();
+
+        using (var accepted = await anonymous.PostAsJsonAsync("/api/v1/invitations/accept", Accept(invited.InvitationToken)))
+        {
+            accepted.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        (await VerifiedAtAsync(SubAgentEmail)).Should().BeNull("nobody at the address has done anything yet");
+
+        // The right password is not enough while the address is unproved, exactly as for a self-registered account.
+        using (var early = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(SubAgentEmail, Password)))
+        {
+            early.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            (await early.Content.ReadAsStringAsync()).Should().Contain("not been verified");
+        }
+
+        // The code goes to the address, and in the principal's name, like the invitation before it.
+        var email = await WaitForEmailToAsync(SubAgentEmail, VerificationSubject);
+
+        email.Subject.Should().Contain("Lagos Travel Limited");
+        email.Html.Should().NotContain("Trips", "a sub-agent works under its principal's brand");
+        email.Text.Should().NotContain("Trips");
+
+        using (var verified = await anonymous.PostAsJsonAsync(
+            "/api/v1/auth/verify-email", new VerifyEmailRequest(SubAgentEmail, CodeIn(email))))
+        {
+            verified.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        (await VerifiedAtAsync(SubAgentEmail)).Should().NotBeNull();
+        (await TokenAsync(SubAgentEmail)).Should().NotBeNullOrWhiteSpace("the address answered, so the account signs in");
     }
 
     [Fact]
@@ -353,6 +403,55 @@ public sealed class SubAgentNetworkEndToEndTests : IAsyncLifetime, IDisposable
         attempt.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    /// <summary>
+    /// Issue 173. Argon2id is expensive on purpose, so posting any string as a token must not be able
+    /// to spend it: the link is looked up first, and only one that turns out to be real is paid for.
+    /// </summary>
+    [Fact]
+    public async Task An_unusable_invitation_link_is_refused_before_any_password_is_hashed()
+    {
+        await SignInAsPrincipalAsync();
+        var invited = await InviteAsync();
+
+        var hasher = new CountingPasswordHasher();
+
+        using var counted = _factory.WithWebHostBuilder(
+            host => host.ConfigureTestServices(services => services.AddSingleton<IPasswordHasher>(hasher)));
+        using var anonymous = counted.CreateClient();
+
+        using (var refused = await anonymous.PostAsJsonAsync("/api/v1/invitations/accept", Accept("not-a-real-token")))
+        {
+            refused.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        hasher.Calls.Should().Be(0, "a link nobody holds must cost nothing to turn away");
+
+        // The control: a real link does pay for the hash, so this is about the order of the two steps
+        // rather than about the hasher having been left out of the request altogether.
+        using (var accepted = await anonymous.PostAsJsonAsync(
+            "/api/v1/invitations/accept", Accept(invited.InvitationToken)))
+        {
+            accepted.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        hasher.Calls.Should().Be(1);
+    }
+
+    /// <summary>Counts what Argon2id would have cost, without paying it.</summary>
+    private sealed class CountingPasswordHasher : IPasswordHasher
+    {
+        public int Calls { get; private set; }
+
+        public string Hash(string password)
+        {
+            Calls++;
+            return $"counted:{password}";
+        }
+
+        public (bool Verified, bool NeedsRehash) Verify(string password, string hash) =>
+            (hash == $"counted:{password}", false);
+    }
+
     // ------------------------------------------------------------------ helpers
 
     /// <summary>Every property name in a JSON document, however deeply nested.</summary>
@@ -440,13 +539,39 @@ public sealed class SubAgentNetworkEndToEndTests : IAsyncLifetime, IDisposable
         return (await response.Content.ReadFromJsonAsync<InviteSubAgentResponse>())!;
     }
 
+    /// <summary>
+    /// Joins as the invitee would: accepts the invitation, then answers the code sent to the address.
+    /// Since issue 170 the account signs in only after the second step.
+    /// </summary>
     private async Task AcceptAsync(string token)
     {
         using var anonymous = _factory.CreateClient();
         var accepted = await anonymous.PostAsJsonAsync("/api/v1/invitations/accept", Accept(token));
 
         accepted.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var code = CodeIn(await WaitForEmailToAsync(SubAgentEmail, VerificationSubject));
+        var verified = await anonymous.PostAsJsonAsync("/api/v1/auth/verify-email", new VerifyEmailRequest(SubAgentEmail, code));
+
+        verified.StatusCode.Should().Be(HttpStatusCode.OK);
     }
+
+    /// <summary>When the account at <paramref name="email"/> proved its address, or null while it has not.</summary>
+    private async Task<DateTimeOffset?> VerifiedAtAsync(string email)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var _ = scope.ServiceProvider.GetRequiredService<IPlatformScope>().Enter("test — reading whether an address is verified");
+
+        return await db.Users
+            .Where(user => user.Email == email)
+            .Select(user => user.EmailVerifiedAt)
+            .SingleAsync();
+    }
+
+    /// <summary>The six-digit code in a verification email.</summary>
+    private static string CodeIn(ReceivedEmail email) =>
+        System.Text.RegularExpressions.Regex.Match(email.Text, @"\b\d{6}\b").Value;
 
     private async Task<HttpClient> SignedInClientAsync(string email)
     {
@@ -470,7 +595,11 @@ public sealed class SubAgentNetworkEndToEndTests : IAsyncLifetime, IDisposable
 
     private sealed record ReceivedEmail(string Subject, string Html, string Text);
 
-    private async Task<ReceivedEmail> WaitForEmailToAsync(string to)
+    /// <summary>
+    /// The newest email to <paramref name="to"/> — or, given <paramref name="subjectContains"/>, the newest
+    /// whose subject says so, because an invitee receives the invitation first and the code after it.
+    /// </summary>
+    private async Task<ReceivedEmail> WaitForEmailToAsync(string to, string? subjectContains = null)
     {
         for (var attempt = 0; attempt < 50; attempt++)
         {
@@ -478,18 +607,28 @@ public sealed class SubAgentNetworkEndToEndTests : IAsyncLifetime, IDisposable
                 new Uri($"/api/v1/search?query=to:{Uri.EscapeDataString(to)}", UriKind.Relative));
             using var list = JsonDocument.Parse(await search.Content.ReadAsStringAsync());
 
-            if (list.RootElement.TryGetProperty("messages", out var messages) && messages.GetArrayLength() > 0)
+            if (list.RootElement.TryGetProperty("messages", out var messages))
             {
-                var id = messages[0].GetProperty("ID").GetString();
+                foreach (var message in messages.EnumerateArray())
+                {
+                    var subject = message.GetProperty("Subject").GetString() ?? string.Empty;
 
-                using var detail = JsonDocument.Parse(
-                    await _mailpitApi.GetStringAsync(new Uri($"/api/v1/message/{id}", UriKind.Relative)));
-                var root = detail.RootElement;
+                    if (subjectContains is not null && !subject.Contains(subjectContains, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
 
-                return new ReceivedEmail(
-                    root.GetProperty("Subject").GetString() ?? string.Empty,
-                    root.GetProperty("HTML").GetString() ?? string.Empty,
-                    root.GetProperty("Text").GetString() ?? string.Empty);
+                    var id = message.GetProperty("ID").GetString();
+
+                    using var detail = JsonDocument.Parse(
+                        await _mailpitApi.GetStringAsync(new Uri($"/api/v1/message/{id}", UriKind.Relative)));
+                    var root = detail.RootElement;
+
+                    return new ReceivedEmail(
+                        root.GetProperty("Subject").GetString() ?? string.Empty,
+                        root.GetProperty("HTML").GetString() ?? string.Empty,
+                        root.GetProperty("Text").GetString() ?? string.Empty);
+                }
             }
 
             await Task.Delay(100);

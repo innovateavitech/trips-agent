@@ -256,7 +256,12 @@ public sealed class CustomerBookingRecorderTests : IAsyncLifetime
         return new CustomerService(
             db,
             new CrmContext(db, tenant, new FixedClock(Now)),
-            new CrmReader(db, new SiteDomainDirectory(db, scope, new UncachedStorefrontHostCache(), new StorefrontOptions())));
+            new CrmReader(
+                db,
+                new SiteDomainDirectory(db, scope, new UncachedStorefrontHostCache(), new StorefrontOptions()),
+
+                // Nothing here reads a quote link; the key only has to be long enough to make one.
+                new QuoteLinks(new TripsAgent.Infrastructure.Identity.HmacTokenHasher(new byte[32]))));
     }
 
     /// <summary>A clock stopped at one instant, so every row a test writes carries the same time.</summary>

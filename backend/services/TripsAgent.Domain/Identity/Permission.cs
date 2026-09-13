@@ -90,6 +90,14 @@ public static class PermissionCodes
     public const string TeamManage = "team.manage";
     public const string SubAgentManage = "subagent.manage";
 
+    /// <summary>Upload, replace and submit the agency's KYB documents.</summary>
+    /// <remarks>
+    /// Owner-level, and deliberately not a Manager's: KYB is the agency's legal identity and the
+    /// submission is what Trips verifies it on, which puts it beside <c>billing.manage</c> rather
+    /// than beside the day-to-day work a Manager does (issue 172).
+    /// </remarks>
+    public const string KybSubmit = "kyb.submit";
+
     public const string ReportView = "report.view";
     public const string ReportExport = "report.export";
 
@@ -148,6 +156,10 @@ public static class PermissionCodes
         public const string Storefront = "Storefront";
         public const string Customers = "Customers";
         public const string Team = "Team";
+
+        /// <summary>The agency's own standing with Trips: what it is verified on.</summary>
+        public const string Agency = "Agency";
+
         public const string Reports = "Reports";
         public const string Platform = "Platform";
     }
@@ -191,6 +203,8 @@ public static class PermissionCodes
         (TeamInvite, Categories.Team, "Invite a colleague"),
         (TeamManage, Categories.Team, "Change colleagues' roles and access"),
         (SubAgentManage, Categories.Team, "Create and manage sub-agents"),
+
+        (KybSubmit, Categories.Agency, "Upload and submit the agency's KYB documents"),
 
         (ReportView, Categories.Reports, "See this agency's reports"),
         (ReportExport, Categories.Reports, "Export a report"),

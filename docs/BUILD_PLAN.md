@@ -21,7 +21,7 @@ Where each part of the system is designed — tables, jobs, the money path — i
 | **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (merged, #167); F2 Notifications and documents (merged, #167) | 66 of 72 |
 | **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog; F4 Storefront; F5 Customer commerce; F6 Group tours; F7 CRM — all merged, #168 | 75 of 75 |
 | **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (done); F10 Sub-agent network (done); F11 Analytics and reporting (done, less XLSX and scheduled reports); F12 Payouts, disputes and reconciliation (done); F13 Loyalty and reviews (flag shipped with F9) | 36 of 42 |
-| **PR 4** · Launch readiness | F14 Security and launch readiness (queued) | 0 of 50 |
+| **PR 4** · Launch readiness | F14 Security and launch readiness (in progress) | 13 of 50 |
 
 
 ## Where things stand
@@ -45,7 +45,9 @@ The first place to look when picking this up again. Update it whenever a branch 
 | `feat/M3-subagents` | 3 | F10 whole (#63): invitations, scopes, permission overrides and margin visibility, race-free wallet allowances, freeze and revoke, consolidated network reporting, and four console screens, with main merged in | pushed, done |
 | `feat/M3-analytics` | 3 | F11 (#67, #68): the analytics schema and read models, the five-minute and nightly rollups, the agency and platform dashboards with drill-down, synchronous and queued CSV reports, the export log, and the console screens. Merged with `main` after PR 2 | pushed, done |
 | `feat/M3-payouts` | 3 | F12 (#69): bank accounts verified through Paystack, payouts with Finance approval and a never-retried transfer (ADR-0008), chargebacks held and settled, daily gateway reconciliation; agent-console Payouts and Disputes screens | pushed, done |
-| — | 4 | F14 security and launch readiness (#71, #104-#110) | not started |
+| `feat/M4-load-and-pentest` | 4 | F14: the search load test against a WireMock stub, cold and warm, with the numbers written up (#109); the penetration-test scope, its seeded environment, and the internal adversarial pass that fixed six holes and opened six issues (#110) | pushed, done |
+| `feat/M4-data-protection` | 4 | F14: PII encryption, retention and NDPA erasure (#104-#106) | in flight |
+| `feat/M4-edge-hardening` | 4 | F14: headers, CORS, cookies, dependency and secret scanning (#107, #108) | in flight |
 
 **Next:** PR 2 is merged, and every issue it carried is closed. #18 is closed too, with the
 S3 adapter deferred until a cloud is chosen. All five `feat/M3-*` branches are merged into
@@ -129,6 +131,29 @@ Decided during the build:
 - **The agency export** is JSON rather than CSV: an agency is a tree — profile, staff, wallet, ledger, orders and their lines — and flattening it to one table would lose the shape somebody receiving it needs.
 - **The admin console's landing page** follows the account's permissions rather than being fixed. A Support account holds `agency.view` and nothing else, so a fixed home page sent them to a refusal at every sign-in.
 
+Decided for F14 (security and launch readiness):
+
+- **Expected peak is 20 searches a second.** Nobody had given a number, and the load test needs one:
+  300 active agencies at launch, three people signed in at each in the busy hour, each searching
+  about every 45 seconds. The test also runs a minute at twice that. Replace it the day the client
+  gives a real figure.
+- **The load test is run by hand, never in CI.** Four minutes of load on every pull request costs
+  four minutes and measures whatever else the runner was doing.
+- **Rate limiting is configured for a load test, not switched off.** One signed-in user stands in
+  for hundreds, so the profile raises the per-user search limit and the per-agency ceiling and
+  changes nothing else; the limiter still runs, and its Redis round trips are in every number.
+- **The supplier stub's latency is an assumption, written down.** Log-normal, median 1.5 s domestic
+  and 3 s international. The first week of real `supplier_api_calls.latency_ms` replaces it.
+- **The penetration test is commissioned after the MVP is finished, and it is a launch gate.**
+  Testing a system you know is unfinished buys a report you could have written. What this PR
+  delivers instead is the scope, the seeded environment and an internal adversarial pass whose
+  findings are fixed with tests.
+- **A finding is an issue, not a paragraph.** `module:security` plus a `severity:*` label, one per
+  finding, whether we found it or a vendor did.
+- **Two agencies are seeded, not one.** A sub-agent will not do for a tenant-isolation test — a
+  principal is meant to see some of its sub-agent's rows — so the seeder creates an unrelated
+  second agency, and a counter agent without `margin.view` beside the first agency's owner.
+
 Decided for F12 (payouts, disputes and reconciliation):
 
 - **Payouts are agent-initiated**, never scheduled. Minimum ₦5,000, and at most ₦5,000,000 requested per agency per day in the agency's own time zone, counting rejected requests too.
@@ -163,7 +188,7 @@ Each feature meets its criteria the simplest safe way. These wait until after th
   catalog is F3.
 - **F11:** CSV exports only, no XLSX; scheduled reports wait.
 - **F12:** scheduled automatic payouts; the Finance back-office screens for payout approval, disputes and reconciliation (the API exists; the screens belong in F8's admin console); forwarding uploaded evidence files to Paystack; posting gateway fees to the ledger; encrypting stored account numbers (F14).
-- **F14:** a written penetration-test scope and an internal checklist run, with the external test after launch; one recorded load-test run.
+- **F14:** the external penetration test itself — the scope, the seeded environment and an internal adversarial pass of our own are done, and the test and its retest are a launch gate rather than a box this PR can tick. One recorded load-test run, on a laptop, against a stubbed supplier.
 
 ## PR 1 · Milestone 1: the money path
 
@@ -906,7 +931,8 @@ FRD §1.2 lists both in scope with no use case written.
 
 ### F14 · Security and launch readiness
 
-**M3 · Queued** · 0 of 50 boxes ticked
+**M3 · In progress** · branch `feat/M4-load-and-pentest` (plus `feat/M4-data-protection` and
+`feat/M4-edge-hardening`) · 13 of 50 boxes ticked
 
 What must be true before real travellers and real money: encrypted traveller documents, retention and erasure, hardened headers and cookies, scanning in CI, a load test and a penetration test.
 
@@ -920,12 +946,12 @@ Pre-launch readiness.
 
 > The epic. Rate limiting (#102) and the RLS test suite (#103) are done.
 
-- [ ] Rate limiting per user, IP and endpoint.
-- [ ] RLS enforcement test suite.
-- [ ] PII encryption and retention policy.
-- [ ] NDPA erasure as anonymisation preserving financial and audit records.
-- [ ] Penetration test remediation.
-- [ ] Load test of the search endpoint at expected peak, cold and warm cache.
+- [x] Rate limiting per user, IP and endpoint. *(#102, merged in #165: per user, per address, per endpoint policy and a per-agency ceiling on top, all in Redis)*
+- [x] RLS enforcement test suite. *(#103, merged: the suite runs as `tripsagent_app`, which the policies bind)*
+- [ ] PII encryption and retention policy. *(the retention table, the purge job and its runbook are built (#105, #165); field encryption (#104) is on the `feat/M4-data-protection` branch)*
+- [ ] NDPA erasure as anonymisation preserving financial and audit records. *(#106, on the `feat/M4-data-protection` branch)*
+- [ ] Penetration test remediation. *(the **internal** adversarial pass is done — six holes found and fixed with tests, six issues opened: [docs/security/INTERNAL_ADVERSARIAL_PASS.md](security/INTERNAL_ADVERSARIAL_PASS.md). The external test has not been commissioned, and its findings are what this box is about)*
+- [x] Load test of the search endpoint at expected peak, cold and warm cache. *(#109: 20 searches a second, cold and warm, written up in [docs/LOAD_TEST_SEARCH.md](LOAD_TEST_SEARCH.md))*
 
 #### #104 · PII encryption at rest for traveller documents
 
@@ -999,12 +1025,12 @@ Pre-launch readiness.
 
 #### #110 · Penetration test — scope, execution and remediation
 
-- [ ] A written scope: which environments, which surfaces (agent console, storefront, API, admin
-- [ ] Non-production credentials and seeded test data prepared. The tester must not be able to
-- [ ] **Multi-tenancy is in scope explicitly.** Give the tester two agencies and ask them to
-- [ ] Findings land as **individual issues** labelled `module:security` with a severity label —
-- [ ] Critical and High remediated and retested before launch; Medium and Low triaged with the
-- [ ] A retest confirms the fixes actually landed
+- [x] A written scope: which environments, which surfaces, and what is explicitly **out** *([docs/security/PENETRATION_TEST_SCOPE.md](security/PENETRATION_TEST_SCOPE.md): agent console, admin console, storefront, public and authenticated API, webhooks, magic links, the Hangfire dashboard. Out: the real Trips Africa API, Paystack live, volumetric load, anything outside the named environment)*
+- [x] Non-production credentials and seeded test data prepared *([docs/security/TEST_ENVIRONMENT.md](security/TEST_ENVIRONMENT.md): a stubbed supplier, Paystack test mode, a mail catcher, the app role so row-level security is really on, and nine seeded accounts whose password grants nothing real)*
+- [x] **Multi-tenancy is in scope explicitly** *(the seeder now creates a second verified agency unrelated to the first, plus a counter agent with no `margin.view`; §3 of the scope tells the tester what to try)*
+- [x] Findings land as **individual issues** labelled `module:security` with a severity label *(the `severity:*` labels now exist; the internal pass opened #170-#175 that way. The external test's findings land the same way)*
+- [ ] Critical and High remediated and retested before launch; Medium and Low triaged with the decision recorded *(the internal pass's Critical and High are fixed with tests; the external test's are the ones this box waits for)*
+- [ ] A retest confirms the fixes actually landed *(**launch gate** — no external test has been run)*
 
 *Needs first:* #102, #103, #104, #105, #106, #107, #108, #109 (S1–S8)
 

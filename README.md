@@ -353,9 +353,6 @@ without rewriting features. Locally, Docker Compose stands in for all of it.
 
 ## 7. Local setup
 
-> **Not yet available** — the scaffold lands in Milestone 1, week 2. This section is the
-> contract for what it will do, and will be filled in with real output as it is built.
-
 ### You will need
 
 | Tool | Version | Check with |
@@ -374,13 +371,14 @@ git clone https://github.com/innovateavitech/trips-agent.git
 cd trips-agent
 
 # 2. Install the shared git hooks and check your tooling  <-- DO THIS FIRST
+#    Creates .env from the template, with freshly generated encryption keys
 ./scripts/setup.sh
 
-# 3. Fill in the secrets (ask the team lead)
-#    setup.sh creates .env for you from the template
+# 3. Fill in the third-party secrets (ask the team lead)
+#    Trips Africa staging and Paystack test mode. Everything else works as generated.
 $EDITOR .env
 
-# 4. Start Postgres, Redis, RabbitMQ, MinIO and Mailpit
+# 4. Start Postgres, Redis, RabbitMQ, MinIO, Mailpit and ClamAV
 docker compose up -d
 
 # 5. Install front-end dependencies
@@ -392,15 +390,34 @@ dotnet run --project services/TripsAgent.Api -- migrate
 dotnet run --project services/TripsAgent.Api -- seed
 cd ..
 
-# 7. Start everything
-cd frontend && pnpm dev
+# 7. Start everything — three terminals, because they are three processes
+cd backend  && dotnet watch --project services/TripsAgent.Api      # the API, on :5002
+cd backend  && dotnet watch --project services/TripsAgent.Worker   # jobs and events
+cd frontend && pnpm dev                                            # both consoles and the storefront
 ```
+
+**The Worker is not optional.** Bookings, ticketing, emails, billing and payouts all run there,
+not in the API. Without it the consoles load, but a booking sits waiting forever and no email
+arrives. `pnpm dev` starts only the three front ends.
+
+**If you already had a `.env` from before September 2026**, `setup.sh` leaves it alone and it has
+no field-encryption keys. Without them, anything that stores a passport number or a bank account
+refuses to work. Copy the `Security__FieldEncryption__*` lines from `.env.example` into `.env`,
+and fill each empty key, and `Security__SecretEncryptionKey` if it is empty, with the output of
+`openssl rand -base64 32`.
+
+**No backend at all?** `cd frontend && pnpm demo` runs the agent console on stand-in data, which
+is enough for a walkthrough.
 
 > **Step 2 is not optional.** It installs the git hooks that stop you pushing to `main`,
 > committing a secret, or writing a malformed commit message. Without it you get none of
 > those safety nets. It is safe to re-run at any time.
 
-Then open <http://localhost:5173> and log in with the test agent from §9.
+Then open <http://localhost:5173> and sign in with the test agent from §9.
+
+**The storefront needs a site first.** The seed creates none: sign in as the test agent, add a
+product, publish the website, then open <http://lagos-travel.localhost:3000>. Browsers resolve
+`*.localhost` to your own machine, so each agency's subdomain works with no hosts-file editing.
 
 ### When it goes wrong
 
@@ -408,7 +425,9 @@ Then open <http://localhost:5173> and log in with the test agent from §9.
 |---|---|---|
 | `Cannot connect to the Docker daemon` | Docker Desktop is not running | Start Docker Desktop, wait for the whale icon to settle, retry |
 | `port 5432 is already allocated` | Another Postgres is running | `docker ps` to find it, or change `POSTGRES_PORT` in `.env` |
-| `relation "agencies" does not exist` | Migrations were not applied | Re-run step 5 |
+| `relation "agencies" does not exist` | Migrations were not applied | Re-run step 6 |
+| A booking never leaves "pending", and no email arrives | The Worker is not running | Start it — step 7 |
+| Saving a traveller or a bank account fails, naming `Security__FieldEncryption` | `.env` predates the encryption keys | See "If you already had a `.env`" above |
 | API starts, front end shows 401 on everything | `.env` is missing or has no JWT secret | Re-do step 2 |
 | TypeScript errors in `frontend/packages/api-client` | The generated client is stale | `pnpm generate:api` |
 | `pnpm: command not found` | pnpm not installed | `npm install -g pnpm` |
@@ -428,7 +447,7 @@ Commands are listed with the directory they run from. `dotnet` lives in `backend
 
 | What | Where | Command |
 |---|---|---|
-| Everything at once | `frontend/` | `pnpm dev` |
+| All three front ends | `frontend/` | `pnpm dev` *(not the API or the Worker — start those too)* |
 | API only | `backend/` | `dotnet watch --project services/TripsAgent.Api` |
 | Background worker | `backend/` | `dotnet watch --project services/TripsAgent.Worker` |
 | Agent console only | `frontend/` | `pnpm --filter agent-console dev` |
@@ -485,9 +504,13 @@ only ever exists on a developer's machine. Real secrets live in `.env`, which is
 |---|---|---|
 | Trips Super Admin | :5174 | `admin@tripsagent.example.com` |
 | Trips Operations | :5174 | `ops@tripsagent.example.com` |
+| Trips Support *(read-only)* | :5174 | `support@tripsagent.example.com` |
+| Trips Finance *(approves payouts)* | :5174 | `finance@tripsagent.example.com` |
 | Verified Agent | :5173 | `owner@lagostravel.example.com` |
+| Counter agent at the same agency *(cannot see net rates or margin)* | :5173 | `agent@lagostravel.example.com` |
 | Sub-Agent | :5173 | `owner@ikejabranch.example.com` |
 | Pending-verification Agent | :5173 | `owner@pendingtravel.example.com` |
+| An unrelated agency *(for testing that agencies cannot see each other)* | :5173 | `owner@kanojourneys.example.com` |
 
 The addresses are subdomains of `example.com`, reserved by RFC 2606 so mail to them can never
 reach a real person. They are not `.test`, which would be equally safe but which **Paystack's
@@ -497,8 +520,10 @@ The seeder stops if its principal agency already exists, so it is safe to re-run
 retrofit changes. To pick up new seed data, recreate the database and migrate again.
 
 Seeded data is a principal agency, a sub-agent beneath it (so hierarchy queries have something
-to return) and a third agency still awaiting KYB — enough to exercise the onboarding, review and
-wallet screens without clicking through setup each time.
+to return), a third agency still awaiting KYB, and a fourth agency unrelated to the rest —
+enough to exercise onboarding, review, the wallet and tenant isolation without clicking through
+setup each time. It creates no products, storefront site or subscription plan: add those from
+the consoles.
 
 **Sandboxes:** Trips Africa staging and Paystack test mode. Ask the team lead for keys.
 **Never commit them.**

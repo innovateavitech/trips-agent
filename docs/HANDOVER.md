@@ -30,6 +30,10 @@ optional: bookings, emails, billing and payouts all run there. §9 lists the see
 
 These are not code. Each needs a person outside the codebase.
 
+This section is their tracker. The issues that described them — #110 and #71 for the penetration
+test, #108 for secret scanning — were closed once everything inside the codebase was done, each
+with a comment pointing here. Reopen #110 to track the external test once it is commissioned.
+
 1. **External penetration test and its retest** (#110, #71). Commission a tester. The written
    scope is [security/PENETRATION_TEST_SCOPE.md](security/PENETRATION_TEST_SCOPE.md), and the
    recipe for a non-production environment with credentials that grant nothing real is

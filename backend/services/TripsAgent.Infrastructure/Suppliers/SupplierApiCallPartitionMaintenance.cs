@@ -36,6 +36,17 @@ public sealed class SupplierApiCallOptions
     /// </summary>
     public int QueueCapacity { get; set; } = 5_000;
 
+    /// <summary>
+    /// True while expired partitions are reported rather than dropped (issue 105).
+    /// </summary>
+    /// <remarks>
+    /// Dropping a partition destroys a month of call history in one statement, and this job runs
+    /// unattended. True until somebody has read a few runs' worth of "this is what I would drop" — the
+    /// same default, and the same reason, as <c>DataRetention__DryRun</c>. Creating partitions is never
+    /// held back by it: without next month's partition, every supplier call fails to record.
+    /// </remarks>
+    public bool DryRun { get; set; } = true;
+
     /// <summary>Rows written per insert. Larger batches mean fewer round trips while a backlog clears.</summary>
     public int BatchSize { get; set; } = 100;
 
@@ -82,12 +93,26 @@ public sealed class SupplierApiCallPartitionMaintenance(
             ensured.Add(name);
         }
 
+        // Read first, always: in a dry run this is the whole job, and in a live run it is what the drop
+        // then works from — so the report and the deed cannot disagree.
+        var expired = await context.Database
+            .SqlQuery<string>(
+                $"""
+                 SELECT * FROM supplier.expired_supplier_api_call_partitions({settings.RetentionMonths}) AS "Value"
+                 """)
+            .ToListAsync(cancellationToken);
+
+        if (settings.DryRun)
+        {
+            return new SupplierApiCallMaintenanceResult(ensured, expired, 0, settings.RetentionMonths, DryRun: true);
+        }
+
         var dropped = await context.Database
             .SqlQuery<int>(
                 $"SELECT supplier.drop_expired_supplier_api_call_partitions({settings.RetentionMonths}) AS \"Value\"")
             .SingleAsync(cancellationToken);
 
-        return new SupplierApiCallMaintenanceResult(ensured, dropped, settings.RetentionMonths);
+        return new SupplierApiCallMaintenanceResult(ensured, expired, dropped, settings.RetentionMonths, DryRun: false);
     }
 }
 

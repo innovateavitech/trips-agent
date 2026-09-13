@@ -4,12 +4,17 @@ How long every table keeps its rows, why, and what enforces it. Issue
 [#105](https://github.com/innovateavitech/trips-agent/issues/105), part of the security epic
 ([docs/epics/0071-security-hardening.md](epics/0071-security-hardening.md)).
 
-> **Status: draft, awaiting review.** The acceptance criterion asks for this schedule to be reviewed
-> by whoever answers **open question 26** in the
+> **Status: written, and awaiting counsel's review.** The acceptance criterion asks for this schedule
+> to be reviewed by whoever answers **open question 26** in the
 > [delivery plan](ARCHITECTURE_AND_DELIVERY_PLAN.md) — NDPA 2023 erasure against the seven-year
-> retention of financial and audit records. That answer needs Nigerian legal counsel, and it has not
-> been given. Until it has, every period below is an engineering proposal, and the purge job runs in
-> **dry-run mode**: it records what it would delete and deletes nothing.
+> retention of financial and audit records. That answer needs Nigerian legal counsel. It is
+> **outstanding**: the review is the client's to arrange, it is not engineering work, and nothing
+> below waits on it. The build plan's decision 26 is what the code follows in the meantime — erasure
+> as anonymisation ([#106](https://github.com/innovateavitech/trips-agent/issues/106),
+> [ADR-0009](adr/0009-ndpa-erasure-as-anonymisation.md)) — and both jobs that delete anything run in
+> **dry-run mode** until somebody with the authority to say so turns them off: the purge job records
+> what it would delete and deletes nothing, and the supplier call log's partition job reports the
+> months it would drop and drops none.
 
 ---
 
@@ -71,7 +76,7 @@ The source of truth is `RetentionCatalogue.Tables` in
 | `orders.orders` | Yes (billing details) | At least 7 years | Protected | The sale: a financial and tax record |
 | `orders.order_lines` | No | At least 7 years | Protected | Net, markup and tax frozen at purchase; every revenue report reads these |
 | `orders.order_status_history` | No | At least 7 years | Protected | How each order moved and who moved it. Append-only in the database too |
-| `orders.order_travellers` | Yes | Row: 7 years. Passport number and expiry: cleared 90 days after the trip | Anonymised | Who travelled belongs to the sale; their passport number does not, once the trip is over |
+| `orders.order_travellers` | Yes | Row: 7 years. Passport number and expiry: cleared 90 days after the trip, or 365 days after the sale for a product with no travel date | Anonymised | Who travelled belongs to the sale; their passport number does not, once the trip is over |
 | `orders.carts` | Some (guest session token) | 30 days after expiry, if never converted | Purged | A cart that became nothing records nothing. Converted carts stay with their order |
 | `orders.cart_items` | No | With their cart | Purged | Deleted by the cart's `ON DELETE CASCADE` |
 | `orders.booking_access_tokens` | No | With their order | Kept | The links travellers manage their bookings with; only the hash of each secret is stored, so the row identifies nobody |
@@ -179,7 +184,7 @@ order needs. None of it is a traveller's personal data, so there is nothing to a
 
 | Table | Personal data | Kept for | Treatment | Why |
 |---|---|---|---|---|
-| `identity.users` | Yes | While the account exists | Kept | Account holders. Erasing a person is [#106](https://github.com/innovateavitech/trips-agent/issues/106), blocked on open question 26 |
+| `identity.users` | Yes | While the account exists | Kept | Account holders. Erasing a traveller or a customer is [#106](https://github.com/innovateavitech/trips-agent/issues/106); an agency's staff account is not in its scope |
 | `identity.roles` | No | While in use | Kept | Configuration |
 | `identity.permissions` | No | While in use | Kept | Reference data |
 | `identity.role_permissions` | No | While in use | Kept | Configuration |
@@ -299,14 +304,33 @@ anonymise rule only matches rows that still hold something to clear.
 (03:15 UTC, `SupplierApiCalls__RetentionMonths`, default 3). It drops whole monthly partitions,
 which is how 90-day hot retention is enforced without deleting row by row. This job does not
 duplicate it: each run reports how many rows are past the window, and a live run calls the same
-maintenance. That job predates this one and never had a dry run, so it keeps dropping expired
-partitions on its own schedule whatever `DataRetention__DryRun` says.
+maintenance.
 
-**Travel documents** are counted from the end of the trip: the last flight arrival, or the last bus
-arrival (its departure when the operator gives none), on the offer the booking was made from.
+**That job now has a dry run of its own** (`SupplierApiCalls__DryRun`, true by default). A dropped
+partition is a month of call history gone in one statement, from a job that runs unattended, so it
+lists the months it would drop and drops none until someone switches it off deliberately. The list
+and the drop come from the same database function — `supplier.expired_supplier_api_call_partitions`
+— so the report and the deed cannot disagree. **Creating** partitions is never held back by the dry
+run: without next month's partition, every supplier call fails to record. A retention run's audit
+row says what actually happened, so a live `data-retention` run against a dry-run partition job is
+recorded as `retention.dry_run`.
+
+**Travel documents** are counted from the end of the trip, whatever kind of trip it was:
+
+| What was sold | The trip ends |
+|---|---|
+| A flight | The last flight arrival on the offer the booking was made from |
+| A bus | The last bus arrival, or its departure when the operator gives no arrival |
+| A tour, package or group departure with a dated departure | The departure date plus the product's duration (one day when it has none), read through the pax manifest |
+| A visa, or a tour sold without a dated departure | Nothing: there is no travel date. Counted from the sale instead, over `DataRetention__UndatedTravelDocumentDays` (365 days) |
+| A flight or bus whose dates we never received | Never. Unknown means keep |
+
 `supplier.passenger_documents` rows are deleted; in `orders.order_travellers` the passport number
-and expiry are cleared and the traveller's name stays with the order. A booking whose trip dates we
-do not have is kept until we do.
+and expiry are cleared and the traveller's name stays with the order. The undated window is
+deliberately much longer than the 90 days a finished trip gets: a visa is applied for, refused,
+appealed and applied for again, and the date of sale is a far weaker signal than a trip that has
+demonstrably ended. It is only applied to the agency's own catalog products (tour, package, visa,
+group departure) — never to a flight or a bus, where a missing date means the data never arrived.
 
 ### Settings
 
@@ -322,6 +346,8 @@ Windows are whole days (`.env.example` lists them all):
 | `DataRetention__NotificationDays` | 365 | Notifications |
 | `DataRetention__ExpiredCartDays` | 30 | Unconverted carts, after expiry |
 | `DataRetention__TravelDocumentDays` | 90 | Passport and visa details, after the trip |
+| `DataRetention__UndatedTravelDocumentDays` | 365 | The same, after the sale, for a product with no travel date |
+| `SupplierApiCalls__DryRun` | `true` | The supplier call log's partitions: report, do not drop |
 
 A window under one day stops the Worker starting, rather than failing quietly at 03:10.
 
@@ -333,8 +359,9 @@ Honest gaps, so nobody assumes they are handled:
 
 - **Deleting financial records after seven years.** Nothing does, and nothing should until open
   question 26 is answered. "At least 7 years" above means exactly that.
-- **Erasure of a person on request** (NDPA). That is [#106](https://github.com/innovateavitech/trips-agent/issues/106),
-  blocked on the same question. This job only clears travel documents after the trip.
+- **Counsel's review of this schedule.** Outstanding, and recorded as outstanding: open question 26
+  is the client's to answer. Every period here is an engineering proposal until they do, which is
+  why both jobs stay in dry run.
 - **Supplier search tables.** Proposed periods are above; enforcement lands with the search work,
   which owns those tables.
 - **Finished report files.** A report's CSV lives in blob storage under `reports/`, and nothing

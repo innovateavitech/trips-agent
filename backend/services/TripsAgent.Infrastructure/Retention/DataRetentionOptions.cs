@@ -47,6 +47,18 @@ public sealed class DataRetentionOptions
     /// <summary>Passport and visa details, from the end of the trip they were collected for.</summary>
     public int TravelDocumentDays { get; set; } = 90;
 
+    /// <summary>
+    /// Passport details on a product with no travel date of its own — a visa, or a tour sold without a
+    /// dated departure — counted from when the order was placed instead.
+    /// </summary>
+    /// <remarks>
+    /// A year, because that is the outside of how long these take: a visa is applied for, refused,
+    /// appealed and applied for again, and an undated tour is booked months before it is taken. Counting
+    /// from the sale is the only date we have, and a long window is the safe way to use a weak one.
+    /// Flights and buses are never counted this way — for those, an unknown trip date means keep.
+    /// </remarks>
+    public int UndatedTravelDocumentDays { get; set; } = 365;
+
     /// <summary>Every window, for validation.</summary>
     internal IEnumerable<int> Windows() =>
     [
@@ -57,5 +69,6 @@ public sealed class DataRetentionOptions
         NotificationDays,
         ExpiredCartDays,
         TravelDocumentDays,
+        UndatedTravelDocumentDays,
     ];
 }

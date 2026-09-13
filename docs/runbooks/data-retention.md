@@ -3,7 +3,10 @@
 The `data-retention` recurring job (Worker, Hangfire, 03:10 UTC daily) applies
 [DATA_RETENTION.md](../DATA_RETENTION.md): it deletes operational rows past their window, clears
 passport details after a trip, and reports on the supplier call log. It is a **dry run** until
-`DataRetention__DryRun=false` is set on the Worker.
+`DataRetention__DryRun=false` is set on the Worker. The supplier call log's partition job has a dry
+run of its own, `SupplierApiCalls__DryRun`, also true by default — so a live retention run can still
+report expired partitions without dropping them, and the audit row says `retention.dry_run` when it
+did.
 
 ## Symptom
 

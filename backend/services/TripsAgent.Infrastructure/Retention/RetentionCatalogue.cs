@@ -133,7 +133,9 @@ public static partial class RetentionCatalogue
         new("orders.order_status_history", RetentionTreatment.Protected, SevenYears,
             "How each order moved and who moved it. Append-only in the database as well."),
         new("orders.order_travellers", RetentionTreatment.Anonymised,
-            "Passport number and expiry cleared 90 days after the trip (DataRetention__TravelDocumentDays). The row stays 7 years",
+            "Passport number and expiry cleared 90 days after the trip — the flight, the bus or the departure "
+            + "(DataRetention__TravelDocumentDays) — or 365 days after the sale for a visa or an undated tour "
+            + "(DataRetention__UndatedTravelDocumentDays). The row stays 7 years",
             "Who travelled belongs to the sale; their passport number does not, once the trip is over."),
         new("orders.carts", RetentionTreatment.Purged,
             "30 days after expiry, if never converted to an order (DataRetention__ExpiredCartDays)",
@@ -415,18 +417,56 @@ public static partial class RetentionCatalogue
          """;
 
     /// <summary>
-    /// A traveller still holding document details whose order line's trip has ended. The first clause is
-    /// what makes a second run find nothing: a cleared row no longer matches.
+    /// "The departure ended before the cutoff", for an order line sold as a seat on a dated departure.
     /// </summary>
-    private static readonly string TravellerDocumentsPastTrip =
+    /// <remarks>
+    /// A tour's dates are the departure's date plus the product's duration; a product with no duration is
+    /// taken as a single day. The manifest is what ties a traveller to the departure they are booked on.
+    /// </remarks>
+    private const string DepartureEndedBeforeCutoff =
+        """
+        (SELECT max((d.departure_date + coalesce(p.duration_days, 1))::timestamp AT TIME ZONE 'UTC')
+           FROM catalog.pax_manifests m
+           JOIN catalog.departures d ON d.id = m.departure_id
+           LEFT JOIN catalog.products p ON p.id = d.product_id
+          WHERE m.order_line_id = l.id) < @cutoff
+        """;
+
+    /// <summary>
+    /// A traveller still holding document details whose trip is over: a flight or bus that has landed, a
+    /// departure that has run, or — for a product that never had a date — a sale old enough that it cannot
+    /// still be in progress.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The first clause is what makes a second run find nothing: a cleared row no longer matches.
+    /// </para>
+    /// <para>
+    /// The third clause is for the catalog products the supplier knows nothing about. A visa has no travel
+    /// date at all, and a tour sold without a dated departure has none either, so "the trip ended" cannot be
+    /// asked of them. They are counted from the sale instead, over a much longer window
+    /// (<c>DataRetention__UndatedTravelDocumentDays</c>). Flights and buses are deliberately not included:
+    /// for those a missing date means the data never arrived, and unknown means keep.
+    /// </para>
+    /// </remarks>
+    private static string TravellerDocumentsPastTrip(int undatedDays, int travelDocumentDays) =>
         $"""
-         (t.passport_number_encrypted IS NOT NULL OR t.passport_expiry IS NOT NULL)
+         (t.passport_number_encrypted IS NOT NULL OR t.passport_expiry_encrypted IS NOT NULL)
          AND EXISTS (
              SELECT 1
                FROM orders.order_lines l
                LEFT JOIN supplier.supplier_bookings b ON b.id = l.supplier_booking_id
               WHERE l.id = t.order_line_id
-                AND {TripEndedBeforeCutoff("coalesce(b.supplier_offer_id, l.supplier_offer_id)")})
+                AND (
+                    {TripEndedBeforeCutoff("coalesce(b.supplier_offer_id, l.supplier_offer_id)")}
+                    OR {DepartureEndedBeforeCutoff}
+                    OR (
+                        l.item_type IN ('{nameof(OrderLineItemType.Tour)}', '{nameof(OrderLineItemType.Visa)}',
+                                        '{nameof(OrderLineItemType.Package)}', '{nameof(OrderLineItemType.GroupDeparture)}')
+                        AND NOT EXISTS (SELECT 1 FROM catalog.pax_manifests m WHERE m.order_line_id = l.id)
+                        AND l.placed_at < @cutoff - interval '{undatedDays - travelDocumentDays} days'
+                    )
+                ))
          """;
 
     /// <summary>The rules the purge job runs, with the windows from <paramref name="options"/>.</summary>
@@ -463,8 +503,8 @@ public static partial class RetentionCatalogue
             new("supplier.passenger_documents", RetentionAction.Delete, Days(options.TravelDocumentDays),
                 PassengerTripEnded),
             new("orders.order_travellers", RetentionAction.Anonymise, Days(options.TravelDocumentDays),
-                TravellerDocumentsPastTrip,
-                Assignments: "passport_number_encrypted = NULL, passport_expiry = NULL, updated_at = now()"),
+                TravellerDocumentsPastTrip(options.UndatedTravelDocumentDays, options.TravelDocumentDays),
+                Assignments: "passport_number_encrypted = NULL, passport_expiry_encrypted = NULL, updated_at = now()"),
         ];
     }
 

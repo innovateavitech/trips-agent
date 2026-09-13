@@ -173,7 +173,8 @@ public sealed class PostgresFixture : IAsyncLifetime
         bool pooled = false,
         bool retryOnFailure = false,
         IReadOnlyList<Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor>? interceptors = null,
-        IFieldEncryptor? fieldEncryptor = null)
+        IFieldEncryptor? fieldEncryptor = null,
+        Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null)
     {
         // As the application role by default, so every test acting as a tenant runs under row-level
         // security exactly as production does (ADR-0006). A flow that only works as a superuser
@@ -213,6 +214,13 @@ public sealed class PostgresFixture : IAsyncLifetime
             })
             .UseSnakeCaseNamingConvention()
             .UseFieldEncryption(fieldEncryptor ?? TestFieldEncryption.Encryptor);
+
+        if (loggerFactory is not null)
+        {
+            // With parameter values in the log, which production never has: a test about what could
+            // leak has to look at the worst case, not the configured one.
+            optionsBuilder.UseLoggerFactory(loggerFactory).EnableSensitiveDataLogging();
+        }
 
         if (interceptors is { Count: > 0 })
         {

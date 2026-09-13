@@ -4,6 +4,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using TripsAgent.Application.Security;
@@ -103,6 +104,27 @@ public sealed class FieldEncryptionTests
         // Not even the last four digits, which the name-based policy would otherwise have kept.
         states.Should().OnlyContain(state => !state.Contains("6789", StringComparison.Ordinal));
         states.Should().Contain(state => state.Contains("[redacted]", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Nothing_in_the_logs_carries_a_passport_number_even_with_parameters_logged()
+    {
+        await using var world = await WorldAsync();
+
+        var log = new CapturingLoggerProvider();
+        using var factory = LoggerFactory.Create(builder => builder.AddProvider(log).SetMinimumLevel(LogLevel.Trace));
+
+        await using (var logged = _postgres.Connect(world.Database, world.Tenant, world.Scope, loggerFactory: factory))
+        {
+            var travellerId = await world.AddTravellerAsync(Passport, new DateOnly(2031, 5, 17), logged);
+
+            // Reading it back too: the value comes out of the database and into a log-heavy path.
+            (await logged.OrderTravellers.SingleAsync(t => t.Id == travellerId)).PassportNumber.Should().Be(Passport);
+        }
+
+        log.Messages.Should().NotBeEmpty("the context logs its commands, so the test is looking at something");
+        log.Messages.Should().OnlyContain(message => !message.Contains(Passport, StringComparison.Ordinal));
+        log.Messages.Should().OnlyContain(message => !message.Contains("2031-05-17", StringComparison.Ordinal));
     }
 
     // ------------------------------------------------------------------ the rows that already existed
@@ -367,8 +389,9 @@ public sealed class FieldEncryptionTests
             tests.ColumnAsync<T>(Database, table, column, id);
 
         /// <summary>An order with one traveller on it, through the domain.</summary>
-        public async Task<Guid> AddTravellerAsync(string passportNumber, DateOnly expiry)
+        public async Task<Guid> AddTravellerAsync(string passportNumber, DateOnly expiry, AppDbContext? context = null)
         {
+            var db = context ?? Db;
             var now = DateTimeOffset.UtcNow;
 
             var rule = MarkupRule.Create(AgencyId, new MarkupRuleTerms
@@ -379,8 +402,8 @@ public sealed class FieldEncryptionTests
                 PercentBasisPoints = 1_000,
                 EffectiveFrom = now.AddDays(-1),
             });
-            Db.MarkupRules.Add(rule);
-            await Db.SaveChangesAsync();
+            db.MarkupRules.Add(rule);
+            await db.SaveChangesAsync();
 
             var quote = PriceQuote.Record(
                 AgencyId,
@@ -390,23 +413,23 @@ public sealed class FieldEncryptionTests
                     "NGN", new MarkupRuleDefinition(rule.Id, AgencyId, rule.Terms), false, 750, 0),
                 now,
                 TimeSpan.FromMinutes(30));
-            Db.PriceQuotes.Add(quote);
-            await Db.SaveChangesAsync();
+            db.PriceQuotes.Add(quote);
+            await db.SaveChangesAsync();
 
             var line = OrderLine.FromQuote(quote, "LOS → ABV, Air Peace", """{"adults":1}""", now);
             var order = Order.Place(
                 AgencyId, $"ORD-2026-{Random.Shared.Next(100_000, 999_999)}", "NGN",
                 BuyerType.AgentAssisted, OrderChannel.Console, null, [line], now);
 
-            Db.Orders.Add(order);
-            await Db.SaveChangesAsync();
+            db.Orders.Add(order);
+            await db.SaveChangesAsync();
 
             var traveller = OrderTraveller.Record(
                 AgencyId, line.Id, TravellerType.Adult, "Ngozi", "Adeyemi",
                 passportNumber: passportNumber, passportExpiry: expiry);
 
-            Db.OrderTravellers.Add(traveller);
-            await Db.SaveChangesAsync();
+            db.OrderTravellers.Add(traveller);
+            await db.SaveChangesAsync();
 
             return traveller.Id;
         }
@@ -439,6 +462,35 @@ public sealed class FieldEncryptionTests
             await Db.DisposeAsync();
             await Owner.DisposeAsync();
             await audited.DisposeAsync();
+        }
+    }
+
+    /// <summary>Keeps every line anything logged, so a test can look for what should not be in them.</summary>
+    private sealed class CapturingLoggerProvider : ILoggerProvider
+    {
+        private readonly System.Collections.Concurrent.ConcurrentBag<string> _messages = [];
+
+        public IReadOnlyCollection<string> Messages => [.. _messages];
+
+        public ILogger CreateLogger(string categoryName) => new CapturingLogger(_messages);
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class CapturingLogger(System.Collections.Concurrent.ConcurrentBag<string> messages) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                ArgumentNullException.ThrowIfNull(formatter);
+                messages.Add(formatter(state, exception) + exception);
+            }
         }
     }
 }

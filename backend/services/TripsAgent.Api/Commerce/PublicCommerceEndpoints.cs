@@ -159,7 +159,9 @@ public static class PublicCommerceEndpoints
             {
                 await SettleQuietlyAsync(http, payments, cancellationToken);
 
-                return ToResult(await checkout.StatusAsync(HostOf(http), reference, cancellationToken));
+                // The cart session goes with it: an order number is something anyone can count up
+                // to, and this answer carries the manage-booking link (issue 110).
+                return ToResult(await checkout.StatusAsync(HostOf(http), reference, SessionOf(http), cancellationToken));
             })
             .WithName("GetCheckoutStatus")
             .Produces<CheckoutStatusResponse>()

@@ -4,6 +4,7 @@ using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Contracts.Identity;
 using TripsAgent.Domain.Identity;
+using TripsAgent.Domain.Tenancy;
 
 namespace TripsAgent.Application.Identity.Authentication;
 
@@ -118,6 +119,23 @@ public sealed partial class RefreshTokenHandler
             presented.Revoke(now);
             await _db.SaveChangesAsync(cancellationToken);
             return new RefreshOutcome.Rejected();
+        }
+
+        // And the agency's standing, for the same reason the sign-in path checks it: terminating an
+        // agency, or revoking a sub-agent, leaves its people Active (issue 110).
+        if (user.AgencyId is { } agencyId)
+        {
+            var agencyStatus = await _db.Agencies
+                .Where(agency => agency.Id == agencyId)
+                .Select(agency => agency.Status)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (!AgencyAccess.CanSignIn(agencyStatus))
+            {
+                presented.Revoke(now);
+                await _db.SaveChangesAsync(cancellationToken);
+                return new RefreshOutcome.Rejected();
+            }
         }
 
         var pair = await _tokens.CreateAsync(user, now, ipAddress, cancellationToken);

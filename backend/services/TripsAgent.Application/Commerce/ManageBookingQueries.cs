@@ -57,7 +57,9 @@ public sealed class ManageBookingQueries
         string? secret,
         CancellationToken cancellationToken = default)
     {
-        var agency = await _storefront.EnterAsync(host, cancellationToken);
+        // A traveller coming back to a booking they already hold: served while the agency is suspended,
+        // and not once it is terminated (decision 14).
+        var agency = await _storefront.EnterAsync(host, StorefrontVisit.ExistingBooking, cancellationToken);
 
         if (agency is null)
         {

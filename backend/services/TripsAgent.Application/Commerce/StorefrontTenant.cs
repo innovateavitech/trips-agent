@@ -2,12 +2,27 @@ using Microsoft.EntityFrameworkCore;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Storefront;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Domain.Tenancy;
 
 namespace TripsAgent.Application.Commerce;
 
 /// <summary>The agency a storefront request turned out to be for, and the facts its answers need.</summary>
 /// <param name="Currency">What the agency sells in. One currency per agency (decision 17).</param>
 public sealed record StorefrontAgency(Guid Id, string Name, string Currency, string TimeZone, DateTimeOffset Now);
+
+/// <summary>What a storefront request is here to do, which decides what a suspended agency may serve.</summary>
+/// <remarks>
+/// Decision 14: a suspended agency's shop goes offline, but the people who already bought from it
+/// keep their bookings and their documents. A request has to say which of the two it is.
+/// </remarks>
+public enum StorefrontVisit
+{
+    /// <summary>Browsing, filling a cart, checking out. Refused unless the agency may sell.</summary>
+    Shopping = 0,
+
+    /// <summary>A traveller returning to a booking they already hold. Refused only once terminated.</summary>
+    ExistingBooking = 1,
+}
 
 /// <summary>
 /// Turns the host name a traveller's browser used into the agency whose shop answers on it, and puts
@@ -50,7 +65,14 @@ public sealed class StorefrontTenant
     /// The agency whose storefront answers on <paramref name="host"/>, with this request moved
     /// inside it. Null when no shop answers there.
     /// </summary>
-    public async Task<StorefrontAgency?> EnterAsync(string? host, CancellationToken cancellationToken = default)
+    /// <param name="visit">
+    /// Shopping, or a traveller coming back to a booking they already hold. A suspended agency
+    /// serves the second and not the first (decision 14).
+    /// </param>
+    public async Task<StorefrontAgency?> EnterAsync(
+        string? host,
+        StorefrontVisit visit = StorefrontVisit.Shopping,
+        CancellationToken cancellationToken = default)
     {
         var tidy = NormaliseHost(host);
 
@@ -70,13 +92,34 @@ public sealed class StorefrontTenant
 
         var agency = await _db.Agencies.AsNoTracking()
             .Where(candidate => candidate.Id == agencyId.Value)
-            .Select(candidate => new { candidate.LegalName, candidate.TradingName, candidate.BaseCurrency, candidate.Timezone })
+            .Select(candidate => new
+            {
+                candidate.LegalName,
+                candidate.TradingName,
+                candidate.BaseCurrency,
+                candidate.Timezone,
+                candidate.Status,
+            })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (agency is null)
         {
             // The directory named an agency the tenant filter cannot see. Treated as "no shop here"
             // rather than as an error: an anonymous caller learns nothing either way.
+            return null;
+        }
+
+        // Decision 14, applied where every storefront request passes rather than on the page alone.
+        // The site said "temporarily unavailable" while the cart, the checkout and the departures
+        // API underneath went on selling to anyone who called them directly — a suspended agency
+        // could still take a traveller's money. Found in the internal adversarial pass before the
+        // penetration test (issue 110). The same "no shop here" answer, so nothing is disclosed.
+        var mayServe = visit == StorefrontVisit.ExistingBooking
+            ? AgencyAccess.CanServeExistingTravellers(agency.Status)
+            : AgencyAccess.CanServeStorefront(agency.Status);
+
+        if (!mayServe)
+        {
             return null;
         }
 

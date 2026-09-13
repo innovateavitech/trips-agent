@@ -94,6 +94,7 @@ LedgerIntegrityAuditSchedule.Register(recurringJobs);
 // that timed out is ever resolved, because it is never sent again (ADR-0008).
 PayoutSenderSchedule.Register(recurringJobs);
 PayoutStatusPollSchedule.Register(recurringJobs);
+DisputeDeadlineSchedule.Register(recurringJobs);
 
 // Keeps the supplier call log's monthly partitions ahead of the calendar. Without it every supplier
 // call fails to record once the prepared months run out.

@@ -564,6 +564,9 @@ public class WebhookIdempotencyTests
         /// <summary>Every alert the handlers raised, in order.</summary>
         public List<PlatformAlert> Alerts { get; } = [];
 
+        /// <summary>Records every dispute the webhook path hands over.</summary>
+        public RecordingDisputeSink Disputes { get; } = new();
+
         public string Reference { get; }
 
         public PaymentWebhookHandler Handler { get; }
@@ -635,6 +638,7 @@ public class WebhookIdempotencyTests
                 // never taken. A stub rather than the real service, which would drag the whole
                 // checkout into a test about webhook idempotency.
                 new NoOrderPayments(),
+                Disputes,
                 new RecordingAlerter(Alerts),
                 new PostgresUniqueViolationDetector(),
                 Clock,

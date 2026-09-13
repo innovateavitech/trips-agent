@@ -34,6 +34,17 @@ public static class DependencyInjection
             // than creating a second one, and verify is a read.
             .AddStandardResilienceHandler();
 
+        // Disputes and settlements (issue 69). Reads, plus evidence filing that the gateway accepts
+        // again until the deadline — so, unlike transfers, these may be retried.
+        services.AddHttpClient<IGatewayBackOffice, PaystackBackOffice>(client =>
+            {
+                client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", options.SecretKey);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddStandardResilienceHandler();
+
         return services;
     }
 

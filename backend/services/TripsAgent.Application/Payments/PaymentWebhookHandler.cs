@@ -88,6 +88,7 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
     private readonly IWebhookDispatcher _dispatcher;
     private readonly VerifyTopUpHandler _verify;
     private readonly IOrderPaymentSettlement _orderPayments;
+    private readonly IDisputeWebhookSink _disputes;
     private readonly IPlatformAlerter _alerter;
     private readonly IUniqueViolationDetector _uniqueViolations;
     private readonly TimeProvider _clock;
@@ -100,6 +101,7 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
         IWebhookDispatcher dispatcher,
         VerifyTopUpHandler verify,
         IOrderPaymentSettlement orderPayments,
+        IDisputeWebhookSink disputes,
         IPlatformAlerter alerter,
         IUniqueViolationDetector uniqueViolations,
         TimeProvider clock,
@@ -111,6 +113,7 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
         _dispatcher = dispatcher;
         _verify = verify;
         _orderPayments = orderPayments;
+        _disputes = disputes;
         _alerter = alerter;
         _uniqueViolations = uniqueViolations;
         _clock = clock;
@@ -118,7 +121,20 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
     }
 
     /// <summary>The event types that mean money moved. Everything else is recorded and ignored.</summary>
-    private static readonly string[] ActedOn = ["charge.success"];
+    private static readonly string[] ActedOn =
+    [
+        "charge.success",
+
+        // Chargebacks (issue 69). Recorded through the same unique index as payments, so the same
+        // dispute event delivered five times produces one row and one hold.
+        "charge.dispute.create",
+        "charge.dispute.remind",
+        "charge.dispute.resolve",
+    ];
+
+    /// <summary>True for the events that are about a dispute rather than a payment.</summary>
+    private static bool IsDispute(string eventType) =>
+        eventType.StartsWith("charge.dispute.", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Verifies and records a delivery. Fast, and safe to call with the same body repeatedly.
@@ -311,7 +327,9 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
         try
         {
             // Asks the gateway. The payload is a notification, not a source of truth about money.
-            var stillPending = await SettleAsync(envelope.Reference, cancellationToken);
+            var stillPending = IsDispute(envelope.EventType)
+                ? await _disputes.SyncAsync(envelope.Reference, cancellationToken)
+                : await SettleAsync(envelope.Reference, cancellationToken);
 
             if (stillPending)
             {
@@ -421,6 +439,15 @@ public sealed partial class PaymentWebhookHandler : IPaymentWebhookProcessor
             var reference = data.ValueKind == JsonValueKind.Object && data.TryGetProperty("reference", out var r)
                 ? r.GetString()
                 : null;
+
+            // A dispute event names the dispute by its id, and the payment only inside
+            // data.transaction. What the processor needs is the dispute, so that is what it is given.
+            if (IsDispute(eventType)
+                && data.ValueKind == JsonValueKind.Object
+                && data.TryGetProperty("id", out var disputeId))
+            {
+                reference = disputeId.ValueKind == JsonValueKind.Number ? disputeId.GetRawText() : disputeId.GetString();
+            }
 
             // Paystack sends no event id of its own, so the event type plus the transaction's id
             // identifies the delivery. Two different events about one payment stay distinct; the

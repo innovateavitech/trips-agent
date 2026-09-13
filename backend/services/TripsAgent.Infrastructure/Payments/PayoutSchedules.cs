@@ -71,3 +71,29 @@ public static class PayoutStatusPollSchedule
             new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
     }
 }
+
+/// <summary>
+/// Chases dispute evidence: reminds an agency as its deadline nears, and records a missed one.
+/// </summary>
+/// <remarks>
+/// Hourly, because a deadline is an instant and a daily job could miss one by 23 hours. A dispute
+/// nobody answers is lost by default, so this is the job that stops one sitting in a table until
+/// the bank decides without us.
+/// </remarks>
+public static class DisputeDeadlineSchedule
+{
+    public const string JobId = "dispute-deadline-monitor";
+
+    public const string CronExpression = "10 * * * *";
+
+    public static void Register(IRecurringJobManager recurringJobs)
+    {
+        ArgumentNullException.ThrowIfNull(recurringJobs);
+
+        recurringJobs.AddOrUpdate<IDisputeDeadlineMonitor>(
+            JobId,
+            monitor => monitor.RunAsync(CancellationToken.None),
+            CronExpression,
+            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+    }
+}

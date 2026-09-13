@@ -64,6 +64,11 @@ public static class DependencyInjection
         services.AddScoped<IPayoutTransferService, PayoutTransferService>();
         services.AddScoped<IPayoutStatusPoller, PayoutStatusPoller>();
 
+        // Chargebacks: the webhook hands them over, the deadline monitor chases the evidence.
+        services.AddScoped<DisputeService>();
+        services.AddScoped<IDisputeWebhookSink>(sp => sp.GetRequiredService<DisputeService>());
+        services.AddScoped<IDisputeDeadlineMonitor>(sp => sp.GetRequiredService<DisputeService>());
+
         services.AddScoped<DocumentIssuer>();
 
         // Records what was sold, at the price the quote froze. The saga (#42) takes it from there.

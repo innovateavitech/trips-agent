@@ -53,6 +53,15 @@ export interface NavItem {
    * honest.
    */
   principalsOnly?: boolean;
+  /**
+   * Show this only to an agency Owner.
+   *
+   * Business verification is the agency's legal identity, and since issue 172
+   * every `/api/v1/kyb` route needs `kyb.submit` — which, of the agency roles,
+   * only the Owner holds. The API refuses the rest either way; this keeps the
+   * sidebar from offering a screen that can only answer "no".
+   */
+  ownersOnly?: boolean;
 }
 
 export interface NavSection {
@@ -110,26 +119,46 @@ export const NAV_SECTIONS: NavSection[] = [
     label: 'Agency',
     items: [
       { label: 'Your website', to: '/website', icon: Globe }, // #58, #59
-      { label: 'Business verification', to: '/verification', icon: ShieldCheck }, // #50
+      { label: 'Business verification', to: '/verification', icon: ShieldCheck, ownersOnly: true }, // #50
     ],
   },
 ];
 
 export const NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap((section) => section.items);
 
+/** The name the token carries for an agency's owner. */
+const OWNER_ROLE = 'Owner';
+
 /**
- * The sidebar for one kind of agency, with empty sections dropped.
+ * Whether these roles may manage the agency's KYB submission.
+ *
+ * Roles arrive from the token by name. When the session carries permissions
+ * rather than roles, this becomes `permissions.includes('kyb.submit')`.
+ */
+export function canManageVerification(roles: readonly string[]): boolean {
+  return roles.includes(OWNER_ROLE);
+}
+
+/**
+ * The sidebar for one kind of agency and one set of roles, with empty sections
+ * dropped.
  *
  * A sub-agent still sees "Network performance": the same endpoint serves both,
- * and it answers with that agency's own figures alone.
+ * and it answers with that agency's own figures alone. Business verification is
+ * the Owner's, because every KYB route now asks for `kyb.submit` (issue 172).
  */
-export function navigationFor(kind: 'principal' | 'sub_agent' | null): NavSection[] {
-  if (kind !== 'sub_agent') {
-    return NAV_SECTIONS;
-  }
+export function navigationFor(
+  kind: 'principal' | 'sub_agent' | null,
+  roles: readonly string[] = [],
+): NavSection[] {
+  const owner = canManageVerification(roles);
 
   return NAV_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => item.principalsOnly !== true),
+    items: section.items.filter(
+      (item) =>
+        (item.principalsOnly !== true || kind !== 'sub_agent') &&
+        (item.ownersOnly !== true || owner),
+    ),
   })).filter((section) => section.items.length > 0);
 }

@@ -10,8 +10,11 @@ import { AgencySwitcher } from './agency-switcher';
  * phone). `onNavigate` lets the drawer close itself when a link is chosen.
  */
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  // A sub-agent has no network of its own, so it is not offered one.
-  const sections = navigationFor(useCurrentUser().agency?.kind ?? null);
+  const user = useCurrentUser();
+
+  // A sub-agent has no network of its own, so it is not offered one; and business
+  // verification belongs to the Owner, because the API asks for `kyb.submit`.
+  const sections = navigationFor(user.agency?.kind ?? null, user.roles);
 
   return (
     <div className="flex h-full flex-col gap-6 px-3 py-4">

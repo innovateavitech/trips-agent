@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@trips/ui';
+import { canManageVerification } from '../app/navigation';
 import { displayNameFor, initialsFor, roleLabel } from '../auth/auth-api';
 import { useAuth, useCurrentUser } from '../auth/auth-provider';
 import { SIGN_IN_PATH } from '../auth/redirect';
@@ -56,12 +57,17 @@ export function UserMenu() {
             </div>
           ) : null}
         </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>Your agency</DropdownMenuLabel>
-        <DropdownMenuItem onSelect={() => navigate('/verification')}>
-          <ShieldCheck aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
-          Business verification
-        </DropdownMenuItem>
+        {/* The Owner's: every KYB route asks for `kyb.submit`, which nobody else holds. */}
+        {canManageVerification(user.roles) ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Your agency</DropdownMenuLabel>
+            <DropdownMenuItem onSelect={() => navigate('/verification')}>
+              <ShieldCheck aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
+              Business verification
+            </DropdownMenuItem>
+          </>
+        ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => void handleSignOut()}>
           <LogOut aria-hidden="true" className="h-4 w-4 text-muted-foreground" />

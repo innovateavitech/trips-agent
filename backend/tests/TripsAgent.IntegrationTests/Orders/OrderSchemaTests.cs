@@ -203,14 +203,14 @@ public sealed class OrderSchemaTests
         var order = await world.PlaceOrderAsync();
 
         const string passport = "A01234567";
-        var protector = new AesGcmSecretProtector(RandomNumberGenerator.GetBytes(AesGcmSecretProtector.KeyBytes));
         var traveller = OrderTraveller.Record(
             world.AgencyId,
             order.Lines[0].Id,
             TravellerType.Adult,
             "Ngozi",
             "Adeyemi",
-            passportNumberEncrypted: protector.Protect(passport, "orders.order_travellers.passport_number"));
+            passportNumber: passport,
+            passportExpiry: new DateOnly(2031, 5, 17));
 
         world.Db.OrderTravellers.Add(traveller);
         await world.Db.SaveChangesAsync();
@@ -223,6 +223,7 @@ public sealed class OrderSchemaTests
 
         var stored = (byte[])(await command.ExecuteScalarAsync())!;
 
+        TestFieldEncryption.Encryptor.KeyIdOf(stored).Should().Be(TestFieldEncryption.KeyId);
         Encoding.UTF8.GetString(stored).Should().NotContain(passport);
         stored.Should().NotEqual(Encoding.UTF8.GetBytes(passport));
     }

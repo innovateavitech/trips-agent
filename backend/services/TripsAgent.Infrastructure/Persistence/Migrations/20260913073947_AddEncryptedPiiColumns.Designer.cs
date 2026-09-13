@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TripsAgent.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using TripsAgent.Infrastructure.Persistence;
 namespace TripsAgent.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260913073947_AddEncryptedPiiColumns")]
+    partial class AddEncryptedPiiColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -4959,6 +4962,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("last_name");
 
+                    b.Property<DateOnly?>("LegacyPassportExpiry")
+                        .HasColumnType("date")
+                        .HasColumnName("passport_expiry");
+
                     b.Property<string>("Nationality")
                         .HasMaxLength(2)
                         .HasColumnType("character(2)")
@@ -5020,7 +5027,6 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnName("account_name_resolved");
 
                     b.Property<byte[]>("AccountNumber")
-                        .IsRequired()
                         .HasColumnType("bytea")
                         .HasColumnName("account_number_encrypted");
 
@@ -5063,6 +5069,13 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsDefault")
                         .HasColumnType("boolean")
                         .HasColumnName("is_default");
+
+                    b.Property<string>("LegacyAccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character(10)")
+                        .HasColumnName("account_number")
+                        .IsFixedLength();
 
                     b.Property<string>("RejectionReason")
                         .HasMaxLength(500)
@@ -7384,6 +7397,10 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character(2)")
                         .HasColumnName("issuing_country")
                         .IsFixedLength();
+
+                    b.Property<DateOnly?>("LegacyExpiresOn")
+                        .HasColumnType("date")
+                        .HasColumnName("expires_on");
 
                     b.Property<string>("NationalityCountry")
                         .HasMaxLength(2)

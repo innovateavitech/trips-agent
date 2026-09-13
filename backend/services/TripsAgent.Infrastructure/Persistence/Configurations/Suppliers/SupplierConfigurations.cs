@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
+using TripsAgent.Infrastructure.Persistence.Encryption;
 
 namespace TripsAgent.Infrastructure.Persistence.Configurations.Suppliers;
 
@@ -445,8 +446,13 @@ public sealed class PassengerDocumentConfiguration : IEntityTypeConfiguration<Pa
         builder.Property(document => document.DocType).HasConversion<string>().HasMaxLength(10).IsRequired();
         builder.Property(document => document.InnerDocType).HasConversion<string>().HasMaxLength(20).IsRequired();
 
-        // Ciphertext only. There is no column a passport number could land in, in clear.
-        builder.Property(document => document.DocNumberEncrypted).HasColumnType("bytea").IsRequired();
+        // Ciphertext only (issue 104). There is no column a passport number or its expiry could land in,
+        // in clear, and neither can be searched.
+        builder.Property(document => document.DocNumber)
+            .IsEncryptedAtRest("doc_number_encrypted", EncryptedColumns.PassengerDocumentNumber)
+            .IsRequired();
+        builder.Property(document => document.ExpiresOn)
+            .IsEncryptedAtRest("expires_on_encrypted", EncryptedColumns.PassengerDocumentExpiry);
 
         builder.Property(document => document.IssuingCountry).HasMaxLength(2).IsFixedLength().IsRequired();
         builder.Property(document => document.NationalityCountry).HasMaxLength(2).IsFixedLength();

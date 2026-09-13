@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
+using TripsAgent.Application.Security;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Persistence.Encryption;
 
 namespace TripsAgent.IntegrationTests.Persistence;
 
@@ -170,7 +172,8 @@ public sealed class PostgresFixture : IAsyncLifetime
         bool asApplicationRole = true,
         bool pooled = false,
         bool retryOnFailure = false,
-        IReadOnlyList<Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor>? interceptors = null)
+        IReadOnlyList<Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor>? interceptors = null,
+        IFieldEncryptor? fieldEncryptor = null)
     {
         // As the application role by default, so every test acting as a tenant runs under row-level
         // security exactly as production does (ADR-0006). A flow that only works as a superuser
@@ -208,7 +211,8 @@ public sealed class PostgresFixture : IAsyncLifetime
                         errorCodesToAdd: null);
                 }
             })
-            .UseSnakeCaseNamingConvention();
+            .UseSnakeCaseNamingConvention()
+            .UseFieldEncryption(fieldEncryptor ?? TestFieldEncryption.Encryptor);
 
         if (interceptors is { Count: > 0 })
         {

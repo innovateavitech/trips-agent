@@ -394,9 +394,6 @@ public sealed class DataRetentionPurgeTests
     {
         public const string Empty = "empty";
 
-        private static readonly AesGcmSecretProtector Protector =
-            new(RandomNumberGenerator.GetBytes(AesGcmSecretProtector.KeyBytes));
-
         private static readonly SupplierApiCallOptions SupplierApiCalls = new() { RetentionMonths = 3, PartitionsCreatedAhead = 1 };
 
         private readonly PostgresFixture _postgres;
@@ -547,13 +544,13 @@ public sealed class DataRetentionPurgeTests
 
             var document = PassengerDocument.Add(
                 AgencyId, passenger.Id, TravelDocumentRecord.Docs, TravelDocumentKind.Passport,
-                Protector.Protect("A01234567", "supplier.passenger_documents.doc_number"),
+                "A01234567",
                 "NG", "NG", new DateOnly(2020, 1, 1), new DateOnly(2030, 1, 1));
             db.PassengerDocuments.Add(document);
 
             var traveller = OrderTraveller.Record(
                 AgencyId, line.Id, TravellerType.Adult, "Ngozi", "Adeyemi",
-                passportNumberEncrypted: Protector.Protect("A01234567", "orders.order_travellers.passport_number"),
+                passportNumber: "A01234567",
                 passportExpiry: new DateOnly(2030, 1, 1),
                 nationality: "NG");
             db.OrderTravellers.Add(traveller);

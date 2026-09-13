@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using TripsAgent.Application.Auditing;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
@@ -24,7 +25,9 @@ using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
 using TripsAgent.Domain.Tenancy.SubAgents;
 using TripsAgent.Infrastructure.Messaging;
+using TripsAgent.Infrastructure.Persistence.Encryption;
 using TripsAgent.Infrastructure.Persistence.Interceptors;
+using TripsAgent.Infrastructure.Security;
 
 namespace TripsAgent.Infrastructure.Persistence;
 
@@ -468,6 +471,16 @@ public class AppDbContext : DbContext, IAppDbContext
             // missing (ADR-0006). Structural for the same reason as the stamper: every context
             // gets it, however it was constructed.
             new TenantSessionInterceptor(_tenantContext, _platformScope));
+
+        // Encrypted columns (issue 104). A context whose options carry no encryptor gets the one that
+        // refuses, so a passport number is never stored in clear because somebody built options by hand.
+        if (optionsBuilder.Options.FindExtension<FieldEncryptionOptionsExtension>() is null)
+        {
+            optionsBuilder.UseFieldEncryption(UnconfiguredFieldEncryptor.Instance);
+        }
+
+        // The model holds the encryptor's converters, so the model cache has to tell key rings apart.
+        optionsBuilder.ReplaceService<IModelCacheKeyFactory, FieldEncryptionModelCacheKeyFactory>();
     }
 
     /// <summary>Messages waiting to be published, and the record of those that were. See <see cref="OutboxMessage"/>.</summary>
@@ -488,6 +501,9 @@ public class AppDbContext : DbContext, IAppDbContext
         modelBuilder.HasPostgresExtension("ltree");
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        // Every column configured IsEncryptedAtRest now encrypts with this context's key ring.
+        FieldEncryptionModel.Bind(modelBuilder, FieldEncryptionOptionsExtension.EncryptorOf(this));
 
         // An agency sees its own audit trail and nothing else. Platform-wide rows carry no
         // agency_id and are visible only to a caller with no agency of their own — a Trips

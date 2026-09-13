@@ -4,6 +4,7 @@ using TripsAgent.Application.Messaging;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Suppliers;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Application.Tenancy.SubAgents;
 using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Suppliers;
@@ -41,14 +42,22 @@ public sealed partial class CheckoutSweeper
 
     private readonly IAppDbContext _db;
     private readonly IPlatformScope _platformScope;
+    private readonly SubAgentSpending _allowance;
     private readonly IOutbox _outbox;
     private readonly TimeProvider _clock;
     private readonly ILogger<CheckoutSweeper> _logger;
 
-    public CheckoutSweeper(IAppDbContext db, IPlatformScope platformScope, IOutbox outbox, TimeProvider clock, ILogger<CheckoutSweeper> logger)
+    public CheckoutSweeper(
+        IAppDbContext db,
+        IPlatformScope platformScope,
+        SubAgentSpending allowance,
+        IOutbox outbox,
+        TimeProvider clock,
+        ILogger<CheckoutSweeper> logger)
     {
         _db = db;
         _platformScope = platformScope;
+        _allowance = allowance;
         _outbox = outbox;
         _clock = clock;
         _logger = logger;
@@ -102,6 +111,11 @@ public sealed partial class CheckoutSweeper
         {
             var wallet = await _db.Wallets.SingleAsync(candidate => candidate.Id == hold.WalletId, cancellationToken);
             wallet.ReleaseHold(hold, now);
+
+            // A sub-agent's spending allowance moves with its wallet hold (feature F10), so a hold
+            // this sweeper gives back is one the sub-agent gets its allowance back for too. Does
+            // nothing for an agency that has no allowance, which is every principal.
+            await _allowance.ReleaseAsync(hold.AgencyId, wallet.Currency, hold.AmountMinor, cancellationToken);
         }
 
         if (orphaned.Count > 0)

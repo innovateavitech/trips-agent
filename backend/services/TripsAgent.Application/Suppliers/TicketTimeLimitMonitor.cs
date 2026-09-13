@@ -6,6 +6,7 @@ using TripsAgent.Application.Messaging;
 using TripsAgent.Application.Notifications;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Application.Tenancy.SubAgents;
 using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Suppliers;
@@ -51,6 +52,7 @@ public sealed partial class TicketTimeLimitMonitor
     private readonly ITransactionRunner _transactions;
     private readonly ISupplierBookingLocks _bookingLocks;
     private readonly IPlatformScope _platformScope;
+    private readonly SubAgentSpending _allowance;
     private readonly INotifier _notifier;
     private readonly IOutbox _outbox;
     private readonly TimeProvider _clock;
@@ -61,6 +63,7 @@ public sealed partial class TicketTimeLimitMonitor
         ITransactionRunner transactions,
         ISupplierBookingLocks bookingLocks,
         IPlatformScope platformScope,
+        SubAgentSpending allowance,
         INotifier notifier,
         IOutbox outbox,
         TimeProvider clock,
@@ -70,6 +73,7 @@ public sealed partial class TicketTimeLimitMonitor
         _transactions = transactions;
         _bookingLocks = bookingLocks;
         _platformScope = platformScope;
+        _allowance = allowance;
         _notifier = notifier;
         _outbox = outbox;
         _clock = clock;
@@ -260,6 +264,11 @@ public sealed partial class TicketTimeLimitMonitor
         {
             var wallet = await _db.Wallets.SingleAsync(candidate => candidate.Id == hold.WalletId, cancellationToken);
             wallet.ReleaseHold(hold, now);
+
+            // A sub-agent's spending allowance moves with its wallet hold (feature F10): a fare
+            // that lapsed was never bought, so it must not go on counting against the cap. Does
+            // nothing for an agency that has no allowance.
+            await _allowance.ReleaseAsync(hold.AgencyId, wallet.Currency, hold.AmountMinor, cancellationToken);
         }
     }
 

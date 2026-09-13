@@ -119,6 +119,42 @@ export async function unwrap<T>(pending: Promise<ClientResult<T>>): Promise<NonN
   return result.data as NonNullable<T>;
 }
 
+/**
+ * Like {@link unwrap}, for an endpoint that answers `204 No Content`.
+ *
+ * `unwrap` treats an empty 2xx as the API breaking its contract, because every
+ * caller of it wants a value. These callers do not: freezing a sub-agent, taking
+ * a permission away and removing a scope all succeed by saying nothing at all,
+ * and a 204 is the right answer rather than a fault.
+ */
+export async function unwrapEmpty(pending: Promise<ClientResult<unknown>>): Promise<void> {
+  const result = await pending;
+
+  if (result.error !== undefined || !result.response.ok) {
+    throw ApiError.from(result.response, result.error);
+  }
+}
+
+/**
+ * Like {@link unwrap}, where nothing is a real answer rather than an absence.
+ *
+ * One endpoint means it: a sub-agent's allowance is `204` when it has none —
+ * which is not the same as a limit of zero, and the screen says so differently.
+ * Use it only where the API documents a 204 with that meaning; everywhere else
+ * an empty body is still a fault, and {@link unwrap} is the one to call.
+ */
+export async function unwrapOptional<T>(
+  pending: Promise<ClientResult<T>>,
+): Promise<NonNullable<T> | null> {
+  const result = await pending;
+
+  if (result.error !== undefined || !result.response.ok) {
+    throw ApiError.from(result.response, result.error);
+  }
+
+  return result.data === undefined || result.data === null ? null : (result.data as NonNullable<T>);
+}
+
 /** What an error means to the agent: a headline and what to do about it. */
 export interface ErrorDescription {
   title: string;

@@ -137,6 +137,13 @@ public static class DependencyInjection
         // than on IAppDbContext, which deliberately exposes no way to run arbitrary SQL.
         services.AddScoped<ILedgerIntegrityQueries, Payments.LedgerIntegrityQueries>();
 
+        // The two conditional statements that move a sub-agent's allowance. In Infrastructure
+        // because the guarantee they rest on — one UPDATE, re-evaluated against the committed row
+        // — is PostgreSQL's rather than ours. See IAllowanceReservations.
+        services.AddScoped<
+            TripsAgent.Application.Tenancy.SubAgents.IAllowanceReservations,
+            Tenancy.PostgresAllowanceReservations>();
+
         // Lets Application tell "a unique index picked another writer" apart from every other
         // failed save, without Application referencing Npgsql.
         services.AddSingleton<IUniqueViolationDetector, PostgresUniqueViolationDetector>();
@@ -169,6 +176,11 @@ public static class DependencyInjection
 
         // The console owns the page that receives the reset token, so its address is
         // configuration rather than something this assembly can know.
+        // The console owns the page an invited sub-agent lands on, so its address is configuration
+        // for the same reason the password-reset link below is.
+        services.AddSingleton(new TripsAgent.Application.Tenancy.SubAgents.SubAgentInviteLinkBuilder(
+            configuration["Console:SubAgentInviteUrl"] ?? "https://localhost:5173/accept-invitation"));
+
         services.AddSingleton(new TripsAgent.Application.Identity.Registration.PasswordResetLinkBuilder(
             configuration["Console:PasswordResetUrl"] ?? "https://localhost:5173/reset-password"));
 

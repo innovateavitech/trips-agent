@@ -77,7 +77,7 @@ public sealed class PublicStorefrontEndpointTests : IClassFixture<RedisFixture>,
             var abuja = Verified(Agency.RegisterPrincipal("Abuja Tours Limited", "abuja-tours", "NG", "NGN", "Africa/Lagos"));
             var quiet = Verified(Agency.RegisterPrincipal("Quiet Travel Limited", "quiet-travel", "NG", "NGN", "Africa/Lagos"));
             var shut = Verified(Agency.RegisterPrincipal("Shut Travel Limited", "shut-travel", "NG", "NGN", "Africa/Lagos"));
-            shut.Suspend("Set up by a test.", DateTimeOffset.UtcNow);
+            shut.Suspend("Storefront test: an agency that may not serve its site.", DateTimeOffset.UtcNow);
 
             setup.Agencies.AddRange(lagos, abuja, quiet, shut);
             await setup.SaveChangesAsync();

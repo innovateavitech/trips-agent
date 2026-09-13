@@ -102,6 +102,7 @@ builder.Services
 // catalogue rather than listed by hand, so a new permission cannot end up with no policy.
 builder.Services.AddAuthorizationBuilder().AddPermissionPolicies();
 
+
 // The outbox check reports Degraded, never Unhealthy, when messages are piling up: restarting the
 // API cannot fix a backlog the Worker or the broker is causing. See OutboxBacklogHealthCheck.
 builder.Services.AddHealthChecks()
@@ -145,16 +146,22 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 
+// Resolves the caller's agency for the rest of the request, from the claims the token carries.
+// It has to run after UseAuthentication — before that there is no identity to read — and before
+// UseAuthorization, so the sub-agent permission middleware below can query as the caller.
+app.UseTenantContext();
+
+// Feature F10: a sub-agent's token loses any permission its principal has denied it, so taking one
+// away bites on the next request rather than when the access token expires. Between UseTenantContext,
+// whose tenant it queries as, and UseAuthorization, whose policies read the claims it leaves behind.
+app.UseSubAgentPermissions();
+
 // After authentication, so a signed-in caller is counted as themselves and their agency rather than
 // as the address their office shares; before authorisation, so a flood of forbidden requests is
 // still counted.
 app.UseSharedRateLimiting();
 
 app.UseAuthorization();
-
-// Resolves the caller's agency for the rest of the request, from the claims the token carries.
-// It has to run after UseAuthentication — before that there is no identity to read.
-app.UseTenantContext();
 
 // Tells the audit log who is acting. Without it every audited change is attributed to nobody,
 // which is exactly the question the log exists to answer.
@@ -200,6 +207,11 @@ app.MapSearchEndpoints();
 app.MapBookingEndpoints();
 app.MapStorefrontEndpoints();
 app.MapPublicStorefrontEndpoints();
+
+// The sub-agent network (feature F10, issue 63): a principal's agents, what each may sell and see,
+// what each may spend, and the network's consolidated figures. The invitation routes in it are
+// anonymous, because whoever holds the link has no account yet.
+app.MapSubAgentEndpoints();
 
 app.MapAssetEndpoints();
 app.MapCatalogEndpoints();

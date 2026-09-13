@@ -10,6 +10,77 @@
     }
   ],
   "paths": {
+    "/api/v1/my-allowance": {
+      "get": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "GetOwnAllowance",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllowanceResponse"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/network-performance": {
+      "get": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "GetNetworkPerformance",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkPerformanceWithMarginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "tags": [
@@ -4514,6 +4585,779 @@
         }
       }
     },
+    "/api/v1/sub-agents": {
+      "get": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "ListSubAgents",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubAgentListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "InviteSubAgent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteSubAgentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteSubAgentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sub-agents/{subAgencyId}/freeze": {
+      "post": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "FreezeSubAgent",
+        "parameters": [
+          {
+            "name": "subAgencyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubAgentStandingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sub-agents/{subAgencyId}/unfreeze": {
+      "post": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "UnfreezeSubAgent",
+        "parameters": [
+          {
+            "name": "subAgencyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubAgentStandingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sub-agents/{subAgencyId}/revoke": {
+      "post": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "RevokeSubAgent",
+        "parameters": [
+          {
+            "name": "subAgencyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubAgentStandingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sub-agents/{subAgencyId}/scopes": {
+      "get": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "ListSubAgentScopes",
+        "parameters": [
+          {
+            "name": "subAgencyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubAgentScopeResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "GrantSubAgentScope",
+        "parameters": [
+          {
+            "name": "subAgencyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantSubAgentScopeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sub-agents/{subAgencyId}/scopes/{scopeId}": {
+      "delete": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "RevokeSubAgentScope",
+        "parameters": [
+          {
+            "name": "subAgencyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "scopeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sub-agents/{subAgencyId}/permissions": {
+      "get": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "ListSubAgentPermissions",
+        "parameters": [
+          {
+            "name": "subAgencyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubAgentPermissionResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sub-agents/{subAgencyId}/permissions/deny": {
+      "post": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "DenySubAgentPermission",
+        "parameters": [
+          {
+            "name": "subAgencyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DenyPermissionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sub-agents/{subAgencyId}/permissions/{permissionCode}": {
+      "delete": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "AllowSubAgentPermission",
+        "parameters": [
+          {
+            "name": "subAgencyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "permissionCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sub-agents/{subAgencyId}/allowance": {
+      "get": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "GetSubAgentAllowance",
+        "parameters": [
+          {
+            "name": "subAgencyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllowanceResponse"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "SetSubAgentAllowance",
+        "parameters": [
+          {
+            "name": "subAgencyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAllowanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllowanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sub-agents/{subAgencyId}/allowance/freeze": {
+      "post": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "FreezeSubAgentAllowance",
+        "parameters": [
+          {
+            "name": "subAgencyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllowanceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sub-agents/{subAgencyId}/allowance/unfreeze": {
+      "post": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "UnfreezeSubAgentAllowance",
+        "parameters": [
+          {
+            "name": "subAgencyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllowanceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations": {
+      "get": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "PreviewInvitation",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationPreviewResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations/accept": {
+      "post": {
+        "tags": [
+          "Sub-agent network"
+        ],
+        "operationId": "AcceptInvitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptInvitationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/assets/limits": {
       "get": {
         "tags": [
@@ -7048,6 +7892,57 @@
   },
   "components": {
     "schemas": {
+      "AcceptInvitationRequest": {
+        "required": [
+          "token",
+          "firstName",
+          "lastName",
+          "password",
+          "phoneNumber"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AcceptInvitationResponse": {
+        "required": [
+          "userId",
+          "agencyId",
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "agencyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          }
+        }
+      },
       "AddCartItemRequest": {
         "type": "object",
         "properties": {
@@ -7614,6 +8509,65 @@
             }
           },
           "lastLoginAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "AllowanceResponse": {
+        "required": [
+          "subAgencyId",
+          "currency",
+          "spentMinor",
+          "limitMinor",
+          "remainingMinor",
+          "period",
+          "status",
+          "resetsAt"
+        ],
+        "type": "object",
+        "properties": {
+          "subAgencyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "spentMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "limitMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "remainingMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "period": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "resetsAt": {
             "type": [
               "null",
               "string"
@@ -9625,6 +10579,21 @@
           }
         }
       },
+      "DenyPermissionRequest": {
+        "required": [
+          "permissionCode",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "permissionCode": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
       "DeparturePaymentResponse": {
         "required": [
           "sequence",
@@ -10131,6 +11100,25 @@
           }
         }
       },
+      "GrantSubAgentScopeRequest": {
+        "required": [
+          "productType",
+          "supplierId"
+        ],
+        "type": "object",
+        "properties": {
+          "productType": {
+            "type": "string"
+          },
+          "supplierId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "HeroBlockConfig": {
         "required": [
           "heading",
@@ -10475,6 +11463,72 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "InvitationPreviewResponse": {
+        "required": [
+          "email",
+          "businessName",
+          "invitedBy"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "businessName": {
+            "type": "string"
+          },
+          "invitedBy": {
+            "type": "string"
+          }
+        }
+      },
+      "InviteSubAgentRequest": {
+        "required": [
+          "legalName",
+          "tradingName",
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "legalName": {
+            "type": "string"
+          },
+          "tradingName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "InviteSubAgentResponse": {
+        "required": [
+          "id",
+          "email",
+          "invitationToken",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "invitationToken": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -11806,6 +12860,132 @@
                 "$ref": "#/components/schemas/ScheduledChangeResponse"
               }
             ]
+          }
+        }
+      },
+      "NetworkMemberWithMarginResponse": {
+        "required": [
+          "agencyId",
+          "name",
+          "status",
+          "isPrincipal",
+          "orders",
+          "salesMinor",
+          "marginMinor",
+          "allowanceSpentMinor",
+          "allowanceLimitMinor"
+        ],
+        "type": "object",
+        "properties": {
+          "agencyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "isPrincipal": {
+            "type": "boolean"
+          },
+          "orders": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "salesMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "marginMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "allowanceSpentMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "allowanceLimitMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "NetworkPerformanceWithMarginResponse": {
+        "required": [
+          "from",
+          "to",
+          "currency",
+          "orders",
+          "salesMinor",
+          "marginMinor",
+          "members"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "orders": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "salesMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "marginMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NetworkMemberWithMarginResponse"
+            }
           }
         }
       },
@@ -14812,6 +15992,26 @@
           }
         }
       },
+      "SetAllowanceRequest": {
+        "required": [
+          "limitMinor",
+          "period"
+        ],
+        "type": "object",
+        "properties": {
+          "limitMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "period": {
+            "type": "string"
+          }
+        }
+      },
       "SetTierEntitlementsRequest": {
         "required": [
           "entitlements",
@@ -15945,6 +17145,209 @@
           }
         }
       },
+      "SubAgentListResponse": {
+        "required": [
+          "subAgents",
+          "maxSubAgents",
+          "canAddAnother",
+          "cannotAddReason"
+        ],
+        "type": "object",
+        "properties": {
+          "subAgents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubAgentResponse"
+            }
+          },
+          "maxSubAgents": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "canAddAnother": {
+            "type": "boolean"
+          },
+          "cannotAddReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SubAgentPermissionResponse": {
+        "required": [
+          "code",
+          "category",
+          "description",
+          "isDenied",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isDenied": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SubAgentResponse": {
+        "required": [
+          "id",
+          "legalName",
+          "tradingName",
+          "slug",
+          "status",
+          "statusReason",
+          "createdAt",
+          "hasOpenInvitation",
+          "scopeCount",
+          "deniedPermissionCount",
+          "canSeeMargin",
+          "allowanceSpentMinor",
+          "allowanceLimitMinor",
+          "allowanceCurrency"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "legalName": {
+            "type": "string"
+          },
+          "tradingName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "slug": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "statusReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "hasOpenInvitation": {
+            "type": "boolean"
+          },
+          "scopeCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "deniedPermissionCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "canSeeMargin": {
+            "type": "boolean"
+          },
+          "allowanceSpentMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "allowanceLimitMinor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "allowanceCurrency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SubAgentScopeResponse": {
+        "required": [
+          "id",
+          "productType",
+          "supplierId",
+          "supplierName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productType": {
+            "type": "string"
+          },
+          "supplierId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "supplierName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SubAgentStandingRequest": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
       "SubscriberResponse": {
         "required": [
           "agencyId",
@@ -16924,6 +18327,9 @@
     }
   },
   "tags": [
+    {
+      "name": "Sub-agent network"
+    },
     {
       "name": "TripsAgent.Api"
     },

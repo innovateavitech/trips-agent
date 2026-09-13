@@ -71,6 +71,13 @@ public static class NotificationTemplateCatalog
     /// </summary>
     public const string IdentityPasswordReset = "identity.password-reset";
 
+    /// <summary>
+    /// A business invited to join a principal's network (feature F10, issue 63). Rendered with the
+    /// <i>principal's</i> brand, never ours — build-plan decision 6 — and sent at once rather than
+    /// queued, because the link in it is a working credential.
+    /// </summary>
+    public const string SubAgentInvitation = "subagent.invitation";
+
     /// <summary>A traveller's invoice and vouchers, attached as PDFs (#46).</summary>
     public const string DocumentsIssued = "documents.issued";
 
@@ -234,6 +241,35 @@ public static class NotificationTemplateCatalog
 
                   If you did not ask for this, you can ignore this email — your password has not
                   changed, and nobody can change it without this link.
+                  """),
+
+        // The only agency-facing template whose {{brandName}} is somebody else's: the sender is
+        // the inviting principal, and the recipient must never see the Trips name.
+        AgencyFacing(
+            SubAgentInvitation,
+            version: 1,
+            subject: "{{brandName}} has invited you to sell with them",
+            tokens: ["inviteUrl", "days"],
+            html: """
+                  <p>Hello,</p>
+                  <p>{{brandName}} has set up an account for {{recipientName}} so you can search,
+                     book and sell travel alongside them.</p>
+                  <p><a href="{{inviteUrl}}">Accept the invitation and choose a password</a></p>
+                  <p>The link works once and expires in {{days}} days. If you were not expecting
+                     this, you can ignore it — nothing happens until the link is used.</p>
+                  """,
+            text: """
+                  Hello,
+
+                  {{brandName}} has set up an account for {{recipientName}} so you can search, book
+                  and sell travel alongside them.
+
+                  Accept the invitation and choose a password:
+
+                      {{inviteUrl}}
+
+                  The link works once and expires in {{days}} days. If you were not expecting this,
+                  you can ignore it — nothing happens until the link is used.
                   """),
 
         AgencyFacing(

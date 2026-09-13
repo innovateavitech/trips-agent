@@ -20,7 +20,7 @@ Where each part of the system is designed — tables, jobs, the money path — i
 |---|---|---|
 | **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (in progress); F2 Notifications and documents (in progress) | 9 of 72 |
 | **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog (in progress); F4 Storefront (queued); F5 Customer commerce (queued); F6 Group tours (queued); F7 CRM (queued) | 0 of 74 |
-| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (done); F10 Sub-agent network (queued); F11 Analytics and reporting (queued); F12 Payouts, disputes and reconciliation (queued); F13 Loyalty and reviews (flag shipped with F9) | 16 of 42 |
+| **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (done); F10 Sub-agent network (done); F11 Analytics and reporting (queued); F12 Payouts, disputes and reconciliation (queued); F13 Loyalty and reviews (flag shipped with F9) | 16 of 42 |
 | **PR 4** · Launch readiness | F14 Security and launch readiness (queued) | 0 of 50 |
 
 
@@ -42,7 +42,7 @@ The first place to look when picking this up again. Update it whenever a branch 
 | `feat/M2-commerce` | 2 | **PR 2, merged.** F5 whole (#61) plus every branch above it | merged to main |
 | `feat/M3-admin-console` | 3 | F8: agency directory, lifecycle with reasons and audit, back-office roles, operations dashboard (#66) | pushed, done |
 | `feat/M3-billing` | 3 | F9: tiers, entitlements, recurring billing and dunning (#64, #65), and F13's loyalty entitlement flag (#70). Built on the admin console branch, with main merged in | pushed, done |
-| `feat/M3-subagents` | 3 | F10: the sub-agent network, allowances and refusals (#63) | agent working |
+| `feat/M3-subagents` | 3 | F10 whole (#63): invitations, scopes, permission overrides and margin visibility, race-free wallet allowances, freeze and revoke, consolidated network reporting, and four console screens, with main merged in | pushed, done |
 | `feat/M3-analytics` | 3 | F11: read models, rollups, dashboards, reporting and exports (#67, #68) | agent working |
 | `feat/M3-payouts` | 3 | F12: bank accounts, payouts, disputes and gateway reconciliation (#69), branched from main after PR 2 | agent working |
 | — | 4 | F14 security and launch readiness (#71, #104-#110) | not started |
@@ -52,12 +52,12 @@ S3 adapter deferred until a cloud is chosen. PR 3 is being assembled from the fi
 branches: merge them into one, regenerate the API client, run every gate, tick F8-F13 here, and
 open it with `Closes` for #63-#70. Then PR 4 is all that is left.
 
-**Two one-line calls still owed**, both waiting on a branch that now exists. The catalog's publish
+**Four one-line calls still owed**, each waiting on a branch that now exists. The catalog's publish
 handler needs `IEntitlements.MayAddAsync(agencyId, EntitlementCodes.MaxCatalogListings, published)`,
 and the storefront's domain claim needs the matching one for `custom_domain`; the ceilings are built
 and tested, and nothing counted published products until F3 landed. Decision 14's storefront half is
-the third: the admin console's `StorefrontAvailability` belongs in `PublicSiteResolver`. All three
-belong in PR 3's assembly.
+the third: the admin console's `StorefrontAvailability` belongs in `PublicSiteResolver`. The fourth arrived with F10: `ISubAgentEntitlement` still answers from `UnlimitedSubAgentEntitlement`
+and needs to read `max_sub_agents` through `IEntitlements`. All four belong in PR 3's assembly.
 
 ## Decisions for the MVP
 
@@ -105,6 +105,28 @@ Decided during the build:
   storefront is refunded to that card through the gateway (F5). Money goes back the way it came.
 - **Resolving a failed booking:** "retry" means booking again from search; escalating slow resolutions waits until after the MVP.
 - **To check on Trips Africa staging:** a bus booking with no PNR is polled with the flight status endpoint, which their documentation does not cover for buses.
+- **Sub-agent rows are owned by the principal.** `sub_agent_scopes`, `permission_overrides` and
+  `wallet_allowances` each carry two agencies: `agency_id` is the principal that writes the row and
+  `sub_agency_id` the sub-agent it is about. Writes therefore stay the ordinary `agency_id = me`
+  rule, and only reads are widened — as a separate `FOR SELECT` policy, because `DELETE` has no
+  `WITH CHECK` and a single widened policy would have let a sub-agent delete its own cap. A
+  composite foreign key onto `agencies (parent_agency_id, id)` makes the database check that the
+  pair really is a principal and its own sub-agent.
+- **Reading across the network:** an explicit, tested hierarchy rule rather than `IPlatformScope`,
+  because a principal listing its own sub-agents is ordinary business and logging it as a
+  cross-tenant read would bury the handful that genuinely are. The scope is still used for the
+  three places that are cross-tenant in substance: creating the sub-agency's own rows, the
+  consolidated money report, and the anonymous invitation lookup.
+- **Margin visibility** is the `margin.view` permission and nothing else, so the two cannot
+  disagree. The response comes in two shapes chosen at the projection — the pattern
+  `PriceQuoteResponse` already set — so net and markup are absent from the JSON rather than null in
+  it, and a denied permission bites on the next request rather than when the token expires.
+- **A sub-agent's allowance is a per-period cap, not a second wallet.** It is consumed by one
+  conditional `UPDATE` through a `SECURITY DEFINER` function, which is the only write a sub-agent's
+  request makes to a row its principal owns; it moves with the wallet hold, so "spent this period"
+  and "held or spent" cannot drift. What the MVP leaves out is below.
+- **Freeze and revoke reuse the agency lifecycle** — suspended and terminated — so the storefront,
+  the checkout and the sign-in path need no new rule and cannot disagree about one.
 - **The agency export** is JSON rather than CSV: an agency is a tree — profile, staff, wallet, ledger, orders and their lines — and flattening it to one table would lose the shape somebody receiving it needs.
 - **The admin console's landing page** follows the account's permissions rather than being fixed. A Support account holds `agency.view` and nothing else, so a fixed home page sent them to a refusal at every sign-in.
 
@@ -121,6 +143,12 @@ Each feature meets its criteria the simplest safe way. These wait until after th
 - **F7:** SMS and WhatsApp are logged, not sent.
 - **F8:** the dashboard shows core counts and sales; the top-agent leaderboard and feature flags wait.
 - **F9:** monthly billing only; promotions wait.
+- **F10:** a sub-agent's bookings are funded from its own wallet, with the allowance enforced as a
+  per-period cap on top. Drawing directly on the principal's wallet needs open question 3 answered
+  (who fronts the money), which §7 lists as blocking this piece. Network reporting sums `orders`
+  over a date range rather than F11's read models, which do not exist yet; the method's shape does
+  not change when they do. Catalog product types can be scoped but not yet enforced, because the
+  catalog is F3.
 - **F11:** CSV exports only, no XLSX; scheduled reports wait.
 - **F12:** bank accounts verified by hand; reconciliation from Paystack's settlement export.
 - **F14:** a written penetration-test scope and an internal checklist run, with the external test after launch; one recorded load-test run.
@@ -717,11 +745,12 @@ Charging agents on a schedule.
 
 ### F10 · Sub-agent network
 
-**M3 · Queued** · 0 of 7 boxes ticked
+**M3 · Done** · branch `feat/M3-subagents` · 7 of 7 boxes ticked
 
 Agencies invite agents beneath them, choose what each may sell and whether they see margins, and give them wallet allowances they cannot exceed.
 
-- **Needs:** F9 (the number of sub-agents is an entitlement).
+- **Needs:** F9 (the number of sub-agents is an entitlement). Built against a named seam,
+  `ISubAgentEntitlement`, which allows everything until F9 answers it — see the decisions below.
 - **Issues:** #63
 - **Open questions it meets:** 6, 7, 8 — see [§7 of the architecture plan](ARCHITECTURE_AND_DELIVERY_PLAN.md#7-open-questions-for-the-client)
 
@@ -731,13 +760,13 @@ FRD §2.7 — an agency onboards agents beneath it.
 
 **Tables:** `sub_agent_scopes, permission_overrides, wallet_allowances`
 
-- [ ] Invitation flow.
-- [ ] Scoped permissions (which product types and suppliers a sub-agent may sell).
-- [ ] Margin visibility control.
-- [ ] Wallet allowances with race-free consumption.
-- [ ] Freeze and revoke.
-- [ ] Consolidated network reporting.
-- [ ] Key test: a sub-agent with margin visibility off receives DTOs where net and markup are structurally ABSENT from the JSON, not merely null.
+- [x] Invitation flow.
+- [x] Scoped permissions (which product types and suppliers a sub-agent may sell).
+- [x] Margin visibility control.
+- [x] Wallet allowances with race-free consumption.
+- [x] Freeze and revoke.
+- [x] Consolidated network reporting.
+- [x] Key test: a sub-agent with margin visibility off receives DTOs where net and markup are structurally ABSENT from the JSON, not merely null.
 
 ### F11 · Analytics and reporting
 

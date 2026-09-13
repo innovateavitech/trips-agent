@@ -4,6 +4,7 @@ import {
   ClipboardList,
   Compass,
   Inbox,
+  Network,
   LayoutDashboard,
   LifeBuoy,
   Plane,
@@ -39,6 +40,15 @@ export interface NavItem {
    * starts with `/` — and so does anything with a sibling nested under it.
    */
   end?: boolean;
+  /**
+   * Show this only to a principal.
+   *
+   * A sub-agent has no network of its own — the hierarchy is two levels — so
+   * offering it a "Sub-agents" link would be a dead end. The API refuses it
+   * either way, which is the guard that matters; this only keeps the sidebar
+   * honest.
+   */
+  principalsOnly?: boolean;
 }
 
 export interface NavSection {
@@ -77,6 +87,13 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    label: 'Network',
+    items: [
+      { label: 'Sub-agents', to: '/sub-agents', icon: Users, principalsOnly: true }, // issue 63
+      { label: 'Network performance', to: '/network', icon: Network }, // issue 63
+    ],
+  },
+  {
     label: 'Agency',
     items: [
       { label: 'Your website', to: '/website', icon: Globe }, // #58, #59
@@ -86,3 +103,20 @@ export const NAV_SECTIONS: NavSection[] = [
 ];
 
 export const NAV_ITEMS: NavItem[] = NAV_SECTIONS.flatMap((section) => section.items);
+
+/**
+ * The sidebar for one kind of agency, with empty sections dropped.
+ *
+ * A sub-agent still sees "Network performance": the same endpoint serves both,
+ * and it answers with that agency's own figures alone.
+ */
+export function navigationFor(kind: 'principal' | 'sub_agent' | null): NavSection[] {
+  if (kind !== 'sub_agent') {
+    return NAV_SECTIONS;
+  }
+
+  return NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => item.principalsOnly !== true),
+  })).filter((section) => section.items.length > 0);
+}

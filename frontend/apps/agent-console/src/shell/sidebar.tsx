@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '@trips/ui';
-import { NAV_SECTIONS } from '../app/navigation';
+import { navigationFor } from '../app/navigation';
+import { useCurrentUser } from '../auth/auth-provider';
 import { AgencySwitcher } from './agency-switcher';
 
 /**
@@ -9,6 +10,9 @@ import { AgencySwitcher } from './agency-switcher';
  * phone). `onNavigate` lets the drawer close itself when a link is chosen.
  */
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  // A sub-agent has no network of its own, so it is not offered one.
+  const sections = navigationFor(useCurrentUser().agency?.kind ?? null);
+
   return (
     <div className="flex h-full flex-col gap-6 px-3 py-4">
       <div className="flex items-center gap-2.5 px-2">
@@ -27,7 +31,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <AgencySwitcher />
 
       <nav aria-label="Main" className="flex flex-1 flex-col gap-5 overflow-y-auto">
-        {NAV_SECTIONS.map((section) => (
+        {sections.map((section) => (
           <div key={section.label} className="flex flex-col gap-0.5">
             <p className="px-3 pb-1 text-xs font-medium text-sidebar-muted-foreground">
               {section.label}

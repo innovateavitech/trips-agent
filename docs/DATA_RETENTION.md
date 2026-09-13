@@ -54,6 +54,7 @@ The source of truth is `RetentionCatalogue.Tables` in
 | `payments.wallets` | No | At least 7 years | Protected | Balances the nightly audit reconciles against the ledger |
 | `payments.wallet_holds` | No | At least 7 years | Protected | Funds reserved for a booking; each explains a statement line |
 | `payments.wallet_transactions` | No | At least 7 years | Protected | The agent's wallet statement |
+| `payments.wallet_allowances` | No | At least 7 years | Protected | How much of a principal's money a sub-agent was allowed to spend, and how much it did — read alongside the ledger when somebody asks who authorised a booking |
 | `payments.payment_transactions` | Some (gateway references) | At least 7 years | Protected | The evidence behind every top-up and order payment |
 | `payments.payment_webhook_events` | Yes (payer details in payloads) | At least 7 years | Protected | What the gateway told us, with its signature check — the evidence in a dispute |
 | `payments.reconciliation_exceptions` | No | At least 7 years | Protected | What the ledger audit found and how it was resolved |
@@ -194,6 +195,8 @@ order needs. None of it is a traveller's personal data, so there is nothing to a
 | `tenancy.agency_branding` | Some (contact address) | While the agency exists | Kept | Configuration |
 | `tenancy.kyb_submissions` | Yes (directors) | At least 7 years | Protected | Proof the agency was verified before it could transact |
 | `tenancy.kyb_documents` | Yes | At least 7 years | Protected | The documents that verification rested on |
+| `tenancy.sub_agent_scopes` | No | While the sub-agent exists | Kept | What a sub-agent is currently allowed to sell. Configuration, not history — what changed and why is in the audit log |
+| `tenancy.permission_overrides` | No | While the sub-agent exists | Kept | Permissions a principal has currently taken away from a sub-agent |
 
 ### Platform
 

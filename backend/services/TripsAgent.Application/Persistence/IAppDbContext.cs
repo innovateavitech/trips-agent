@@ -16,6 +16,7 @@ using TripsAgent.Domain.Storefront;
 using TripsAgent.Domain.Suppliers;
 using TripsAgent.Domain.Tenancy;
 using TripsAgent.Domain.Tenancy.Kyb;
+using TripsAgent.Domain.Tenancy.SubAgents;
 
 namespace TripsAgent.Application.Persistence;
 
@@ -60,6 +61,18 @@ public interface IAppDbContext
 
     /// <summary>The audit trail behind the lockout rule.</summary>
     public DbSet<LoginAttempt> LoginAttempts { get; }
+
+    /// <summary>Outstanding invitations to join an agency, or to join Trips staff.</summary>
+    public DbSet<UserInvitation> UserInvitations { get; }
+
+    /// <summary>What each sub-agent may sell. No rows means nothing is allowed. Feature F10.</summary>
+    public DbSet<SubAgentScope> SubAgentScopes { get; }
+
+    /// <summary>Permissions a principal has taken away from a sub-agent. Deny only. Feature F10.</summary>
+    public DbSet<PermissionOverride> PermissionOverrides { get; }
+
+    /// <summary>The hard cap on what each sub-agent may spend against its principal. Feature F10.</summary>
+    public DbSet<WalletAllowance> WalletAllowances { get; }
 
     public DbSet<KybSubmission> KybSubmissions { get; }
 

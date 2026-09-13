@@ -16,6 +16,7 @@ import { httpDeparturesApi, mockDeparturesApi } from './features/departures';
 import { mockSearchApi } from './features/search';
 import { createHttpBookingFlowApi, mockBookingFlowApi } from './features/booking';
 import { createHttpBookingsApi, mockBookingsApi } from './features/bookings';
+import { createHttpSubAgentsApi, mockSubAgentsApi } from './features/subagents';
 import { mockWalletApi } from './features/wallet';
 import { createHttpBillingApi, mockBillingApi } from './features/billing';
 import './index.css';
@@ -34,6 +35,7 @@ import './index.css';
  *   departures   real `/api/v1/catalog`; the stand-in with `VITE_AUTH_MODE=mock`
  *   crm          real `/api/v1/crm`; the stand-in with `VITE_AUTH_MODE=mock`
  *   billing      real `/api/v1/billing` (issues 64, 65); the stand-in with `VITE_AUTH_MODE=mock`
+ *   subAgents    real `/api/v1/sub-agents` (issue 63); the stand-in with `VITE_AUTH_MODE=mock`
  */
 const adapters: AppAdapters = {
   auth: AUTH_MODE === 'mock' ? mockAuthApi : createHttpAuthApi({ api, publicApi }),
@@ -46,6 +48,7 @@ const adapters: AppAdapters = {
   departures: AUTH_MODE === 'mock' ? mockDeparturesApi : httpDeparturesApi,
   crm: AUTH_MODE === 'mock' ? mockCrmApi : httpCrmApi,
   billing: AUTH_MODE === 'mock' ? mockBillingApi : createHttpBillingApi({ api }),
+  subAgents: AUTH_MODE === 'mock' ? mockSubAgentsApi : createHttpSubAgentsApi({ api }),
 };
 
 const queryClient = createQueryClient();

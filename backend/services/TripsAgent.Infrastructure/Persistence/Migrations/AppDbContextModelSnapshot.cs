@@ -4867,6 +4867,80 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.ToTable("wallets", "payments");
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Payments.WalletAllowance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<long>("LimitMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("limit_minor");
+
+                    b.Property<string>("Period")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("period");
+
+                    b.Property<DateTimeOffset?>("ResetsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resets_at");
+
+                    b.Property<long>("SpentMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("spent_minor");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("SubAgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sub_agency_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_wallet_allowances");
+
+                    b.HasIndex("AgencyId")
+                        .HasDatabaseName("ix_wallet_allowances_agency_id");
+
+                    b.HasIndex("ResetsAt")
+                        .HasDatabaseName("ix_wallet_allowances_resets_at");
+
+                    b.HasIndex("SubAgencyId", "Currency")
+                        .IsUnique()
+                        .HasDatabaseName("ix_wallet_allowances_sub_agency_id_currency");
+
+                    b.ToTable("wallet_allowances", "payments");
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Payments.WalletHold", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7381,6 +7455,103 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                     b.ToTable("kyb_submissions", "tenancy");
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Tenancy.SubAgents.PermissionOverride", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("PermissionCode")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("permission_code");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("SubAgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sub_agency_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_permission_overrides");
+
+                    b.HasIndex("AgencyId")
+                        .HasDatabaseName("ix_permission_overrides_agency_id");
+
+                    b.HasIndex("SubAgencyId", "PermissionCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_permission_overrides_sub_agency_id_permission_code");
+
+                    b.ToTable("permission_overrides", "tenancy");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Tenancy.SubAgents.SubAgentScope", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agency_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ProductType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("product_type");
+
+                    b.Property<Guid>("SubAgencyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sub_agency_id");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sub_agent_scopes");
+
+                    b.HasIndex("AgencyId")
+                        .HasDatabaseName("ix_sub_agent_scopes_agency_id");
+
+                    b.HasIndex("SupplierId")
+                        .HasDatabaseName("ix_sub_agent_scopes_supplier_id");
+
+                    b.HasIndex("SubAgencyId", "ProductType", "SupplierId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sub_agent_scopes_sub_agency_id_product_type_supplier_id");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("SubAgencyId", "ProductType", "SupplierId"), false);
+
+                    b.ToTable("sub_agent_scopes", "tenancy");
+                });
+
             modelBuilder.Entity("TripsAgent.Infrastructure.Messaging.InboxMessage", b =>
                 {
                     b.Property<Guid>("MessageId")
@@ -8504,6 +8675,23 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_wallets_agencies_agency_id");
                 });
 
+            modelBuilder.Entity("TripsAgent.Domain.Payments.WalletAllowance", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_wallet_allowances_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("SubAgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_wallet_allowances_agencies_sub_agency_id");
+                });
+
             modelBuilder.Entity("TripsAgent.Domain.Payments.WalletHold", b =>
                 {
                     b.HasOne("TripsAgent.Domain.Payments.Wallet", null)
@@ -8898,6 +9086,46 @@ namespace TripsAgent.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_kyb_submissions_agencies_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Tenancy.SubAgents.PermissionOverride", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_permission_overrides_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("SubAgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_permission_overrides_agencies_sub_agency_id");
+                });
+
+            modelBuilder.Entity("TripsAgent.Domain.Tenancy.SubAgents.SubAgentScope", b =>
+                {
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("AgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sub_agent_scopes_agencies_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Tenancy.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("SubAgencyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sub_agent_scopes_agencies_sub_agency_id");
+
+                    b.HasOne("TripsAgent.Domain.Suppliers.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_sub_agent_scopes_suppliers_supplier_id");
                 });
 
             modelBuilder.Entity("TripsAgent.Domain.Billing.SubscriptionInvoice", b =>

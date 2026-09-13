@@ -105,6 +105,9 @@ public static partial class RetentionCatalogue
             "Funds reserved for a booking; each explains a movement on a wallet statement."),
         new("payments.wallet_transactions", RetentionTreatment.Protected, SevenYears,
             "The agent's wallet statement."),
+        new("payments.wallet_allowances", RetentionTreatment.Protected, SevenYears,
+            "How much of a principal's money a sub-agent was allowed to spend, and how much it did. "
+            + "Read alongside the ledger when somebody asks who authorised a booking."),
         new("payments.payment_transactions", RetentionTreatment.Protected, SevenYears,
             "Every gateway payment — the evidence behind a top-up or an order payment."),
         new("payments.payment_webhook_events", RetentionTreatment.Protected, SevenYears,
@@ -302,6 +305,14 @@ public static partial class RetentionCatalogue
             "Proof the agency was verified before it was allowed to transact."),
         new("tenancy.kyb_documents", RetentionTreatment.Protected, SevenYears,
             "The documents that verification rested on."),
+
+        // The sub-agent network (feature F10). Configuration, not history: each row says what one
+        // agency currently allows another. A change replaces the row rather than adding one, and
+        // what changed and why is in the audit log, which has its own retention.
+        new("tenancy.sub_agent_scopes", RetentionTreatment.Kept, "While the sub-agent exists",
+            "What a sub-agent is currently allowed to sell."),
+        new("tenancy.permission_overrides", RetentionTreatment.Kept, "While the sub-agent exists",
+            "Permissions a principal has currently taken away from a sub-agent."),
 
         // ---------------------------------------------------------------- platform
         new("platform.audit_logs", RetentionTreatment.Protected,

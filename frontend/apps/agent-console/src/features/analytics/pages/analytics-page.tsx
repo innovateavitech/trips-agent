@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ErrorState, SegmentedControl, Skeleton } from '@trips/ui';
 import {
   DEFAULT_WINDOW_ID,
@@ -44,6 +44,16 @@ export function AnalyticsPage() {
   const bookings = useBookingDrillDown(drillDownWindow, page, drillDownDay !== null);
 
   const withYear = spansYears(window);
+
+  // The drill-down opens below a table that can be a year long. Without this, choosing a day at the
+  // top of the page appears to do nothing, because what it opened is several screens down.
+  const drillDownRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (drillDownDay) {
+      drillDownRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    }
+  }, [drillDownDay]);
 
   function selectDay(day: string) {
     setDrillDownDay(day);
@@ -159,7 +169,11 @@ export function AnalyticsPage() {
       ) : null}
 
       {drillDownDay ? (
-        <section className="flex flex-col gap-3" aria-labelledby="drilldown-heading">
+        <section
+          ref={drillDownRef}
+          className="flex scroll-mt-6 flex-col gap-3"
+          aria-labelledby="drilldown-heading"
+        >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2
               id="drilldown-heading"

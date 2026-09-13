@@ -599,6 +599,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/erasure-requests/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewErasure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/erasure-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ErasureRequests"];
+        put?: never;
+        post: operations["EraseCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/wallet": {
         parameters: {
             query?: never;
@@ -3718,6 +3750,62 @@ export interface components {
             description: string;
             valueType: string;
             defaultValue: string;
+        };
+        ErasurePreviewRequest: {
+            /** Format: uuid */
+            agencyId: string;
+            email: string;
+        };
+        ErasurePreviewResponse: {
+            /** Format: uuid */
+            customerId: string;
+            name: string;
+            email: null | string;
+            /** Format: int32 */
+            orders: number | string;
+            /** Format: int32 */
+            travellers: number | string;
+            /** Format: int32 */
+            travelDocuments: number | string;
+            /** Format: int32 */
+            notifications: number | string;
+            /** Format: int32 */
+            evidenceFiles: number | string;
+            blockers: string[];
+        };
+        ErasureRequestCommand: {
+            /** Format: uuid */
+            agencyId: string;
+            /** Format: uuid */
+            customerId: string;
+            reason: string;
+        };
+        ErasureRequestResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            agencyId: string;
+            /** Format: uuid */
+            customerId: string;
+            status: string;
+            reason: string;
+            /** Format: uuid */
+            requestedByUserId: null | string;
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+            outcome: null | string;
+            refusalReason: null | string;
+        };
+        ErasureResultResponse: {
+            /** Format: uuid */
+            requestId: string;
+            completed: boolean;
+            changed: {
+                [key: string]: number | string;
+            };
+            blockers: string[];
         };
         FlightJourneyResponse: {
             /** Format: int32 */
@@ -6983,6 +7071,121 @@ export interface operations {
                 };
                 content: {
                     "application/json": string[];
+                };
+            };
+        };
+    };
+    PreviewErasure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ErasurePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErasurePreviewResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ErasureRequests: {
+        parameters: {
+            query?: {
+                limit?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErasureRequestResponse"][];
+                };
+            };
+        };
+    };
+    EraseCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ErasureRequestCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErasureResultResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErasureResultResponse"];
                 };
             };
         };

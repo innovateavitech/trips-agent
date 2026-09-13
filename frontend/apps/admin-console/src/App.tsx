@@ -20,6 +20,7 @@ import {
   type BackOfficeApi,
 } from './features/back-office';
 import { DashboardApiProvider, dashboardRoutes, type DashboardApi } from './features/dashboard';
+import { ErasureApiProvider, erasureRoutes, type ErasureApi } from './features/data-erasure';
 import { KybReviewApiProvider, kybReviewRoutes, type KybReviewApi } from './features/kyb-review';
 import type { ApiClient } from './lib/api/client';
 import { homePathFor } from './lib/auth/redirect';
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
       ...auditRoutes,
       ...billingRoutes,
       ...backOfficeRoutes,
+      ...erasureRoutes,
       { path: '*', element: <NotFoundPage /> },
     ],
   },
@@ -70,6 +72,7 @@ export interface ConsoleApis {
   backOffice: BackOfficeApi;
   billing: BillingApi;
   dashboard: DashboardApi;
+  erasure: ErasureApi;
   kybReview: KybReviewApi;
 }
 
@@ -92,11 +95,13 @@ export function App({
             <BackOfficeApiProvider value={apis.backOffice}>
               <BillingApiProvider value={apis.billing}>
                 <DashboardApiProvider value={apis.dashboard}>
-                  <KybReviewApiProvider value={apis.kybReview}>
-                    <PlatformAnalyticsApiProvider value={apis.analytics}>
-                      <RouterProvider router={router} />
-                    </PlatformAnalyticsApiProvider>
-                  </KybReviewApiProvider>
+                  <ErasureApiProvider value={apis.erasure}>
+                    <KybReviewApiProvider value={apis.kybReview}>
+                      <PlatformAnalyticsApiProvider value={apis.analytics}>
+                        <RouterProvider router={router} />
+                      </PlatformAnalyticsApiProvider>
+                    </KybReviewApiProvider>
+                  </ErasureApiProvider>
                 </DashboardApiProvider>
               </BillingApiProvider>
             </BackOfficeApiProvider>

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
+using TripsAgent.Api.RateLimiting;
+using TripsAgent.Application.RateLimiting;
 using TripsAgent.Application.Storefront;
 using TripsAgent.Contracts.Storefront;
 using TripsAgent.Domain.Storefront;
@@ -27,6 +29,12 @@ namespace TripsAgent.Api.Storefront;
 /// <b>Nothing here mentions the platform</b> (CLAUDE.md rule 4), and nothing carries a net rate, a
 /// markup or an internal id.
 /// </para>
+/// <para>
+/// <b>Rate-limited per calling address under the <c>Storefront</c> policy</b>, like the cart, the
+/// checkout and the CRM routes beside it. These fell back to the default policy, fifteen times looser,
+/// though every one of them reads the catalog on an anonymous caller's say-so. Found in the internal
+/// adversarial pass (issue 173).
+/// </para>
 /// </remarks>
 public static class PublicStorefrontEndpoints
 {
@@ -45,7 +53,8 @@ public static class PublicStorefrontEndpoints
 
         var group = app.MapGroup("/api/v1/public/storefront")
             .WithTags("Public storefront")
-            .AllowAnonymous();
+            .AllowAnonymous()
+            .RequireRateLimitPolicy(RateLimitPolicyNames.Storefront);
 
         group.MapGet("/site", async (
                 HttpContext http,

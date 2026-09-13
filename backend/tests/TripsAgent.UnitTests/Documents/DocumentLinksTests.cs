@@ -43,25 +43,56 @@ public class DocumentLinksTests
     }
 
     [Fact]
-    public void A_customers_link_never_expires_and_cannot_pass_as_an_agents()
+    public void A_customers_link_works_until_it_expires_and_cannot_pass_as_an_agents()
     {
-        var token = _links.PublicPathFor(Document).Split('/')[^1];
+        var expiresAt = _clock.Now.AddDays(90);
+        var (expires, token) = ParsePublic(_links.PublicPathFor(Document, expiresAt));
 
-        _clock.Now += TimeSpan.FromDays(3_650);
+        _links.IsValidPublic(Document, expires, token).Should().BeTrue();
+        _links.IsValidPublic(Guid.CreateVersion7(), expires, token).Should().BeFalse();
+        _links.IsValidPublic(Document, expires + 86_400, token).Should().BeFalse("moving the deadline breaks the signature");
+        _links.IsValidDownload(Document, expires, token).Should().BeFalse("a customer's token is not an agent's");
 
-        _links.IsValidPublic(Document, token).Should().BeTrue();
-        _links.IsValidPublic(Guid.CreateVersion7(), token).Should().BeFalse();
-        _links.IsValidDownload(Document, _clock.Now.AddHours(1).ToUnixTimeSeconds(), token).Should().BeFalse();
+        _clock.Now = expiresAt.AddSeconds(1);
+
+        _links.IsValidPublic(Document, expires, token).Should().BeFalse("a link in an old email must not work for ever");
+    }
+
+    [Fact]
+    public void A_customers_link_with_no_deadline_of_ours_on_it_is_refused()
+    {
+        // The permanent links minted before issue 174, and anything else presented without a
+        // deadline we signed. One nobody signed is not a deadline — including values no date can be
+        // made of, which must be refused rather than throw.
+        var (expires, token) = ParsePublic(_links.PublicPathFor(Document, _clock.Now.AddDays(90)));
+
+        _links.IsValidPublic(Document, expires: null, token).Should().BeFalse();
+        _links.IsValidPublic(Document, long.MaxValue, token).Should().BeFalse();
+        _links.IsValidPublic(Document, long.MinValue, token).Should().BeFalse();
+        _links.IsValidPublic(Document, expires, token: null).Should().BeFalse();
+        _links.IsValidDownload(Document, long.MaxValue, token).Should().BeFalse();
     }
 
     [Fact]
     public void Every_signature_is_safe_in_a_url_without_escaping()
     {
         var (_, signature) = Parse(_links.DownloadFor(Document).Path);
-        var token = _links.PublicPathFor(Document).Split('/')[^1];
+        var (_, token) = ParsePublic(_links.PublicPathFor(Document, _clock.Now.AddDays(90)));
 
         signature.Should().MatchRegex("^[A-Za-z0-9_-]+$");
         token.Should().MatchRegex("^[A-Za-z0-9_-]+$");
+    }
+
+    /// <summary>The deadline and the signature out of a customer's link.</summary>
+    private static (long Expires, string Token) ParsePublic(string path)
+    {
+        var query = path.IndexOf('?', StringComparison.Ordinal);
+
+        return (
+            long.Parse(
+                path[(path.IndexOf("expires=", StringComparison.Ordinal) + 8)..],
+                System.Globalization.CultureInfo.InvariantCulture),
+            path[(path.LastIndexOf('/', query) + 1)..query]);
     }
 
     private static (long Expires, string Signature) Parse(string path)

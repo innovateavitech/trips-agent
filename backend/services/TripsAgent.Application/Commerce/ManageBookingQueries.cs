@@ -68,16 +68,16 @@ public sealed class ManageBookingQueries
 
         // Read inside the agency the host resolved to, so a link for one agency's booking presented
         // on another's domain finds nothing — and reads exactly like a link that has lapsed.
-        var orderId = await _links.OrderForAsync(secret, cancellationToken);
+        var link = await _links.OpenAsync(secret, cancellationToken);
 
-        if (orderId is null)
+        if (link is null)
         {
             return Store.NotFound<ManageBookingResponse>(NoSuchBooking);
         }
 
         var order = await _db.Orders.AsNoTracking()
             .Include(candidate => candidate.Lines)
-            .FirstOrDefaultAsync(candidate => candidate.Id == orderId.Value, cancellationToken);
+            .FirstOrDefaultAsync(candidate => candidate.Id == link.OrderId, cancellationToken);
 
         if (order is null)
         {
@@ -147,7 +147,10 @@ public sealed class ManageBookingQueries
                     document.Id,
                     document.DocumentType.ToString(),
                     document.DocumentNumber,
-                    _documents.PublicPathFor(document.Id)))
+
+                    // A document link is a bearer token like the one that opened this page, so it
+                    // lapses with it rather than lasting for ever (issue 174).
+                    _documents.PublicPathFor(document.Id, link.ExpiresAt)))
                 .ToList()));
     }
 

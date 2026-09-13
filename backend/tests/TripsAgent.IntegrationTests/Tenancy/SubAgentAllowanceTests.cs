@@ -138,20 +138,79 @@ public class SubAgentAllowanceTests
     }
 
     [Fact]
-    public async Task Releasing_twice_leaves_the_allowance_at_zero_rather_than_below_it()
+    public async Task A_second_release_of_the_same_hold_is_refused_and_leaves_other_bookings_alone()
     {
         await using var world = await WorldAsync();
         await using var session = world.ActingAs(world.SubAgent, world.Principal);
         var reservations = new PostgresAllowanceReservations(session.Db);
 
+        // Two bookings counted against the one cap.
         await reservations.ReserveAsync("NGN", 100_000);
+        await reservations.ReserveAsync("NGN", 50_000);
 
-        // A reversal racing a lapse. Both give the same hold back, and the allowance must not end
-        // up negative — which would silently hand the sub-agent extra room.
-        await reservations.ReleaseAsync(world.SubAgent, "NGN", 100_000);
-        await reservations.ReleaseAsync(world.SubAgent, "NGN", 100_000);
+        // A reversal racing a lapse: the same hold given back twice. The first release is that
+        // booking's own money; the second is nobody's, and must not come out of the other booking's
+        // reservation — which is what clamping the subtraction at zero used to do (issue 175).
+        (await reservations.ReleaseAsync(world.SubAgent, "NGN", 100_000)).Should().BeTrue();
+        (await reservations.ReleaseAsync(world.SubAgent, "NGN", 100_000)).Should().BeFalse();
 
+        (await world.AdminCountAsync("SELECT spent_minor FROM payments.wallet_allowances")).Should().Be(50_000);
+    }
+
+    [Fact]
+    public async Task The_function_itself_refuses_to_release_more_than_the_allowance_holds()
+    {
+        await using var world = await WorldAsync();
+        await using var session = world.ActingAs(world.SubAgent, world.Principal);
+        var reservations = new PostgresAllowanceReservations(session.Db);
+
+        await reservations.ReserveAsync("NGN", 300_000);
+
+        // Straight at the SECURITY DEFINER function, as the policed role the API connects with. The
+        // application is what usually decides the amount; this is the case where it does not, and
+        // the bound has to be the database's own.
+        (await session.Db.Database.SqlQueryRaw<string>("""SELECT current_user::text AS "Value" """).SingleAsync())
+            .Should().Be("tripsagent_app", "the bound is only worth testing against the role that cannot bypass it");
+
+        var released = await session.Db.Database
+            .SqlQueryRaw<bool>(
+                """SELECT payments.release_sub_agent_allowance({0}, {1}, {2}) AS "Value" """,
+                world.SubAgent,
+                "NGN",
+                300_001L)
+            .SingleAsync();
+
+        released.Should().BeFalse("a release of more than was held is refused, not clamped");
+        (await world.AdminCountAsync("SELECT spent_minor FROM payments.wallet_allowances")).Should().Be(300_000);
+
+        // What was held still goes back, so the bound refuses nothing legitimate.
+        (await reservations.ReleaseAsync(world.SubAgent, "NGN", 300_000)).Should().BeTrue();
         (await world.AdminCountAsync("SELECT spent_minor FROM payments.wallet_allowances")).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task The_release_function_keeps_its_definer_rights_its_search_path_and_its_grant()
+    {
+        await using var world = await WorldAsync();
+
+        // Replacing a function rewrites the whole definition. Lose SECURITY DEFINER and a sub-agent's
+        // own release stops working; lose the search path and it runs with one its caller chose; lose
+        // the grant and nothing can call it at all.
+        var installed = await world.AdminListAsync(
+            """
+            SELECT p.prosecdef::text
+                   || '|' || coalesce(array_to_string(p.proconfig, ','), '')
+                   || '|' || has_function_privilege('tripsagent_app', p.oid, 'EXECUTE')::text
+              FROM pg_proc p
+              JOIN pg_namespace n ON n.oid = p.pronamespace
+             WHERE n.nspname = 'payments' AND p.proname = 'release_sub_agent_allowance'
+            """);
+
+        var settings = installed.Should().ContainSingle().Subject;
+
+        settings.Should().StartWith("true|search_path=");
+        settings.Should().Contain("payments").And.Contain("tenancy");
+        settings.Should().EndWith("|true");
     }
 
     [Fact]

@@ -26,7 +26,9 @@ namespace TripsAgent.Infrastructure.Tenancy;
 /// The functions are also why this is not a plain UPDATE: the allowance row belongs to the
 /// principal, and a sub-agent's session cannot write it. A definer-rights function that can only
 /// add to <c>spent_minor</c>, only within the limit, and only on the calling agency's own row is a
-/// far smaller hole than an UPDATE policy that would let it write any column.
+/// far smaller hole than an UPDATE policy that would let it write any column. Releasing is bounded
+/// in the same place and the same way — never more than the allowance holds — so neither direction
+/// depends on this class getting the amount right (issue 175).
 /// </para>
 /// </remarks>
 public sealed class PostgresAllowanceReservations : IAllowanceReservations

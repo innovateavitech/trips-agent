@@ -69,11 +69,21 @@ public sealed class FakePaymentGateway : IPaymentGateway
         return Task.FromResult(new GatewayInitialization($"https://pay.test/{reference}", $"gw-{reference}"));
     }
 
-    public Task<GatewayVerification> VerifyAsync(string reference, CancellationToken cancellationToken = default) =>
-        Task.FromResult(_answers.TryGetValue(reference, out var answer)
+    /// <summary>
+    /// Every payment the gateway was asked about, oldest first. What a test asserts about when the
+    /// gateway must not be asked at all.
+    /// </summary>
+    public ConcurrentQueue<string> Verified { get; } = new();
+
+    public Task<GatewayVerification> VerifyAsync(string reference, CancellationToken cancellationToken = default)
+    {
+        Verified.Enqueue(reference);
+
+        return Task.FromResult(_answers.TryGetValue(reference, out var answer)
             ? answer
             : new GatewayVerification(
                 GatewayPaymentOutcome.Pending, "abandoned", Money.Zero, Money.Zero, "NGN", $"gw-{reference}", null));
+    }
 
     public Task<GatewayRefund> RefundAsync(
         string reference,

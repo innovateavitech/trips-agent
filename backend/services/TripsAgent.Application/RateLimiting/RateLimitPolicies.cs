@@ -29,8 +29,9 @@ public static class RateLimitPolicyNames
     public const string Search = "Search";
 
     /// <summary>
-    /// The storefront's anonymous CRM routes (#62): the trip-request widget, and the quote page a
-    /// customer opens from their email. Each one writes, and anyone on the internet can reach them.
+    /// Every anonymous route on an agency's storefront: the site and catalog it renders, the cart,
+    /// the checkout and the manage-my-booking link, and the CRM's trip-request widget and quote page
+    /// (#62). Anyone on the internet can reach them, and several of them write.
     /// </summary>
     public const string Storefront = "Storefront";
 
@@ -111,6 +112,11 @@ public sealed class RateLimitSettings
             // Per address, for anonymous traffic on an agency's own site. A traveller sends one trip
             // request and opens their quote a handful of times; twenty a minute from one address is
             // somebody filling the agency's inbox with rubbish, or guessing at quote links.
+            //
+            // The site's own pages count here too (issue 173). The storefront renders them on its
+            // server and caches them, so a page read reaches this API as a cache fill from the
+            // storefront's address, not the traveller's. Where the storefront does not forward the
+            // visitor's address, size this limit for that.
             [RateLimitPolicyNames.Storefront] = new(20, TimeSpan.FromMinutes(1)),
 
             // Per agency, across all its users: four busy users' worth of the default.

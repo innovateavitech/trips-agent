@@ -7,6 +7,7 @@ using TripsAgent.Application.Storage;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Orders;
+using TripsAgent.Domain.Tenancy;
 
 namespace TripsAgent.Application.Documents;
 
@@ -68,6 +69,16 @@ public abstract record DocumentFileOutcome
 
     /// <summary>A customer asked for a document that has since been replaced.</summary>
     public sealed record Superseded(string ByDocumentNumber) : DocumentFileOutcome;
+
+    /// <summary>
+    /// The agency whose document it is has been closed, so its travellers' links have stopped
+    /// (issue 174).
+    /// </summary>
+    /// <remarks>
+    /// Answered exactly like a lapsed or forged link, so whoever holds it learns nothing about the
+    /// agency by asking.
+    /// </remarks>
+    public sealed record AgencyClosed : DocumentFileOutcome;
 
     /// <summary>The stored bytes are not the bytes that were issued. Never served.</summary>
     public sealed record Corrupted : DocumentFileOutcome;
@@ -222,6 +233,19 @@ public sealed partial class BookingDocumentsHandler
 
         if (forCustomer)
         {
+            // Decision 14 from the traveller's side, and the rule the manage-my-booking link already
+            // follows: somebody who paid keeps their documents while the agency is suspended, and a
+            // terminated agency's links stop (issue 174).
+            var standing = await _db.Agencies.AsNoTracking()
+                .Where(agency => agency.Id == document.AgencyId)
+                .Select(agency => (AgencyStatus?)agency.Status)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (standing is null || !AgencyAccess.CanServeExistingTravellers(standing.Value))
+            {
+                return new DocumentFileOutcome.AgencyClosed();
+            }
+
             var replacedBy = await _db.GeneratedDocuments
                 .AsNoTracking()
                 .Where(d => d.SupersedesDocumentId == documentId)

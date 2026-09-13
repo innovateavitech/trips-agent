@@ -40,6 +40,11 @@ public enum SubmitEvidenceOutcome
 
     /// <summary>The gateway could not be reached. Nothing was recorded as filed.</summary>
     GatewayUnavailable = 5,
+
+    /// <summary>
+    /// One of the attached files is not this agency's. Nothing was sent (issue 175).
+    /// </summary>
+    UnknownAsset = 6,
 }
 
 /// <summary>What the agent files. Customer details are prefilled from the order where we have them.</summary>
@@ -401,6 +406,24 @@ public sealed partial class DisputeService : IDisputeWebhookSink, IDisputeDeadli
             return SubmitEvidenceOutcome.Invalid;
         }
 
+        var assetIds = submission.AssetIds?.Distinct().ToList() ?? [];
+
+        if (assetIds.Count > 0)
+        {
+            // The files have to be this agency's own. Tenant-filtered, so a stranger's id reads
+            // exactly like one that does not exist. Nothing renders or uploads these yet, which is
+            // the only reason storing somebody else's id was harmless; it stops being harmless the
+            // moment something does (issue 175). Checked before the gateway is told anything, so a
+            // refusal spends neither the deadline nor a submission.
+            var own = await _db.Assets.AsNoTracking()
+                .CountAsync(asset => assetIds.Contains(asset.Id), cancellationToken);
+
+            if (own != assetIds.Count)
+            {
+                return SubmitEvidenceOutcome.UnknownAsset;
+            }
+        }
+
         var evidence = new DisputeEvidence(
             submission.CustomerName.Trim(),
             submission.CustomerEmail.Trim(),
@@ -420,7 +443,7 @@ public sealed partial class DisputeService : IDisputeWebhookSink, IDisputeDeadli
         // Exactly what was sent. "What did we actually submit" is the first question when one is lost.
         dispute.RecordEvidence(
             submission.Note,
-            submission.AssetIds is { Count: > 0 } ids ? JsonSerializer.Serialize(ids) : null,
+            assetIds.Count > 0 ? JsonSerializer.Serialize(assetIds) : null,
             JsonSerializer.Serialize(evidence),
             _tenant.UserId,
             now);

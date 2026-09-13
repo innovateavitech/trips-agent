@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TripsAgent.Application.Checkout;
 using TripsAgent.Application.Payments;
 using TripsAgent.Application.Tenancy.SubAgents;
+using TripsAgent.Domain.Assets;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Identity;
 using TripsAgent.Domain.Orders;
@@ -155,6 +156,44 @@ public sealed class CrossTenantAccessTests
         }
     }
 
+    [Fact]
+    public async Task Evidence_cannot_be_filed_with_another_agencys_file_attached()
+    {
+        await using var world = await PayoutWorldAsync();
+        var other = await SeedSecondAgencyAsync(world);
+        var disputeId = await OpenOurDisputeAsync(world);
+        var ours = await SeedOurAssetAsync(world);
+
+        var evidence = new EvidenceSubmission(
+            "Tunde Bello", "tunde@example.com", "+2348000000000", "Lagos–Abuja flight", null, null, [other.AssetId]);
+
+        // An asset id is the one part of a submission the agent chooses by id, so it is the one part
+        // that can name another agency's row (issue 175).
+        (await world.Disputes().SubmitEvidenceAsync(disputeId, evidence))
+            .Should().Be(SubmitEvidenceOutcome.UnknownAsset);
+
+        world.BackOffice.Evidence.Should().BeEmpty("nothing reaches the gateway until every file is ours");
+
+        world.Db.ChangeTracker.Clear();
+        (await world.Db.Disputes.AsNoTracking().SingleAsync(d => d.Id == disputeId))
+            .EvidenceSubmittedAt.Should().BeNull("the refusal happened before anything was recorded");
+
+        // One of ours and one of theirs is still theirs: a mixed list is refused whole.
+        (await world.Disputes().SubmitEvidenceAsync(disputeId, evidence with { AssetIds = [ours, other.AssetId] }))
+            .Should().Be(SubmitEvidenceOutcome.UnknownAsset);
+
+        // The control: this agency's own file goes through, and is what gets recorded.
+        world.Db.ChangeTracker.Clear();
+        (await world.Disputes().SubmitEvidenceAsync(disputeId, evidence with { AssetIds = [ours] }))
+            .Should().Be(SubmitEvidenceOutcome.Submitted);
+
+        world.BackOffice.Evidence.Should().ContainSingle();
+
+        world.Db.ChangeTracker.Clear();
+        (await world.Db.Disputes.AsNoTracking().SingleAsync(d => d.Id == disputeId))
+            .EvidenceAssetIds.Should().Contain(ours.ToString());
+    }
+
     // ------------------------------------------------------------------ bookings
 
     [Fact]
@@ -294,7 +333,36 @@ public sealed class CrossTenantAccessTests
         PayoutWorld.CreateAsync(_postgres, testName);
 
     /// <summary>The other agency's ids, for the payout and dispute tests.</summary>
-    private sealed record OtherAgency(Guid AgencyId, Guid BankAccountId, Guid DisputeId);
+    private sealed record OtherAgency(Guid AgencyId, Guid BankAccountId, Guid DisputeId, Guid AssetId);
+
+    /// <summary>A chargeback of this agency's own, opened the way the webhook opens one.</summary>
+    private static async Task<Guid> OpenOurDisputeAsync(PayoutWorld world)
+    {
+        var payment = await world.PayInAsync(1_000_000);
+        var opened = world.Clock.GetUtcNow();
+
+        world.BackOffice.Disputes["D-OURS"] = new GatewayDispute(
+            "D-OURS", payment.Reference, new Money(100_000), "NGN", GatewayDisputeState.Open,
+            "awaiting-merchant-feedback", null, "chargeback", "I do not recognise this charge",
+            opened, opened.AddDays(3));
+
+        await world.Disputes().SyncAsync("D-OURS");
+        world.Db.ChangeTracker.Clear();
+
+        return (await world.Db.Disputes.AsNoTracking().SingleAsync()).Id;
+    }
+
+    /// <summary>A file of this agency's own, as the console's upload would have left it.</summary>
+    private static async Task<Guid> SeedOurAssetAsync(PayoutWorld world)
+    {
+        var asset = Asset.Reserve(
+            world.AgencyId, AssetPurpose.Attachment, "boarding-pass.pdf", world.Clock.GetUtcNow().AddMinutes(15));
+
+        world.Db.Assets.Add(asset);
+        await world.Db.SaveChangesAsync();
+
+        return asset.Id;
+    }
 
     /// <summary>
     /// A second verified agency inside <see cref="PayoutWorld"/>'s database, with a bank account
@@ -339,9 +407,15 @@ public sealed class CrossTenantAccessTests
             "chargeback", "I do not recognise this charge", now, now.AddDays(3), orderId: null);
 
         db.Disputes.Add(dispute);
+
+        // A file of theirs. An asset id is the one part of an evidence submission an agent chooses by
+        // id, so it is the one part that can name a row belonging to somebody else.
+        var asset = Asset.Reserve(agency.Id, AssetPurpose.Attachment, "their-invoice.pdf", now.AddMinutes(15));
+        db.Assets.Add(asset);
+
         await db.SaveChangesAsync();
 
-        return new OtherAgency(agency.Id, account.Id, dispute.Id);
+        return new OtherAgency(agency.Id, account.Id, dispute.Id, asset.Id);
     }
 
     /// <summary>

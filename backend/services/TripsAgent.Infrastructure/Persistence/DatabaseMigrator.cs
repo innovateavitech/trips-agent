@@ -1,7 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using TripsAgent.Application.Security;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Infrastructure.Persistence.Encryption;
 
 namespace TripsAgent.Infrastructure.Persistence;
 
@@ -68,10 +72,27 @@ public static partial class DatabaseMigrator
                 var migrationNames = string.Join(", ", pending);
                 LogApplying(logger, pending.Length, migrationNames);
 
+                // Encrypting a column that already holds data is a data migration, and SQL cannot do it:
+                // the key is in configuration, not in the database (issue 104). So the run stops at the
+                // migration that adds the ciphertext columns, encrypts what is there, and only then
+                // applies the one that drops the plaintext columns — which refuses to drop a column with
+                // anything unencrypted still in it.
+                if (pending.Any(migration => migration.EndsWith(EncryptionColumnsMigration, StringComparison.Ordinal)))
+                {
+                    LogPausingForBackfill(logger);
+
+                    await dbContext.GetService<IMigrator>().MigrateAsync(EncryptionColumnsMigration, cancellationToken);
+                    await BackfillEncryptionAsync(scope.ServiceProvider, dbContext, platformScope, logger, cancellationToken);
+                }
+
                 await dbContext.Database.MigrateAsync(cancellationToken);
 
                 LogApplied(logger);
             }
+
+            // Always, even with nothing pending: this is also the key rotation pass, which re-encrypts
+            // every value still under a retired key id.
+            await BackfillEncryptionAsync(scope.ServiceProvider, dbContext, platformScope, logger, cancellationToken);
 
             // Always, even with no schema change: a permission added in code needs no migration,
             // and would otherwise never reach a production database.
@@ -85,6 +106,36 @@ public static partial class DatabaseMigrator
             LogFailed(logger, ex);
             return 1;
         }
+    }
+
+    /// <summary>The migration that adds the ciphertext columns; the backfill runs straight after it.</summary>
+    public const string EncryptionColumnsMigration = "AddEncryptedPiiColumns";
+
+    /// <summary>
+    /// Encrypts traveller documents and bank account numbers that are still in clear, and re-encrypts
+    /// anything under a retired key.
+    /// </summary>
+    private static async Task BackfillEncryptionAsync(
+        IServiceProvider services,
+        AppDbContext dbContext,
+        IPlatformScope platformScope,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var backfill = new FieldEncryptionBackfill(
+            dbContext,
+            platformScope,
+            services.GetRequiredService<IFieldEncryptor>(),
+
+            // Resolved only if a row turns out to be in the pre-issue-104 format, so a database with none
+            // needs no legacy key configured.
+            services.GetRequiredService<ISecretProtector>,
+            logger);
+
+        var outcomes = await backfill.RunAsync(cancellationToken);
+        var rows = outcomes.Sum(outcome => outcome.Rows);
+
+        LogEncrypted(logger, rows);
     }
 
     [LoggerMessage(
@@ -112,4 +163,14 @@ public static partial class DatabaseMigrator
         Message = "Migration failed. The database has been left at its previous version — each "
                   + "migration runs in its own transaction, so nothing is half-applied.")]
     private static partial void LogFailed(ILogger logger, Exception exception);
+
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "Pausing after the migration that adds the encrypted columns, to encrypt what is already stored.")]
+    private static partial void LogPausingForBackfill(ILogger logger);
+
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "Field encryption: {Rows} stored value(s) encrypted or re-encrypted under the active key.")]
+    private static partial void LogEncrypted(ILogger logger, int rows);
 }

@@ -184,6 +184,7 @@ app.MapAuthenticationEndpoints();
 app.MapKybEndpoints();
 app.MapKybReviewEndpoints();
 app.MapWalletEndpoints();
+app.MapPayoutEndpoints();
 app.MapPricingEndpoints();
 app.MapSearchEndpoints();
 app.MapBookingEndpoints();

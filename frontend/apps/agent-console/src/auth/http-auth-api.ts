@@ -1,15 +1,17 @@
 import type { ApiClient, Schemas } from '@trips/api-client';
 import { unwrap } from '../api/errors';
-import { clearTokens, getRefreshToken, storeTokenPair } from '../api/tokens';
+import { clearTokens, storeAccessToken } from '../api/tokens';
 import type { AuthApi, SessionUser } from './auth-api';
 
 /**
  * The real session, against `/api/v1/auth` (#16).
  *
- *   sign in  → POST /login   (unauthenticated client) → store the pair → GET /me
+ *   sign in  → POST /login   (unauthenticated client) → keep the access token,
+ *                             the API sets the refresh cookie → GET /me
  *   restore  → GET /me       (authenticated client — `authFetch` refreshes first,
- *                             because after a reload only the refresh token is left)
- *   sign out → POST /logout  with the refresh token, so the server revokes it
+ *                             because after a reload only the cookie is left)
+ *   sign out → POST /logout  the browser sends the cookie, the server revokes it
+ *                             and clears it
  */
 export function createHttpAuthApi({
   api,
@@ -29,18 +31,17 @@ export function createHttpAuthApi({
       const pair = await unwrap(
         publicApi.POST('/api/v1/auth/login', { body: { email, password } }),
       );
-      storeTokenPair(pair);
+      storeAccessToken(pair);
       return currentUser();
     },
 
     async restore() {
-      // Nothing to restore: never signed in in this tab, or signed out.
-      if (getRefreshToken() === null) return null;
-
+      // Whether there is a session to restore is the cookie's to say, and this
+      // page cannot read it: ask. `authFetch` refreshes before the request.
       const result = await api.GET('/api/v1/auth/me');
       if (result.data) return toSessionUser(result.data);
 
-      // The refresh token was refused. `authFetch` has already cleared it.
+      // No cookie, or one the API refused: signed out.
       if (result.response.status === 401) return null;
 
       // Anything else is an outage, not an answer — let the caller say so.
@@ -48,16 +49,15 @@ export function createHttpAuthApi({
     },
 
     async signOut() {
-      const refreshToken = getRefreshToken();
       // Cleared first: whatever the network does next, this tab is signed out.
       clearTokens();
-      if (!refreshToken) return;
 
       try {
-        await publicApi.POST('/api/v1/auth/logout', { body: { refreshToken } });
+        await publicApi.POST('/api/v1/auth/logout');
       } catch {
-        // Offline. The token dies on its own in 30 days, and it is already gone
-        // from this browser; the agent should not be stuck signed in over it.
+        // Offline. The access token is already gone from this tab, and the
+        // cookie dies on its own in 30 days; the agent should not be stuck
+        // signed in over it.
       }
     },
 

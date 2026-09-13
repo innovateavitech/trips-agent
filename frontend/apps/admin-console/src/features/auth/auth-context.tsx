@@ -17,9 +17,9 @@ import type { SessionStore } from '../../lib/auth/session-store';
 import { NotStaffError } from './sign-in-errors';
 
 /**
- * `restoring` covers the moment after a page reload when we hold a refresh token but have not yet
- * traded it for a session. Treating that as "signed out" would bounce the reviewer to the sign-in
- * page for half a second on every reload.
+ * `restoring` covers the moment after a page load while the refresh cookie — which this page cannot
+ * read, so has to ask about — is traded for a session. Treating that as "signed out" would bounce the
+ * reviewer to the sign-in page for half a second on every reload.
  */
 export type AuthStatus = 'restoring' | 'signed-in' | 'signed-out';
 
@@ -44,9 +44,7 @@ export function AuthProvider({
   const queryClient = useQueryClient();
   const session = useSyncExternalStore(store.subscribe, store.getSession);
 
-  const [restoring, setRestoring] = useState(
-    () => store.getSession() === null && store.getRefreshToken() !== null,
-  );
+  const [restoring, setRestoring] = useState(() => store.getSession() === null);
 
   useEffect(() => {
     if (!restoring) return;
@@ -85,7 +83,7 @@ export function AuthProvider({
       // Checked BEFORE the session is stored, so an agency account never renders a single
       // screen of this console, not even for a frame.
       if (!isTripsStaff(next.claims)) {
-        await client.revoke(next.refreshToken);
+        await client.revoke();
         throw new NotStaffError();
       }
 

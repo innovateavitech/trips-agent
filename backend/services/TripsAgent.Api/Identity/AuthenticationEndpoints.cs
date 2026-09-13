@@ -10,6 +10,11 @@ using TripsAgent.Contracts.Identity;
 namespace TripsAgent.Api.Identity;
 
 /// <summary>Sign in, refresh, sign out.</summary>
+/// <remarks>
+/// The access token comes back in the JSON body; the refresh token never does. It travels only in
+/// an <c>HttpOnly</c> cookie, so no script on a console page can read it — see
+/// <see cref="RefreshTokenCookie"/>.
+/// </remarks>
 public static class AuthenticationEndpoints
 {
     /// <summary>
@@ -37,7 +42,7 @@ public static class AuthenticationEndpoints
 
                 return outcome switch
                 {
-                    LoginOutcome.Succeeded success => Results.Ok(Respond(success.Tokens)),
+                    LoginOutcome.Succeeded success => Results.Ok(Respond(http, success.Tokens)),
 
                     // 403 rather than 401: the credentials were right, so retrying them will not
                     // help. The client needs to send the user to the verification screen.
@@ -64,39 +69,48 @@ public static class AuthenticationEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
+        // No body: the refresh token is the cookie. A cross-site page cannot make the browser send
+        // it (SameSite=Strict), and could not read the answer if it did (CORS).
         group.MapPost("/refresh", async (
-                RefreshTokenRequest request,
                 RefreshTokenHandler handler,
                 HttpContext http,
                 CancellationToken cancellationToken) =>
             {
                 var outcome = await handler.HandleAsync(
-                    request,
+                    new RefreshTokenRequest(RefreshTokenCookie.Read(http.Request) ?? string.Empty),
                     ipAddress: http.Connection.RemoteIpAddress?.ToString(),
                     cancellationToken);
 
-                return outcome switch
+                if (outcome is RefreshOutcome.Succeeded success)
                 {
-                    RefreshOutcome.Succeeded success => Results.Ok(Respond(success.Tokens)),
+                    return Results.Ok(Respond(http, success.Tokens));
+                }
 
-                    // Reuse gets the same 401 as any other bad token. Saying "we detected reuse"
-                    // would tell an attacker their stolen token had been noticed.
-                    _ => Results.Problem(
-                        statusCode: StatusCodes.Status401Unauthorized,
-                        title: "That session has expired.",
-                        detail: "Sign in again to continue."),
-                };
+                // A cookie the server will never accept again is dead weight; clearing it means the
+                // next page load does not present it a second time.
+                RefreshTokenCookie.Delete(http);
+
+                // Reuse gets the same 401 as any other bad token, or a missing one. Saying "we
+                // detected reuse" would tell an attacker their stolen token had been noticed.
+                return Results.Problem(
+                    statusCode: StatusCodes.Status401Unauthorized,
+                    title: "That session has expired.",
+                    detail: "Sign in again to continue.");
             })
             .WithName("RefreshToken")
             .Produces<TokenPairResponse>()
             .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/logout", async (
-                RefreshTokenRequest request,
                 LogoutHandler handler,
+                HttpContext http,
                 CancellationToken cancellationToken) =>
             {
-                await handler.HandleAsync(request, cancellationToken);
+                await handler.HandleAsync(
+                    new RefreshTokenRequest(RefreshTokenCookie.Read(http.Request) ?? string.Empty),
+                    cancellationToken);
+
+                RefreshTokenCookie.Delete(http);
 
                 // Always 204, whatever the token was — see LogoutHandler.
                 return Results.NoContent();
@@ -138,8 +152,13 @@ public static class AuthenticationEndpoints
         return app;
     }
 
-    private static TokenPairResponse Respond(IssuedTokenPair pair) =>
-        new(pair.Access.Value,
-            (int)Math.Round((pair.Access.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds, MidpointRounding.AwayFromZero),
-            pair.RefreshTokenValue);
+    /// <summary>Sets the refresh cookie and returns the access token.</summary>
+    private static TokenPairResponse Respond(HttpContext http, IssuedTokenPair pair)
+    {
+        RefreshTokenCookie.Write(http, pair.RefreshTokenValue, pair.Stored.ExpiresAt);
+
+        return new(
+            pair.Access.Value,
+            (int)Math.Round((pair.Access.ExpiresAt - DateTimeOffset.UtcNow).TotalSeconds, MidpointRounding.AwayFromZero));
+    }
 }

@@ -1,5 +1,6 @@
 import { createApiClient } from '@trips/api-client';
 import { API_BASE_URL } from './config';
+import { sessionFetch } from './session-fetch';
 
 /**
  * The client for the few calls that must NOT go through `authFetch`: sign in,
@@ -11,4 +12,4 @@ import { API_BASE_URL } from './config';
  * spend the agent's refresh token. Keeping them on a plain client makes that
  * impossible rather than merely avoided.
  */
-export const publicApi = createApiClient({ baseUrl: API_BASE_URL });
+export const publicApi = createApiClient({ baseUrl: API_BASE_URL, fetch: sessionFetch });

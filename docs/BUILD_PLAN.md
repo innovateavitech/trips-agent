@@ -21,7 +21,7 @@ Where each part of the system is designed — tables, jobs, the money path — i
 | **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (merged, #167); F2 Notifications and documents (merged, #167) | 66 of 72 |
 | **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog; F4 Storefront; F5 Customer commerce; F6 Group tours; F7 CRM — all merged, #168 | 75 of 75 |
 | **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (done); F10 Sub-agent network (done); F11 Analytics and reporting (done, less XLSX and scheduled reports); F12 Payouts, disputes and reconciliation (done); F13 Loyalty and reviews (flag shipped with F9) | 36 of 42 |
-| **PR 4** · Launch readiness | F14 Security and launch readiness (queued) | 0 of 50 |
+| **PR 4** · Launch readiness | F14 Security and launch readiness (in progress) | 10 of 50 |
 
 
 ## Where things stand
@@ -141,6 +141,42 @@ Decided for F12 (payouts, disputes and reconciliation):
 - **A dispute on a payment we have no record of** is recorded as a reconciliation exception rather than a dispute row, because a dispute row needs an agency.
 - **Reconciliation runs each morning for the previous Lagos day**, reads every page of that day's Paystack settlements, matches lines to payments by reference to the kobo, and raises a payment as unsettled only once it is 3 days old. It reads and reports; it never corrects the ledger. One run row per gateway per day; exceptions are keyed on check and subject, so a re-run duplicates nothing. The existing `reconciliation_exceptions` table is shared with the nightly ledger audit, gaining a run link and a written-off status.
 - **To check on Paystack test mode before launch:** whether a dispute's `refund_amount` is in kobo, the field name of a settlement's date, and that transfer OTP is switched off on the account — otherwise every transfer waits on a code and stays `OutcomeUnknown`.
+
+Decided for F14 (the edge: headers, CORS and cookies — issue 107):
+
+- **HSTS a year on the API, thirty days on a storefront**, neither with `includeSubDomains` or
+  `preload`. The API's host is ours; an agency's domain is not, its other subdomains are none of our
+  business, and a certificate that lapses there should not lock its travellers out for a year.
+- **The API sends no `Content-Security-Policy` beyond `frame-ancestors`.** It answers JSON, and the
+  two things it does hand a browser directly — a signed PDF, the Hangfire dashboard — break under a
+  policy written for JSON. Framing is allowed from itself and the configured console origins, because
+  the admin console shows KYB documents in an `iframe`.
+- **The storefront's policy is nonce-based**, built per request in `middleware.ts`; Next.js stamps the
+  nonce on its own scripts, so an injected one does not run. `style-src` keeps `'unsafe-inline'`
+  because the agency's brand colour is a `style` attribute on `<body>`, and styles run no code.
+  `img-src` allows any `https:` origin rather than naming the asset host — naming it would print our
+  domain on the agency's own site (CLAUDE.md rule 4). `form-action` names the gateway's hosted page,
+  which is where a checkout without JavaScript is redirected.
+- **The refresh token moves into an `HttpOnly`, `Secure`, `SameSite=Strict` cookie** scoped to
+  `/api/v1/auth`, and leaves the JSON body entirely; the access token stays a module variable in each
+  console. `SameSite=Strict` is also the CSRF defence for refresh and sign-out, and it means a console
+  must be served same-site with the API.
+- **One cookie name per console** (`refresh_token`, `admin_refresh_token`), chosen by an
+  `X-Session-Client` header. Cookies belong to a host, not a port, so on a developer's machine the two
+  consoles would otherwise overwrite each other's session.
+- **A console refreshes under a Web Locks lock**, because the cookie is shared by every tab and a
+  refresh token is single use: two tabs refreshing at the same instant would look like theft and sign
+  the agent out everywhere.
+- **CORS is decided per request**, not a named policy: a configured console origin gets credentials; a
+  hostname that is verified and not held for review in `site_domains`, written exactly as that site's
+  address, gets the anonymous `/api/v1/public/` routes without credentials; everything else gets no
+  header at all. A storefront never gets credentials — an agency controls what is on its own pages,
+  and a subdomain storefront is same-site with the API. The answer comes from the storefront host
+  cache, so it is cached and already dropped whenever a domain is verified, reviewed or removed.
+- **No server banner:** Kestrel's `Server` header is off and Next's `X-Powered-By` is off, so nothing
+  traveller-facing says what built the site.
+- **Secret scanning stays a request, not a change.** It is a repository setting and nobody on the
+  build has admin rights; the command is in [BRANCH_PROTECTION.md](BRANCH_PROTECTION.md) Step 3a.
 
 ## What the MVP leaves out
 
@@ -906,7 +942,7 @@ FRD §1.2 lists both in scope with no use case written.
 
 ### F14 · Security and launch readiness
 
-**M3 · Queued** · 0 of 50 boxes ticked
+**M3 · In progress** · 10 of 50 boxes ticked
 
 What must be true before real travellers and real money: encrypted traveller documents, retention and erasure, hardened headers and cookies, scanning in CI, a load test and a penetration test.
 
@@ -967,22 +1003,43 @@ Pre-launch readiness.
 
 #### #107 · Security headers, CORS and cookie hardening
 
-- [ ] HSTS with a sensible `max-age`; **preload only after** custom domains are proven, since
-- [ ] `Content-Security-Policy` on the storefront, `X-Content-Type-Options: nosniff`,
-- [ ] Refresh token in an `HttpOnly`, `Secure`, `SameSite` cookie; the access token never in
-- [ ] CORS driven by the **verified custom-domain table**, not a wildcard — `*` with credentials
-- [ ] A test asserting the headers are present on both API and storefront responses, so a later
+- [x] HSTS with a sensible `max-age`; **preload only after** custom domains are proven, since
+      *(a year on the API, thirty days on a storefront — an agency's own domain, where a lapsed
+      certificate should not lock travellers out for a year. No `includeSubDomains`, no preload.)*
+- [x] `Content-Security-Policy` on the storefront, `X-Content-Type-Options: nosniff`,
+      `Referrer-Policy`, `frame-ancestors`, `Permissions-Policy` *(the storefront's policy carries a
+      per-response nonce and names no host of ours; the API sends the rest plus `frame-ancestors`,
+      and no `Server` banner)*
+- [x] Refresh token in an `HttpOnly`, `Secure`, `SameSite` cookie; the access token never in
+      `localStorage` *(both consoles: the access token is a module variable, the refresh token is a
+      cookie neither console can read, one cookie name per console)*
+- [x] CORS driven by the **verified custom-domain table**, not a wildcard — `*` with credentials
+      *(console origins from configuration get credentials; a verified storefront domain gets the
+      anonymous `/api/v1/public/` routes and never credentials; everything else gets no header at
+      all, and a wildcard origin refuses to start)*
+- [x] A test asserting the headers are present on both API and storefront responses, so a later
+      middleware reordering cannot silently drop them *(`EdgeHardeningTests` through the real API
+      pipeline; `security-headers.test.ts` over the storefront's middleware and config)*
 
 *Needs first:* #16, #59, #60
 
 #### #108 · Dependency and secret scanning in CI
 
-- [ ] `dotnet list package --vulnerable --include-transitive` fails the build on High or Critical
-- [ ] `pnpm audit` at the same threshold
-- [ ] Dependabot (or Renovate) for NuGet, pnpm **and GitHub Actions** — a compromised action is a
-- [ ] CodeQL for C# and TypeScript on pull requests targeting `main`
-- [ ] GitHub secret scanning with push protection enabled — this complements
-- [ ] A documented triage path for the case that will definitely happen: a High advisory on a
+- [x] `dotnet list package --vulnerable --include-transitive` fails the build on High or Critical
+      *(shipped in #141: `dependency-audit.yml` → `scripts/audit_dependencies.py`, with an expiring
+      allowlist)*
+- [x] `pnpm audit` at the same threshold
+- [x] Dependabot (or Renovate) for NuGet, pnpm **and GitHub Actions** — a compromised action is a
+      supply-chain path straight into CI
+- [x] CodeQL for C# and TypeScript on pull requests targeting `main`
+- [ ] GitHub secret scanning with push protection enabled — this complements `.githooks/pre-commit`
+      *(a repository **setting**, not a file, and nobody on the build has admin rights: the account
+      that reads the API sees no `security_and_analysis` block at all. An admin turns it on with
+      the command in [BRANCH_PROTECTION.md](BRANCH_PROTECTION.md) Step 3a; the repository is public,
+      so it costs nothing.)*
+- [x] A documented triage path for the case that will definitely happen: a High advisory on a
+      transitive dependency with no fix available *(§2 of
+      [docs/runbooks/vulnerable-dependency.md](runbooks/vulnerable-dependency.md))*
 
 *Needs first:* #7
 

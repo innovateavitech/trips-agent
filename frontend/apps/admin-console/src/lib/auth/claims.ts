@@ -31,6 +31,7 @@ export const PLATFORM_PERMISSIONS = [
   'platform.report.view',
   'subscription.manage',
   'platform.user.manage',
+  'platform.erasure.execute',
 ] as const;
 
 export const KYB_REVIEW_PERMISSION = 'kyb.review';
@@ -48,6 +49,9 @@ export const AGENCY_SUSPEND_PERMISSION = 'agency.suspend';
 export const AGENCY_TERMINATE_PERMISSION = 'agency.terminate';
 export const AGENCY_EXPORT_PERMISSION = 'agency.export';
 export const AUDIT_VIEW_PERMISSION = 'audit.view';
+
+/** Erasing a person on request (issue 106). Super Admin only — it cannot be undone. */
+export const ERASURE_EXECUTE_PERMISSION = 'platform.erasure.execute';
 export const PLATFORM_REPORT_PERMISSION = 'platform.report.view';
 export const PLATFORM_USER_PERMISSION = 'platform.user.manage';
 

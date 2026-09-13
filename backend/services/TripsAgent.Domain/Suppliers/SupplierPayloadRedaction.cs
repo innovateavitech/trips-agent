@@ -101,7 +101,14 @@ public static partial class SupplierPayloadRedaction
     private static readonly string[] DocumentContainerFragments = ["document", "passport", "visa", "docs", "doco"];
 
     /// <summary>Generic names that, inside a document, are the document's number.</summary>
-    private static readonly HashSet<string> DocumentNumberNames = ["number", "no", "num", "value", "id", "freetext", "text"];
+    private static readonly HashSet<string> DocumentNumberNames =
+    [
+        "number", "no", "num", "value", "id", "freetext", "text",
+
+        // A passport's expiry is encrypted at rest (issue 104), so the call log must not hold it either.
+        // Only inside a document: a fare's or a booking's expiry elsewhere is evidence, not personal data.
+        "expirydate", "expiry", "expireson", "expires", "expirationdate",
+    ];
 
     /// <summary>
     /// Values that mark the object holding them as a travel document record: the SSR codes for

@@ -190,9 +190,9 @@ public sealed partial class DataRetentionPurge : IDataRetentionPurge
     /// here: this counts what is past the window and, in a live run, calls that same maintenance.
     /// </summary>
     /// <remarks>
-    /// In a dry run the maintenance job still drops expired partitions on its own schedule at 03:15: it
-    /// shipped before this job with no dry run of its own, and this does not hold it back. This job runs
-    /// at 03:10, so its dry-run row is a report of what is about to go.
+    /// The maintenance job has a dry run of its own (<c>SupplierApiCalls__DryRun</c>, issue 105), and it is
+    /// on by default for the same reason this job's is. A run here is a dry run when either says so, and the
+    /// audit row says which months are expired whichever way it went.
     /// </remarks>
     private async Task<RetentionTableOutcome> ReportSupplierApiCallsAsync(
         DateTimeOffset today,
@@ -209,6 +209,9 @@ public sealed partial class DataRetentionPurge : IDataRetentionPurge
         var outcome = new RetentionTableOutcome(
             SupplierApiCallsTable, "drop-partitions", 0, $"{months} whole months", cutoff);
 
+        // Either dry run keeps the partitions: this job's, and the maintenance job's own.
+        var keepingPartitions = dryRun || _supplierApiCallOptions.DryRun;
+
         try
         {
             var rows = await CountAsync(SupplierApiCallsTable, "t.occurred_at < @cutoff", cutoff, cancellationToken);
@@ -217,12 +220,14 @@ public sealed partial class DataRetentionPurge : IDataRetentionPurge
             if (!dryRun)
             {
                 var result = await _supplierApiCalls.RunAsync(cancellationToken);
-                LogPartitionsDropped(_logger, runId, result.PartitionsDropped, months);
+
+                keepingPartitions = result.DryRun;
+                LogPartitionsDropped(_logger, runId, result.PartitionsDropped, result.PartitionsExpired.Count, months, result.DryRun);
             }
 
-            await SaveAuditAsync(outcome, dryRun, runId, cancellationToken);
+            await SaveAuditAsync(outcome, keepingPartitions, runId, cancellationToken);
 
-            LogTable(_logger, runId, outcome.Table, outcome.Action, rows, outcome.Window, cutoff, dryRun);
+            LogTable(_logger, runId, outcome.Table, outcome.Action, rows, outcome.Window, cutoff, keepingPartitions);
             return outcome;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -337,8 +342,10 @@ public sealed partial class DataRetentionPurge : IDataRetentionPurge
         ILogger logger, Guid runId, string table, string action, int rows, string window, DateTimeOffset cutoff, bool dryRun);
 
     [LoggerMessage(Level = LogLevel.Information,
-        Message = "Data retention run {RunId}: supplier call log maintenance dropped {Partitions} partitions past {Months} months.")]
-    private static partial void LogPartitionsDropped(ILogger logger, Guid runId, int partitions, int months);
+        Message = "Data retention run {RunId}: supplier call log maintenance dropped {Partitions} of {Expired} partition(s) "
+                  + "past {Months} months. Dry run: {DryRun}.")]
+    private static partial void LogPartitionsDropped(
+        ILogger logger, Guid runId, int partitions, int expired, int months, bool dryRun);
 
     [LoggerMessage(Level = LogLevel.Error,
         Message = "Data retention run {RunId}: {Table} failed and nothing in it was changed. The run carries on with the other tables.")]

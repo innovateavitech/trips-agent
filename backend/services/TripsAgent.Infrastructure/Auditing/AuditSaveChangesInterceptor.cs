@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using TripsAgent.Application.Auditing;
 using TripsAgent.Domain.Auditing;
 using TripsAgent.Domain.Common;
+using TripsAgent.Infrastructure.Persistence.Encryption;
 
 namespace TripsAgent.Infrastructure.Auditing;
 
@@ -213,6 +214,15 @@ public sealed class AuditSaveChangesInterceptor(
 
     private object? Redact(PropertyEntry property, object? value)
     {
+        // An encrypted column (issue 104) is never recorded, not even its last four characters: the
+        // audit log is kept for seven years and cannot be edited, and the whole point of the column is
+        // that its value exists nowhere in clear. Recognised by its converter, not its name, so a new
+        // encrypted column is covered without anyone updating a list.
+        if (FieldEncryptionModel.IsEncrypted(property.Metadata))
+        {
+            return value is null ? null : AuditRedactionPolicy.RedactedPlaceholder;
+        }
+
         // A byte array is a document, an avatar or a PDF. Its length is audit-worthy; base64 of
         // its contents would bloat every row and copy the file into a table nobody can delete from.
         if (value is byte[] bytes)

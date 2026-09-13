@@ -4,6 +4,7 @@ using TripsAgent.Domain.Catalog;
 using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Pricing;
 using TripsAgent.Domain.Tenancy;
+using TripsAgent.Infrastructure.Persistence.Encryption;
 
 namespace TripsAgent.Infrastructure.Persistence.Configurations.Orders;
 
@@ -134,11 +135,12 @@ public sealed class OrderTravellerConfiguration : IEntityTypeConfiguration<Order
         builder.Property(traveller => traveller.LastName).HasMaxLength(100).IsRequired();
         builder.Property(traveller => traveller.Nationality).HasMaxLength(2).IsFixedLength();
 
-        // Ciphertext, not text: AES-GCM output from ISecretProtector. The column name ends in
-        // _encrypted so nobody reading the schema mistakes it for something they can search on.
-        builder.Property(traveller => traveller.PassportNumberEncrypted)
-            .HasColumnName("passport_number_encrypted")
-            .HasColumnType("bytea");
+        // Ciphertext, not text (issue 104): encrypted and decrypted by a value converter, so no handler
+        // has to remember to. Neither column can be searched — see IFieldEncryptor.
+        builder.Property(traveller => traveller.PassportNumber)
+            .IsEncryptedAtRest("passport_number_encrypted", EncryptedColumns.OrderTravellerPassportNumber);
+        builder.Property(traveller => traveller.PassportExpiry)
+            .IsEncryptedAtRest("passport_expiry_encrypted", EncryptedColumns.OrderTravellerPassportExpiry);
 
         builder.HasOne<Agency>()
             .WithMany()

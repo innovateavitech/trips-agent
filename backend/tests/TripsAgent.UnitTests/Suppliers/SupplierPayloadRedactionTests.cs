@@ -121,6 +121,27 @@ public class SupplierPayloadRedactionTests
     }
 
     [Fact]
+    public void A_documents_expiry_goes_with_its_number()
+    {
+        // The shape TripsAfricaMapping sends. The expiry is encrypted at rest (issue 104), so the call
+        // log must not keep a copy of it either — while a booking's own expiry, elsewhere, is evidence.
+        var body =
+            """
+            {"Passengers":[{"FirstName":"Adaeze","Documents":[{"DocType":"DOCS","DocID":"A01234567",
+            "InnerDocType":"PASSPORT","IssueCountryCode":"NG","EffectiveDate":"2020-01-01",
+            "ExpiryDate":"2031-05-17"}]}],"TicketTimeLimitExpiry":"2026-09-13T12:00:00Z"}
+            """;
+
+        var redacted = JsonDocument.Parse(SupplierPayloadRedaction.RedactRequestBody(body, [])!).RootElement;
+        var document = redacted.GetProperty("Passengers")[0].GetProperty("Documents")[0];
+
+        document.GetProperty("DocID").GetString().Should().Be(SupplierPayloadRedaction.RedactedValue);
+        document.GetProperty("ExpiryDate").GetString().Should().Be(SupplierPayloadRedaction.RedactedValue);
+        document.GetProperty("InnerDocType").GetString().Should().Be("PASSPORT", "which document it was is not personal");
+        redacted.GetProperty("TicketTimeLimitExpiry").GetString().Should().Be("2026-09-13T12:00:00Z");
+    }
+
+    [Fact]
     public void A_DOCS_record_echoed_in_an_error_page_is_removed()
     {
         var page = $"<html><body>Rejected SSR DOCS HK1/{DocsRecord} for PNR ABC123</body></html>";

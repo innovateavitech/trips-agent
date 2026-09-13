@@ -149,11 +149,14 @@ public sealed class BankAccountService
             return new AddBankAccountOutcome.Invalid(ex.Message);
         }
 
-        var duplicate = await _db.AgencyBankAccounts.AnyAsync(
-            existing => existing.BankCode == account.BankCode
-                        && existing.AccountNumber == account.AccountNumber
-                        && existing.Status != BankAccountStatus.Removed,
-            cancellationToken);
+        // Compared in memory, not in the WHERE clause: the account number is encrypted with a fresh nonce
+        // every time (issue 104), so the database cannot tell two equal numbers apart — and a query
+        // comparing it would silently match nothing. An agency has a handful of accounts at most.
+        var sameBank = await _db.AgencyBankAccounts
+            .Where(existing => existing.BankCode == account.BankCode && existing.Status != BankAccountStatus.Removed)
+            .ToListAsync(cancellationToken);
+
+        var duplicate = sameBank.Any(existing => existing.AccountNumber == account.AccountNumber);
 
         if (duplicate)
         {

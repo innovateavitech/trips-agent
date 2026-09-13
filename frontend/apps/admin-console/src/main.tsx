@@ -8,6 +8,7 @@ import { createHttpAuditApi } from './features/audit';
 import { createHttpBackOfficeApi } from './features/back-office';
 import { createHttpBillingApi } from './features/billing';
 import { createHttpDashboardApi } from './features/dashboard';
+import { createHttpErasureApi } from './features/data-erasure';
 import { createHttpKybReviewApi } from './features/kyb-review';
 import { createApiClient } from './lib/api/client';
 import { ApiError } from './lib/api/problem';
@@ -28,6 +29,7 @@ const apis: ConsoleApis = {
   backOffice: createHttpBackOfficeApi(client),
   billing: createHttpBillingApi(client),
   dashboard: createHttpDashboardApi(client),
+  erasure: createHttpErasureApi(client),
   kybReview: createHttpKybReviewApi(client),
 };
 

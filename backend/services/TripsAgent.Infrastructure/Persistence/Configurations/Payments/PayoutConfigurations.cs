@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TripsAgent.Domain.Orders;
 using TripsAgent.Domain.Payments;
 using TripsAgent.Domain.Tenancy;
+using TripsAgent.Infrastructure.Persistence.Encryption;
 
 namespace TripsAgent.Infrastructure.Persistence.Configurations.Payments;
 
@@ -21,7 +22,10 @@ public sealed class AgencyBankAccountConfiguration : IEntityTypeConfiguration<Ag
 
         builder.Property(account => account.BankCode).HasMaxLength(20).IsRequired();
         builder.Property(account => account.BankName).HasMaxLength(120).IsRequired();
-        builder.Property(account => account.AccountNumber).HasMaxLength(10).IsFixedLength().IsRequired();
+        // Ciphertext only (issue 104). Shown as its last four digits everywhere; never searchable.
+        builder.Property(account => account.AccountNumber)
+            .IsEncryptedAtRest("account_number_encrypted", EncryptedColumns.AgencyBankAccountNumber)
+            .IsRequired();
         builder.Property(account => account.AccountNameProvided).HasMaxLength(160).IsRequired();
         builder.Property(account => account.AccountNameResolved).HasMaxLength(160);
         builder.Property(account => account.GatewayRecipientCode).HasMaxLength(80);
@@ -38,12 +42,6 @@ public sealed class AgencyBankAccountConfiguration : IEntityTypeConfiguration<Ag
         builder.HasOne<Agency>().WithMany()
             .HasForeignKey(account => account.AgencyId)
             .OnDelete(DeleteBehavior.Restrict);
-
-        // The same account captured twice would give an agency two rows to set as default and two
-        // recipient codes at the gateway for one destination.
-        builder.HasIndex(account => new { account.AgencyId, account.BankCode, account.AccountNumber })
-            .IsUnique()
-            .HasDatabaseName("ix_agency_bank_accounts_agency_bank_number");
 
         // One default per agency per currency, as a partial index: a filtered unique index is the
         // only way to say "at most one row where is_default" without a trigger.

@@ -22,6 +22,7 @@ using TripsAgent.Infrastructure.Identity;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Notifications;
 using TripsAgent.Infrastructure.Persistence;
+using TripsAgent.Infrastructure.Persistence.Encryption;
 using TripsAgent.Infrastructure.Pricing;
 using TripsAgent.Infrastructure.RateLimiting;
 using TripsAgent.Infrastructure.Retention;
@@ -200,6 +201,10 @@ public static class DependencyInjection
 
         // The service-provider overload: the audit interceptor below has to come from the scoped
         // provider so it sees the actor for *this* request.
+        // Column encryption for traveller documents and bank account numbers (issue 104). One key ring
+        // per process, read from configuration; without one, the columns refuse rather than store clear.
+        services.AddSingleton<IFieldEncryptor>(_ => FieldEncryptionConfiguration.Create(configuration));
+
         services.AddDbContext<AppDbContext>((serviceProvider, options) =>
         {
             // The tenant write guard is not registered here: AppDbContext installs it in
@@ -221,7 +226,8 @@ public static class DependencyInjection
                 // Resolved from the scoped provider so the interceptor sees the actor for *this*
                 // request. A singleton would freeze whoever made the first request into every
                 // audit row that followed.
-                .AddInterceptors(serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>());
+                .AddInterceptors(serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>())
+                .UseFieldEncryption(serviceProvider.GetRequiredService<IFieldEncryptor>());
         });
 
         // The outbox and the inbox: a handler can stage messages in its own transaction, and a
@@ -235,7 +241,8 @@ public static class DependencyInjection
         // resolves it by accident: the application's AppDbContext is the policed one.
         services.AddSingleton(sp => new AdminDbContextFactory(
             ReadAdminConnectionString(configuration),
-            sp.GetRequiredService<TimeProvider>()));
+            sp.GetRequiredService<TimeProvider>(),
+            sp.GetRequiredService<IFieldEncryptor>()));
 
         services.AddKeyedScoped<AppDbContext>(AdminDbContextFactory.ServiceKey, (sp, _) =>
             sp.GetRequiredService<AdminDbContextFactory>().Create(

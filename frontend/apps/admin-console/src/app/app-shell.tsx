@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { cn } from '@trips/ui';
 import { BrandMark } from '../components/brand-mark';
 import {
+  AlertIcon,
   BuildingIcon,
   CardIcon,
   ChartIcon,
@@ -17,6 +18,7 @@ import { useKybQueue } from '../features/kyb-review/kyb-review-queries';
 import {
   AGENCY_VIEW_PERMISSION,
   AUDIT_VIEW_PERMISSION,
+  ERASURE_EXECUTE_PERMISSION,
   KYB_REVIEW_PERMISSION,
   PLATFORM_REPORT_PERMISSION,
   PLATFORM_USER_PERMISSION,
@@ -102,6 +104,12 @@ const NAV: { to: string; label: string; permission: string; icon: ReactNode }[] 
     icon: <CardIcon />,
   },
   { to: '/audit', label: 'Audit log', permission: AUDIT_VIEW_PERMISSION, icon: <HistoryIcon /> },
+  {
+    to: '/data-erasure',
+    label: 'Data erasure',
+    permission: ERASURE_EXECUTE_PERMISSION,
+    icon: <AlertIcon />,
+  },
   {
     to: '/users',
     label: 'Back-office users',

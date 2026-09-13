@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TripsAgent.Application.Documents;
 using TripsAgent.Application.Persistence;
-using TripsAgent.Application.Security;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Domain.Documents;
 using TripsAgent.Domain.Orders;
@@ -57,13 +56,9 @@ public sealed record PlaceOrderCommand(
 /// </remarks>
 public sealed class PlaceOrderHandler
 {
-    /// <summary>The purpose string the passport number is encrypted under. Never reuse it elsewhere.</summary>
-    public const string PassportPurpose = "orders.order_travellers.passport_number";
-
     private readonly IAppDbContext _db;
     private readonly IDocumentNumberAllocator _numbers;
     private readonly ITransactionRunner _transactions;
-    private readonly ISecretProtector _protector;
     private readonly ITenantContext _tenant;
     private readonly TimeProvider _clock;
 
@@ -71,14 +66,12 @@ public sealed class PlaceOrderHandler
         IAppDbContext db,
         IDocumentNumberAllocator numbers,
         ITransactionRunner transactions,
-        ISecretProtector protector,
         ITenantContext tenant,
         TimeProvider clock)
     {
         _db = db;
         _numbers = numbers;
         _transactions = transactions;
-        _protector = protector;
         _tenant = tenant;
         _clock = clock;
     }
@@ -152,9 +145,7 @@ public sealed class PlaceOrderHandler
                         traveller.FirstName,
                         traveller.LastName,
                         traveller.BirthDate,
-                        string.IsNullOrWhiteSpace(traveller.PassportNumber)
-                            ? null
-                            : _protector.Protect(traveller.PassportNumber, PassportPurpose),
+                        traveller.PassportNumber,
                         traveller.PassportExpiry,
                         traveller.Nationality));
                 }

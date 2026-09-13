@@ -6,9 +6,10 @@ namespace TripsAgent.Domain.Orders;
 /// Who is travelling on a line, and the document they travel on.
 /// </summary>
 /// <remarks>
-/// The passport number is held ONLY as ciphertext: this type never sees the number in clear, because
-/// encrypting is the application's job (ISecretProtector) and the domain depends on nothing. Nothing
-/// in this class can therefore log or leak it, and the audit log redacts the column by name.
+/// The passport number and its expiry are stored ONLY as ciphertext (issue 104). This type holds them
+/// in clear, in memory; the persistence layer encrypts them on the way to the database and decrypts
+/// them on the way back, with a value converter nobody has to remember to call. The audit log records
+/// neither, and neither column can be searched.
 /// </remarks>
 public sealed class OrderTraveller : Entity, IAuditableEntity, ITenantScoped
 {
@@ -25,7 +26,7 @@ public sealed class OrderTraveller : Entity, IAuditableEntity, ITenantScoped
         string firstName,
         string lastName,
         DateOnly? birthDate = null,
-        byte[]? passportNumberEncrypted = null,
+        string? passportNumber = null,
         DateOnly? passportExpiry = null,
         string? nationality = null)
     {
@@ -42,7 +43,7 @@ public sealed class OrderTraveller : Entity, IAuditableEntity, ITenantScoped
             FirstName = firstName.Trim(),
             LastName = lastName.Trim(),
             BirthDate = birthDate,
-            PassportNumberEncrypted = passportNumberEncrypted,
+            PassportNumber = string.IsNullOrWhiteSpace(passportNumber) ? null : passportNumber.Trim(),
             PassportExpiry = passportExpiry,
             Nationality = nationality?.Trim().ToUpperInvariant(),
         };
@@ -61,9 +62,10 @@ public sealed class OrderTraveller : Entity, IAuditableEntity, ITenantScoped
 
     public DateOnly? BirthDate { get; private set; }
 
-    /// <summary>The passport number, encrypted at rest. Never stored or logged in clear.</summary>
-    public byte[]? PassportNumberEncrypted { get; private set; }
+    /// <summary>The passport number. Encrypted at rest; never logged, audited or searchable.</summary>
+    public string? PassportNumber { get; private set; }
 
+    /// <summary>The passport's expiry. Encrypted at rest, like the number.</summary>
     public DateOnly? PassportExpiry { get; private set; }
 
     /// <summary>ISO 3166-1 alpha-2.</summary>

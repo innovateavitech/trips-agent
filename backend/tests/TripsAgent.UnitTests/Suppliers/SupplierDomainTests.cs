@@ -210,20 +210,20 @@ public class SupplierDomainTests
     }
 
     [Fact]
-    public void A_travel_document_holds_only_ciphertext_and_sane_dates()
+    public void A_travel_document_needs_a_number_and_sane_dates()
     {
         var expiresBeforeIssued = () => PassengerDocument.Add(
             Guid.CreateVersion7(), Guid.CreateVersion7(), TravelDocumentRecord.Docs, TravelDocumentKind.Passport,
-            [1, 2, 3], "NG", issuedOn: new DateOnly(2030, 1, 1), expiresOn: new DateOnly(2020, 1, 1));
+            "A01234567", "NG", issuedOn: new DateOnly(2030, 1, 1), expiresOn: new DateOnly(2020, 1, 1));
 
-        var noCiphertext = () => PassengerDocument.Add(
-            Guid.CreateVersion7(), Guid.CreateVersion7(), TravelDocumentRecord.Docs, TravelDocumentKind.Passport, [], "NG");
+        var noNumber = () => PassengerDocument.Add(
+            Guid.CreateVersion7(), Guid.CreateVersion7(), TravelDocumentRecord.Docs, TravelDocumentKind.Passport, " ", "NG");
 
         var badCountry = () => PassengerDocument.Add(
-            Guid.CreateVersion7(), Guid.CreateVersion7(), TravelDocumentRecord.Docs, TravelDocumentKind.Passport, [1], "NGA");
+            Guid.CreateVersion7(), Guid.CreateVersion7(), TravelDocumentRecord.Docs, TravelDocumentKind.Passport, "A01234567", "NGA");
 
         expiresBeforeIssued.Should().Throw<ArgumentException>();
-        noCiphertext.Should().Throw<ArgumentException>();
+        noNumber.Should().Throw<ArgumentException>();
         badCountry.Should().Throw<ArgumentException>();
     }
 }

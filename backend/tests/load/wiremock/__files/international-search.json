@@ -1,0 +1,3056 @@
+{
+ "SessionId": "loadtest-intl",
+ "TotalCount": 50,
+ "ResultList": [
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "500",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T00:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T05:15:00",
+       "ArrivalAirportCode": "CMN",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y18NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "800",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T07:30:00",
+       "DepartureAirportCode": "CMN",
+       "ArrivalDate": "2026-10-02T11:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y38NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 714000.0,
+   "TotalFare": 1095000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 0,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "501",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T05:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T10:15:00",
+       "ArrivalAirportCode": "NBO",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y70NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "801",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T12:30:00",
+       "DepartureAirportCode": "NBO",
+       "ArrivalDate": "2026-10-02T16:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y16NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 792000.0,
+   "TotalFare": 1431000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 1,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "502",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T10:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T15:15:00",
+       "ArrivalAirportCode": "ADD",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y72NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "802",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T17:30:00",
+       "DepartureAirportCode": "ADD",
+       "ArrivalDate": "2026-10-02T21:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y88NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 592000.0,
+   "TotalFare": 1011000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 2,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "503",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T03:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T08:15:00",
+       "ArrivalAirportCode": "DXB",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y75NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "803",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T10:30:00",
+       "DepartureAirportCode": "DXB",
+       "ArrivalDate": "2026-10-02T14:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y74NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 827000.0,
+   "TotalFare": 1184000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 3,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "504",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T08:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T13:15:00",
+       "ArrivalAirportCode": "DOH",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y48NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "804",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T15:30:00",
+       "DepartureAirportCode": "DOH",
+       "ArrivalDate": "2026-10-02T19:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y13NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 780000.0,
+   "TotalFare": 2258000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 4,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "505",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T01:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T06:15:00",
+       "ArrivalAirportCode": "IST",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y09NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "805",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T08:30:00",
+       "DepartureAirportCode": "IST",
+       "ArrivalDate": "2026-10-02T12:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y73NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 530000.0,
+   "TotalFare": 2067000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 5,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "506",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T06:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T11:15:00",
+       "ArrivalAirportCode": "CMN",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y27NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "806",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T13:30:00",
+       "DepartureAirportCode": "CMN",
+       "ArrivalDate": "2026-10-02T17:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y64NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 848000.0,
+   "TotalFare": 1888000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 6,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "507",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T11:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T16:15:00",
+       "ArrivalAirportCode": "NBO",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y55NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "807",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T18:30:00",
+       "DepartureAirportCode": "NBO",
+       "ArrivalDate": "2026-10-02T22:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y41NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 738000.0,
+   "TotalFare": 1999000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 7,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "508",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T04:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T09:15:00",
+       "ArrivalAirportCode": "ADD",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y59NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "808",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T11:30:00",
+       "DepartureAirportCode": "ADD",
+       "ArrivalDate": "2026-10-02T15:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y47NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 653000.0,
+   "TotalFare": 1308000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 8,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "509",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T09:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T14:15:00",
+       "ArrivalAirportCode": "DXB",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y24NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "809",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T16:30:00",
+       "DepartureAirportCode": "DXB",
+       "ArrivalDate": "2026-10-02T20:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y90NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 899000.0,
+   "TotalFare": 1299000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 9,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "510",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T02:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T07:15:00",
+       "ArrivalAirportCode": "DOH",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y11NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "810",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T09:30:00",
+       "DepartureAirportCode": "DOH",
+       "ArrivalDate": "2026-10-02T13:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y74NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 653000.0,
+   "TotalFare": 1875000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 10,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "511",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T07:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T12:15:00",
+       "ArrivalAirportCode": "IST",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y64NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "811",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T14:30:00",
+       "DepartureAirportCode": "IST",
+       "ArrivalDate": "2026-10-02T18:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y44NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 873000.0,
+   "TotalFare": 1719000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 11,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "512",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T00:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T05:15:00",
+       "ArrivalAirportCode": "CMN",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y37NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "812",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T07:30:00",
+       "DepartureAirportCode": "CMN",
+       "ArrivalDate": "2026-10-02T11:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y78NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 537000.0,
+   "TotalFare": 1041000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 12,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "513",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T05:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T10:15:00",
+       "ArrivalAirportCode": "NBO",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y66NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "813",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T12:30:00",
+       "DepartureAirportCode": "NBO",
+       "ArrivalDate": "2026-10-02T16:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y54NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 584000.0,
+   "TotalFare": 2350000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 13,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "514",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T10:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T15:15:00",
+       "ArrivalAirportCode": "ADD",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y44NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "814",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T17:30:00",
+       "DepartureAirportCode": "ADD",
+       "ArrivalDate": "2026-10-02T21:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y20NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 750000.0,
+   "TotalFare": 1663000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 14,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "515",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T03:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T08:15:00",
+       "ArrivalAirportCode": "DXB",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y06NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "815",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T10:30:00",
+       "DepartureAirportCode": "DXB",
+       "ArrivalDate": "2026-10-02T14:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y86NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 539000.0,
+   "TotalFare": 2365000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 15,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "516",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T08:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T13:15:00",
+       "ArrivalAirportCode": "DOH",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y72NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "816",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T15:30:00",
+       "DepartureAirportCode": "DOH",
+       "ArrivalDate": "2026-10-02T19:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y74NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 660000.0,
+   "TotalFare": 1496000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 16,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "517",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T01:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T06:15:00",
+       "ArrivalAirportCode": "IST",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y89NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "817",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T08:30:00",
+       "DepartureAirportCode": "IST",
+       "ArrivalDate": "2026-10-02T12:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y45NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 804000.0,
+   "TotalFare": 1817000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 17,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "518",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T06:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T11:15:00",
+       "ArrivalAirportCode": "CMN",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y75NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "818",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T13:30:00",
+       "DepartureAirportCode": "CMN",
+       "ArrivalDate": "2026-10-02T17:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y59NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 535000.0,
+   "TotalFare": 991000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 18,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "519",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T11:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T16:15:00",
+       "ArrivalAirportCode": "NBO",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y35NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "819",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T18:30:00",
+       "DepartureAirportCode": "NBO",
+       "ArrivalDate": "2026-10-02T22:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y61NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 856000.0,
+   "TotalFare": 2160000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 19,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "520",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T04:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T09:15:00",
+       "ArrivalAirportCode": "ADD",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y09NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "820",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T11:30:00",
+       "DepartureAirportCode": "ADD",
+       "ArrivalDate": "2026-10-02T15:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y08NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 874000.0,
+   "TotalFare": 2236000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 20,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "521",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T09:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T14:15:00",
+       "ArrivalAirportCode": "DXB",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y40NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "821",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T16:30:00",
+       "DepartureAirportCode": "DXB",
+       "ArrivalDate": "2026-10-02T20:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y83NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 795000.0,
+   "TotalFare": 2195000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 21,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "522",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T02:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T07:15:00",
+       "ArrivalAirportCode": "DOH",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y58NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "822",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T09:30:00",
+       "DepartureAirportCode": "DOH",
+       "ArrivalDate": "2026-10-02T13:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y37NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 866000.0,
+   "TotalFare": 1590000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 22,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "523",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T07:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T12:15:00",
+       "ArrivalAirportCode": "IST",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y86NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "823",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T14:30:00",
+       "DepartureAirportCode": "IST",
+       "ArrivalDate": "2026-10-02T18:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y45NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 511000.0,
+   "TotalFare": 1745000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 23,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "524",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T00:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T05:15:00",
+       "ArrivalAirportCode": "CMN",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y46NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "824",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T07:30:00",
+       "DepartureAirportCode": "CMN",
+       "ArrivalDate": "2026-10-02T11:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y22NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 812000.0,
+   "TotalFare": 1039000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 24,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "525",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T05:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T10:15:00",
+       "ArrivalAirportCode": "NBO",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y64NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "825",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T12:30:00",
+       "DepartureAirportCode": "NBO",
+       "ArrivalDate": "2026-10-02T16:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y08NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 611000.0,
+   "TotalFare": 2373000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 25,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "526",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T10:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T15:15:00",
+       "ArrivalAirportCode": "ADD",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y37NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "826",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T17:30:00",
+       "DepartureAirportCode": "ADD",
+       "ArrivalDate": "2026-10-02T21:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y17NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 878000.0,
+   "TotalFare": 1307000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 26,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "527",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T03:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T08:15:00",
+       "ArrivalAirportCode": "DXB",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y51NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "827",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T10:30:00",
+       "DepartureAirportCode": "DXB",
+       "ArrivalDate": "2026-10-02T14:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y51NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 754000.0,
+   "TotalFare": 965000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 27,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "528",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T08:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T13:15:00",
+       "ArrivalAirportCode": "DOH",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y22NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "828",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T15:30:00",
+       "DepartureAirportCode": "DOH",
+       "ArrivalDate": "2026-10-02T19:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y58NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 705000.0,
+   "TotalFare": 1925000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 28,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "529",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T01:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T06:15:00",
+       "ArrivalAirportCode": "IST",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y36NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "829",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T08:30:00",
+       "DepartureAirportCode": "IST",
+       "ArrivalDate": "2026-10-02T12:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y18NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 720000.0,
+   "TotalFare": 1926000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 29,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "530",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T06:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T11:15:00",
+       "ArrivalAirportCode": "CMN",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y36NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "830",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T13:30:00",
+       "DepartureAirportCode": "CMN",
+       "ArrivalDate": "2026-10-02T17:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y91NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 712000.0,
+   "TotalFare": 1534000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 30,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "531",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T11:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T16:15:00",
+       "ArrivalAirportCode": "NBO",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y88NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "831",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T18:30:00",
+       "DepartureAirportCode": "NBO",
+       "ArrivalDate": "2026-10-02T22:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y49NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 618000.0,
+   "TotalFare": 1109000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 31,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "532",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T04:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T09:15:00",
+       "ArrivalAirportCode": "ADD",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y11NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "832",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T11:30:00",
+       "DepartureAirportCode": "ADD",
+       "ArrivalDate": "2026-10-02T15:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y23NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 577000.0,
+   "TotalFare": 1275000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 32,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "533",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T09:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T14:15:00",
+       "ArrivalAirportCode": "DXB",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y85NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "833",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T16:30:00",
+       "DepartureAirportCode": "DXB",
+       "ArrivalDate": "2026-10-02T20:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y30NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 506000.0,
+   "TotalFare": 1793000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 33,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "534",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T02:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T07:15:00",
+       "ArrivalAirportCode": "DOH",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y76NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "834",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T09:30:00",
+       "DepartureAirportCode": "DOH",
+       "ArrivalDate": "2026-10-02T13:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y24NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 634000.0,
+   "TotalFare": 1377000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 34,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "535",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T07:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T12:15:00",
+       "ArrivalAirportCode": "IST",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y01NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "835",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T14:30:00",
+       "DepartureAirportCode": "IST",
+       "ArrivalDate": "2026-10-02T18:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y19NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 714000.0,
+   "TotalFare": 1894000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 35,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "536",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T00:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T05:15:00",
+       "ArrivalAirportCode": "CMN",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y48NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "836",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T07:30:00",
+       "DepartureAirportCode": "CMN",
+       "ArrivalDate": "2026-10-02T11:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y79NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 789000.0,
+   "TotalFare": 1452000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 36,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "537",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T05:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T10:15:00",
+       "ArrivalAirportCode": "NBO",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y17NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "837",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T12:30:00",
+       "DepartureAirportCode": "NBO",
+       "ArrivalDate": "2026-10-02T16:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y89NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 763000.0,
+   "TotalFare": 2064000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 37,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "538",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T10:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T15:15:00",
+       "ArrivalAirportCode": "ADD",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y84NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "838",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T17:30:00",
+       "DepartureAirportCode": "ADD",
+       "ArrivalDate": "2026-10-02T21:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y87NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 878000.0,
+   "TotalFare": 910000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 38,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "539",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T03:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T08:15:00",
+       "ArrivalAirportCode": "DXB",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y59NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "839",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T10:30:00",
+       "DepartureAirportCode": "DXB",
+       "ArrivalDate": "2026-10-02T14:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y88NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 786000.0,
+   "TotalFare": 1603000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 39,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "540",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T08:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T13:15:00",
+       "ArrivalAirportCode": "DOH",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y51NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "840",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T15:30:00",
+       "DepartureAirportCode": "DOH",
+       "ArrivalDate": "2026-10-02T19:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y52NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 701000.0,
+   "TotalFare": 1012000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 40,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "541",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T01:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T06:15:00",
+       "ArrivalAirportCode": "IST",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y62NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "841",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T08:30:00",
+       "DepartureAirportCode": "IST",
+       "ArrivalDate": "2026-10-02T12:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y82NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 705000.0,
+   "TotalFare": 927000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 41,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "542",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T06:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T11:15:00",
+       "ArrivalAirportCode": "CMN",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y25NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "842",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T13:30:00",
+       "DepartureAirportCode": "CMN",
+       "ArrivalDate": "2026-10-02T17:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y09NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 606000.0,
+   "TotalFare": 1702000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 42,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "543",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T11:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T16:15:00",
+       "ArrivalAirportCode": "NBO",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y21NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "843",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T18:30:00",
+       "DepartureAirportCode": "NBO",
+       "ArrivalDate": "2026-10-02T22:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y15NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 674000.0,
+   "TotalFare": 2030000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 43,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "544",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T04:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T09:15:00",
+       "ArrivalAirportCode": "ADD",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y07NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "844",
+       "MarketingAirlineCode": "ET",
+       "MarketingAirlineName": "Ethiopian Airlines",
+       "OperatingAirlineCode": "ET",
+       "DepartureDate": "2026-10-02T11:30:00",
+       "DepartureAirportCode": "ADD",
+       "ArrivalDate": "2026-10-02T15:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y14NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 500000.0,
+   "TotalFare": 1960000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 44,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "545",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T09:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T14:15:00",
+       "ArrivalAirportCode": "DXB",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y20NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "845",
+       "MarketingAirlineCode": "EK",
+       "MarketingAirlineName": "Emirates",
+       "OperatingAirlineCode": "EK",
+       "DepartureDate": "2026-10-02T16:30:00",
+       "DepartureAirportCode": "DXB",
+       "ArrivalDate": "2026-10-02T20:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y69NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 551000.0,
+   "TotalFare": 1544000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 45,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "546",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T02:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T07:15:00",
+       "ArrivalAirportCode": "DOH",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y79NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "846",
+       "MarketingAirlineCode": "QR",
+       "MarketingAirlineName": "Qatar Airways",
+       "OperatingAirlineCode": "QR",
+       "DepartureDate": "2026-10-02T09:30:00",
+       "DepartureAirportCode": "DOH",
+       "ArrivalDate": "2026-10-02T13:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y04NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 536000.0,
+   "TotalFare": 1225000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 46,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "547",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T07:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T12:15:00",
+       "ArrivalAirportCode": "IST",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y79NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "847",
+       "MarketingAirlineCode": "TK",
+       "MarketingAirlineName": "Turkish Airlines",
+       "OperatingAirlineCode": "TK",
+       "DepartureDate": "2026-10-02T14:30:00",
+       "DepartureAirportCode": "IST",
+       "ArrivalDate": "2026-10-02T18:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y49NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 576000.0,
+   "TotalFare": 2099000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 47,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "548",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T00:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T05:15:00",
+       "ArrivalAirportCode": "CMN",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y33NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "848",
+       "MarketingAirlineCode": "AT",
+       "MarketingAirlineName": "Royal Air Maroc",
+       "OperatingAirlineCode": "AT",
+       "DepartureDate": "2026-10-02T07:30:00",
+       "DepartureAirportCode": "CMN",
+       "ArrivalDate": "2026-10-02T11:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y45NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 808000.0,
+   "TotalFare": 1545000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 48,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 1,
+     "FlightEntries": [
+      {
+       "FlightNumber": "549",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T05:45:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-02T10:15:00",
+       "ArrivalAirportCode": "NBO",
+       "FlightClass": "Economy",
+       "FlightDuration": "4h:30m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y61NG"
+        }
+       ]
+      },
+      {
+       "FlightNumber": "849",
+       "MarketingAirlineCode": "KQ",
+       "MarketingAirlineName": "Kenya Airways",
+       "OperatingAirlineCode": "KQ",
+       "DepartureDate": "2026-10-02T12:30:00",
+       "DepartureAirportCode": "NBO",
+       "ArrivalDate": "2026-10-02T16:50:00",
+       "ArrivalAirportCode": "LHR",
+       "FlightClass": "Economy",
+       "FlightDuration": "7h:20m",
+       "Baggages": "2",
+       "BaggageUnit": "PC",
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y16NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 5,
+   "GDSId": 2,
+   "Currency": "NGN",
+   "BaseFare": 559000.0,
+   "TotalFare": 1799000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 49,
+    "TripsSessionId": "loadtest-intl",
+    "GdsSessionId": "loadtest-gds"
+   },
+   "IsLocal": false
+  }
+ ]
+}

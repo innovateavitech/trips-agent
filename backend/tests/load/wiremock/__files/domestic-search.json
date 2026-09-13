@@ -1,0 +1,806 @@
+{
+ "SessionId": "loadtest-dom",
+ "TotalCount": 20,
+ "ResultList": [
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0100",
+       "MarketingAirlineCode": "QI",
+       "MarketingAirlineName": "Ibom Air",
+       "OperatingAirlineCode": "QI",
+       "DepartureDate": "2026-10-05T06:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T07:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y42NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 183000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 0,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0101",
+       "MarketingAirlineCode": "P4",
+       "MarketingAirlineName": "Air Peace",
+       "OperatingAirlineCode": "P4",
+       "DepartureDate": "2026-10-05T15:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T16:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y20NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 112000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 1,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0102",
+       "MarketingAirlineCode": "W3",
+       "MarketingAirlineName": "Arik Air",
+       "OperatingAirlineCode": "W3",
+       "DepartureDate": "2026-10-05T10:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T11:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y84NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 68000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 2,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0103",
+       "MarketingAirlineCode": "VK",
+       "MarketingAirlineName": "ValueJet",
+       "OperatingAirlineCode": "VK",
+       "DepartureDate": "2026-10-05T19:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T20:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y10NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 167000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 3,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0104",
+       "MarketingAirlineCode": "UN",
+       "MarketingAirlineName": "United Nigeria",
+       "OperatingAirlineCode": "UN",
+       "DepartureDate": "2026-10-05T14:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T15:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y69NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 74000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 4,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0105",
+       "MarketingAirlineCode": "QI",
+       "MarketingAirlineName": "Ibom Air",
+       "OperatingAirlineCode": "QI",
+       "DepartureDate": "2026-10-05T09:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T10:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y47NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 136000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 5,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0106",
+       "MarketingAirlineCode": "P4",
+       "MarketingAirlineName": "Air Peace",
+       "OperatingAirlineCode": "P4",
+       "DepartureDate": "2026-10-05T18:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T19:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y08NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 178000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 6,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0107",
+       "MarketingAirlineCode": "W3",
+       "MarketingAirlineName": "Arik Air",
+       "OperatingAirlineCode": "W3",
+       "DepartureDate": "2026-10-05T13:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T14:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y65NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 89000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 7,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0108",
+       "MarketingAirlineCode": "VK",
+       "MarketingAirlineName": "ValueJet",
+       "OperatingAirlineCode": "VK",
+       "DepartureDate": "2026-10-05T08:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T09:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y05NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 73000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 8,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0109",
+       "MarketingAirlineCode": "UN",
+       "MarketingAirlineName": "United Nigeria",
+       "OperatingAirlineCode": "UN",
+       "DepartureDate": "2026-10-05T17:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T18:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y56NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 115000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 9,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0110",
+       "MarketingAirlineCode": "QI",
+       "MarketingAirlineName": "Ibom Air",
+       "OperatingAirlineCode": "QI",
+       "DepartureDate": "2026-10-05T12:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T13:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y09NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 92000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 10,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0111",
+       "MarketingAirlineCode": "P4",
+       "MarketingAirlineName": "Air Peace",
+       "OperatingAirlineCode": "P4",
+       "DepartureDate": "2026-10-05T07:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T08:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y12NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 132000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 11,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0112",
+       "MarketingAirlineCode": "W3",
+       "MarketingAirlineName": "Arik Air",
+       "OperatingAirlineCode": "W3",
+       "DepartureDate": "2026-10-05T16:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T17:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y55NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 69000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 12,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0113",
+       "MarketingAirlineCode": "VK",
+       "MarketingAirlineName": "ValueJet",
+       "OperatingAirlineCode": "VK",
+       "DepartureDate": "2026-10-05T11:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T12:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y73NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 77000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 13,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0114",
+       "MarketingAirlineCode": "UN",
+       "MarketingAirlineName": "United Nigeria",
+       "OperatingAirlineCode": "UN",
+       "DepartureDate": "2026-10-05T06:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T07:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y29NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 142000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 14,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0115",
+       "MarketingAirlineCode": "QI",
+       "MarketingAirlineName": "Ibom Air",
+       "OperatingAirlineCode": "QI",
+       "DepartureDate": "2026-10-05T15:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T16:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y81NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 136000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 15,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0116",
+       "MarketingAirlineCode": "P4",
+       "MarketingAirlineName": "Air Peace",
+       "OperatingAirlineCode": "P4",
+       "DepartureDate": "2026-10-05T10:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T11:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y08NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 135000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 16,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0117",
+       "MarketingAirlineCode": "W3",
+       "MarketingAirlineName": "Arik Air",
+       "OperatingAirlineCode": "W3",
+       "DepartureDate": "2026-10-05T19:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T20:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y75NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 112000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 17,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0118",
+       "MarketingAirlineCode": "VK",
+       "MarketingAirlineName": "ValueJet",
+       "OperatingAirlineCode": "VK",
+       "DepartureDate": "2026-10-05T14:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T15:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y07NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 90000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 18,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  },
+  {
+   "FlightDetails": [
+    {
+     "StopOvers": 0,
+     "FlightEntries": [
+      {
+       "FlightNumber": "0119",
+       "MarketingAirlineCode": "UN",
+       "MarketingAirlineName": "United Nigeria",
+       "OperatingAirlineCode": "UN",
+       "DepartureDate": "2026-10-05T09:20:00",
+       "DepartureAirportCode": "LOS",
+       "ArrivalDate": "2026-10-05T10:40:00",
+       "ArrivalAirportCode": "ABV",
+       "FlightClass": "Economy",
+       "FlightDuration": "1h:20m",
+       "Baggages": "KGS",
+       "BaggageUnit": null,
+       "AvailablePassengerSeats": [
+        {
+         "PassengerType": "ADT",
+         "FareBasis": "Y06NG"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "AgentId": 165,
+   "GDSId": 101,
+   "Currency": "NGN",
+   "TotalFare": 133000.5,
+   "Properties": {
+    "CombinationID": 0,
+    "RecommendationID": 19,
+    "TripsSessionId": "loadtest-dom"
+   },
+   "IsLocal": true,
+   "FlightRouteIndex": 0
+  }
+ ]
+}

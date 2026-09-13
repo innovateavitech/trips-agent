@@ -1,0 +1,9 @@
+{
+  "priority": 10,
+  "request": { "method": "ANY", "urlPattern": "/.*" },
+  "response": {
+    "status": 501,
+    "headers": { "Content-Type": "text/plain" },
+    "body": "The load-test stub serves flight search only. Nothing else may reach a supplier during a load test."
+  }
+}

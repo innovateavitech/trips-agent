@@ -21,7 +21,7 @@ Where each part of the system is designed — tables, jobs, the money path — i
 | **PR 1** · Milestone 1: the money path | F1 Booking pipeline and checkout (merged, #167); F2 Notifications and documents (merged, #167) | 66 of 72 |
 | **PR 2** · Milestone 2: the agent's own shop | F3 Product catalog; F4 Storefront; F5 Customer commerce; F6 Group tours; F7 CRM — all merged, #168 | 75 of 75 |
 | **PR 3** · Milestone 3: running and charging for the platform | F8 Admin console (done); F9 Subscriptions and billing (done); F10 Sub-agent network (done); F11 Analytics and reporting (done, less XLSX and scheduled reports); F12 Payouts, disputes and reconciliation (done); F13 Loyalty and reviews (flag shipped with F9) | 36 of 42 |
-| **PR 4** · Launch readiness | F14 Security and launch readiness (queued) | 0 of 50 |
+| **PR 4** · Launch readiness | F14 Security and launch readiness (in progress) | 23 of 50 |
 
 
 ## Where things stand
@@ -45,9 +45,13 @@ The first place to look when picking this up again. Update it whenever a branch 
 | `feat/M3-subagents` | 3 | F10 whole (#63): invitations, scopes, permission overrides and margin visibility, race-free wallet allowances, freeze and revoke, consolidated network reporting, and four console screens, with main merged in | pushed, done |
 | `feat/M3-analytics` | 3 | F11 (#67, #68): the analytics schema and read models, the five-minute and nightly rollups, the agency and platform dashboards with drill-down, synchronous and queued CSV reports, the export log, and the console screens. Merged with `main` after PR 2 | pushed, done |
 | `feat/M3-payouts` | 3 | F12 (#69): bank accounts verified through Paystack, payouts with Finance approval and a never-retried transfer (ADR-0008), chargebacks held and settled, daily gateway reconciliation; agent-console Payouts and Disputes screens | pushed, done |
-| — | 4 | F14 security and launch readiness (#71, #104-#110) | not started |
+| `feat/M4-data-protection` | 4 | F14's data protection: PII encryption at rest with a key ring and a rotation pass (#104), the three things #105 still owed, and NDPA erasure as anonymisation with its admin screen and ADR-0009 (#106) | pushed, in PR 4 |
+| — | 4 | The rest of F14: headers, CORS and cookies (#107), scanning in CI (#108), the load test (#109), the penetration test (#110) | in progress on their own branches |
 
-**Next:** PR 2 is merged, and every issue it carried is closed. #18 is closed too, with the
+**Next:** PR 3 is merged (#169). PR 4 is being built on three branches at once — data protection,
+edge hardening, and the load and penetration tests — which are assembled into one PR.
+
+Before that: PR 2 is merged, and every issue it carried is closed. #18 is closed too, with the
 S3 adapter deferred until a cloud is chosen. All five `feat/M3-*` branches are merged into
 `feat/M3-platform`, which is PR 3: run every gate on it, then open it with `Closes` for #63-#70.
 Then PR 4 is all that is left.
@@ -128,6 +132,39 @@ Decided during the build:
   the checkout and the sign-in path need no new rule and cannot disagree about one.
 - **The agency export** is JSON rather than CSV: an agency is a tree — profile, staff, wallet, ledger, orders and their lines — and flattening it to one table would lose the shape somebody receiving it needs.
 - **The admin console's landing page** follows the account's permissions rather than being fixed. A Support account holds `agency.view` and nothing else, so a fixed home page sent them to a refusal at every sign-in.
+
+Decided for F14 (data protection — encryption, retention and erasure):
+
+- **One key ring in configuration, no cloud KMS.** `Security__FieldEncryption__ActiveKeyId` plus one
+  base64 key per id, read at startup and held behind `IFieldEncryptor`. A KMS-backed implementation
+  replaces it when a cloud is chosen; choosing one now would choose the cloud.
+- **Encrypted columns cannot be searched, and that is the design.** A fresh nonce per value, so equal
+  values encrypt differently; deterministic encryption would make equality search possible and leak
+  equality at the same time. The bank account duplicate check moved into `BankAccountService` and the
+  unique index on the number went with it — an agency has a handful of accounts, compared in memory.
+- **Bank account numbers are encrypted too**, which F12 deferred. The same converter, the same key
+  ring; the last four digits are still shown, from the decrypted value.
+- **With no key configured, those columns refuse.** `migrate` and `seed` still run, and the first
+  read or write of an encrypted column fails with a message naming the settings. A missing key is an
+  outage for those columns, never a reason to store a passport number in clear.
+- **Encrypting the columns is a data migration, in three steps in one command.** Add the ciphertext
+  columns, run `FieldEncryptionBackfill`, then drop the plaintext columns — and that last migration
+  refuses while any row is still unencrypted. The same backfill is the key rotation pass.
+- **Travel documents on a product with no travel date** — a visa, or a tour sold without a dated
+  departure — are cleared a year after the sale (`DataRetention__UndatedTravelDocumentDays`) rather
+  than never. Flights and buses keep the older rule: no dates means the data never arrived, and
+  unknown means keep.
+- **The supplier call log's partition job gets its own dry run**, on by default, for the same reason
+  the purge has one: it drops a month of history in one statement, unattended.
+- **Erasure is anonymisation, and it is a platform operation** behind `platform.erasure.execute`
+  (Super Admin only), not something an agency does for itself: it cannot be undone.
+- **An erasure is refused while an order is still being paid for or a chargeback is still open**,
+  and the refusal is recorded with its reason. Both resolve in days.
+- **An issued invoice or voucher keeps the bytes that were issued.** The file is the tax record as it
+  was sent. What is anonymised is the recipient on the row, so a search cannot find the person and a
+  document rendered later prints the placeholder. ADR-0009 lists this among what erasure leaves.
+- **Counsel's review is recorded as outstanding, not as a blocker.** Open question 26 is the
+  client's to answer; the retention schedule and ADR-0009 both say what is still to be confirmed.
 
 Decided for F12 (payouts, disputes and reconciliation):
 
@@ -906,7 +943,7 @@ FRD §1.2 lists both in scope with no use case written.
 
 ### F14 · Security and launch readiness
 
-**M3 · Queued** · 0 of 50 boxes ticked
+**M4 · In progress** · 23 of 50 boxes ticked
 
 What must be true before real travellers and real money: encrypted traveller documents, retention and erasure, hardened headers and cookies, scanning in CI, a load test and a penetration test.
 
@@ -922,46 +959,70 @@ Pre-launch readiness.
 
 - [ ] Rate limiting per user, IP and endpoint.
 - [ ] RLS enforcement test suite.
-- [ ] PII encryption and retention policy.
-- [ ] NDPA erasure as anonymisation preserving financial and audit records.
+- [x] PII encryption and retention policy.
+- [x] NDPA erasure as anonymisation preserving financial and audit records.
 - [ ] Penetration test remediation.
 - [ ] Load test of the search endpoint at expected peak, cold and warm cache.
 
 #### #104 · PII encryption at rest for traveller documents
 
-- [ ] An `IFieldEncryptor` port with the key source behind it — **no cloud KMS SDK**, because the
-- [ ] AES-256-GCM, a fresh IV per value, and the key id stored alongside the ciphertext so keys
-- [ ] Applied through an EF Core value converter, so encryption is not something a developer has
-- [ ] Plaintext never reaches logs, `audit_logs` before/after state, or `supplier_api_calls`
-- [ ] A documented rotation path: re-encrypt on write under the new key id, retain old keys for
-- [ ] Searching or filtering on these columns is explicitly **not** supported, and the issue says
-- [ ] Test: a raw SQL `SELECT` against the column returns ciphertext, not a passport number
+> Built here. The columns are passport number and expiry on `order_travellers`, document number and expiry on `passenger_documents`, and — new to the issue — the agency bank account numbers F12 stored in clear. Two migrations with a data backfill between them encrypt what was already stored; the second refuses to drop a plaintext column while anything in it is unencrypted.
+
+- [x] An `IFieldEncryptor` port with the key source behind it — **no cloud KMS SDK**, because the
+- [x] AES-256-GCM, a fresh IV per value, and the key id stored alongside the ciphertext so keys
+- [x] Applied through an EF Core value converter, so encryption is not something a developer has
+- [x] Plaintext never reaches logs, `audit_logs` before/after state, or `supplier_api_calls` — the
+      audit log recognises an encrypted column by its converter rather than by its name, and the
+      supplier call log now redacts a document's expiry as well as its number
+- [x] A documented rotation path: re-encrypt on write under the new key id, retain old keys for
+      decrypt only. `migrate` runs the re-encryption pass; the runbook is
+      [docs/runbooks/field-encryption.md](runbooks/field-encryption.md)
+- [x] Searching or filtering on these columns is explicitly **not** supported, and the issue says
+      why — said again on the port, in the runbook and in the retention schedule. The bank account
+      duplicate check moved into `BankAccountService` because of it, and its unique index went
+- [x] Test: a raw SQL `SELECT` against the column returns ciphertext, not a passport number
 
 *Needs first:* #32, #41
 
 #### #105 · Data retention policy and the purge job
 
-> Built in #165: the retention table and catalogue, a daily purge that is a dry run by default and cannot touch financial or audit tables, an audit row per table, and a runbook. Left: counsel's review of the retention table (open question 26), travel dates for tours and visas, and a dry run for the supplier call log's partition job.
+> Built in #165: the retention table and catalogue, a daily purge that is a dry run by default and cannot touch financial or audit tables, an audit row per table, and a runbook. The three things left are done here: travel dates for tours, visas and departures; a dry run for the supplier call log's partition job; and the schedule brought up to date.
 
-- [ ] A retention table in `docs/` — every table that holds personal or operational data, how
-- [ ] Financial records, `audit_logs` and anything supporting them: **7 years, never touched by
-- [ ] `supplier_api_calls`: 90-day hot retention by dropping monthly partitions — this is job 30
-- [ ] Traveller documents purged or anonymised a defined interval after travel completes
-- [ ] Implemented as a Hangfire job with a **dry-run mode** that reports what it would delete
-- [ ] Every run writes an audit row: table, row count, window
-- [ ] Idempotent — running it twice in a day deletes nothing extra and errors nowhere
+- [x] A retention table in `docs/` — every table that holds personal or operational data, how
+      long it is kept, and the reason. **Counsel's review is outstanding** and recorded as
+      outstanding: open question 26 is the client's to answer, and both jobs stay in dry run until
+      it is
+- [x] Financial records, `audit_logs` and anything supporting them: **7 years, never touched by
+- [x] `supplier_api_calls`: 90-day hot retention by dropping monthly partitions — this is job 30
+      in the plan. It now has a dry run of its own (`SupplierApiCalls__DryRun`, on by default): the
+      months it would drop and the months it does drop come from the same database function
+- [x] Traveller documents purged or anonymised a defined interval after travel completes — a
+      flight's or bus's arrival, a departure's date plus the product's duration, or, for a visa or
+      an undated tour, a year after the sale. A flight with no dates is still kept
+- [x] Implemented as a Hangfire job with a **dry-run mode** that reports what it would delete
+- [x] Every run writes an audit row: table, row count, window
+- [x] Idempotent — running it twice in a day deletes nothing extra and errors nowhere
 
 *Needs first:* #21, #31, #32
 
 #### #106 · NDPA erasure as anonymisation
 
-- [ ] An erasure request is recorded, audited, and requires a stated reason
-- [ ] Anonymisation replaces PII in place: name → a placeholder, email and phone → null or an
-- [ ] Ledger entries, order lines, invoices and audit rows survive **and still balance** — the
-- [ ] Uploaded documents removed from blob storage through `IBlobStorage`
-- [ ] Irreversible: no shadow copy, no "archived" table holding what was erased
-- [ ] Test: after erasure the nightly ledger integrity audit still passes and a historical invoice
-- [ ] An ADR records the interpretation, who approved it, and when
+> The issue was labelled blocked on counsel. Built anyway, under decision 26, because nothing it destroys is data anybody claims we must keep and nothing it keeps is data anybody claims we must destroy: if counsel reads it more strictly, what changes is the list of columns, not the mechanism. [ADR-0009](adr/0009-ndpa-erasure-as-anonymisation.md) says so, and says what is still to be confirmed.
+
+- [x] An erasure request is recorded, audited, and requires a stated reason — and recorded when it
+      is **refused**, too, with the reason it was
+- [x] Anonymisation replaces PII in place: name → a placeholder, email and phone → null or an
+      unreachable address. A customer's email becomes one in the reserved `.invalid` domain rather
+      than null, because the table's own rule is that a customer is contactable
+- [x] Ledger entries, order lines, invoices and audit rows survive **and still balance** — the
+- [x] Uploaded documents removed from blob storage through `IBlobStorage`; the asset row stays,
+      marked erased, so the trail shows a file was there and is not
+- [x] Irreversible: no shadow copy, no "archived" table holding what was erased
+- [x] Test: after erasure the nightly ledger integrity audit still passes and a historical invoice
+      still renders — and a document rendered *after* the erasure prints the placeholder
+- [x] An ADR records the interpretation, who approved it, and when — as the MVP decision taken
+      under this plan, **pending the client's DPO**, which the ADR states rather than inventing an
+      approver
 
 *Needs first:* #21, #22, #62
 

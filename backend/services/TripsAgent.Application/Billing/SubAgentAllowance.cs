@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TripsAgent.Application.Persistence;
 using TripsAgent.Application.Tenancy;
+using TripsAgent.Application.Tenancy.SubAgents;
 using TripsAgent.Domain.Billing;
 
 namespace TripsAgent.Application.Billing;
@@ -16,14 +17,14 @@ namespace TripsAgent.Application.Billing;
 /// the whole of the "how many do they have?" half of the question.
 /// </para>
 /// <para>
-/// So the ceiling is real and tested now, and F10's invitation flow calls
-/// <see cref="MayAddAsync"/> once before it creates anything. It exists as its own small class
+/// It is also the sub-agent network's <see cref="ISubAgentEntitlement"/>: the invitation flow and
+/// the network screen ask it once, before anything is created. It exists as its own small class
 /// rather than as a method on <see cref="IEntitlements"/> because knowing how to count agencies is
 /// a fact about tenancy, and <see cref="IEntitlements"/> would grow a method per feature if every
 /// caller's counting lived there.
 /// </para>
 /// </remarks>
-public sealed class SubAgentAllowance
+public sealed class SubAgentAllowance : ISubAgentEntitlement
 {
     private readonly IAppDbContext _db;
     private readonly IEntitlements _entitlements;
@@ -65,5 +66,25 @@ public sealed class SubAgentAllowance
 
         return await _entitlements.MayAddAsync(
             principalId, EntitlementCodes.MaxSubAgents, current, adding, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The network service has already counted, the same way <see cref="CountAsync"/> does, so its
+    /// count is used rather than asking the database a second time.
+    /// </remarks>
+    public async Task<SubAgentEntitlementDecision> MayAddSubAgentAsync(
+        Guid agencyId,
+        int currentCount,
+        CancellationToken cancellationToken = default)
+    {
+        var decision = await _entitlements.MayAddAsync(
+            agencyId, EntitlementCodes.MaxSubAgents, currentCount, 1, cancellationToken);
+
+        return new SubAgentEntitlementDecision(
+            decision.IsAllowed,
+            decision.Limit,
+            currentCount,
+            decision.IsAllowed ? null : decision.Detail);
     }
 }

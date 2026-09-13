@@ -65,12 +65,9 @@ public static class DependencyInjection
         services.AddScoped<Tenancy.SubAgents.AcceptInvitationHandler>();
         services.AddScoped<Tenancy.SubAgents.IAllowanceResetJob, Tenancy.SubAgents.AllowanceResetJob>();
 
-        // How many sub-agents an agency may have is a subscription entitlement, and subscriptions
-        // are feature F9. Until that lands this answers yes to everything; replacing it is this
-        // one line. See ISubAgentEntitlement.
-        services.AddSingleton<
-            Tenancy.SubAgents.ISubAgentEntitlement,
-            Tenancy.SubAgents.UnlimitedSubAgentEntitlement>();
+        // How many sub-agents an agency may have is its plan's max_sub_agents entitlement (F9).
+        services.AddScoped<Tenancy.SubAgents.ISubAgentEntitlement>(
+            provider => provider.GetRequiredService<Billing.SubAgentAllowance>());
 
         services.AddScoped<WalletTopUpService>();
         services.AddScoped<StartTopUpHandler>();

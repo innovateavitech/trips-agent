@@ -9,9 +9,11 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using TripsAgent.Application.Billing;
 using TripsAgent.Application.Tenancy;
 using TripsAgent.Contracts.Identity;
 using TripsAgent.Contracts.Tenancy;
+using TripsAgent.Domain.Billing;
 using TripsAgent.Infrastructure.Persistence;
 using TripsAgent.IntegrationTests.Persistence;
 
@@ -275,6 +277,24 @@ public sealed class SubAgentNetworkEndToEndTests : IAsyncLifetime, IDisposable
     }
 
     [Fact]
+    public async Task A_principal_whose_plan_allows_no_sub_agents_is_refused_before_anything_is_created()
+    {
+        await SignInAsPrincipalAsync(onAPlanWithSubAgents: false);
+
+        var response = await _api.PostAsJsonAsync(
+            "/api/v1/sub-agents",
+            new InviteSubAgentRequest("Ikeja Branch Limited", null, SubAgentEmail));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var _ = scope.ServiceProvider.GetRequiredService<IPlatformScope>().Enter("test — looking for an agency that must not exist");
+
+        (await db.Agencies.CountAsync(candidate => candidate.ParentAgencyId != null)).Should().Be(0);
+    }
+
+    [Fact]
     public async Task Revoking_a_sub_agent_ends_it_and_kills_its_sessions()
     {
         await SignInAsPrincipalAsync();
@@ -371,7 +391,7 @@ public sealed class SubAgentNetworkEndToEndTests : IAsyncLifetime, IDisposable
     private static AcceptInvitationRequest Accept(string token) =>
         new(token, "Bola", "Adeyemi", Password, null);
 
-    private async Task SignInAsPrincipalAsync()
+    private async Task SignInAsPrincipalAsync(bool onAPlanWithSubAgents = true)
     {
         await _api.PostAsJsonAsync(
             "/api/v1/auth/register",
@@ -383,6 +403,43 @@ public sealed class SubAgentNetworkEndToEndTests : IAsyncLifetime, IDisposable
         await _api.PostAsJsonAsync("/api/v1/auth/verify-email", new VerifyEmailRequest(PrincipalEmail, code));
 
         _api.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await TokenAsync(PrincipalEmail));
+
+        if (onAPlanWithSubAgents)
+        {
+            await PutPrincipalOnAPlanWithSubAgentsAsync();
+        }
+    }
+
+    /// <summary>
+    /// Subscribes the principal to a plan that allows sub-agents.
+    /// </summary>
+    /// <remarks>
+    /// How many sub-agents an agency may have is its plan's <c>max_sub_agents</c> entitlement, and an
+    /// agency with no plan gets the most restrictive answer: none. So a principal that is going to
+    /// invite anybody needs a plan first, exactly as it would in production.
+    /// </remarks>
+    private async Task PutPrincipalOnAPlanWithSubAgentsAsync()
+    {
+        const string Reason = "Set up by an integration test.";
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var tiers = scope.ServiceProvider.GetRequiredService<TierAdminService>();
+
+        var created = await tiers.CreateAsync(new TierDraft("network", "Network", null, 0, 0, false), Reason);
+        var tierId = ((TierChangeOutcome.Saved)created).Tier.Id;
+        await tiers.SetEntitlementsAsync(tierId, [new EntitlementGrant(EntitlementCodes.MaxSubAgents, "5")], Reason);
+        await tiers.PublishAsync(tierId, Reason);
+
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var _ = scope.ServiceProvider.GetRequiredService<IPlatformScope>().Enter(
+            "test setup — subscribes the principal to a plan that allows sub-agents");
+
+        var principal = await db.Agencies.SingleAsync(candidate => candidate.ParentAgencyId == null);
+        var tier = await db.SubscriptionTiers.Include(candidate => candidate.Prices).SingleAsync(candidate => candidate.Id == tierId);
+        var now = DateTimeOffset.UtcNow;
+
+        db.Subscriptions.Add(Subscription.Start(principal.Id, tier, tier.PriceAt("NGN", BillingInterval.Monthly, now), "NGN", now));
+        await db.SaveChangesAsync();
     }
 
     private async Task<InviteSubAgentResponse> InviteAsync()

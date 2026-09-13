@@ -26,18 +26,11 @@ public sealed record SubAgentEntitlementDecision(
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>This is the seam where subscriptions and billing plugs in.</b> The number of sub-agents is
-/// the <c>max_sub_agents</c> entitlement of an agency's subscription tier (feature F9, issue 64),
-/// which is being built separately. This interface is the whole of what the sub-agent network
-/// needs from it: one question, asked in one place — <c>SubAgentNetworkService.InviteAsync</c> —
-/// before an agency is created.
-/// </para>
-/// <para>
-/// Until F9 lands, <see cref="UnlimitedSubAgentEntitlement"/> is registered and answers yes to
-/// everything. Replacing it is a one-line change in <c>DependencyInjection.AddApplication</c>: register an
-/// implementation that reads the agency's subscription and its tier's entitlement value, and
-/// nothing in this feature changes. The count of existing sub-agents is passed in, so the
-/// implementation does not have to repeat the query.
+/// <b>This is the seam where subscriptions and billing plug in.</b> The number of sub-agents is
+/// the <c>max_sub_agents</c> entitlement of an agency's subscription tier (feature F9, issue 64).
+/// This interface is the whole of what the sub-agent network needs from it: one question, asked
+/// before an agency is created. <c>Billing.SubAgentAllowance</c> answers it from the plan. The
+/// count of existing sub-agents is passed in, so the answer does not repeat the query.
 /// </para>
 /// <para>
 /// Build-plan decision 15 says what happens when an agency is already over its limit after a
@@ -55,21 +48,4 @@ public interface ISubAgentEntitlement
         Guid agencyId,
         int currentCount,
         CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// The stand-in until subscription entitlements exist: everything is allowed.
-/// </summary>
-/// <remarks>
-/// Deliberately a real implementation rather than a null check at the call site. A null check
-/// spreads — every new caller has to remember it — whereas this makes "no plan limits yet" a
-/// single registered decision that one line in <c>DependencyInjection.AddApplication</c> replaces.
-/// </remarks>
-public sealed class UnlimitedSubAgentEntitlement : ISubAgentEntitlement
-{
-    public Task<SubAgentEntitlementDecision> MayAddSubAgentAsync(
-        Guid agencyId,
-        int currentCount,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult(SubAgentEntitlementDecision.Unlimited(currentCount));
 }

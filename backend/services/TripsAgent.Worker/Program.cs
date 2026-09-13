@@ -5,10 +5,12 @@ using TripsAgent.Infrastructure;
 using TripsAgent.Infrastructure.Analytics;
 using TripsAgent.Infrastructure.Assets;
 using TripsAgent.Infrastructure.Auditing;
+using TripsAgent.Infrastructure.Catalog;
 using TripsAgent.Infrastructure.Messaging;
 using TripsAgent.Infrastructure.Payments;
 using TripsAgent.Infrastructure.Retention;
 using TripsAgent.Infrastructure.Scheduling;
+using TripsAgent.Infrastructure.Storefront;
 using TripsAgent.Infrastructure.Suppliers;
 using TripsAgent.Integrations.Paystack;
 
@@ -115,5 +117,21 @@ TripsAgent.Infrastructure.Checkout.CheckoutSweepSchedule.Register(recurringJobs)
 // rebuilt; every night the whole window is rebuilt from source, whatever the watermark says.
 // Nothing here is authoritative — it is all derived from orders and thrown away on the next run.
 AnalyticsRollupSchedule.Register(recurringJobs);
+// Group departures (#57), plan §3 jobs 6, 9, 10 and 11. The seats and the status are moved by the
+// checkout that earns them; these are the clock's share of the work — the checkout that walked
+// away, the offer nobody answered, the payment nobody made, and the nightly proof that every
+// status still matches its seats.
+DepartureHoldExpirySchedule.Register(recurringJobs);
+WaitlistOfferExpirySchedule.Register(recurringJobs);
+DepartureStatusSweepSchedule.Register(recurringJobs);
+InstallmentReminderSchedule.Register(recurringJobs);
+
+// Agencies' own website addresses (issue 59): looks for the DNS records of every hostname waiting to
+// be verified, and issues and renews their certificates — renewal starts 30 days before expiry.
+DomainVerificationSchedule.Register(recurringJobs);
+CertificateSchedule.Register(recurringJobs);
+
+// The CRM's follow-up reminders (#62): a task that fell due emails the person who owns it.
+TripsAgent.Infrastructure.Crm.CrmTaskReminderSchedule.Register(recurringJobs);
 
 await host.RunAsync();

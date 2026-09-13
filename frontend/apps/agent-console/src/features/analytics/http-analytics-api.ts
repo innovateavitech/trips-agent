@@ -1,7 +1,7 @@
 import type { ApiClient } from '@trips/api-client';
+import { int64 } from '@trips/utils';
 import { API_BASE_URL } from '../../api/config';
 import { ApiError, unwrap } from '../../api/errors';
-import { int64 } from '../../api/int64';
 import type { AnalyticsApi } from './analytics-api';
 import type {
   AgencyAnalytics,

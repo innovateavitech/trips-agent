@@ -89,6 +89,33 @@ public class CheckoutDomainTests
         order.Lines[0].RecordFulfilment(FulfilmentStatus.Confirmed, Now);
 
         FailedLines.FlagForResolution(order, order.Lines[0], "Too late.", Now, new RecordingOutbox()).Should().BeFalse();
+
+        // Not even as an agency cancellation: this is a flight, and only the supplier can say a real
+        // ticket is not real.
+        FailedLines.FlagAgencyCancellation(order, order.Lines[0], "Called off.", Now, new RecordingOutbox())
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void A_paid_group_departure_line_the_agency_called_off_does_go_to_the_resolution_queue()
+    {
+        // Build plan decision 12: cancelling a departure refunds everyone who paid. The agency hosts
+        // it itself, so there is no supplier ticket to contradict.
+        var order = PlacedOrder(PricedProductType.GroupDeparture);
+        var line = order.Lines[0];
+        line.RecordFulfilment(FulfilmentStatus.Confirmed, Now);
+        var outbox = new RecordingOutbox();
+
+        FailedLines.FlagAgencyCancellation(order, line, "The agency cancelled this departure.", Now, outbox)
+            .Should().BeTrue();
+
+        line.FulfilmentStatus.Should().Be(FulfilmentStatus.FailedNeedsResolution);
+        line.ResolutionStatus.Should().Be(ResolutionStatus.Open);
+        line.FailureReason.Should().Be("The agency cancelled this departure.");
+        outbox.Messages.Should().ContainSingle().Which.Should().BeOfType<BookingNeedsResolution>();
+
+        FailedLines.FlagAgencyCancellation(order, line, "Again.", Now, outbox)
+            .Should().BeFalse("it is already waiting for a decision");
     }
 
     [Theory]
@@ -136,7 +163,7 @@ public class CheckoutDomainTests
         registration.Job.Type.Should().Be<CheckoutSweepJob>();
     }
 
-    private static Order PlacedOrder()
+    private static Order PlacedOrder(PricedProductType productType = PricedProductType.Flight)
     {
         var agencyId = Guid.CreateVersion7();
         var rule = MarkupRule.Create(agencyId, new MarkupRuleTerms
@@ -150,7 +177,7 @@ public class CheckoutDomainTests
 
         var quote = PriceQuote.Record(
             agencyId,
-            new PricingSubject(PricedProductType.Flight, "NGN"),
+            new PricingSubject(productType, "NGN"),
             new PriceBreakdown(
                 new Money(100_000), new Money(10_000), new Money(750), new Money(500), new Money(110_750),
                 "NGN", new MarkupRuleDefinition(rule.Id, agencyId, rule.Terms), false, 750, 0),

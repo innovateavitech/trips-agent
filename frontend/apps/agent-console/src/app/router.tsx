@@ -6,10 +6,14 @@ import { authRoutes } from '../features/auth/routes';
 import { analyticsRoutes } from '../features/analytics';
 import { bookingRoutes } from '../features/booking/routes';
 import { bookingsRoutes } from '../features/bookings/routes';
+import { catalogRoutes } from '../features/catalog/routes';
+import { crmRoutes } from '../features/crm/routes';
+import { departuresRoutes } from '../features/departures/routes';
 import { DashboardPage } from '../features/dashboard';
 import { onboardingRoutes } from '../features/onboarding/routes';
 import { pricingRoutes } from '../features/pricing/routes';
 import { searchRoutes } from '../features/search/routes';
+import { storefrontRoutes } from '../features/storefront/routes';
 import { walletRoutes } from '../features/wallet';
 import { AppShell } from '../shell/app-shell';
 import { PublicLayout } from '../shell/public-layout';
@@ -30,6 +34,7 @@ import { NotFoundPage, RouteErrorPage } from '../shell/route-error-page';
  *    /bookings[/:id]        (#54)       /resolution    (#54)
  *    /analytics             (67)        /reports       (68)
  *    /wallet/…              (#51)       /pricing       (#55)
+ *    /website/…             (#58, #59)
  *    /verification          (#50)
  *
  * Each feature owns its `routes.tsx` and hands over an array; this file only
@@ -61,8 +66,12 @@ export const appRoutes: RouteObject[] = [
               ...bookingRoutes,
               ...bookingsRoutes,
               ...analyticsRoutes,
+              ...catalogRoutes,
+              ...departuresRoutes,
+              ...crmRoutes,
               ...walletRoutes,
               ...pricingRoutes,
+              ...storefrontRoutes,
               ...onboardingRoutes,
               { path: '*', element: <NotFoundPage /> },
             ],

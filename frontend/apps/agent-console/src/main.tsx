@@ -10,7 +10,10 @@ import { AUTH_MODE } from './app/settings';
 import { createHttpAuthApi } from './auth/http-auth-api';
 import { mockAuthApi } from './auth/mock/mock-auth-api';
 import { createHttpAnalyticsApi, mockAnalyticsApi } from './features/analytics';
+import { httpCatalogApi, mockCatalogApi } from './features/catalog';
+import { httpCrmApi, mockCrmApi } from './features/crm';
 import { mockDashboardApi } from './features/dashboard';
+import { httpDeparturesApi, mockDeparturesApi } from './features/departures';
 import { mockSearchApi } from './features/search';
 import { createHttpBookingFlowApi, mockBookingFlowApi } from './features/booking';
 import { createHttpBookingsApi, mockBookingsApi } from './features/bookings';
@@ -29,6 +32,9 @@ import './index.css';
  *   bookings     real `/api/v1/bookings` (#42, #44); the stand-in with `VITE_AUTH_MODE=mock`
  *   analytics    real `/api/v1/analytics` and `/api/v1/reports` (issues 67, 68); the stand-in
  *                with `VITE_AUTH_MODE=mock`
+ *   catalog      real `/api/v1/catalog`; the stand-in with `VITE_AUTH_MODE=mock`
+ *   departures   real `/api/v1/catalog`; the stand-in with `VITE_AUTH_MODE=mock`
+ *   crm          real `/api/v1/crm`; the stand-in with `VITE_AUTH_MODE=mock`
  */
 const adapters: AppAdapters = {
   analytics:
@@ -41,6 +47,9 @@ const adapters: AppAdapters = {
   search: mockSearchApi,
   bookingFlow: AUTH_MODE === 'mock' ? mockBookingFlowApi : createHttpBookingFlowApi({ api }),
   bookings: AUTH_MODE === 'mock' ? mockBookingsApi : createHttpBookingsApi({ api }),
+  catalog: AUTH_MODE === 'mock' ? mockCatalogApi : httpCatalogApi,
+  departures: AUTH_MODE === 'mock' ? mockDeparturesApi : httpDeparturesApi,
+  crm: AUTH_MODE === 'mock' ? mockCrmApi : httpCrmApi,
 };
 
 const queryClient = createQueryClient();

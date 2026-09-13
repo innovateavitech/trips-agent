@@ -130,6 +130,9 @@ public static partial class RetentionCatalogue
         new("orders.cart_items", RetentionTreatment.Purged,
             "With their cart", "Deleted by the cart's ON DELETE CASCADE.",
             PurgedWith: "orders.carts"),
+        new("orders.booking_access_tokens", RetentionTreatment.Kept, "With their order",
+            "The links travellers manage their bookings with. Only the hash of each secret is stored, so the row "
+            + "identifies nobody; it is kept because it is the evidence of what a traveller was sent."),
 
         // ---------------------------------------------------------------- documents and pricing
         new("documents.generated_documents", RetentionTreatment.Protected, SevenYears,
@@ -142,6 +145,71 @@ public static partial class RetentionCatalogue
             "The priced snapshot each order line was placed from."),
         new("pricing.markup_rules", RetentionTreatment.Protected, SevenYears,
             "Explains the markup on every historic order line."),
+
+        // ---------------------------------------------------------------- the agency's own catalog
+        new("catalog.products", RetentionTreatment.Kept, "While the agency exists. Archived, never deleted",
+            "What the agency sells. Order lines name the product and freeze their own title and price, so this is not a financial record."),
+        new("catalog.product_media", RetentionTreatment.Kept, "With their product",
+            "Which uploads a product shows. Detaching one never deletes the asset."),
+        new("catalog.product_categories", RetentionTreatment.Kept, "While in use",
+            "Configuration: the agency's own categories and themes."),
+        new("catalog.product_category_map", RetentionTreatment.Kept, "With their product",
+            "Which categories and themes a product carries."),
+        new("catalog.tour_itinerary_days", RetentionTreatment.Kept, "With their product",
+            "The day-by-day itinerary. Replaced whenever the product is saved."),
+        new("catalog.product_inclusions", RetentionTreatment.Kept, "With their product",
+            "What the price includes and leaves out. Replaced whenever the product is saved."),
+        new("catalog.product_price_variants", RetentionTreatment.Kept, "With their product",
+            "Current prices only. A quote or order line froze its own copy of the price it used."),
+        new("catalog.visa_details", RetentionTreatment.Kept, "With their product",
+            "What a visa product says about the visa."),
+        new("catalog.visa_document_requirements", RetentionTreatment.Kept, "With their product",
+            "The applicant's checklist: a list of documents, not anyone's documents."),
+
+        // ---------------------------------------------------------------- group departures
+        new("catalog.departures", RetentionTreatment.Kept, "With their product",
+            "A dated run of a tour. Order lines freeze their own price, so this is not a financial record."),
+        new("catalog.departure_price_tiers", RetentionTreatment.Kept, "With their departure",
+            "Current prices only. A quote or order line froze its own copy of the price it used."),
+        new("catalog.installment_plans", RetentionTreatment.Kept, "With their departure",
+            "How a departure is paid for. Terms, not anybody's payments."),
+        new("catalog.installment_schedule_items", RetentionTreatment.Kept, "With their plan",
+            "The payments the balance is split into, as offsets. Replaced whenever the departure is saved."),
+        new("catalog.departure_holds", RetentionTreatment.Purged, "With their cart",
+            "Deleted by the cart's ON DELETE CASCADE. A hold on a cart that became nothing is not a record of anything.",
+            PurgedWith: "orders.carts"),
+        new("catalog.departure_waitlist", RetentionTreatment.Kept,
+            "While the departure exists",
+            "Holds a name and an email somebody gave to be told about a seat. Considered and left alone for the MVP: "
+            + "a candidate for anonymisation once counsel reviews the schedule (build plan decision 26)."),
+        new("catalog.pax_manifests", RetentionTreatment.Kept, "With their order line",
+            "Which departure a booked traveller is on, and their room. The traveller's own details live on orders.order_travellers."),
+        new("catalog.booking_payment_schedules", RetentionTreatment.Protected, SevenYears,
+            "What a booking on a departure was billed, and who was billed. A financial record, and it carries a name and an email."),
+        new("catalog.booking_installments", RetentionTreatment.Protected, SevenYears,
+            "The payments that schedule was split into, and whether they were paid."),
+        // ---------------------------------------------------------------- the agency's own CRM
+        //
+        // Personal data the agency controls, and the reason the CRM keeps it in one place: a
+        // customer's name, email and phone live on their own row and nowhere else here, so erasing
+        // a person (#106) is one row anonymised rather than a sweep of five tables. Nothing has an
+        // automatic window: an agency's customer list is the agency's to keep while it trades.
+        new("crm.customers", RetentionTreatment.Kept, "While the agency exists. Erased on request (#106)",
+            "The agency's own customers. Name, email and phone — personal data, and the only copy of it in the CRM."),
+        new("crm.leads", RetentionTreatment.Kept, "While the agency exists",
+            "What each customer asked for, and where it got to. Points at the customer rather than copying their details."),
+        new("crm.lead_stage_history", RetentionTreatment.Kept, "With their lead",
+            "Every move of every lead, and who made it. Append-only in the database as well."),
+        new("crm.quotes", RetentionTreatment.Kept, "While the agency exists",
+            "What was quoted, and what the customer answered. A sent quote never changes; the database says so too."),
+        new("crm.quote_items", RetentionTreatment.Kept, "With their quote",
+            "A quote's priced lines. Replaced while the quote is a draft, final once it is sent."),
+        new("crm.quote_itinerary_days", RetentionTreatment.Kept, "With their quote",
+            "A quote's proposed days. Replaced while the quote is a draft, final once it is sent."),
+        new("crm.tasks", RetentionTreatment.Kept, "While the agency exists",
+            "Follow-up work: a title, a date and what it is about. No personal data of its own."),
+        new("crm.communications", RetentionTreatment.Kept, "With their customer",
+            "Each customer's timeline of messages and notes — what an agent needs to pick a conversation back up. Append-only in the database as well."),
 
         // ---------------------------------------------------------------- supplier bookings
         new("supplier.supplier_bookings", RetentionTreatment.Protected, SevenYears,
@@ -229,6 +297,21 @@ public static partial class RetentionCatalogue
         new("notifications.notification_templates", RetentionTreatment.Kept, "While in use", "Configuration."),
         new("notifications.suppressed_email_addresses", RetentionTreatment.Kept, "Indefinitely",
             "An address that bounced or complained has to stay suppressed, or we mail it again."),
+
+        // ---------------------------------------------------------------- storefront
+        new("storefront.site_templates", RetentionTreatment.Kept, "While offered", "Reference data: the starter websites."),
+        new("storefront.reserved_hostname_labels", RetentionTreatment.Kept, "Indefinitely",
+            "Reference data: the hostname denylist and the brand list behind open question 20."),
+        new("storefront.sites", RetentionTreatment.Kept, "While the agency exists", "The agency's website and its settings."),
+        new("storefront.site_versions", RetentionTreatment.Kept, "While the site exists",
+            "Every staged and published version: rollback needs them, and they record what travellers were shown."),
+        new("storefront.site_pages", RetentionTreatment.Kept, "While the site exists", "The draft's pages."),
+        new("storefront.site_blocks", RetentionTreatment.Kept, "With their page", "The draft's blocks."),
+        new("storefront.site_themes", RetentionTreatment.Kept, "While the site exists", "The site's typography."),
+        new("storefront.site_domains", RetentionTreatment.Kept, "While connected",
+            "Hostnames the site answers on. A removed one is deleted, with its checks."),
+        new("storefront.site_domain_checks", RetentionTreatment.Kept, "With their hostname",
+            "What DNS said on each check — the answer to \"why isn't my domain working?\". Small, and removed with the hostname."),
     ];
 
     /// <summary>The tables no retention rule may ever target.</summary>

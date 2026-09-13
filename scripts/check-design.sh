@@ -19,10 +19,17 @@ BRAND_PRIMARY_HSL="226 83% 56%"
 TOKENS="frontend/packages/ui/src/styles/tokens.css"
 PRESET="frontend/packages/ui/tailwind.preset.ts"
 
-# Files allowed to contain raw colour values.
+# The storefront turns an agency's own brand colour, a hex value out of their branding record, into
+# the token variables the design system already uses. That conversion has to be tested against real
+# hex values — including this brand primary, so the two can never drift apart — and a test asserting
+# arithmetic is not a design decision. It renders nothing.
+THEME_TEST="frontend/apps/storefront/lib/__tests__/theme.test.ts"
+
+# Files allowed to contain raw colour values. Keep this list short and name a reason above each
+# entry: every addition is somewhere drift can hide.
 is_allowed() {
   case "$1" in
-    "$TOKENS"|"$PRESET") return 0 ;;
+    "$TOKENS"|"$PRESET"|"$THEME_TEST") return 0 ;;
     *) return 1 ;;
   esac
 }

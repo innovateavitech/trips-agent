@@ -29,6 +29,12 @@ public static class RateLimitPolicyNames
     public const string Search = "Search";
 
     /// <summary>
+    /// The storefront's anonymous CRM routes (#62): the trip-request widget, and the quote page a
+    /// customer opens from their email. Each one writes, and anyone on the internet can reach them.
+    /// </summary>
+    public const string Storefront = "Storefront";
+
+    /// <summary>
     /// The ceiling on one agency's traffic, across all of its users and every endpoint.
     /// </summary>
     /// <remarks>
@@ -40,7 +46,7 @@ public static class RateLimitPolicyNames
 
     /// <summary>Every policy, in the order configuration documents them.</summary>
     public static IReadOnlyList<string> All { get; } =
-        [Default, Login, Registration, OtpResend, ForgotPassword, Search, Agency];
+        [Default, Login, Registration, OtpResend, ForgotPassword, Search, Storefront, Agency];
 
     /// <summary>True for a policy an endpoint may name. <see cref="Agency"/> is not one.</summary>
     public static bool IsEndpointPolicy(string? name) =>
@@ -101,6 +107,11 @@ public sealed class RateLimitSettings
             // Per user. The one request that can cost us a supplier call, so the tightest of the
             // signed-in policies: one search every two seconds, sustained, is still a busy agent.
             [RateLimitPolicyNames.Search] = new(30, TimeSpan.FromMinutes(1)),
+
+            // Per address, for anonymous traffic on an agency's own site. A traveller sends one trip
+            // request and opens their quote a handful of times; twenty a minute from one address is
+            // somebody filling the agency's inbox with rubbish, or guessing at quote links.
+            [RateLimitPolicyNames.Storefront] = new(20, TimeSpan.FromMinutes(1)),
 
             // Per agency, across all its users: four busy users' worth of the default.
             [RateLimitPolicyNames.Agency] = new(1200, TimeSpan.FromMinutes(1)),

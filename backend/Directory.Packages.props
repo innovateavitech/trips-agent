@@ -106,7 +106,7 @@
   <ItemGroup Label="Email">
     <!-- Plain SMTP, so it talks to Mailpit locally and to any SMTP relay in production without
          tying us to a cloud provider's SDK (CLAUDE.md: "Cloud is not chosen yet"). -->
-    <PackageVersion Include="MailKit" Version="4.17.0" />
+    <PackageVersion Include="MailKit" Version="4.18.0" />
   </ItemGroup>
 
   <!-- Invoices and vouchers (#46), the PDF library named in the delivery plan's stack table.

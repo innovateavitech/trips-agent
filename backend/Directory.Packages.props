@@ -92,7 +92,7 @@
   <ItemGroup Label="Caching">
     <!-- Markup rule cache (issue #28). The raw client rather than IDistributedCache, because the
          invalidation scheme needs an atomic INCR, which IDistributedCache cannot express. -->
-    <PackageVersion Include="StackExchange.Redis" Version="2.13.17" />
+    <PackageVersion Include="StackExchange.Redis" Version="3.2.1" />
   </ItemGroup>
 
   <!-- Image processing for the asset pipeline (#18). SkiaSharp is MIT over BSD-licensed Skia.

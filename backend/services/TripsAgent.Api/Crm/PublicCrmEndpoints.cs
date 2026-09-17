@@ -1,4 +1,5 @@
 using TripsAgent.Api.RateLimiting;
+using TripsAgent.Application.Commerce;
 using TripsAgent.Application.Crm;
 using TripsAgent.Application.RateLimiting;
 using TripsAgent.Contracts.Crm;
@@ -111,7 +112,7 @@ public static class PublicCrmEndpoints
     {
         var header = http.Request.Headers[StorefrontHostHeader].ToString();
 
-        return StorefrontCrmService.NormaliseHost(
+        return StorefrontTenant.NormaliseHost(
             string.IsNullOrWhiteSpace(header) ? http.Request.Host.Value : header);
     }
 }

@@ -30,6 +30,7 @@ public sealed class QuoteService
     private readonly IAppDbContext _db;
     private readonly CrmContext _crm;
     private readonly CrmReader _reader;
+    private readonly QuoteLinks _links;
     private readonly IQuoteEmails _emails;
     private readonly IUniqueViolationDetector _uniqueViolations;
 
@@ -37,12 +38,14 @@ public sealed class QuoteService
         IAppDbContext db,
         CrmContext crm,
         CrmReader reader,
+        QuoteLinks links,
         IQuoteEmails emails,
         IUniqueViolationDetector uniqueViolations)
     {
         _db = db;
         _crm = crm;
         _reader = reader;
+        _links = links;
         _emails = emails;
         _uniqueViolations = uniqueViolations;
     }
@@ -159,11 +162,15 @@ public sealed class QuoteService
         var lead = await _db.Leads.FirstAsync(candidate => candidate.Id == quote.LeadId, cancellationToken);
         var customer = await _db.Customers.FirstAsync(candidate => candidate.Id == lead.CustomerId, cancellationToken);
 
-        quote.Send(QuoteLinkTokens.New(), actor.Today, actor.Now);
+        // The token is a signature over this quote's id, and only its hash is stored (issue 175).
+        // The customer's email and the agent's response both take the link from here.
+        var token = _links.TokenFor(quote.Id);
+
+        quote.Send(_links.HashOf(token), actor.Today, actor.Now);
         lead.MarkQuoted(actor.UserId, actor.Name, actor.Now);
         customer.RecordActivity(actor.Now);
 
-        var publicUrl = await _reader.PublicUrlAsync(actor.AgencyId, quote.PublicToken!, cancellationToken);
+        var publicUrl = await _reader.PublicUrlAsync(actor.AgencyId, token, cancellationToken);
         await _emails.QueueQuoteSentAsync(quote, customer, publicUrl, actor, cancellationToken);
 
         await _db.SaveChangesAsync(cancellationToken);

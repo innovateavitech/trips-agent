@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using TripsAgent.Api.Authorization;
+using TripsAgent.Api.RateLimiting;
 using TripsAgent.Application.Identity;
+using TripsAgent.Application.RateLimiting;
 using TripsAgent.Application.Tenancy.SubAgents;
 using TripsAgent.Contracts.Tenancy;
 using TripsAgent.Domain.Identity;
@@ -426,6 +428,10 @@ public static class SubAgentEndpoints
                 };
             })
             .WithName("AcceptInvitation")
+
+            // Anonymous, and a link that turns out to be real ends in an Argon2id hash. Its own policy,
+            // so that CPU cannot be spent at the default per-address rate (issue 173).
+            .RequireRateLimitPolicy(RateLimitPolicyNames.InvitationAccept)
             .Produces<AcceptInvitationResponse>()
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status404NotFound);

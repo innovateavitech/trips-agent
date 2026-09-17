@@ -422,7 +422,7 @@ public class RegistrationTests
 
             var sender = new CapturingEmailSender(Sent);
             var passwordHasher = new CountingPasswordHasher(this);
-            var issuer = new VerificationCodeIssuer(db, tokenHasher, sender, NullLogger<VerificationCodeIssuer>.Instance);
+            var issuer = new VerificationCodeIssuer(db, tokenHasher, sender, tenancy.Scope, NullLogger<VerificationCodeIssuer>.Instance);
 
             _register = new RegisterAgentHandler(db, passwordHasher, tenancy.Scope, issuer, clock);
             _verify = new VerifyEmailHandler(db, tokenHasher, tenancy.Scope, clock);

@@ -223,6 +223,7 @@ public static class DependencyInjection
         // anonymous side of it. CrmContext and CrmReader are shared by all of them.
         services.AddScoped<CrmContext>();
         services.AddScoped<CrmReader>();
+        services.AddScoped<QuoteLinks>();
         services.AddScoped<CustomerDirectory>();
         services.AddScoped<LeadService>();
         services.AddScoped<QuoteService>();

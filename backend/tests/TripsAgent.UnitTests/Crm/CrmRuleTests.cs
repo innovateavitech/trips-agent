@@ -1,4 +1,5 @@
 using FluentAssertions;
+using TripsAgent.Application.Commerce;
 using TripsAgent.Application.Crm;
 using TripsAgent.Domain.Common;
 using TripsAgent.Domain.Crm;
@@ -130,7 +131,7 @@ public class CrmRuleTests
         quote.QuoteNumber.Should().Be("QT-0001");
         quote.Status.Should().Be(QuoteStatus.Draft);
         quote.TotalMinor.AmountMinor.Should().Be((2 * 45_000_000L) + 7_500_000L);
-        quote.PublicToken.Should().BeNull();
+        quote.PublicTokenHash.Should().BeNull();
 
         Quote.FormatNumber(10_000).Should().Be("QT-10000", "the number never wraps");
     }
@@ -152,11 +153,11 @@ public class CrmRuleTests
         quote.Revise(Content(title: "Dubai, ten nights"));
         quote.Title.Should().Be("Dubai, ten nights");
 
-        quote.Send("a-token", Today, Now);
+        quote.Send("a-token-hash", Today, Now);
 
         quote.Status.Should().Be(QuoteStatus.Sent);
         quote.SentAt.Should().Be(Now);
-        quote.PublicToken.Should().Be("a-token");
+        quote.PublicTokenHash.Should().Be("a-token-hash");
 
         var revising = () => quote.Revise(Content(title: "Dubai, twelve nights"));
 
@@ -174,7 +175,7 @@ public class CrmRuleTests
             .Should().Contain("expired");
 
         var sent = Draft();
-        sent.Send("a-token", Today, Now);
+        sent.Send("a-token-hash", Today, Now);
 
         QuoteRules.WhyNotSendable(sent, Today).Should().Contain("already been sent");
     }
@@ -183,7 +184,7 @@ public class CrmRuleTests
     public void Only_the_first_view_counts()
     {
         var quote = Draft();
-        quote.Send("a-token", Today, Now);
+        quote.Send("a-token-hash", Today, Now);
 
         quote.RecordView(Now).Should().BeTrue();
         quote.Status.Should().Be(QuoteStatus.Viewed);
@@ -197,7 +198,7 @@ public class CrmRuleTests
     public void A_quote_is_answered_once_and_reads_as_expired_after_its_last_valid_day()
     {
         var quote = Draft();
-        quote.Send("a-token", Today, Now);
+        quote.Send("a-token-hash", Today, Now);
 
         quote.WhyNotAnswerable(Today).Should().BeNull();
         quote.Accept(Today, Now);
@@ -233,17 +234,45 @@ public class CrmRuleTests
     }
 
     [Fact]
-    public void A_quote_link_token_is_unguessable_and_anything_else_is_turned_away()
+    public void A_quote_link_is_derived_from_its_quote_and_only_its_hash_is_kept()
     {
-        var token = QuoteLinkTokens.New();
+        var links = new QuoteLinks(new FakeTokenHasher());
+        var quoteId = Guid.CreateVersion7();
+
+        var token = links.TokenFor(quoteId);
 
         token.Should().HaveLength(QuoteLinkTokens.Length);
         QuoteLinkTokens.LooksValid(token).Should().BeTrue();
-        QuoteLinkTokens.New().Should().NotBe(token);
+
+        // The console shows the link again whenever the agent opens the quote, so one quote always
+        // derives the same token — and another quote never the same one (issue 175).
+        links.TokenFor(quoteId).Should().Be(token);
+        links.TokenFor(Guid.CreateVersion7()).Should().NotBe(token);
+
+        // What the row keeps is the hash of the token, which is not the token.
+        links.HashOf(token).Should().NotBe(token);
+        links.ShowableTokenFor(quoteId, links.HashOf(token)).Should().Be(token);
+
+        // A quote sent before the change holds the hash of 256 random bits: its link still opens it,
+        // and there is nothing for the console to show.
+        links.ShowableTokenFor(quoteId, "the hash of something else").Should().BeNull();
+        links.ShowableTokenFor(quoteId, null).Should().BeNull();
 
         QuoteLinkTokens.LooksValid("short").Should().BeFalse();
         QuoteLinkTokens.LooksValid(new string('!', QuoteLinkTokens.Length)).Should().BeFalse();
         QuoteLinkTokens.LooksValid(null).Should().BeFalse();
+    }
+
+    /// <summary>Stands in for the server's keyed hash: deterministic, and 32 bytes like the real one.</summary>
+    private sealed class FakeTokenHasher : TripsAgent.Application.Identity.ITokenHasher
+    {
+        public string Hash(string token) =>
+            Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes($"key:{token}")));
+
+        public string GenerateNumericCode(int digits) => throw new NotSupportedException();
+
+        public string GenerateOpaqueToken() => throw new NotSupportedException();
     }
 
     [Fact]
@@ -258,10 +287,10 @@ public class CrmRuleTests
     [Fact]
     public void A_storefront_host_is_read_without_its_port_or_its_casing()
     {
-        StorefrontCrmService.NormaliseHost("Lekki-Horizon.com:443").Should().Be("lekki-horizon.com");
-        StorefrontCrmService.NormaliseHost(" lekki-horizon.com. ").Should().Be("lekki-horizon.com");
-        StorefrontCrmService.NormaliseHost("  ").Should().BeNull();
-        StorefrontCrmService.NormaliseHost(null).Should().BeNull();
+        StorefrontTenant.NormaliseHost("Lekki-Horizon.com:443").Should().Be("lekki-horizon.com");
+        StorefrontTenant.NormaliseHost(" lekki-horizon.com. ").Should().Be("lekki-horizon.com");
+        StorefrontTenant.NormaliseHost("  ").Should().BeNull();
+        StorefrontTenant.NormaliseHost(null).Should().BeNull();
     }
 
     // ------------------------------------------------------------------ samples

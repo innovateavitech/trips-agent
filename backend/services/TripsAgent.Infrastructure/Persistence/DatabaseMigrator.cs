@@ -86,6 +86,24 @@ public static partial class DatabaseMigrator
                     await BackfillEncryptionAsync(scope.ServiceProvider, dbContext, platformScope, logger, cancellationToken);
                 }
 
+                // The same shape again for the quote links (issue 175): hashing a stored token needs
+                // the key, which is in configuration and not in the database. So the run stops at the
+                // migration that adds the hash column, hashes what is there, and only then applies the
+                // one that drops the plaintext column — which refuses while a token is still unhashed.
+                if (pending.Any(migration => migration.EndsWith(QuoteLinkHashMigration, StringComparison.Ordinal)))
+                {
+                    LogPausingForQuoteLinks(logger);
+
+                    await dbContext.GetService<IMigrator>().MigrateAsync(QuoteLinkHashMigration, cancellationToken);
+                }
+
+                // Asked separately from the pause above, so that a run interrupted between the two
+                // migrations hashes what is left when it is started again rather than meeting the guard.
+                if (pending.Any(migration => migration.EndsWith(QuoteLinkDropMigration, StringComparison.Ordinal)))
+                {
+                    await BackfillQuoteLinksAsync(scope.ServiceProvider, dbContext, platformScope, logger, cancellationToken);
+                }
+
                 await dbContext.Database.MigrateAsync(cancellationToken);
 
                 LogApplied(logger);
@@ -111,6 +129,36 @@ public static partial class DatabaseMigrator
 
     /// <summary>The migration that adds the ciphertext columns; the backfill runs straight after it.</summary>
     public const string EncryptionColumnsMigration = "AddEncryptedPiiColumns";
+
+    /// <summary>The migration that adds the quote link's hash column; the hashing runs straight after it.</summary>
+    public const string QuoteLinkHashMigration = "AddQuoteLinkTokenHash";
+
+    /// <summary>The migration that drops the plaintext quote link, once nothing in it is left unhashed.</summary>
+    public const string QuoteLinkDropMigration = "DropPlaintextQuoteLinkToken";
+
+    /// <summary>
+    /// Hashes the quote links still stored in clear, between the two migrations that make the change.
+    /// </summary>
+    private static async Task BackfillQuoteLinksAsync(
+        IServiceProvider services,
+        AppDbContext dbContext,
+        IPlatformScope platformScope,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        // The same hasher the application uses, and no fallback: a hash made under any other key
+        // would lock every customer out of the quote they are holding a link to.
+        var links = services.GetService<TripsAgent.Application.Crm.QuoteLinks>()
+            ?? new TripsAgent.Application.Crm.QuoteLinks(
+                services.GetRequiredService<TripsAgent.Application.Identity.ITokenHasher>());
+
+        await new QuoteLinkTokenBackfill(dbContext, platformScope, links, logger).RunAsync(cancellationToken);
+    }
+
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "Pausing after the migration that adds the quote link hash, to hash the links already stored.")]
+    private static partial void LogPausingForQuoteLinks(ILogger logger);
 
     /// <summary>
     /// Encrypts traveller documents and bank account numbers that are still in clear, and re-encrypts

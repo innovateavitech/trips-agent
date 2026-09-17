@@ -21,11 +21,13 @@ public sealed class CrmReader
 {
     private readonly IAppDbContext _db;
     private readonly IStorefrontDirectory _storefront;
+    private readonly QuoteLinks _links;
 
-    public CrmReader(IAppDbContext db, IStorefrontDirectory storefront)
+    public CrmReader(IAppDbContext db, IStorefrontDirectory storefront, QuoteLinks links)
     {
         _db = db;
         _storefront = storefront;
+        _links = links;
     }
 
     public static CustomerRefResponse CustomerRef(Customer customer)
@@ -160,7 +162,11 @@ public sealed class CrmReader
             .Join(_db.Customers.AsNoTracking(), lead => lead.CustomerId, candidate => candidate.Id, (_, candidate) => candidate)
             .FirstAsync(cancellationToken);
 
-        var publicUrl = quote.PublicToken is { } token ? await PublicUrlAsync(quote.AgencyId, token, cancellationToken) : null;
+        // Worked out again from the quote's id, because only the hash of the link is kept (issue 175).
+        // A quote sent before that change holds a hash of 256 random bits, which cannot be recomputed:
+        // its link goes on working for the customer, and the console simply has none to show.
+        var token = _links.ShowableTokenFor(quote.Id, quote.PublicTokenHash);
+        var publicUrl = token is null ? null : await PublicUrlAsync(quote.AgencyId, token, cancellationToken);
 
         return new QuoteResponse(
             quote.Id,

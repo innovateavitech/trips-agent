@@ -61,7 +61,9 @@ public interface IAllowanceReservations
     /// <remarks>
     /// Takes the sub-agency because the caller is often a background job rather than the sub-agent
     /// — the checkout sweeper, the ticket time limit monitor. Only that sub-agent, its principal
-    /// or a platform scope may call it; anything else is refused and returns false.
+    /// or a platform scope may call it; anything else is refused and returns false. So is a release
+    /// of more than the allowance holds (issue 175): the database gives back at most what was
+    /// reserved, and refuses the rest rather than quietly clamping it at nothing spent.
     /// </remarks>
     public Task<bool> ReleaseAsync(
         Guid subAgencyId,

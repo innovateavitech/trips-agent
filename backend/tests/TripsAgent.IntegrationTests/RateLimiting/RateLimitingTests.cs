@@ -46,6 +46,7 @@ public sealed class RateLimitingTests : IClassFixture<RedisFixture>, IAsyncLifet
     private const int UserLimit = 5;
     private const int AgencyLimit = 8;
     private const int SearchLimit = 2;
+    private const int StorefrontLimit = 4;
 
     /// <summary>The one proxy the API is told to trust.</summary>
     private const string TrustedProxy = "198.51.100.10";
@@ -80,6 +81,10 @@ public sealed class RateLimitingTests : IClassFixture<RedisFixture>, IAsyncLifet
             ("ConnectionStrings__PostgresAdmin", _postgres.ConnectionStringFor(database, asApplicationRole: false)),
             ("ConnectionStrings__Redis", _redis.ConnectionString),
             ("Paystack__SecretKey", "rate-limit-test-key"),
+
+            // Nothing here encrypts anything, but the storefront's checkout route resolves the service
+            // that would, and the API refuses to build it without a key. Zeroes: obviously not one.
+            ("Security__SecretEncryptionKey", Convert.ToBase64String(new byte[32])),
             ("RateLimiting__Enabled", "true"),
             ("RateLimiting__Policies__Login__PermitLimit", LoginLimit.ToString(CultureInfo.InvariantCulture)),
             ("RateLimiting__Policies__Login__Window", "00:05:00"),
@@ -89,6 +94,8 @@ public sealed class RateLimitingTests : IClassFixture<RedisFixture>, IAsyncLifet
             ("RateLimiting__Policies__Agency__Window", "00:05:00"),
             ("RateLimiting__Policies__Search__PermitLimit", SearchLimit.ToString(CultureInfo.InvariantCulture)),
             ("RateLimiting__Policies__Search__Window", "00:05:00"),
+            ("RateLimiting__Policies__Storefront__PermitLimit", StorefrontLimit.ToString(CultureInfo.InvariantCulture)),
+            ("RateLimiting__Policies__Storefront__Window", "00:05:00"),
             ("ForwardedHeaders__KnownProxies", TrustedProxy),
         ];
 
@@ -291,6 +298,42 @@ public sealed class RateLimitingTests : IClassFixture<RedisFixture>, IAsyncLifet
     }
 
     [Fact]
+    public async Task The_storefront_and_its_checkout_return_page_are_counted_under_the_Storefront_policy()
+    {
+        var api = StartInstance().CreateClient();
+        const string traveller = "203.0.113.91";
+
+        // The public site's routes fell back to the default policy until issue 173. No site answers on
+        // this host, so each is a 404 — counted all the same, which is the point.
+        string[] siteRoutes =
+        [
+            "/api/v1/public/storefront/site",
+            "/api/v1/public/storefront/catalog",
+            "/api/v1/public/storefront/catalog/kilimanjaro-seven-days",
+            "/api/v1/public/storefront/sitemap",
+        ];
+
+        foreach (var path in siteRoutes)
+        {
+            using var counted = await AnonymousGetAsync(api, path, traveller);
+
+            counted.StatusCode.Should().Be(HttpStatusCode.NotFound, path);
+            Header(counted, RateLimitHeaders.Policy).Should().Be($"{StorefrontLimit};w=300", path);
+        }
+
+        // Four routes, one count: the next request from the same address is refused.
+        using var refused = await AnonymousGetAsync(api, "/api/v1/public/storefront/site", traveller);
+        refused.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+
+        // The gateway's return page is counted the same way, whatever payment reference it carries.
+        using var returned = await AnonymousGetAsync(
+            api, "/api/v1/public/checkout/ORD-2026-000001?payment=PAY-2026-000001", "203.0.113.92");
+
+        returned.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        Header(returned, RateLimitHeaders.Policy).Should().Be($"{StorefrontLimit};w=300");
+    }
+
+    [Fact]
     public async Task The_Paystack_webhook_is_never_throttled()
     {
         var api = StartInstance().CreateClient();
@@ -369,6 +412,14 @@ public sealed class RateLimitingTests : IClassFixture<RedisFixture>, IAsyncLifet
             Content = new StringContent("{}", Encoding.UTF8, "application/json"),
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add(PeerAddressFilter.Header, peer);
+
+        return await api.SendAsync(request);
+    }
+
+    private static async Task<HttpResponseMessage> AnonymousGetAsync(HttpClient api, string path, string peer)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
         request.Headers.Add(PeerAddressFilter.Header, peer);
 
         return await api.SendAsync(request);

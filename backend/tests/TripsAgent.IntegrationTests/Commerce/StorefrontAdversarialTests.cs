@@ -129,12 +129,58 @@ public sealed class StorefrontAdversarialTests : IAsyncLifetime
             .Should().BeOfType<StoreResult<ManageBookingResponse>.NotFound>();
     }
 
+    // ---------------------------------------------------------- making us call the gateway for free
+
+    [Fact]
+    public async Task The_return_page_asks_the_gateway_only_about_a_payment_of_the_booking_it_shows()
+    {
+        await using var harness = await BookingPipelineHarness.CreateAsync(_postgres, _stub);
+        var productId = await StorefrontSeed.TourAsync(harness);
+
+        // Two travellers on the same shop, both sent to the gateway and neither back yet.
+        var mine = await BeginAsync(harness, productId);
+        var theirs = await BeginAsync(harness, productId);
+
+        // A reference that is nobody's. Before issue 173 the page put it to the gateway as it was.
+        (await ReturnAsync(harness, mine.Reference, mine.SessionToken, "PAY-2026-NOT-OURS"))
+            .Should().BeOfType<StoreResult<CheckoutStatusResponse>.Done>()
+            .Which.Value.Status.Should().Be("pending");
+
+        // Another traveller's real, pending payment, presented on this booking's page.
+        (await ReturnAsync(harness, mine.Reference, mine.SessionToken, theirs.PaymentReference))
+            .Should().BeOfType<StoreResult<CheckoutStatusResponse>.Done>()
+            .Which.Value.Status.Should().Be("pending");
+
+        // This booking's own payment, from a browser that did not buy it: refused before anything else.
+        (await ReturnAsync(harness, mine.Reference, theirs.SessionToken, mine.PaymentReference))
+            .Should().BeOfType<StoreResult<CheckoutStatusResponse>.NotFound>();
+
+        harness.Gateway.Verified.Should().BeEmpty(
+            "the gateway hears only about a payment of the booking on the page, from the browser that bought it");
+
+        // The control: the traveller's own payment, from their own browser, is asked about — once.
+        harness.Gateway.Succeed(mine.PaymentReference);
+
+        (await ReturnAsync(harness, mine.Reference, mine.SessionToken, mine.PaymentReference))
+            .Should().BeOfType<StoreResult<CheckoutStatusResponse>.Done>()
+            .Which.Value.Status.Should().Be("paid");
+
+        harness.Gateway.Verified.Should().Equal(mine.PaymentReference);
+
+        // Settled now, so a refresh has nothing left to ask.
+        await ReturnAsync(harness, mine.Reference, mine.SessionToken, mine.PaymentReference);
+
+        harness.Gateway.Verified.Should().ContainSingle();
+    }
+
     // ----------------------------------------------------------------------------------- helpers
 
-    /// <summary>A tour, bought and paid for, as a traveller would.</summary>
-    private static async Task<(string Reference, string SessionToken)> BuyAsync(BookingPipelineHarness harness)
+    /// <summary>A traveller sent to the gateway and not back yet: their order, their browser, their payment.</summary>
+    private sealed record Started(string Reference, string SessionToken, string PaymentReference);
+
+    /// <summary>A tour in a new cart, checked out as far as the gateway's page, as a traveller would.</summary>
+    private static async Task<Started> BeginAsync(BookingPipelineHarness harness, Guid productId)
     {
-        var productId = await StorefrontSeed.TourAsync(harness);
         var cart = await AddAsync(harness, null, new AddCartItemRequest(ProductId: productId, Adults: 2));
 
         var started = await harness.InAgencyScopeAsync(async provider =>
@@ -149,13 +195,33 @@ public sealed class StorefrontAdversarialTests : IAsyncLifetime
             return outcome.Should().BeOfType<StoreResult<BeginCheckoutResponse>.Done>().Which.Value;
         });
 
-        var reference = await PaymentReferenceAsync(harness, started.Reference);
-        harness.Gateway.Succeed(reference);
-        await harness.InJobScopeAsync(provider =>
-            provider.GetRequiredService<CustomerOrderPayments>().SettleAsync(reference));
-
-        return (started.Reference, cart.SessionToken);
+        return new Started(started.Reference, cart.SessionToken, await PaymentReferenceAsync(harness, started.Reference));
     }
+
+    /// <summary>A tour, bought and paid for, as a traveller would.</summary>
+    private static async Task<(string Reference, string SessionToken)> BuyAsync(BookingPipelineHarness harness)
+    {
+        var started = await BeginAsync(harness, await StorefrontSeed.TourAsync(harness));
+
+        harness.Gateway.Succeed(started.PaymentReference);
+        await harness.InJobScopeAsync(provider =>
+            provider.GetRequiredService<CustomerOrderPayments>().SettleAsync(started.PaymentReference));
+
+        return (started.Reference, started.SessionToken);
+    }
+
+    /// <summary>
+    /// The gateway's return page, reached the way an anonymous browser reaches it: no tenant until
+    /// the host names one.
+    /// </summary>
+    private static Task<StoreResult<CheckoutStatusResponse>> ReturnAsync(
+        BookingPipelineHarness harness,
+        string reference,
+        string? sessionToken,
+        string? paymentReference) =>
+        harness.InJobScopeAsync(provider =>
+            provider.GetRequiredService<StorefrontCheckoutService>().ReturnAsync(
+                Host, reference, sessionToken, paymentReference));
 
     private static Task<StoreResult<CheckoutStatusResponse>> StatusAsync(
         BookingPipelineHarness harness,

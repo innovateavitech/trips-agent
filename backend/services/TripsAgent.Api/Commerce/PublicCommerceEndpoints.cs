@@ -149,20 +149,16 @@ public static class PublicCommerceEndpoints
 
         // Where the gateway returns the traveller to. Asking the gateway what happened is this
         // endpoint's job and not the browser's: a redirect says what the payer's browser was told,
-        // which is not the gateway answering a question we asked.
+        // which is not the gateway answering a question we asked. The answer goes only to the cart
+        // session that became the order (issue 110), and the gateway is asked only about one of that
+        // order's own payments (issue 173) — see StorefrontCheckoutService.ReturnAsync.
         group.MapGet("/checkout/{reference}", async (
                 string reference,
                 HttpContext http,
                 StorefrontCheckoutService checkout,
-                CustomerOrderPayments payments,
                 CancellationToken cancellationToken) =>
-            {
-                await SettleQuietlyAsync(http, payments, cancellationToken);
-
-                // The cart session goes with it: an order number is something anyone can count up
-                // to, and this answer carries the manage-booking link (issue 110).
-                return ToResult(await checkout.StatusAsync(HostOf(http), reference, SessionOf(http), cancellationToken));
-            })
+                ToResult(await checkout.ReturnAsync(
+                    HostOf(http), reference, SessionOf(http), PaymentOf(http), cancellationToken)))
             .WithName("GetCheckoutStatus")
             .Produces<CheckoutStatusResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -179,40 +175,6 @@ public static class PublicCommerceEndpoints
             .WithName("OpenBookingByLink")
             .Produces<ManageBookingResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
-    }
-
-    /// <summary>
-    /// Asks the gateway about the payment the traveller has just come back from, if they named one.
-    /// </summary>
-    /// <remarks>
-    /// Best effort, and deliberately swallowed. The webhook is what guarantees a payment is settled;
-    /// this only makes the traveller's own page tell the truth a few seconds sooner. A gateway that
-    /// cannot be reached must not turn into an error on a page somebody has just been charged on —
-    /// that invites them to pay again.
-    /// </remarks>
-    private static async Task SettleQuietlyAsync(
-        HttpContext http,
-        CustomerOrderPayments payments,
-        CancellationToken cancellationToken)
-    {
-        var paymentReference = http.Request.Query["payment"].ToString();
-
-        if (string.IsNullOrWhiteSpace(paymentReference))
-        {
-            return;
-        }
-
-        try
-        {
-            await payments.SettleAsync(paymentReference.Trim(), cancellationToken);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            http.RequestServices
-                .GetRequiredService<ILoggerFactory>()
-                .CreateLogger(typeof(PublicCommerceEndpoints))
-                .LogWarning(ex, "Could not settle payment from the return page; the webhook will.");
-        }
     }
 
     /// <summary>Each outcome to exactly one status, the same mapping the CRM's public routes use.</summary>
@@ -266,5 +228,16 @@ public static class PublicCommerceEndpoints
         var header = http.Request.Headers[CartSessionHeader].ToString();
 
         return string.IsNullOrWhiteSpace(header) ? null : header.Trim();
+    }
+
+    /// <summary>
+    /// The payment reference the return address carries, if any. Only a claim: nothing is asked about
+    /// it until it proves to be a payment of the traveller's own order.
+    /// </summary>
+    private static string? PaymentOf(HttpContext http)
+    {
+        var value = http.Request.Query["payment"].ToString();
+
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }

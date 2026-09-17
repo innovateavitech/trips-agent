@@ -8,6 +8,9 @@ namespace TripsAgent.Application.Commerce;
 /// <summary>A link that was just issued: the row to save, and the address to put in an email.</summary>
 public sealed record IssuedBookingLink(BookingAccessToken Token, string Secret);
 
+/// <summary>What a presented link opened: the booking, and when the link itself lapses.</summary>
+public sealed record OpenedBookingLink(Guid OrderId, DateTimeOffset ExpiresAt);
+
 /// <summary>
 /// The links travellers manage their bookings with (build plan F5, decision 21 — no accounts).
 /// </summary>
@@ -89,14 +92,16 @@ public sealed class BookingAccessLinks
     }
 
     /// <summary>
-    /// The order a presented link opens, or null when it opens nothing.
+    /// The booking a presented link opens, or null when it opens nothing.
     /// </summary>
     /// <remarks>
     /// Looked up by the hash of the secret, inside the tenant the caller's host already resolved to —
     /// so a link for one agency's booking presented on another agency's domain finds nothing. A
     /// revoked or lapsed link is "nothing" as well, and reads to the caller exactly like a wrong one.
+    /// The expiry comes back with it because everything the page then hands out — a document link —
+    /// lapses with the link that revealed it (issue 174).
     /// </remarks>
-    public async Task<Guid?> OrderForAsync(string? secret, CancellationToken cancellationToken = default)
+    public async Task<OpenedBookingLink?> OpenAsync(string? secret, CancellationToken cancellationToken = default)
     {
         var tidy = secret?.Trim();
 
@@ -118,7 +123,7 @@ public sealed class BookingAccessLinks
         token.RecordUse(now);
         await _db.SaveChangesAsync(cancellationToken);
 
-        return token.OrderId;
+        return new OpenedBookingLink(token.OrderId, token.ExpiresAt);
     }
 
     /// <summary>True for something shaped like a secret, so a malformed one never reaches the database.</summary>

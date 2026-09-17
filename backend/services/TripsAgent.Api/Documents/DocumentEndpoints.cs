@@ -116,16 +116,19 @@ public static class DocumentEndpoints
             .WithName("DownloadBookingDocument")
             .ExcludeFromDescription();
 
-        // The customer's own link. Permanent, and refuses a document their agent has since replaced.
+        // The customer's own link, from their booking page. It lapses with the booking link that
+        // revealed it, stops when the agency is closed (issue 174), and refuses a document their
+        // agent has since replaced.
         app.MapGet("/api/v1/public/documents/{documentId:guid}/{token}", async (
                 Guid documentId,
                 string token,
+                long? expires,
                 DocumentLinks links,
                 BookingDocumentsHandler handler,
                 HttpContext http,
                 CancellationToken cancellationToken) =>
             {
-                if (!links.IsValidPublic(documentId, token))
+                if (!links.IsValidPublic(documentId, expires, token))
                 {
                     return Refused();
                 }
@@ -155,6 +158,11 @@ public static class DocumentEndpoints
                     statusCode: StatusCodes.Status410Gone,
                     title: "This document has been replaced.",
                     detail: $"Please use {superseded.ByDocumentNumber} instead, or ask your travel agent for it.");
+
+            // The agency is closed, so its travellers' links have stopped. The same answer as a
+            // lapsed link, on purpose: it is one.
+            case DocumentFileOutcome.AgencyClosed:
+                return Refused();
 
             case DocumentFileOutcome.Corrupted:
                 return Results.Problem(

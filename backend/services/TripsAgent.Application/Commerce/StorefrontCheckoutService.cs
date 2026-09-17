@@ -61,6 +61,7 @@ public sealed partial class StorefrontCheckoutService
     private readonly DepartureInstallments _installments;
     private readonly CustomerDirectory _customers;
     private readonly BookingAccessLinks _links;
+    private readonly CustomerOrderPayments _payments;
     private readonly IPaymentGateway _gateway;
     private readonly CheckoutReturnUrl _returnUrl;
     private readonly CommerceOptions _options;
@@ -80,6 +81,7 @@ public sealed partial class StorefrontCheckoutService
         DepartureInstallments installments,
         CustomerDirectory customers,
         BookingAccessLinks links,
+        CustomerOrderPayments payments,
         IPaymentGateway gateway,
         CheckoutReturnUrl returnUrl,
         CommerceOptions options,
@@ -98,6 +100,7 @@ public sealed partial class StorefrontCheckoutService
         _installments = installments;
         _customers = customers;
         _links = links;
+        _payments = payments;
         _gateway = gateway;
         _returnUrl = returnUrl;
         _options = options;
@@ -167,11 +170,26 @@ public sealed partial class StorefrontCheckoutService
 
     /// <summary>Where a payment has got to, for the page the gateway returns the traveller to.</summary>
     /// <remarks>
-    /// <para>
-    /// Read-only and idempotent. It reports what the database says; the gateway's own answer is
-    /// taken by <see cref="CustomerOrderPayments"/>, through the webhook and the verify path, so a
-    /// traveller refreshing this page can never move any money.
-    /// </para>
+    /// Read-only: <see cref="ReturnAsync"/> with no payment to ask about. It reports what the database
+    /// says and never asks the gateway, so a traveller refreshing their receipt can never move any
+    /// money.
+    /// </remarks>
+    /// <param name="host">The host name the traveller's browser used, which says whose shop this is.</param>
+    /// <param name="reference">The order number.</param>
+    /// <param name="sessionToken">The browser's cart session. See <see cref="ReturnAsync"/>.</param>
+    /// <param name="cancellationToken">Cancels the reads.</param>
+    public Task<StoreResult<CheckoutStatusResponse>> StatusAsync(
+        string? host,
+        string reference,
+        string? sessionToken,
+        CancellationToken cancellationToken = default) =>
+        ReturnAsync(host, reference, sessionToken, paymentReference: null, cancellationToken);
+
+    /// <summary>
+    /// The page the gateway returns the traveller to: settles the payment they came back from, when it
+    /// is theirs, and says where their booking has got to.
+    /// </summary>
+    /// <remarks>
     /// <para>
     /// <b>Only for the browser that bought it.</b> Order numbers are gapless per agency, so anyone
     /// can count through them; the answer is given only to the cart session that became the order.
@@ -179,15 +197,38 @@ public sealed partial class StorefrontCheckoutService
     /// their invoice — to whoever asked for ORD-2026-000001 and counted up. Found in the internal
     /// adversarial pass before the penetration test (issue 110).
     /// </para>
+    /// <para>
+    /// <b>Ours before the gateway's.</b> Asking the gateway is what lets this page say "paid" a few
+    /// seconds before the webhook lands. It used to ask about whatever reference the return address
+    /// carried, before anything checked that the reference was a payment of ours: a free way for
+    /// anyone to make us call the gateway (issue 173). Now the gateway is asked only about a payment
+    /// of this order, in the agency this host belongs to, from the browser that bought it, and only
+    /// while that payment is still waiting for an answer. Any other reference is ignored, and the
+    /// page says what the database says.
+    /// </para>
+    /// <para>
+    /// <b>Best effort, and never retried.</b> The webhook is what guarantees a payment is settled. A
+    /// gateway that cannot be reached must not become an error on a page somebody has just been
+    /// charged on — that invites them to pay again — so the failure is logged and the page says
+    /// "pending".
+    /// </para>
     /// </remarks>
+    /// <param name="host">The host name the traveller's browser used, which says whose shop this is.</param>
+    /// <param name="reference">The order number the return address names.</param>
     /// <param name="sessionToken">
     /// The browser's cart session. The cart that converted into the order keeps it, so it is what
     /// tells this browser apart from everybody else's.
     /// </param>
-    public async Task<StoreResult<CheckoutStatusResponse>> StatusAsync(
+    /// <param name="paymentReference">
+    /// Our reference for the payment the traveller came back from, as the return address carries it.
+    /// Only a claim until it matches one of this order's payments.
+    /// </param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    public async Task<StoreResult<CheckoutStatusResponse>> ReturnAsync(
         string? host,
         string reference,
         string? sessionToken,
+        string? paymentReference,
         CancellationToken cancellationToken = default)
     {
         // The traveller has already been sent to the gateway, so this is their own booking coming
@@ -199,27 +240,23 @@ public sealed partial class StorefrontCheckoutService
             return Store.NotFound<CheckoutStatusResponse>("We could not find that site.");
         }
 
-        // The same words as an unknown order, so a guess cannot be told apart from a miss.
-        if (string.IsNullOrWhiteSpace(sessionToken))
-        {
-            return Store.NotFound<CheckoutStatusResponse>("We could not find that booking.");
-        }
-
-        var order = await _db.Orders.AsNoTracking()
-            .FirstOrDefaultAsync(candidate => candidate.OrderNumber == reference, cancellationToken);
+        var order = await OrderBoughtHereAsync(reference, sessionToken, cancellationToken);
 
         if (order is null)
         {
+            // The same words for an unknown order, a missing session and somebody else's, so a guess
+            // cannot be told apart from a miss.
             return Store.NotFound<CheckoutStatusResponse>("We could not find that booking.");
         }
 
-        var boughtHere = await _db.Carts.AsNoTracking().AnyAsync(
-            cart => cart.ConvertedOrderId == order.Id && cart.SessionToken == sessionToken,
-            cancellationToken);
-
-        if (!boughtHere)
+        if (order.PaidAt is null
+            && await PaymentToSettleAsync(order.Id, paymentReference, cancellationToken) is { } settling)
         {
-            return Store.NotFound<CheckoutStatusResponse>("We could not find that booking.");
+            await SettleQuietlyAsync(settling, cancellationToken);
+
+            // Read again: a payment the gateway has just confirmed has funded the order.
+            var orderId = order.Id;
+            order = await _db.Orders.AsNoTracking().SingleAsync(candidate => candidate.Id == orderId, cancellationToken);
         }
 
         var payment = await _db.PaymentTransactions.AsNoTracking()
@@ -243,6 +280,84 @@ public sealed partial class StorefrontCheckoutService
             payment?.AmountMinor.AmountMinor ?? order.TotalGrossMinor.AmountMinor,
             order.Currency,
             manageUrl));
+    }
+
+    /// <summary>
+    /// The order with this number, when this browser's cart is the one that became it. Null for any
+    /// other browser, and for no order at all.
+    /// </summary>
+    private async Task<Order?> OrderBoughtHereAsync(
+        string reference,
+        string? sessionToken,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(sessionToken))
+        {
+            return null;
+        }
+
+        var order = await _db.Orders.AsNoTracking()
+            .FirstOrDefaultAsync(candidate => candidate.OrderNumber == reference, cancellationToken);
+
+        if (order is null)
+        {
+            return null;
+        }
+
+        var boughtHere = await _db.Carts.AsNoTracking().AnyAsync(
+            cart => cart.ConvertedOrderId == order.Id && cart.SessionToken == sessionToken,
+            cancellationToken);
+
+        return boughtHere ? order : null;
+    }
+
+    /// <summary>
+    /// The payment the traveller came back from, when it is one of this order's and there is still
+    /// something to settle. Null otherwise, and a null is never put to the gateway.
+    /// </summary>
+    /// <remarks>
+    /// A pending payment is the only kind the gateway is asked about. A payment already credited is
+    /// taken as well, because settling it again only finishes funding that a crash interrupted, and
+    /// that asks the gateway nothing. A failed, abandoned or held-for-review payment is left as it is.
+    /// </remarks>
+    private async Task<string?> PaymentToSettleAsync(
+        Guid orderId,
+        string? paymentReference,
+        CancellationToken cancellationToken)
+    {
+        var tidy = paymentReference?.Trim();
+
+        if (string.IsNullOrEmpty(tidy))
+        {
+            return null;
+        }
+
+        // Inside the tenant the host resolved to, and pinned to this order: another agency's payment,
+        // or another traveller's on this same shop, is simply not found.
+        var settleable = await _db.PaymentTransactions.AsNoTracking().AnyAsync(
+            payment => payment.OrderId == orderId
+                       && payment.Reference == tidy
+                       && payment.Purpose == PaymentPurpose.OrderPayment
+                       && (payment.Status == PaymentStatus.Pending || payment.LedgerTransactionGroupId != null),
+            cancellationToken);
+
+        return settleable ? tidy : null;
+    }
+
+    /// <summary>Settles one of the traveller's payments and swallows what goes wrong. See <see cref="ReturnAsync"/>.</summary>
+    private async Task SettleQuietlyAsync(string paymentReference, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _payments.SettleAsync(paymentReference, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Whatever the attempt had staged is dropped, so the save that issues the manage link
+            // afterwards cannot carry half of it to the database.
+            _db.ChangeTracker.Clear();
+            LogReturnSettleFailed(_logger, ex, paymentReference);
+        }
     }
 
     // ---------------------------------------------------------------------------------- the flow
@@ -847,4 +962,8 @@ public sealed partial class StorefrontCheckoutService
     [LoggerMessage(Level = LogLevel.Error,
         Message = "Could not give seat hold {HoldId} back after a checkout that failed; the hold expiry job will.")]
     private static partial void LogReleaseFailed(ILogger logger, Exception exception, Guid holdId);
+
+    [LoggerMessage(Level = LogLevel.Warning,
+        Message = "Could not settle payment {Reference} from the return page; the webhook will.")]
+    private static partial void LogReturnSettleFailed(ILogger logger, Exception exception, string reference);
 }

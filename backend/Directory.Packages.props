@@ -99,7 +99,7 @@
        SixLabors.ImageSharp was ruled out on licence: the Six Labors Split License needs a paid
        commercial licence above a revenue threshold. See SkiaImageProcessor. -->
   <ItemGroup Label="Image processing">
-    <PackageVersion Include="SkiaSharp" Version="3.119.4" />
+    <PackageVersion Include="SkiaSharp" Version="4.152.0" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.4" />
   </ItemGroup>
 

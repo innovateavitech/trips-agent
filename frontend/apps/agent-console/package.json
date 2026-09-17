@@ -19,7 +19,7 @@
     "@trips/api-client": "workspace:^",
     "@trips/ui": "workspace:*",
     "@trips/utils": "workspace:*",
-    "lucide-react": "^0.469",
+    "lucide-react": "^1.44",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.1"

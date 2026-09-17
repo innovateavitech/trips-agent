@@ -30,8 +30,10 @@
   --primary-subtle: 226 83% 97%;
   --primary-border: 226 83% 86%;
 
-  /* -- Surfaces ----------------------------------------------------------- */
-  --background: 0 0% 100%;
+  /* -- Surfaces -------------------------------------------------------------
+     --background is the page canvas, a hair off white so a white --card reads
+     as a lifted surface without needing a border to prove it. */
+  --background: 0 0% 98%;
   --foreground: 226 20% 12%;
   --card: 0 0% 100%;
   --card-foreground: 226 20% 12%;
@@ -72,23 +74,39 @@
   --info-subtle: 226 83% 97%;
   --info-subtle-foreground: 226 75% 38%;
 
-  /* -- Lines and focus ----------------------------------------------------- */
+  /* -- Lines and focus -----------------------------------------------------
+     --border is the workhorse line used everywhere. --border-subtle is a
+     near-invisible hairline for surfaces that sit directly on --card (a
+     button outline, a tab divider) where --border would read as too heavy
+     once there is no colour difference left to separate. */
   --border: 226 16% 90%;
+  --border-subtle: 0 0% 95%;
   --input: 226 16% 90%;
   --ring: 226 83% 56%;
 
-  /* -- Sidebar -------------------------------------------------------------
-     The agent console's navigation rail: a deep ink of the brand hue, so the
-     workspace beside it reads as the page and the rail as furniture. The
-     active item is marked with --sidebar-primary, a lifted brand blue that
-     keeps 6:1+ against the ink. Muted text clears 7:1. */
-  --sidebar: 226 38% 14%;
-  --sidebar-foreground: 226 25% 94%;
-  --sidebar-muted-foreground: 226 18% 72%;
-  --sidebar-accent: 226 30% 21%;
-  --sidebar-accent-foreground: 0 0% 100%;
-  --sidebar-border: 226 26% 23%;
-  --sidebar-primary: 226 90% 72%;
+  /* -- Sidebar ---------------------------------------------------------------
+     A white, floating navigation rail rather than a dark one — it sits on
+     --background like any other surface, and the active item is marked by a
+     light tint plus brand-coloured text rather than a filled block. */
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 226 20% 12%;
+  --sidebar-muted-foreground: 0 0% 62%;
+  --sidebar-accent: 0 0% 98%;
+  --sidebar-accent-foreground: 226 83% 56%;
+  --sidebar-border: 0 0% 95%;
+  --sidebar-primary: 226 83% 56%;
+
+  /* -- Chart / progress ------------------------------------------------------
+     Data-visualisation colour, deliberately separate from --primary: a
+     progress bar's "filled" segment is not a brand statement, and conflating
+     the two would make every stat card look like a call to action.
+     --progress-track is its own token rather than a reuse of --muted: muted
+     is tuned to sit under text (96% L), which reads as nearly invisible as a
+     bar's empty half on a white card. A progress track needs to read as a
+     track — closer to Figma's own #E8E8E8 (91% L). */
+  --chart-1: 200 100% 49%;
+  --chart-2: 136 70% 53%;
+  --progress-track: 0 0% 91%;
 
   /* -- Shape --------------------------------------------------------------- */
   --radius: 0.5rem;
@@ -135,16 +153,23 @@
   --info-subtle-foreground: 226 80% 76%;
 
   --border: 226 18% 20%;
+  --border-subtle: 226 18% 20%;
   --input: 226 18% 20%;
   --ring: 226 83% 63%;
 
-  --sidebar: 226 28% 6%;
+  /* A dark sidebar stays a lifted card-like surface rather than the darkest
+     thing on screen, mirroring the light theme's white-on-canvas relationship. */
+  --sidebar: 226 22% 11%;
   --sidebar-foreground: 226 12% 94%;
-  --sidebar-muted-foreground: 226 10% 64%;
-  --sidebar-accent: 226 20% 13%;
-  --sidebar-accent-foreground: 0 0% 100%;
-  --sidebar-border: 226 18% 14%;
-  --sidebar-primary: 226 83% 70%;
+  --sidebar-muted-foreground: 226 10% 62%;
+  --sidebar-accent: 226 18% 17%;
+  --sidebar-accent-foreground: 226 83% 63%;
+  --sidebar-border: 226 18% 20%;
+  --sidebar-primary: 226 83% 63%;
+
+  --chart-1: 200 100% 60%;
+  --chart-2: 136 55% 55%;
+  --progress-track: 226 14% 24%;
 }
 
 /* Base element styles live in tailwind.preset.ts (addBase), not here — this file

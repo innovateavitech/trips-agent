@@ -16,12 +16,26 @@ import type { BookingStatus, BookingSummary, ProductKind } from '../dashboard/ty
 
 export type { BookingStatus, BookingSummary, ProductKind };
 
+/** Whether whoever made the booking is a company account or a person. */
+export type CustomerKind = 'business' | 'individual';
+
 /** A row in the bookings list: the summary, plus what the list is searched and sorted by. */
 export interface BookingListItem extends BookingSummary {
   /** The airline's or operator's reference, once there is one. */
   pnr: string | null;
   /** ISO 8601, UTC. */
   bookedAt: string;
+  /**
+   * Business or individual. Optional: the real orders API (#42) does not model
+   * this yet, so `createHttpBookingsApi` leaves it unset and the Travel screen
+   * falls back to "individual" rather than guessing.
+   */
+  customerKind?: CustomerKind;
+  /**
+   * When the trip itself ends — the last segment's arrival, ISO 8601 UTC.
+   * Optional for the same reason as `customerKind`: not on the real API yet.
+   */
+  arrivesAt?: string | null;
 }
 
 export interface BookingTraveller {
@@ -29,6 +43,13 @@ export interface BookingTraveller {
   name: string;
   /** The issued ticket number, once there is one. Buses have none. */
   ticketNumber: string | null;
+  /**
+   * As on the travel document. Optional: the real orders API does not model
+   * this yet, so `toDetail` leaves it unset rather than guessing.
+   */
+  passportNumber?: string | null;
+  /** `YYYY-MM-DD`. Optional for the same reason as `passportNumber`. */
+  dateOfBirth?: string | null;
 }
 
 export interface BookingSegment {
@@ -73,6 +94,15 @@ export interface BookingDetail extends BookingListItem {
   timeline: TimelineEntry[];
   /** Set while the booking waits in the resolution queue. */
   failure: BookingFailure | null;
+  /**
+   * Flights only; `null` for a bus. Optional for the same reason as
+   * `BookingTraveller.passportNumber` — not on the real API yet.
+   */
+  cabinClass?: string | null;
+  /** The customer's contact, for whoever needs to reach them about this trip. Optional, same reason. */
+  contactEmail?: string | null;
+  /** Optional, same reason as `contactEmail`. */
+  contactPhone?: string | null;
 }
 
 /**

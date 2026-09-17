@@ -5,7 +5,7 @@ import type { BookingStatus } from './types';
 export const AGENCY_TIME_ZONE = 'Africa/Lagos';
 
 export const STATUS_DISPLAY: Record<BookingStatus, { label: string; tone: BadgeProps['tone'] }> = {
-  awaiting_ticket: { label: 'Awaiting ticket', tone: 'warning' },
+  awaiting_ticket: { label: 'Awaiting ticket', tone: 'info' },
   confirmed: { label: 'Confirmed', tone: 'info' },
   ticketed: { label: 'Ticketed', tone: 'success' },
   failed: { label: 'Needs decision', tone: 'destructive' },
@@ -70,4 +70,30 @@ const departureFormat = new Intl.DateTimeFormat('en-NG', {
 
 export function formatDeparture(iso: string): string {
   return departureFormat.format(new Date(iso));
+}
+
+const shortDateFormat = new Intl.DateTimeFormat('en-NG', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: AGENCY_TIME_ZONE,
+});
+
+/** "Apr 18, 2026" — a date with no time, for a column that is a day, not a moment. */
+export function formatShortDate(iso: string): string {
+  return shortDateFormat.format(new Date(iso));
+}
+
+const shortDateTimeFormat = new Intl.DateTimeFormat('en-NG', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+  timeZone: AGENCY_TIME_ZONE,
+});
+
+/** "Apr 18, 11:00" — no year, no weekday: for a trip's start/end columns, side by side. */
+export function formatShortDateTime(iso: string): string {
+  return shortDateTimeFormat.format(new Date(iso));
 }

@@ -46,4 +46,62 @@ export interface DashboardOverview {
   needsAttention: BookingSummary[];
   /** The latest bookings, newest first. */
   recentBookings: BookingSummary[];
+  /** The Home page's headline figures and feeds. */
+  home: HomeOverview;
+}
+
+/**
+ * Everything the Home page's cards below the wallet-balance card need. The
+ * wallet balance itself is not here — it comes from `useWalletSummary()`, the
+ * wallet feature's own data, so there is exactly one place that number lives.
+ */
+export interface HomeOverview {
+  earnings: EarningsSummary;
+  forYouToday: InsightItem[];
+  upcomingItems: UpcomingItem[];
+  invoices: TransactionRow[];
+  payments: TransactionRow[];
+}
+
+export interface EarningsSummary {
+  totalMinor: number;
+  currency: string;
+  /** Basis points vs. the prior period. 3000 is "+30%". */
+  changeBasisPoints: number;
+  /** Shares of the total, for the composition bar. Need not sum to the total. */
+  composition: { label: string; valueMinor: number }[];
+}
+
+export type InsightTone = 'destructive' | 'info' | 'warning';
+
+export interface InsightItem {
+  id: string;
+  tone: InsightTone;
+  message: string;
+  actions: { label: string; href: string }[];
+}
+
+export type UpcomingItemKind = 'travel' | 'catalogue';
+
+export interface UpcomingItem {
+  id: string;
+  kind: UpcomingItemKind;
+  product: ProductKind | 'tour';
+  title: string;
+  /** Short fragments joined with a dot, e.g. ["LOS - PHC", "Apr 18, 11:30", "Ibom Air"]. */
+  meta: string[];
+  href: string;
+}
+
+export type TransactionStatus = 'overdue' | 'pending' | 'draft' | 'paid';
+
+export interface TransactionRow {
+  id: string;
+  name: string;
+  amountMinor: number;
+  currency: string;
+  /** e.g. "Invoice No. 7728". */
+  reference: string;
+  status: TransactionStatus;
+  href: string;
 }

@@ -2,22 +2,71 @@ import { cva } from 'class-variance-authority';
 import { cn } from '../lib/cn';
 
 /**
- * One segment. Selected reads as a raised tab on a sunken track, which is the convention people
- * already know from every OS — familiarity beats invention for a control used forty times a day.
+ * One segment, in either of two looks:
+ *
+ * `track` — selected reads as a raised tab on a sunken track, the convention
+ * people already know from every OS. The system default.
+ *
+ * `pill` — each option is its own fully-rounded button with no shared track;
+ * selected is marked by a hairline border and a lifted fill, not by weight or
+ * colour (both read the same text colour, on purpose — matches the design
+ * this variant was built for).
+ *
+ * `underline` — a page-level tab strip sitting on its own bottom rule:
+ * selected is a primary-coloured label on a primary underline, unselected is
+ * muted text with no line. For switching between whole views of a page (the
+ * Travel screen's All trips/Active/Upcoming…), not for filtering a list in
+ * place — that is what `track` and `pill` are for.
  */
 const segmentVariants = cva(
-  [
-    'inline-flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition-colors',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-  ],
+  ['inline-flex items-center gap-2 whitespace-nowrap text-sm transition-colors font-semibold'],
   {
     variants: {
+      appearance: {
+        track:
+          'rounded-md px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        pill: 'h-10 justify-center rounded-full px-4 border border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        underline:
+          'h-11 justify-center border-b-[1.5px] border-transparent px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+      },
       selected: {
-        true: 'bg-background font-medium text-foreground shadow-sm',
-        false: 'text-muted-foreground hover:text-foreground',
+        true: '',
+        false: '',
       },
     },
-    defaultVariants: { selected: false },
+    compoundVariants: [
+      {
+        appearance: 'track',
+        selected: true,
+        className: 'bg-background font-medium text-foreground shadow-sm',
+      },
+      {
+        appearance: 'track',
+        selected: false,
+        className: 'font-medium text-muted-foreground hover:text-foreground',
+      },
+      {
+        appearance: 'pill',
+        selected: true,
+        className: 'border-border-subtle bg-card text-foreground',
+      },
+      {
+        appearance: 'pill',
+        selected: false,
+        className: 'bg-transparent text-foreground hover:bg-card/60',
+      },
+      {
+        appearance: 'underline',
+        selected: true,
+        className: 'border-primary text-primary',
+      },
+      {
+        appearance: 'underline',
+        selected: false,
+        className: 'font-medium text-muted-foreground hover:text-foreground',
+      },
+    ],
+    defaultVariants: { selected: false, appearance: 'track' },
   },
 );
 
@@ -35,6 +84,15 @@ export interface SegmentedControlProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   className?: string;
+  /**
+   * `track` (default): a raised tab on a sunken track. `pill`: independent
+   * fully-rounded buttons with no shared track, each the same width — a
+   * follow-you-anywhere filter sitting directly on a card, not a form control.
+   * `underline`: a page-level tab strip — wrap it in a container with
+   * `border-b border-border-subtle` for the shared rule the selected tab's
+   * underline sits on.
+   */
+  appearance?: 'track' | 'pill' | 'underline';
 }
 
 /**
@@ -49,13 +107,17 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   className,
+  appearance = 'track',
 }: SegmentedControlProps<T>) {
   return (
     <div
       role="group"
       aria-label={label}
       className={cn(
-        'inline-flex flex-wrap gap-1 rounded-lg border border-border bg-muted p-1',
+        'inline-flex flex-wrap',
+        appearance === 'track' && 'gap-1 rounded-lg border border-border bg-muted p-1',
+        appearance === 'pill' && 'gap-3',
+        appearance === 'underline' && 'gap-1',
         className,
       )}
     >
@@ -68,7 +130,10 @@ export function SegmentedControl<T extends string>({
             type="button"
             aria-pressed={selected}
             onClick={() => onChange(option.value)}
-            className={segmentVariants({ selected })}
+            className={cn(
+              segmentVariants({ selected, appearance }),
+              appearance === 'pill' && 'w-25',
+            )}
           >
             {option.label}
             {option.count !== undefined ? (

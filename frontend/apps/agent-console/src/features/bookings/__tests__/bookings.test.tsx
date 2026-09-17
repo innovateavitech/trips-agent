@@ -3,7 +3,14 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { formatMoneyShort } from '@trips/utils';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { filterBookings, resolutionCopy, statusCounts } from '../bookings-rules';
+import {
+  describeDuration,
+  filterBookings,
+  formatDateOfBirth,
+  resolutionCopy,
+  splitFareEvenly,
+  statusCounts,
+} from '../bookings-rules';
 import { ResolutionCard } from '../components/resolution-card';
 import { NO_BOOKING_FILTERS, type BookingDetail, type BookingListItem } from '../types';
 
@@ -84,6 +91,49 @@ describe('finding a booking', () => {
       failed: 1,
       awaiting_ticket: 0,
     });
+  });
+});
+
+describe('splitting a fare evenly among travellers', () => {
+  it('divides evenly when it divides evenly', () => {
+    expect(splitFareEvenly(90_000, 3)).toEqual([30_000, 30_000, 30_000]);
+  });
+
+  it('gives the leftover kobo to the first travellers, one each, so parts sum to the total', () => {
+    expect(splitFareEvenly(1_000, 3)).toEqual([334, 333, 333]);
+    expect(splitFareEvenly(1_000, 3).reduce((a, b) => a + b, 0)).toBe(1_000);
+  });
+
+  it('returns the whole amount for one traveller', () => {
+    expect(splitFareEvenly(20_950_000, 1)).toEqual([20_950_000]);
+  });
+
+  it('returns an empty split for zero travellers', () => {
+    expect(splitFareEvenly(1_000, 0)).toEqual([]);
+  });
+});
+
+describe("a segment's duration", () => {
+  it('describes an hour and minutes', () => {
+    expect(describeDuration('2026-09-19T11:00', '2026-09-19T12:30')).toBe('1 hr 30 min');
+  });
+
+  it('describes a whole number of hours without a redundant "0 min"', () => {
+    expect(describeDuration('2026-09-19T11:00', '2026-09-19T12:00')).toBe('1 hr');
+  });
+
+  it('describes under an hour in minutes only', () => {
+    expect(describeDuration('2026-09-19T11:00', '2026-09-19T11:45')).toBe('45 min');
+  });
+
+  it('is "—" for a non-positive span rather than a negative duration', () => {
+    expect(describeDuration('2026-09-19T12:00', '2026-09-19T11:00')).toBe('—');
+  });
+});
+
+describe('formatting a date of birth', () => {
+  it('renders as day/month/year', () => {
+    expect(formatDateOfBirth('1999-03-12')).toBe('12/03/1999');
   });
 });
 

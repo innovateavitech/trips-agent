@@ -1,6 +1,7 @@
 import { ChevronDown, LogOut, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
+  Avatar,
   Badge,
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@trips/ui';
-import { displayNameFor, initialsFor, roleLabel } from '../auth/auth-api';
+import { displayNameFor, roleLabel } from '../auth/auth-api';
 import { useAuth, useCurrentUser } from '../auth/auth-provider';
 import { SIGN_IN_PATH } from '../auth/redirect';
 
@@ -27,16 +28,11 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex items-center gap-2 rounded-full bg-card py-1 pl-1 pr-3 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={`Account menu for ${name}`}
       >
-        <span
-          aria-hidden="true"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-subtle text-xs font-semibold text-primary"
-        >
-          {initialsFor(user)}
-        </span>
-        <span className="hidden max-w-40 truncate text-sm font-medium text-foreground md:inline">
+        <Avatar name={name} size={32} />
+        <span className="hidden max-w-40 truncate text-sm font-semibold text-foreground md:inline">
           {name}
         </span>
         <ChevronDown aria-hidden="true" className="h-4 w-4 text-muted-foreground" />

@@ -7,6 +7,7 @@ import { CatalogApiProvider, type CatalogApi } from '../features/catalog';
 import { CrmApiProvider, type CrmApi } from '../features/crm';
 import { DashboardApiProvider, type DashboardApi } from '../features/dashboard';
 import { DeparturesApiProvider, type DeparturesApi } from '../features/departures';
+import { InvoicesApiProvider, type InvoicesApi } from '../features/invoices';
 import { SearchApiProvider, type SearchApi } from '../features/search';
 import { SubAgentsApiProvider, type SubAgentsApi } from '../features/subagents';
 import { BookingFlowApiProvider, type BookingFlowApi } from '../features/booking';
@@ -27,6 +28,7 @@ export interface AppAdapters {
   crm: CrmApi;
   billing: BillingApi;
   subAgents: SubAgentsApi;
+  invoices: InvoicesApi;
 }
 
 /**
@@ -57,7 +59,9 @@ export function AppProviders({
                         <CrmApiProvider value={adapters.crm}>
                           <BillingApiProvider value={adapters.billing}>
                             <SubAgentsApiProvider value={adapters.subAgents}>
-                              {children}
+                              <InvoicesApiProvider value={adapters.invoices}>
+                                {children}
+                              </InvoicesApiProvider>
                             </SubAgentsApiProvider>
                           </BillingApiProvider>
                         </CrmApiProvider>

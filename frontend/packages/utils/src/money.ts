@@ -37,6 +37,32 @@ export function formatMoneyShort(
   }).format(amountMinor / 100);
 }
 
+/**
+ * Splits a formatted amount into its whole and fractional halves, for a
+ * display that styles them differently — a large balance with a smaller,
+ * muted ".02". `formatMoneyParts(5045035602, 'NGN')` →
+ * `{ whole: '₦50,450,356', fraction: '02' }`.
+ */
+export function formatMoneyParts(
+  amountMinor: MinorUnits,
+  currency: string,
+  locale = 'en-NG',
+): { whole: string; fraction: string } {
+  const parts = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).formatToParts(amountMinor / 100);
+
+  const fraction = parts.find((part) => part.type === 'fraction')?.value ?? '00';
+  const whole = parts
+    .filter((part) => part.type !== 'fraction' && part.type !== 'decimal')
+    .map((part) => part.value)
+    .join('');
+
+  return { whole, fraction };
+}
+
 /** Parses user input into minor units. `toMinorUnits('1500.50')` → 150050 */
 export function toMinorUnits(input: string | number): MinorUnits {
   const value = typeof input === 'number' ? input : Number.parseFloat(input);

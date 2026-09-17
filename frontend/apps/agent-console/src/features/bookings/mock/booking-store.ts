@@ -2,6 +2,7 @@ import type {
   BookingDetail,
   BookingStatus,
   BookingTraveller,
+  CustomerKind,
   PaidFrom,
   ProductKind,
   TimelineEntry,
@@ -60,6 +61,53 @@ function ticketNumber(reference: string, index: number): string {
   return `074${digits}`.padEnd(13, '0').slice(0, 13);
 }
 
+function digitsFrom(text: string): string {
+  return Array.from(text, (char) => char.charCodeAt(0) % 10).join('');
+}
+
+/** A stable, made-up passport number from a traveller's name — not a real document. */
+function passportNumber(name: string, index: number): string {
+  return `A${digitsFrom(`${name}${index}`)}`.padEnd(9, '0').slice(0, 9);
+}
+
+/** A believable age span for each traveller type — an infant is not 40 years old. */
+const AGE_RANGE_YEARS: Record<BookingTraveller['type'], { min: number; max: number }> = {
+  ADT: { min: 22, max: 61 },
+  CHD: { min: 2, max: 17 },
+  INF: { min: 0, max: 1 },
+};
+
+/** A stable, made-up birthdate from a traveller's name and type — not a real one. */
+function dateOfBirthFor(name: string, index: number, type: BookingTraveller['type']): string {
+  const digits = digitsFrom(`${name}${index}`).padEnd(6, '0');
+  const { min, max } = AGE_RANGE_YEARS[type];
+  const yearsAgo = min + (Number(digits.slice(0, 2)) % (max - min + 1));
+  const month = 1 + (Number(digits[2]) % 12);
+  const day = 1 + (Number(digits.slice(3, 5)) % 28);
+  const year = new Date().getFullYear() - yearsAgo;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/** A stable, made-up contact email from the lead traveller's name — not a real one. */
+function emailFor(name: string): string {
+  const local = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z]+/g, '.')
+    .replace(/^\.+|\.+$/g, '');
+  return `${local || 'traveller'}@example.com`;
+}
+
+/** Real Nigerian mobile prefixes, so a made-up number at least looks like one. */
+const NG_MOBILE_PREFIXES = ['070', '080', '081', '090', '091'];
+
+/** A stable, made-up Nigerian-looking phone number from a name — not a real one. */
+function phoneFor(name: string): string {
+  const digits = digitsFrom(name);
+  const prefix = NG_MOBILE_PREFIXES[Number(digits[0] ?? '0') % NG_MOBILE_PREFIXES.length];
+  return `${prefix}${digits.padEnd(8, '0').slice(0, 8)}`;
+}
+
 interface Seed {
   reference: string;
   travellers: Array<[name: string, type: BookingTraveller['type']]>;
@@ -76,6 +124,10 @@ interface Seed {
   bookedAgoMs: number;
   paidFrom: PaidFrom;
   failure?: string;
+  /** Defaults to 'individual' — most seed bookings are a person travelling, not a company account. */
+  customerKind?: CustomerKind;
+  /** Flights only; defaults to 'Economy'. Ignored for a bus. */
+  cabinClass?: string;
 }
 
 function build(seed: Seed): BookingDetail {
@@ -99,12 +151,19 @@ function build(seed: Seed): BookingDetail {
     ticketTimeLimit: seed.ticketTimeLimitInMs === null ? null : iso(now + seed.ticketTimeLimitInMs),
     pnr: seed.pnr,
     bookedAt: iso(bookedAt),
+    customerKind: seed.customerKind ?? 'individual',
+    arrivesAt: iso(departs + seed.durationMs),
     paidFrom: seed.paidFrom,
+    cabinClass: seed.product === 'flight' ? (seed.cabinClass ?? 'Economy') : null,
+    contactEmail: emailFor(seed.travellers[0]?.[0] ?? ''),
+    contactPhone: phoneFor(seed.travellers[0]?.[0] ?? ''),
     travellers: seed.travellers.map(([name, type], index) => ({
       name,
       type,
       ticketNumber:
         ticketed && seed.product === 'flight' ? ticketNumber(seed.reference, index) : null,
+      passportNumber: seed.product === 'flight' ? passportNumber(name, index) : null,
+      dateOfBirth: dateOfBirthFor(name, index, type),
     })),
     segments: [
       {
@@ -284,6 +343,63 @@ function seed(): BookingDetail[] {
       pnr: null,
       bookedAgoMs: 4 * HOUR,
       paidFrom: 'wallet',
+    },
+    {
+      reference: 'TRP-8K2W8J',
+      travellers: [['Grace Adebayo', 'ADT']],
+      product: 'flight',
+      origin: 'LOS',
+      destination: 'PHC',
+      carrier: 'Ibom Air QI 0114',
+      departsInMs: -3 * DAY,
+      durationMs: 80 * MINUTE,
+      status: 'ticketed',
+      sellMinor: 12_400_000,
+      ticketTimeLimitInMs: null,
+      pnr: 'QI8K2W',
+      bookedAgoMs: 5 * DAY,
+      paidFrom: 'wallet',
+    },
+    {
+      reference: 'TRP-8K2Z2B',
+      travellers: [
+        ['Chuka Obi', 'ADT'],
+        ['Femi Alade', 'ADT'],
+        ['Blessing Eze', 'ADT'],
+      ],
+      product: 'bus',
+      origin: 'Lagos',
+      destination: 'Ibadan',
+      carrier: 'GIG Mobility',
+      departsInMs: -1 * HOUR,
+      durationMs: 6 * HOUR,
+      status: 'ticketed',
+      sellMinor: 15_600_000,
+      ticketTimeLimitInMs: null,
+      pnr: 'GIG2Z2B',
+      bookedAgoMs: 2 * DAY,
+      paidFrom: 'card',
+      customerKind: 'business',
+    },
+    {
+      reference: 'TRP-8K2Y6M',
+      travellers: [
+        ['Ada Nwachukwu', 'ADT'],
+        ['Segun Bello', 'ADT'],
+      ],
+      product: 'flight',
+      origin: 'LOS',
+      destination: 'ABV',
+      carrier: 'Air Peace P4 7130',
+      departsInMs: 6 * DAY,
+      durationMs: 75 * MINUTE,
+      status: 'ticketed',
+      sellMinor: 27_500_000,
+      ticketTimeLimitInMs: null,
+      pnr: 'P4Y6M2',
+      bookedAgoMs: 6 * HOUR,
+      paidFrom: 'wallet',
+      customerKind: 'business',
     },
   ].map((entry) => build(entry as Seed));
 }

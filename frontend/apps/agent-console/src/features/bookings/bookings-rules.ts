@@ -102,6 +102,113 @@ export function newestFirst(bookings: readonly BookingListItem[]): BookingListIt
   return [...bookings].sort((a, b) => b.bookedAt.localeCompare(a.bookedAt));
 }
 
+/**
+ * ============================================================================
+ *  The Travel screen's own tabs — where a trip stands on the calendar, not
+ *  where it stands with the supplier. `STATUS_FILTERS` above answers "has the
+ *  ticket been issued"; this answers "is it happening yet, and is it over".
+ * ============================================================================
+ */
+export type TravelStage = 'active' | 'upcoming' | 'completed' | 'requested';
+
+export const TRIP_FILTERS: ReadonlyArray<{ value: TravelStage | 'all'; label: string }> = [
+  { value: 'all', label: 'All trips' },
+  { value: 'active', label: 'Active' },
+  { value: 'upcoming', label: 'Upcoming' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'requested', label: 'Requested' },
+];
+
+/**
+ * `null` for a failed or cancelled booking — it does not belong to a point on
+ * the trip's calendar, so it only ever shows up under "All trips".
+ */
+export function travelStageOf(booking: BookingListItem, now: Date): TravelStage | null {
+  if (booking.status === 'failed' || booking.status === 'cancelled') return null;
+  // Paid but not yet ticketed: we have asked the supplier and are waiting.
+  if (booking.status !== 'ticketed') return 'requested';
+
+  const start = new Date(booking.departsAt).getTime();
+  const end = booking.arrivesAt ? new Date(booking.arrivesAt).getTime() : start;
+  const at = now.getTime();
+
+  if (at < start) return 'upcoming';
+  if (at > end) return 'completed';
+  return 'active';
+}
+
+export function filterByTravelStage(
+  bookings: readonly BookingListItem[],
+  stage: TravelStage | 'all',
+  now: Date,
+): BookingListItem[] {
+  if (stage === 'all') return [...bookings];
+  return bookings.filter((booking) => travelStageOf(booking, now) === stage);
+}
+
+/** Whether an ISO instant's Lagos calendar day falls within an inclusive `YYYY-MM-DD` range. */
+export function dayWithinRange(iso: string, from: string, to: string): boolean {
+  if (!from && !to) return true;
+  const day = lagosDay(iso);
+  if (from && day < from) return false;
+  if (to && day > to) return false;
+  return true;
+}
+
+/**
+ * `totalMinor` split evenly across `count` travellers, in whole minor units —
+ * an even split is the agreed product behaviour, not a per-traveller fare the
+ * API returns. Hands the leftover kobo to the first travellers, one each, so
+ * the parts always sum to exactly `totalMinor`.
+ * `splitFareEvenly(1000, 3)` → `[334, 333, 333]`.
+ */
+export function splitFareEvenly(totalMinor: number, count: number): number[] {
+  if (count <= 0) return [];
+  const base = Math.floor(totalMinor / count);
+  const remainder = totalMinor - base * count;
+  return Array.from({ length: count }, (_, index) => (index < remainder ? base + 1 : base));
+}
+
+/**
+ * "1 hr", "1 hr 30 min", "45 min" — the gap between two of a segment's own
+ * wall-clock timestamps. `'—'` when they don't make a positive span (bad data,
+ * not something to show as a negative or zero duration).
+ */
+export function describeDuration(departsAt: string, arrivesAt: string): string {
+  const minutes = Math.round(
+    (new Date(arrivesAt).getTime() - new Date(departsAt).getTime()) / 60_000,
+  );
+  if (minutes <= 0) return '—';
+
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours === 0) return `${mins} min`;
+  if (mins === 0) return `${hours} hr`;
+  return `${hours} hr ${mins} min`;
+}
+
+const dateOfBirthFormat = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+/** `'1999-03-12'` → `'12/03/1999'`. */
+export function formatDateOfBirth(dateOfBirth: string): string {
+  return dateOfBirthFormat.format(new Date(`${dateOfBirth}T00:00:00Z`));
+}
+
+/** The Travel screen's "Filter by name" box — the customer, not the full free-text search. */
+export function filterByCustomerName(
+  bookings: readonly BookingListItem[],
+  name: string,
+): BookingListItem[] {
+  const wanted = name.trim().toLowerCase();
+  if (!wanted) return [...bookings];
+  return bookings.filter((booking) => booking.leadTraveller.toLowerCase().includes(wanted));
+}
+
 export interface ResolutionCopy {
   title: string;
   body: string;

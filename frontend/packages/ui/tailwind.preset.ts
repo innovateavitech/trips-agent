@@ -26,9 +26,17 @@ export const preset = {
 
       background: 'hsl(var(--background))',
       foreground: 'hsl(var(--foreground))',
-      border: 'hsl(var(--border))',
+      border: {
+        DEFAULT: 'hsl(var(--border))',
+        subtle: 'hsl(var(--border-subtle))',
+      },
       input: 'hsl(var(--input))',
       ring: 'hsl(var(--ring))',
+      chart: {
+        1: 'hsl(var(--chart-1))',
+        2: 'hsl(var(--chart-2))',
+      },
+      'progress-track': 'hsl(var(--progress-track))',
 
       primary: {
         DEFAULT: 'hsl(var(--primary))',
@@ -93,14 +101,49 @@ export const preset = {
       },
     },
 
-    // One family. Inter, self-hosted via @fontsource-variable/inter —
-    // no Google Fonts request, which matters on a slow Nigerian connection.
+    // Two families, both self-hosted (no Google Fonts/CDN request — matters
+    // on a slow Nigerian connection). Plus Jakarta Sans carries everything:
+    // headings, nav, buttons, body copy. Inter is kept for `font-numeric`
+    // only — money figures, wallet balances, and similar dense numeric/meta
+    // text, where its tabular figures earn their place over Jakarta's
+    // proportional ones. Do not reach for `font-numeric` outside that use.
     fontFamily: {
-      sans: ['"Inter Variable"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+      sans: [
+        '"Plus Jakarta Sans Variable"',
+        '"Plus Jakarta Sans"',
+        'system-ui',
+        '-apple-system',
+        'sans-serif',
+      ],
+      numeric: ['"Inter Variable"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
       mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
     },
 
     extend: {
+      // Below Tailwind's own `text-xs`, for the one place regular type is too
+      // big: a numeric badge inside a 24px pill. Named, not an arbitrary
+      // `text-[9px]` — the same anti-drift reasoning as the colour tokens.
+      fontSize: {
+        '2xs': ['0.6875rem', { lineHeight: '0.875rem' }],
+      },
+      // A pill-tab width that falls between Tailwind's own 24/28 steps.
+      spacing: {
+        25: '6.25rem', // 100px
+      },
+      // Fixed heights for the Home page's card grid, so a card's height comes
+      // from the design, not from however much its own data happens to be —
+      // content that runs long scrolls inside the card instead of stretching
+      // it, which is what keeps two independent columns lining up.
+      //
+      // card-sm + card-md + the 10px gap between them (`gap-2.5`, a stock
+      // Tailwind step) must sum to exactly card-lg, since the wallet-balance
+      // and earnings cards stack to match one row on the other side. Change
+      // any one of these three numbers and the other two must follow.
+      height: {
+        'card-sm': '11.75rem', // 188px — wallet balance
+        'card-md': '12.125rem', // 194px — earnings
+        'card-lg': '24.5rem', // 392px — upcoming items, for you today, transactions
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

@@ -14,6 +14,7 @@ import { httpCatalogApi, mockCatalogApi } from './features/catalog';
 import { httpCrmApi, mockCrmApi } from './features/crm';
 import { mockDashboardApi } from './features/dashboard';
 import { httpDeparturesApi, mockDeparturesApi } from './features/departures';
+import { mockInvoicesApi } from './features/invoices';
 import { mockSearchApi } from './features/search';
 import { createHttpBookingFlowApi, mockBookingFlowApi } from './features/booking';
 import { createHttpBookingsApi, mockBookingsApi } from './features/bookings';
@@ -56,6 +57,9 @@ const adapters: AppAdapters = {
   crm: AUTH_MODE === 'mock' ? mockCrmApi : httpCrmApi,
   billing: AUTH_MODE === 'mock' ? mockBillingApi : createHttpBillingApi({ api }),
   subAgents: AUTH_MODE === 'mock' ? mockSubAgentsApi : createHttpSubAgentsApi({ api }),
+  // Mock-only for now: there is no backend read model yet for a traveller's
+  // invoices, only per-booking documents. See features/invoices/types.ts.
+  invoices: mockInvoicesApi,
 };
 
 const queryClient = createQueryClient();

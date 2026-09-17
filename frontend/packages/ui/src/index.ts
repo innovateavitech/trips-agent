@@ -1,6 +1,7 @@
 import './styles/tokens.css';
 
 export { Alert, alertVariants, type AlertProps } from './components/alert';
+export { Avatar, type AvatarProps } from './components/avatar';
 export { Badge, badgeVariants, type BadgeProps } from './components/badge';
 export { Button, buttonVariants, type ButtonProps } from './components/button';
 export {
@@ -31,8 +32,39 @@ export {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './components/dropdown-menu';
+export {
+  AddIcon,
+  AirplaneIcon,
+  AnalyticsIcon,
+  BookTravelIcon,
+  BusIcon,
+  CatalogueIcon,
+  ChevronDownIcon,
+  CircularArrowDownIcon,
+  ConfigurationIcon,
+  CustomersIcon,
+  HelpIcon,
+  HomeIcon,
+  InvoicesIcon,
+  NotificationIcon,
+  OnlineStoreIcon,
+  ReportsIcon,
+  SearchIcon,
+  SidebarCollapseIcon,
+  TravelIcon,
+  TrendUpIcon,
+  WalletIcon,
+} from './components/icons';
+export { GlobalSearchInput, type GlobalSearchInputProps } from './components/global-search-input';
+export { IconChip, iconChipVariants, type IconChipProps } from './components/icon-chip';
 export { Input, type InputProps } from './components/input';
+export { NotificationBell, type NotificationBellProps } from './components/notification-bell';
 export { PasswordInput, type PasswordInputProps } from './components/password-input';
+export {
+  ProgressBar,
+  type ProgressBarProps,
+  type ProgressBarSegment,
+} from './components/progress-bar';
 export {
   SegmentedControl,
   segmentVariants,
@@ -49,6 +81,7 @@ export {
   SheetTrigger,
 } from './components/sheet';
 export { Skeleton, type SkeletonProps } from './components/skeleton';
+export { StatCard, type StatCardProps } from './components/stat-card';
 export {
   EmptyState,
   ErrorState,

@@ -1,6 +1,6 @@
 import { Bus, Plane, Ticket } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Avatar,
   Badge,
@@ -251,6 +251,8 @@ const headerCellClasses =
   'h-10 bg-muted text-xs font-medium normal-case tracking-normal text-muted-foreground first:rounded-l-lg last:rounded-r-lg';
 
 function TravelTable({ bookings }: { bookings: BookingListItem[] }) {
+  const navigate = useNavigate();
+
   return (
     <div className="overflow-hidden rounded-xl">
       <Table>
@@ -270,7 +272,11 @@ function TravelTable({ bookings }: { bookings: BookingListItem[] }) {
             const RouteIcon = booking.product === 'flight' ? Plane : Bus;
 
             return (
-              <TableRow key={booking.reference} className="border-border-subtle">
+              <TableRow
+                key={booking.reference}
+                className="cursor-pointer border-border-subtle"
+                onClick={() => navigate(`/bookings/${booking.reference}`)}
+              >
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar name={booking.leadTraveller} size={40} tone="muted" />

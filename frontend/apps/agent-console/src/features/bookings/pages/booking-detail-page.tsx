@@ -1,12 +1,10 @@
 import { ArrowLeft, Bus, Plane, Ticket } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   Alert,
   Avatar,
   Badge,
-  Card,
-  CardHeader,
-  CardTitle,
   EmptyState,
   ErrorState,
   LoadingState,
@@ -16,9 +14,8 @@ import { formatMoneyShort } from '@trips/utils';
 import { ApiError, describeError } from '../../../api/errors';
 import { STATUS_DISPLAY, describeTimeLeft } from '../../dashboard/booking-display';
 import { formatClock, formatDay } from '../../search/search-rules';
-import { useBooking, useBookingDocuments, useReissueDocument } from '../bookings-api';
+import { useBooking } from '../bookings-api';
 import { describeDuration, formatDateOfBirth, splitFareEvenly } from '../bookings-rules';
-import { DocumentsCard } from '../components/documents-card';
 import type { BookingDetail, BookingSegment } from '../types';
 
 const TRAVELLER_TYPE: Record<BookingDetail['travellers'][number]['type'], string> = {
@@ -45,6 +42,21 @@ const shortDayFormat = new Intl.DateTimeFormat('en-NG', {
 /** `'2026-09-19T11:00'` → `'19 Sept'`. */
 function shortDay(localDateTime: string): string {
   return shortDayFormat.format(new Date(`${localDateTime.slice(0, 10)}T00:00:00Z`));
+}
+
+/**
+ * A section card in this page's design language — matching Home and Travel:
+ * heavily rounded, a hairline border, no header divider. NOT the older
+ * `Card`/`CardHeader`/`CardTitle` from `@trips/ui`, which belongs to the
+ * app's pre-redesign surfaces and reads visibly boxier next to these.
+ */
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-[2rem] border border-border-subtle bg-card p-5">
+      <h2 className="mb-5 text-base font-medium text-foreground">{title}</h2>
+      {children}
+    </div>
+  );
 }
 
 /** #54 — one booking, in full: who, where, what it cost, and everything that has happened to it. */
@@ -118,49 +130,56 @@ function BookingView({ booking }: { booking: BookingDetail }) {
       </div>
 
       {booking.status === 'awaiting_ticket' ? (
-        <Alert tone="warning" title={`We're confirming with ${booking.carrier}`}>
-          Paid, and waiting for the ticket to be issued. This page updates by itself.
-          {timeLeft ? ` The supplier's deadline to issue: ${timeLeft.label}.` : null}
-        </Alert>
+        <div className="flex items-center gap-3 rounded-[2rem] border border-border-subtle bg-card p-5">
+          <span
+            aria-hidden="true"
+            className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-primary border-t-transparent motion-reduce:animate-none"
+          />
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium text-foreground">
+              We&rsquo;re confirming with {booking.carrier}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Paid. The ticket is being issued — usually within a minute, sometimes longer. This
+              page updates by itself.
+              {timeLeft && (timeLeft.urgency === 'urgent' || timeLeft.urgency === 'soon')
+                ? ` The supplier's deadline to issue: ${timeLeft.label}.`
+                : null}
+            </p>
+          </div>
+        </div>
       ) : null}
 
       {booking.status === 'failed' && booking.failure ? (
         <Alert
           tone="destructive"
-          title="The supplier did not confirm this booking"
+          title={`${booking.carrier} did not confirm this booking`}
           action={
             <Link to="/resolution" className={buttonVariants({ size: 'sm', variant: 'outline' })}>
-              Decide in the resolution queue
+              Open the resolution queue
             </Link>
           }
         >
-          {booking.failure.reason} {formatMoneyShort(booking.failure.atRiskMinor, booking.currency)}{' '}
-          of your customer&rsquo;s money is waiting on your decision.
+          {booking.failure.reason} Nothing was issued —{' '}
+          {formatMoneyShort(booking.failure.atRiskMinor, booking.currency)} of your customer&rsquo;s
+          money is waiting on your decision: try again, find another fare, or refund.
         </Alert>
       ) : null}
 
-      <div className="grid items-start gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-6 lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                Itinerary — {shortDay(booking.segments[0]?.departsAt ?? booking.departsAt)}
-                {' – '}
-                {shortDay(
-                  booking.segments[booking.segments.length - 1]?.arrivesAt ??
-                    booking.segments[0]?.departsAt ??
-                    booking.departsAt,
-                )}
-              </CardTitle>
-            </CardHeader>
+      <div className="grid items-start gap-5 lg:grid-cols-3">
+        <div className="flex flex-col gap-5 lg:col-span-2">
+          <Section
+            title={`Itinerary — ${shortDay(booking.segments[0]?.departsAt ?? booking.departsAt)} – ${shortDay(
+              booking.segments[booking.segments.length - 1]?.arrivesAt ??
+                booking.segments[0]?.departsAt ??
+                booking.departsAt,
+            )}`}
+          >
             <ItineraryTimeline product={booking.product} segments={booking.segments} />
-          </Card>
+          </Section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment summary</CardTitle>
-            </CardHeader>
-            <dl className="flex flex-col gap-4 border-t border-border px-5 py-4 text-sm">
+          <Section title="Payment summary">
+            <dl className="flex flex-col gap-6 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-foreground">Passengers × {booking.travellers.length}</dt>
                 <dd className="tabular-nums text-foreground">
@@ -183,28 +202,22 @@ function BookingView({ booking }: { booking: BookingDetail }) {
                   </div>
                 </>
               ) : null}
-              <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+              <div className="flex items-center justify-between gap-3">
                 <dt className="text-lg font-semibold text-foreground">Total for all passengers</dt>
                 <dd className="text-lg font-semibold tabular-nums text-foreground">
                   {formatMoneyShort(booking.price.sellMinor, booking.currency)}
                 </dd>
               </div>
             </dl>
-            <p className="border-t border-border px-5 py-3 text-xs text-muted-foreground">
+            <p className="mt-4 text-xs text-muted-foreground">
               Paid {booking.paidFrom === 'wallet' ? 'from your wallet' : "on the customer's card"}
             </p>
-          </Card>
+          </Section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Travellers ({booking.travellers.length})</CardTitle>
-            </CardHeader>
-            <ul className="divide-y divide-border border-t border-border">
+          <Section title={`Travellers (${booking.travellers.length})`}>
+            <ul className="flex flex-col gap-6">
               {booking.travellers.map((traveller, index) => (
-                <li
-                  key={index}
-                  className="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
-                >
+                <li key={index} className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-col">
                     <p className="text-sm text-foreground">{traveller.name}</p>
                     <p className="text-xs text-muted-foreground">
@@ -232,40 +245,17 @@ function BookingView({ booking }: { booking: BookingDetail }) {
                 </li>
               ))}
             </ul>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>History</CardTitle>
-            </CardHeader>
-            <ol className="flex flex-col gap-4 border-t border-border px-5 py-4">
-              {booking.timeline.map((entry, index) => (
-                <li key={index} className="flex gap-3">
-                  <span
-                    aria-hidden="true"
-                    className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-muted-foreground"
-                  />
-                  <div className="flex flex-col gap-0.5">
-                    <p className="text-sm text-foreground">{entry.note}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {timeFormat.format(new Date(entry.at))} · {STATUS_DISPLAY[entry.status].label}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </Card>
+          </Section>
         </div>
 
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Customer details</CardTitle>
-            </CardHeader>
-            <dl className="flex flex-col gap-3 border-t border-border px-5 py-4 text-sm">
+        <div className="flex flex-col gap-5">
+          <Section title="Customer details">
+            <dl className="flex flex-col gap-4 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-muted-foreground">Name</dt>
-                <dd className="text-right font-medium text-foreground">{booking.leadTraveller}</dd>
+                <dd className="text-right font-medium text-foreground underline underline-offset-4">
+                  {booking.leadTraveller}
+                </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-muted-foreground">Customer type</dt>
@@ -274,16 +264,15 @@ function BookingView({ booking }: { booking: BookingDetail }) {
                 </dd>
               </div>
             </dl>
-          </Card>
+          </Section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Booking details</CardTitle>
-            </CardHeader>
-            <dl className="flex flex-col gap-3 border-t border-border px-5 py-4 text-sm">
+          <Section title="Booking details">
+            <dl className="flex flex-col gap-4 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-muted-foreground">Booking PNR</dt>
-                <dd className="text-right font-medium text-foreground">{booking.pnr ?? '—'}</dd>
+                <dd className="text-right font-medium text-foreground underline underline-offset-4">
+                  {booking.pnr ?? '—'}
+                </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-muted-foreground">Airline</dt>
@@ -312,9 +301,7 @@ function BookingView({ booking }: { booking: BookingDetail }) {
                 </dd>
               </div>
             </dl>
-          </Card>
-
-          <BookingDocuments booking={booking} />
+          </Section>
         </div>
       </div>
     </div>
@@ -340,7 +327,7 @@ function ItineraryTimeline({
       : `${segments.length - 1} stop${segments.length > 2 ? 's' : ''}`;
 
   return (
-    <div className="flex items-center gap-4 px-5 pb-5 pt-1">
+    <div className="flex items-center gap-4">
       <div className="flex flex-col gap-1">
         <p className="text-3xl font-semibold tabular-nums text-foreground">
           {formatClock(first.departsAt)}
@@ -349,13 +336,18 @@ function ItineraryTimeline({
         <p className="text-sm text-muted-foreground">{formatDay(first.departsAt)}</p>
       </div>
 
-      <div className="flex flex-1 flex-col items-center gap-1 px-2">
+      <div className="flex flex-1 flex-col items-center gap-1.5 px-2">
         <p className="text-sm text-muted-foreground">
           {last.arrivesAt ? describeDuration(first.departsAt, last.arrivesAt) : '—'}
         </p>
         <div className="flex w-full items-center gap-2">
           <span aria-hidden="true" className="h-px flex-1 bg-border" />
-          <RouteIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span
+            aria-hidden="true"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+          >
+            <RouteIcon aria-hidden="true" className="h-3.5 w-3.5" />
+          </span>
           <span aria-hidden="true" className="h-px flex-1 bg-border" />
         </div>
         <p className="text-sm text-muted-foreground">{stops}</p>
@@ -371,28 +363,5 @@ function ItineraryTimeline({
         </p>
       </div>
     </div>
-  );
-}
-
-/** The booking's invoices and vouchers, with download and reissue (#46). */
-function BookingDocuments({ booking }: { booking: BookingDetail }) {
-  const documents = useBookingDocuments(booking.reference);
-  const reissue = useReissueDocument(booking.reference);
-
-  const problem = documents.isError
-    ? describeError(documents.error).title
-    : reissue.isError
-      ? describeError(reissue.error).title
-      : null;
-
-  return (
-    <DocumentsCard
-      documents={documents.data}
-      loading={documents.isPending}
-      problem={problem}
-      ticketed={booking.status === 'ticketed'}
-      reissuingId={reissue.isPending ? (reissue.variables ?? null) : null}
-      onReissue={(document) => reissue.mutate(document.id)}
-    />
   );
 }

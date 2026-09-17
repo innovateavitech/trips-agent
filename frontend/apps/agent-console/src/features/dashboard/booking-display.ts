@@ -5,7 +5,7 @@ import type { BookingStatus } from './types';
 export const AGENCY_TIME_ZONE = 'Africa/Lagos';
 
 export const STATUS_DISPLAY: Record<BookingStatus, { label: string; tone: BadgeProps['tone'] }> = {
-  awaiting_ticket: { label: 'Awaiting ticket', tone: 'warning' },
+  awaiting_ticket: { label: 'Awaiting ticket', tone: 'info' },
   confirmed: { label: 'Confirmed', tone: 'info' },
   ticketed: { label: 'Ticketed', tone: 'success' },
   failed: { label: 'Needs decision', tone: 'destructive' },

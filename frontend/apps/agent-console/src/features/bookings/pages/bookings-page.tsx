@@ -1,15 +1,21 @@
 import { Bus, Plane, Ticket } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  Avatar,
   Badge,
+  BookTravelIcon,
   Button,
-  Card,
+  ChevronDownIcon,
+  ConfigurationIcon,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
   EmptyState,
   ErrorState,
+  GlobalSearchInput,
   Input,
   SegmentedControl,
-  Select,
   Skeleton,
   Table,
   TableBody,
@@ -18,108 +24,123 @@ import {
   TableHeader,
   TableRow,
   buttonVariants,
+  cn,
 } from '@trips/ui';
 import { formatMoneyShort } from '@trips/utils';
 import { describeError } from '../../../api/errors';
 import { PageHeader } from '../../../shell/page-header';
-import { STATUS_DISPLAY, formatDeparture } from '../../dashboard/booking-display';
+import { formatShortDate, formatShortDateTime } from '../../dashboard/booking-display';
 import { useBookings } from '../bookings-api';
-import { STATUS_FILTERS, dateRangeProblem, filterBookings, statusCounts } from '../bookings-rules';
 import {
-  NO_BOOKING_FILTERS,
-  type BookingDateField,
-  type BookingFilters,
-  type BookingListItem,
-  type ProductKind,
-} from '../types';
+  TRIP_FILTERS,
+  dayWithinRange,
+  filterByCustomerName,
+  filterByTravelStage,
+  statusCounts,
+  type TravelStage,
+} from '../bookings-rules';
+import type { BookingListItem } from '../types';
+
+interface DateRange {
+  from: string;
+  to: string;
+}
+
+const NO_RANGE: DateRange = { from: '', to: '' };
 
 /**
- * #54 — every booking the agency has made, and where each one stands. Status
- * badges come from the dashboard's own table, so "Awaiting ticket" means the
- * same thing everywhere and never implies a ticket that does not exist yet.
+ * #54 — every trip an agency's customers have taken, grouped one row per
+ * booking's customer. "All trips"/Active/Upcoming/Completed/Requested are
+ * where a trip stands on the calendar; the (rarer) "Needs decision" queue
+ * below is where money is actually at risk, and stays its own thing so it is
+ * never buried under a tab nobody happens to be on.
  */
 export function BookingsPage() {
   const bookings = useBookings();
-  const [filters, setFilters] = useState<BookingFilters>(NO_BOOKING_FILTERS);
+  const [stage, setStage] = useState<TravelStage | 'all'>('all');
+  const [name, setName] = useState('');
+  const [bookingRange, setBookingRange] = useState<DateRange>(NO_RANGE);
+  const [startRange, setStartRange] = useState<DateRange>(NO_RANGE);
+  const [endRange, setEndRange] = useState<DateRange>(NO_RANGE);
 
-  const all = useMemo(() => bookings.data ?? [], [bookings.data]);
-  const counts = useMemo(() => statusCounts(all), [all]);
-  const visible = useMemo(() => filterBookings(all, filters), [all, filters]);
+  const now = new Date();
+  const all = bookings.data ?? [];
+  const counts = statusCounts(all);
+
+  const visible = filterByCustomerName(
+    filterByTravelStage(all, stage, now).filter(
+      (booking) =>
+        dayWithinRange(booking.bookedAt, bookingRange.from, bookingRange.to) &&
+        dayWithinRange(booking.departsAt, startRange.from, startRange.to) &&
+        dayWithinRange(booking.arrivesAt ?? booking.departsAt, endRange.from, endRange.to),
+    ),
+    name,
+  );
+
+  const filtersActive = Boolean(
+    bookingRange.from ||
+    bookingRange.to ||
+    startRange.from ||
+    startRange.to ||
+    endRange.from ||
+    endRange.to ||
+    name.trim(),
+  );
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Bookings"
-        description="Every booking your agency has made, and where each one stands."
+        title="Travel"
         actions={
-          counts.failed > 0 ? (
-            <Link to="/resolution" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-              Resolution queue
-              <Badge tone="destructive">{counts.failed}</Badge>
+          <>
+            <Link
+              to="/pricing"
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'sm' }),
+                'gap-2 rounded-full',
+              )}
+            >
+              <ConfigurationIcon size={16} />
+              Configuration
             </Link>
-          ) : null
+            {counts.failed > 0 ? (
+              <Link to="/resolution" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                Resolution queue
+                <Badge tone="destructive">{counts.failed}</Badge>
+              </Link>
+            ) : null}
+            <Link to="/search/flights" className={buttonVariants({ size: 'md', radius: 'lg' })}>
+              <BookTravelIcon size={16} />
+              Book travel
+            </Link>
+          </>
         }
       />
 
-      <Card className="flex flex-col gap-4 p-4">
+      <div className="border-b border-border-subtle">
         <SegmentedControl
-          label="Filter by status"
-          // No counts until the list has loaded: "0" would claim there are no bookings.
-          options={STATUS_FILTERS.map((option) =>
-            bookings.data ? { ...option, count: counts[option.value] } : option,
-          )}
-          value={filters.status}
-          onChange={(status) => setFilters({ ...filters, status })}
+          label="Filter by trip stage"
+          appearance="underline"
+          options={TRIP_FILTERS}
+          value={stage}
+          onChange={setStage}
         />
-        <div className="grid items-start gap-3 sm:grid-cols-3">
-          <div className="sm:col-span-2">
-            <Input
-              label="Find a booking"
-              placeholder="PNR, reference, traveller or place"
-              value={filters.query}
-              onChange={(event) => setFilters({ ...filters, query: event.target.value })}
-            />
-          </div>
-          <Select
-            label="Product"
-            value={filters.product}
-            onChange={(event) =>
-              setFilters({ ...filters, product: event.target.value as ProductKind | 'all' })
-            }
-          >
-            <option value="all">Flights and buses</option>
-            <option value="flight">Flights</option>
-            <option value="bus">Buses</option>
-          </Select>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          <DateRangeMenu label="Booking date" range={bookingRange} onChange={setBookingRange} />
+          <DateRangeMenu label="Start date" range={startRange} onChange={setStartRange} />
+          <DateRangeMenu label="End date" range={endRange} onChange={setEndRange} />
         </div>
-        <div className="grid items-start gap-3 sm:grid-cols-3">
-          <Select
-            label="Date"
-            value={filters.dateField}
-            onChange={(event) =>
-              setFilters({ ...filters, dateField: event.target.value as BookingDateField })
-            }
-          >
-            <option value="departure">Departure date</option>
-            <option value="booked">Booking date</option>
-          </Select>
-          <Input
-            type="date"
-            label="From"
-            value={filters.from}
-            max={filters.to || undefined}
-            onChange={(event) => setFilters({ ...filters, from: event.target.value })}
-          />
-          <Input
-            type="date"
-            label="To"
-            value={filters.to}
-            min={filters.from || undefined}
-            error={dateRangeProblem(filters) ?? undefined}
-            onChange={(event) => setFilters({ ...filters, to: event.target.value })}
-          />
-        </div>
-      </Card>
+        <GlobalSearchInput
+          className="w-full max-w-[320px]"
+          placeholder="Filter by name"
+          aria-label="Filter by name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+      </div>
 
       {bookings.isPending ? <ListSkeleton /> : null}
 
@@ -136,119 +157,191 @@ export function BookingsPage() {
           size="page"
           headingLevel={2}
           icon={<Ticket aria-hidden="true" className="h-5 w-5" />}
-          title="No bookings yet"
+          title="No trips yet"
           action={
             <Link to="/search/flights" className={buttonVariants({ size: 'sm' })}>
               Search flights
             </Link>
           }
         >
-          Every booking your agency makes appears here, with its status and where it stands with the
-          supplier.
+          Every trip your agency books appears here, by customer, with where it stands.
         </EmptyState>
       ) : null}
 
       {bookings.data && all.length > 0 && visible.length === 0 ? (
-        <Card>
-          <EmptyState
-            title="No bookings match"
-            action={
-              <Button variant="outline" size="sm" onClick={() => setFilters(NO_BOOKING_FILTERS)}>
+        <EmptyState
+          title="No trips match"
+          action={
+            filtersActive ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setBookingRange(NO_RANGE);
+                  setStartRange(NO_RANGE);
+                  setEndRange(NO_RANGE);
+                  setName('');
+                }}
+              >
                 Clear filters
               </Button>
-            }
-          >
-            {all.length} bookings exist; the filters are hiding all of them.
-          </EmptyState>
-        </Card>
+            ) : undefined
+          }
+        >
+          {all.length} trips exist; the filters are hiding all of them.
+        </EmptyState>
       ) : null}
 
-      {visible.length > 0 ? <BookingsTable bookings={visible} /> : null}
+      {visible.length > 0 ? <TravelTable bookings={visible} /> : null}
     </div>
   );
 }
 
-function BookingsTable({ bookings }: { bookings: BookingListItem[] }) {
+function DateRangeMenu({
+  label,
+  range,
+  onChange,
+}: {
+  label: string;
+  range: DateRange;
+  onChange: (range: DateRange) => void;
+}) {
+  const active = Boolean(range.from || range.to);
+
   return (
-    <Card className="overflow-hidden">
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className={cn(
+          buttonVariants({ variant: 'outline', size: 'sm' }),
+          'gap-2 rounded-full',
+          active ? 'border-primary text-primary' : 'text-muted-foreground',
+        )}
+      >
+        {label}
+        <ChevronDownIcon size={16} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-64 p-3">
+        <div className="flex flex-col gap-3">
+          <Input
+            type="date"
+            label="From"
+            value={range.from}
+            max={range.to || undefined}
+            onChange={(event) => onChange({ ...range, from: event.target.value })}
+          />
+          <Input
+            type="date"
+            label="To"
+            value={range.to}
+            min={range.from || undefined}
+            onChange={(event) => onChange({ ...range, to: event.target.value })}
+          />
+          {active ? (
+            <Button type="button" variant="ghost" size="sm" onClick={() => onChange(NO_RANGE)}>
+              Clear
+            </Button>
+          ) : null}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+const headerCellClasses =
+  'h-10 bg-muted text-xs font-medium normal-case tracking-normal text-muted-foreground first:rounded-l-lg last:rounded-r-lg';
+
+function TravelTable({ bookings }: { bookings: BookingListItem[] }) {
+  return (
+    <div className="overflow-hidden rounded-xl">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Booking</TableHead>
-            <TableHead>Traveller</TableHead>
-            <TableHead>Route</TableHead>
-            <TableHead>Departs</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Sell</TableHead>
+          <TableRow className="border-none hover:bg-transparent">
+            <TableHead className={headerCellClasses}>Customer</TableHead>
+            <TableHead className={headerCellClasses}>Travellers</TableHead>
+            <TableHead className={headerCellClasses}>Route</TableHead>
+            <TableHead className={headerCellClasses}>Booking date</TableHead>
+            <TableHead className={headerCellClasses}>Booking start date</TableHead>
+            <TableHead className={headerCellClasses}>Booking end date</TableHead>
+            <TableHead className={cn(headerCellClasses, 'text-right')}>Amount</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {bookings.map((booking) => {
-            const Icon = booking.product === 'flight' ? Plane : Bus;
-            const status = STATUS_DISPLAY[booking.status];
+            const RouteIcon = booking.product === 'flight' ? Plane : Bus;
 
             return (
-              <TableRow key={booking.reference}>
+              <TableRow key={booking.reference} className="border-border-subtle">
                 <TableCell>
-                  <Link
-                    to={`/bookings/${booking.reference}`}
-                    className="font-medium text-primary underline-offset-4 hover:underline"
-                  >
-                    {booking.reference}
-                  </Link>
-                  {booking.pnr ? (
-                    <p className="text-xs text-muted-foreground">PNR {booking.pnr}</p>
-                  ) : null}
+                  <div className="flex items-center gap-3">
+                    <Avatar name={booking.leadTraveller} size={40} tone="muted" />
+                    <div className="flex min-w-0 flex-col">
+                      <Link
+                        to={`/bookings/${booking.reference}`}
+                        className="truncate font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
+                      >
+                        {booking.leadTraveller}
+                      </Link>
+                      <span className="text-xs text-muted-foreground">
+                        {booking.customerKind === 'business' ? 'Business' : 'Individual'}
+                      </span>
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell>
-                  {booking.leadTraveller}
-                  {booking.travellerCount > 1 ? (
-                    <span className="text-muted-foreground"> +{booking.travellerCount - 1}</span>
-                  ) : null}
-                </TableCell>
-                <TableCell>
-                  <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                    <Icon aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
-                    {booking.origin}
-                    <span className="sr-only">to</span>
-                    <span aria-hidden="true" className="text-muted-foreground">
-                      →
-                    </span>
-                    {booking.destination}
+                  <span className="inline-flex size-7 items-center justify-center rounded-lg bg-muted text-sm font-semibold text-foreground">
+                    {booking.travellerCount}
                   </span>
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-muted-foreground">
-                  {formatDeparture(booking.departsAt)}
+                  <span className="inline-flex items-center gap-2">
+                    <RouteIcon aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
+                    {booking.origin}
+                    <span className="sr-only">to</span>
+                    <span aria-hidden="true">→</span>
+                    {booking.destination}
+                  </span>
                 </TableCell>
-                <TableCell>
-                  <Badge tone={status.tone}>{status.label}</Badge>
+                <TableCell className="whitespace-nowrap text-foreground">
+                  {formatShortDate(booking.bookedAt)}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatMoneyShort(booking.sellMinor, booking.currency)}
+                <TableCell className="whitespace-nowrap text-muted-foreground">
+                  {formatShortDateTime(booking.departsAt)}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-muted-foreground">
+                  {booking.arrivesAt ? formatShortDateTime(booking.arrivesAt) : '—'}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex flex-col items-end">
+                    <span className="font-semibold tabular-nums text-foreground">
+                      {formatMoneyShort(booking.sellMinor, booking.currency)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">Booking total</span>
+                  </div>
                 </TableCell>
               </TableRow>
             );
           })}
         </TableBody>
       </Table>
-    </Card>
+    </div>
   );
 }
 
 function ListSkeleton() {
   return (
-    <Card
+    <div
       aria-busy="true"
-      aria-label="Loading bookings"
-      className="flex flex-col divide-y divide-border"
+      aria-label="Loading trips"
+      className="flex flex-col divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-subtle"
     >
       {[0, 1, 2, 3, 4].map((row) => (
-        <div key={row} className="flex items-center gap-4 px-5 py-4">
-          <Skeleton className="h-4 w-28" />
+        <div key={row} className="flex items-center gap-4 px-4 py-4">
+          <Skeleton className="h-10 w-10 rounded-full" />
           <Skeleton className="h-4 flex-1" />
-          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-20" />
         </div>
       ))}
-    </Card>
+    </div>
   );
 }

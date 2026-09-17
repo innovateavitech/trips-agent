@@ -14,12 +14,20 @@ const buttonVariants = cva(
   // Shared by every variant.
   [
     'inline-flex items-center justify-center gap-2 whitespace-nowrap',
-    'rounded-md font-medium transition-colors',
+    'font-medium transition-colors',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
     'disabled:pointer-events-none disabled:opacity-50',
   ],
   {
     variants: {
+      // `md` is the system default everywhere. `lg` exists for the handful of
+      // places a design calls for a visibly softer corner on a prominent
+      // action (Home's "Book travel" / "Create") — a real variant, not a
+      // one-off className, so it stays a deliberate, findable choice.
+      radius: {
+        md: 'rounded-md',
+        lg: 'rounded-2xl',
+      },
       variant: {
         primary:
           'bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active',
@@ -44,6 +52,7 @@ const buttonVariants = cva(
     defaultVariants: {
       variant: 'primary',
       size: 'md',
+      radius: 'md',
     },
   },
 );
@@ -55,13 +64,13 @@ export interface ButtonProps
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { className, variant, size, fullWidth, loading, disabled, children, ...props },
+  { className, variant, size, radius, fullWidth, loading, disabled, children, ...props },
   ref,
 ) {
   return (
     <button
       ref={ref}
-      className={cn(buttonVariants({ variant, size, fullWidth }), className)}
+      className={cn(buttonVariants({ variant, size, radius, fullWidth }), className)}
       disabled={disabled ?? loading}
       aria-busy={loading}
       {...props}

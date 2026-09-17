@@ -1,43 +1,50 @@
-import { Bus, CalendarClock, Plane } from 'lucide-react';
+import { useState, type ComponentType, type ReactNode } from 'react';
+import { Ticket } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
+  AddIcon,
+  AirplaneIcon,
   Badge,
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  EmptyState,
+  BookTravelIcon,
+  BusIcon,
+  CatalogueIcon,
+  ChevronDownIcon,
+  CircularArrowDownIcon,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   ErrorState,
+  IconChip,
+  ProgressBar,
+  SegmentedControl,
   Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  StatCard,
+  TrendUpIcon,
   buttonVariants,
-  cn,
+  type IconChipProps,
 } from '@trips/ui';
-import { formatMoney } from '@trips/utils';
+import { formatMoney, formatMoneyParts } from '@trips/utils';
 import { describeError } from '../../../api/errors';
 import { displayNameFor } from '../../../auth/auth-api';
 import { useCurrentUser } from '../../../auth/auth-provider';
 import { PageHeader } from '../../../shell/page-header';
 import { useWalletSummary } from '../../wallet';
 import { useDashboardOverview } from '../dashboard-api';
-import {
-  STATUS_DISPLAY,
-  describeTimeLeft,
-  formatDeparture,
-  greetingFor,
-  type Urgency,
-} from '../booking-display';
-import type { BookingSummary } from '../types';
+import { greetingFor } from '../booking-display';
+import type {
+  EarningsSummary,
+  InsightItem,
+  InsightTone,
+  TransactionRow,
+  TransactionStatus,
+  UpcomingItem,
+} from '../types';
 
 /**
- * Where an agent lands: what needs doing before a deadline passes, how much
- * they can spend, and what was booked lately. In that order, because a missed
- * ticket time limit is the one thing on this page that cannot be undone.
+ * Home. What the agent can do right now (book, create), what they can spend,
+ * how the last 90 days went, what is coming up, what needs a reply today, and
+ * what is owed to them — in that order, top to bottom, left to right.
  */
 export function DashboardPage() {
   const user = useCurrentUser();
@@ -48,280 +55,486 @@ export function DashboardPage() {
     <>
       <PageHeader
         title={`${greetingFor(now)}, ${displayNameFor(user).split(' ')[0]}`}
-        description={
-          user.agency
-            ? `Here is what needs you today at ${user.agency.name}.`
-            : 'Here is what needs you today.'
-        }
         actions={
           <>
-            <Link to="/search/buses" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-              <Bus aria-hidden="true" className="h-4 w-4" />
-              Search buses
+            <Link to="/search/flights" className={buttonVariants({ size: 'md', radius: 'lg' })}>
+              <BookTravelIcon size={16} />
+              Book travel
             </Link>
-            <Link to="/search/flights" className={buttonVariants({ size: 'sm' })}>
-              <Plane aria-hidden="true" className="h-4 w-4" />
-              Search flights
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={buttonVariants({ variant: 'secondary', size: 'md', radius: 'lg' })}
+              >
+                Create
+                <ChevronDownIcon size={16} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link to="/catalog">Tour or package</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/crm/leads">Lead</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/invoices">Invoice</Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </>
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Needs your attention</CardTitle>
-            <CardDescription>
-              Issue tickets before the airline&rsquo;s time limit, or the fare is lost.
-            </CardDescription>
-          </CardHeader>
-          <div className="border-t border-border">
-            {overview.isPending ? <AttentionSkeleton /> : null}
-            {overview.isError ? (
-              <div className="p-5">
-                <ErrorState
-                  {...describeError(overview.error)}
-                  onRetry={() => void overview.refetch()}
-                  retrying={overview.isFetching}
-                />
-              </div>
-            ) : null}
-            {overview.data && overview.data.needsAttention.length === 0 ? (
-              <EmptyState
-                icon={<CalendarClock aria-hidden="true" className="h-5 w-5" />}
-                title="Nothing is waiting on you"
-              >
-                Bookings close to their ticket time limit, and any the airline did not confirm,
-                appear here first.
-              </EmptyState>
-            ) : null}
-            {overview.data && overview.data.needsAttention.length > 0 ? (
-              <ul className="divide-y divide-border">
-                {overview.data.needsAttention.map((booking) => (
-                  <AttentionRow key={booking.reference} booking={booking} now={now} />
-                ))}
-              </ul>
-            ) : null}
+      {/*
+        Two independent columns, each summing to the same total height —
+        that's what makes them line up, not a shared CSS grid row: wallet
+        (188) + a 10px gap + earnings (194) = 392, exactly matching "For you
+        today" alone; then a 20px gap before the second 392px row on both
+        sides. Change one side's arithmetic and the other must follow, or
+        the columns drift apart again.
+      */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2.5">
+            <WalletCard />
+            <EarningsCard
+              isPending={overview.isPending}
+              isError={overview.isError}
+              data={overview.data?.home.earnings}
+            />
           </div>
-        </Card>
+          <UpcomingItemsCard
+            isPending={overview.isPending}
+            isError={overview.isError}
+            error={overview.error}
+            onRetry={() => void overview.refetch()}
+            items={overview.data?.home.upcomingItems}
+          />
+        </div>
 
-        <WalletGlance />
+        <div className="flex flex-col gap-5">
+          <ForYouTodayCard
+            isPending={overview.isPending}
+            isError={overview.isError}
+            error={overview.error}
+            onRetry={() => void overview.refetch()}
+            items={overview.data?.home.forYouToday}
+          />
+          <TransactionsCard
+            isPending={overview.isPending}
+            isError={overview.isError}
+            invoices={overview.data?.home.invoices}
+            payments={overview.data?.home.payments}
+          />
+        </div>
       </div>
-
-      <Card className="overflow-hidden">
-        <CardHeader className="flex-row items-center justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <CardTitle>Recent bookings</CardTitle>
-            <CardDescription>The latest bookings across your agency.</CardDescription>
-          </div>
-          <Link to="/bookings" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-            View all
-          </Link>
-        </CardHeader>
-        <RecentBookings query={overview} />
-      </Card>
     </>
   );
 }
 
-const URGENCY_TONE: Record<Urgency, 'destructive' | 'warning' | 'neutral'> = {
-  expired: 'destructive',
-  urgent: 'destructive',
-  soon: 'warning',
-  comfortable: 'neutral',
+/** The header-row "View all" link + count bubble shared by Upcoming items and Transactions. */
+function ViewAllLink({ to, count }: { to: string; count: number }) {
+  return (
+    <Link to={to} className="flex shrink-0 items-center gap-1.5">
+      <span className="text-base font-semibold text-foreground underline">View all</span>
+      <span className="flex size-5 items-center justify-center rounded-full bg-background text-xs font-semibold text-foreground">
+        {count}
+      </span>
+    </Link>
+  );
+}
+
+function CircleIconButton({
+  to,
+  label,
+  children,
+}: {
+  to: string;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      to={to}
+      aria-label={label}
+      className="flex size-10 items-center justify-center rounded-full border border-border-subtle bg-card hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {children}
+    </Link>
+  );
+}
+
+function WalletCard() {
+  const summary = useWalletSummary();
+
+  if (summary.isPending) {
+    return (
+      <div
+        className="h-card-sm rounded-[2rem] bg-card p-6"
+        aria-busy="true"
+        aria-label="Loading your wallet balance"
+      >
+        <Skeleton className="mb-2 h-4 w-28" />
+        <Skeleton className="h-9 w-56" />
+      </div>
+    );
+  }
+
+  if (summary.isError || !summary.data) {
+    return (
+      <div className="h-card-sm rounded-[2rem] bg-card p-6">
+        <ErrorState
+          title="We could not load your balance"
+          detail="Your money is safe; this is a problem reading it."
+          onRetry={() => void summary.refetch()}
+        />
+      </div>
+    );
+  }
+
+  const { whole, fraction } = formatMoneyParts(summary.data.balanceMinor, summary.data.currency);
+  const reservedShare =
+    summary.data.balanceMinor > 0
+      ? (summary.data.reservedMinor / summary.data.balanceMinor) * 100
+      : 0;
+
+  return (
+    <StatCard
+      className="h-card-sm"
+      label="Wallet balance"
+      value={whole}
+      valueSuffix={fraction}
+      caption={`Reserved balance: ${formatMoney(summary.data.reservedMinor, summary.data.currency)}`}
+      actions={
+        <>
+          <CircleIconButton to="/wallet" label="Top up wallet">
+            <AddIcon size={20} />
+          </CircleIconButton>
+          <CircleIconButton to="/payouts" label="Withdraw from wallet">
+            <CircularArrowDownIcon size={20} />
+          </CircleIconButton>
+        </>
+      }
+    >
+      <ProgressBar
+        segments={[{ value: reservedShare, colorClassName: 'bg-chart-1', label: 'Reserved' }]}
+      />
+    </StatCard>
+  );
+}
+
+function EarningsCard({
+  isPending,
+  isError,
+  data,
+}: {
+  isPending: boolean;
+  isError: boolean;
+  data?: EarningsSummary;
+}) {
+  if (isPending || isError || !data) {
+    return (
+      <div className="h-card-md rounded-[2rem] bg-card p-6" aria-busy={isPending}>
+        <Skeleton className="mb-2 h-4 w-36" />
+        <Skeleton className="h-9 w-56" />
+      </div>
+    );
+  }
+
+  const { whole, fraction } = formatMoneyParts(data.totalMinor, data.currency);
+  const changePct = (data.changeBasisPoints / 100).toFixed(0);
+  const segmentColors = ['bg-chart-1', 'bg-chart-2'];
+
+  return (
+    <StatCard
+      className="h-card-md"
+      label="Total earnings, 90 days"
+      value={whole}
+      valueSuffix={fraction}
+      caption={`+${changePct}%`}
+      actions={
+        <CircleIconButton to="/analytics" label="View earnings detail">
+          <ChevronDownIcon size={20} className="-rotate-90" />
+        </CircleIconButton>
+      }
+    >
+      <ProgressBar
+        segments={data.composition.map((part, index) => ({
+          value: (part.valueMinor / data.totalMinor) * 100,
+          colorClassName: segmentColors[index % segmentColors.length] ?? 'bg-muted',
+          label: part.label,
+        }))}
+      />
+    </StatCard>
+  );
+}
+
+type RowIcon = ComponentType<{ size?: number; className?: string }>;
+
+const UPCOMING_ICON: Record<UpcomingItem['product'], RowIcon> = {
+  flight: AirplaneIcon,
+  bus: BusIcon,
+  tour: CatalogueIcon,
 };
 
-function AttentionRow({ booking, now }: { booking: BookingSummary; now: Date }) {
-  const failed = booking.status === 'failed';
-  const timeLeft = booking.ticketTimeLimit ? describeTimeLeft(booking.ticketTimeLimit, now) : null;
+const UPCOMING_TONE: Record<UpcomingItem['product'], IconChipProps['tone']> = {
+  flight: 'info',
+  bus: 'warning',
+  tour: 'success',
+};
+
+function UpcomingItemsCard({
+  isPending,
+  isError,
+  error,
+  onRetry,
+  items,
+}: {
+  isPending: boolean;
+  isError: boolean;
+  error?: unknown;
+  onRetry: () => void;
+  items?: UpcomingItem[];
+}) {
+  const [tab, setTab] = useState<UpcomingItem['kind']>('travel');
+  const filtered = items?.filter((item) => item.kind === tab) ?? [];
 
   return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4">
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <p className="text-sm font-medium text-foreground">
-          <Route booking={booking} />
-        </p>
-        <p className="truncate text-sm text-muted-foreground">
-          {booking.leadTraveller}
-          {booking.travellerCount > 1 ? ` and ${booking.travellerCount - 1} more` : ''},{' '}
-          {booking.carrier}
-        </p>
+    <div className="flex h-card-lg flex-col rounded-[2rem] bg-card p-5">
+      <div className="mb-4 flex shrink-0 items-center justify-between gap-4">
+        <h2 className="text-base font-semibold text-foreground">
+          Upcoming items{items ? ` (${items.length})` : ''}
+        </h2>
+        <ViewAllLink to="/bookings" count={items?.length ?? 0} />
       </div>
-      {failed ? (
-        <Badge tone="destructive">Airline did not confirm</Badge>
-      ) : timeLeft ? (
-        <Badge tone={URGENCY_TONE[timeLeft.urgency]} className="tabular-nums">
-          {timeLeft.label}
-        </Badge>
-      ) : null}
-      <Link
-        to={failed ? '/resolution' : `/bookings/${booking.reference}`}
-        className={buttonVariants({ variant: failed ? 'outline' : 'primary', size: 'sm' })}
-      >
-        {failed ? 'Resolve' : 'Issue ticket'}
-      </Link>
-    </li>
-  );
-}
 
-function Route({ booking }: { booking: BookingSummary }) {
-  const Icon = booking.product === 'flight' ? Plane : Bus;
-  return (
-    <span className="inline-flex items-center gap-2">
-      <Icon aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
-      {booking.origin}
-      <span className="sr-only">to</span>
-      <span aria-hidden="true" className="text-muted-foreground">
-        →
-      </span>
-      {booking.destination}
-    </span>
-  );
-}
+      <SegmentedControl
+        label="Filter upcoming items"
+        appearance="pill"
+        value={tab}
+        onChange={setTab}
+        className="mb-5 shrink-0"
+        options={[
+          { value: 'travel', label: 'Travel' },
+          { value: 'catalogue', label: 'Catalogue' },
+        ]}
+      />
 
-function AttentionSkeleton() {
-  return (
-    <div aria-busy="true" aria-label="Loading bookings that need attention">
-      {[0, 1, 2].map((row) => (
-        <div
-          key={row}
-          className="flex items-center gap-4 border-b border-border px-5 py-4 last:border-b-0"
-        >
-          <div className="flex flex-1 flex-col gap-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-3 w-56" />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {isPending ? (
+          <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading upcoming items">
+            {[0, 1, 2].map((row) => (
+              <Skeleton key={row} className="h-11 w-full" />
+            ))}
           </div>
-          <Skeleton className="h-8 w-24" />
-        </div>
-      ))}
+        ) : null}
+
+        {isError ? <ErrorState {...describeError(error)} onRetry={onRetry} /> : null}
+
+        {!isPending && !isError && filtered.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">Nothing here yet.</p>
+        ) : null}
+
+        {!isPending && !isError && filtered.length > 0 ? (
+          <ul className="flex flex-col gap-6">
+            {filtered.map((item) => {
+              const Icon = UPCOMING_ICON[item.product];
+              return (
+                <li key={item.id}>
+                  <Link to={item.href} className="flex items-center justify-between gap-3">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <IconChip tone={UPCOMING_TONE[item.product]}>
+                        <Icon size={20} />
+                      </IconChip>
+                      <span className="flex min-w-0 flex-col">
+                        <span className="truncate text-base font-medium text-foreground">
+                          {item.title}
+                        </span>
+                        <span className="truncate text-sm text-muted-foreground">
+                          {item.meta.join(' · ')}
+                        </span>
+                      </span>
+                    </span>
+                    <ChevronDownIcon
+                      size={16}
+                      className="shrink-0 -rotate-90 text-muted-foreground"
+                    />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </div>
     </div>
   );
 }
 
-function WalletGlance() {
-  const summary = useWalletSummary();
+const INSIGHT_ICON: Record<InsightTone, RowIcon> = {
+  destructive: Ticket,
+  warning: Ticket,
+  info: TrendUpIcon,
+};
 
+const INSIGHT_TONE: Record<InsightTone, IconChipProps['tone']> = {
+  destructive: 'destructive',
+  warning: 'warning',
+  info: 'info',
+};
+
+function ForYouTodayCard({
+  isPending,
+  isError,
+  error,
+  onRetry,
+  items,
+}: {
+  isPending: boolean;
+  isError: boolean;
+  error?: unknown;
+  onRetry: () => void;
+  items?: InsightItem[];
+}) {
   return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <CardTitle>Wallet</CardTitle>
-        <CardDescription>What you can spend on bookings right now.</CardDescription>
-      </CardHeader>
-      <div className="flex flex-1 flex-col justify-between gap-5 px-5 pb-5">
-        {summary.isPending ? (
-          <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading your balance">
-            <Skeleton className="h-8 w-40" />
-            <Skeleton className="h-4 w-32" />
+    <div className="flex h-card-lg flex-col rounded-[2rem] bg-card p-5">
+      <h2 className="mb-4 shrink-0 text-base font-semibold text-foreground">
+        For you today{items ? ` (${items.length})` : ''}
+      </h2>
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {isPending ? (
+          <div
+            className="flex flex-col gap-4"
+            aria-busy="true"
+            aria-label="Loading today's insights"
+          >
+            {[0, 1, 2].map((row) => (
+              <Skeleton key={row} className="h-16 w-full" />
+            ))}
           </div>
         ) : null}
-        {summary.isError ? (
-          <ErrorState
-            title="We could not load your balance"
-            detail="Your money is safe; this is a problem reading it."
-            onRetry={() => void summary.refetch()}
-          />
+
+        {isError ? <ErrorState {...describeError(error)} onRetry={onRetry} /> : null}
+
+        {!isPending && !isError && items && items.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Nothing needs you right now.
+          </p>
         ) : null}
-        {summary.data ? (
-          <dl className="flex flex-col gap-3">
-            <div>
-              <dt className="text-sm text-muted-foreground">Available</dt>
-              <dd className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
-                {formatMoney(summary.data.availableMinor, summary.data.currency)}
-              </dd>
-            </div>
-            <div className="flex justify-between text-sm">
-              <dt className="text-muted-foreground">Held for bookings</dt>
-              <dd className="font-medium tabular-nums text-foreground">
-                {formatMoney(summary.data.reservedMinor, summary.data.currency)}
-              </dd>
-            </div>
-          </dl>
+
+        {!isPending && !isError && items && items.length > 0 ? (
+          <ul className="flex flex-col gap-6">
+            {items.map((item) => {
+              const Icon = INSIGHT_ICON[item.tone];
+              return (
+                <li key={item.id} className="flex items-start gap-3">
+                  <IconChip tone={INSIGHT_TONE[item.tone]} className="mt-0.5">
+                    <Icon size={20} />
+                  </IconChip>
+                  <div className="flex flex-1 flex-col gap-2.5">
+                    <p className="text-base text-foreground">{item.message}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {item.actions.map((action) => (
+                        <Link
+                          key={action.label}
+                          to={action.href}
+                          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                        >
+                          {action.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         ) : null}
-        <Link to="/wallet" className={buttonVariants({ variant: 'outline', fullWidth: true })}>
-          Top up or view statement
-        </Link>
       </div>
-    </Card>
+    </div>
   );
 }
 
-function RecentBookings({ query }: { query: ReturnType<typeof useDashboardOverview> }) {
-  if (query.isPending) {
-    return (
-      <div
-        className="flex flex-col gap-3 px-5 pb-5"
-        aria-busy="true"
-        aria-label="Loading recent bookings"
-      >
-        {[0, 1, 2, 3].map((row) => (
-          <Skeleton key={row} className="h-9 w-full" />
-        ))}
-      </div>
-    );
-  }
+const TRANSACTION_TONE: Record<
+  TransactionStatus,
+  { label: string; tone: 'destructive' | 'warning' | 'neutral' | 'success' }
+> = {
+  overdue: { label: 'Overdue', tone: 'destructive' },
+  pending: { label: 'Pending', tone: 'warning' },
+  draft: { label: 'Draft', tone: 'neutral' },
+  paid: { label: 'Paid', tone: 'success' },
+};
 
-  // The attention card above already shows the error and the retry button.
-  if (query.isError) return null;
-
-  if (query.data.recentBookings.length === 0) {
-    return (
-      <EmptyState
-        title="No bookings yet"
-        action={
-          <Link to="/search/flights" className={buttonVariants({ size: 'sm' })}>
-            Search flights
-          </Link>
-        }
-      >
-        When you book a flight or a bus, it appears here with its status.
-      </EmptyState>
-    );
-  }
+function TransactionsCard({
+  isPending,
+  isError,
+  invoices,
+  payments,
+}: {
+  isPending: boolean;
+  isError: boolean;
+  invoices?: TransactionRow[];
+  payments?: TransactionRow[];
+}) {
+  const [tab, setTab] = useState<'invoices' | 'payments'>('invoices');
+  const rows = (tab === 'invoices' ? invoices : payments) ?? [];
 
   return (
-    <div className="overflow-x-auto border-t border-border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Reference</TableHead>
-            <TableHead>Trip</TableHead>
-            <TableHead className="hidden md:table-cell">Departs</TableHead>
-            <TableHead className="text-right">Sell price</TableHead>
-            <TableHead>Status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {query.data.recentBookings.map((booking) => {
-            const status = STATUS_DISPLAY[booking.status];
-            return (
-              <TableRow key={booking.reference}>
-                <TableCell>
-                  <Link
-                    to={`/bookings/${booking.reference}`}
-                    className="font-medium text-primary underline-offset-4 hover:underline"
-                  >
-                    {booking.reference}
+    <div className="flex h-card-lg flex-col rounded-[2rem] bg-card p-5">
+      <div className="mb-4 flex shrink-0 items-center justify-between gap-4">
+        <h2 className="text-base font-semibold text-foreground">Transactions</h2>
+        <ViewAllLink to="/invoices" count={rows.length} />
+      </div>
+
+      <SegmentedControl
+        label="Filter transactions"
+        appearance="pill"
+        value={tab}
+        onChange={setTab}
+        className="mb-5 shrink-0"
+        options={[
+          { value: 'invoices', label: 'Invoices' },
+          { value: 'payments', label: 'Payments' },
+        ]}
+      />
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {isPending ? (
+          <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading transactions">
+            {[0, 1, 2].map((row) => (
+              <Skeleton key={row} className="h-11 w-full" />
+            ))}
+          </div>
+        ) : null}
+
+        {!isPending && !isError && rows.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">Nothing here yet.</p>
+        ) : null}
+
+        {!isPending && !isError && rows.length > 0 ? (
+          <ul className="flex flex-col gap-6">
+            {rows.map((row) => {
+              const display = TRANSACTION_TONE[row.status];
+              return (
+                <li key={row.id}>
+                  <Link to={row.href} className="flex items-center justify-between gap-3">
+                    <span className="flex min-w-0 flex-col">
+                      <span className="truncate text-base font-medium text-foreground">
+                        {row.name}
+                      </span>
+                      <span className="truncate text-sm text-muted-foreground">
+                        {formatMoney(row.amountMinor, row.currency)} · {row.reference}
+                      </span>
+                    </span>
+                    <Badge tone={display.tone} className="shrink-0">
+                      {display.label}
+                    </Badge>
                   </Link>
-                  <p className="text-xs text-muted-foreground">{booking.leadTraveller}</p>
-                </TableCell>
-                <TableCell>
-                  <Route booking={booking} />
-                  <p className="text-xs text-muted-foreground">{booking.carrier}</p>
-                </TableCell>
-                <TableCell className="hidden whitespace-nowrap tabular-nums md:table-cell">
-                  {formatDeparture(booking.departsAt)}
-                </TableCell>
-                <TableCell className={cn('text-right font-medium tabular-nums')}>
-                  {formatMoney(booking.sellMinor, booking.currency)}
-                </TableCell>
-                <TableCell>
-                  <Badge tone={status.tone}>{status.label}</Badge>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </div>
     </div>
   );
 }

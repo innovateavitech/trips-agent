@@ -1,4 +1,8 @@
-/* Self-hosted Inter — no Google Fonts request, which matters on a slow connection. */
+/* Self-hosted type — no Google Fonts/CDN request, which matters on a slow
+   connection. Plus Jakarta Sans is the display/UI face (`font-sans`, the
+   default); Inter is kept for `font-numeric` — money figures and similar
+   dense numeric text. See tailwind.preset.ts for how each maps. */
+@import '@fontsource-variable/plus-jakarta-sans';
 @import '@fontsource-variable/inter';
 
 /* The single source of truth for colour. See packages/ui/src/styles/tokens.css. */

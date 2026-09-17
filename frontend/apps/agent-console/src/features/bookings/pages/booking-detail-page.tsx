@@ -17,6 +17,7 @@ import { PageHeader } from '../../../shell/page-header';
 import { STATUS_DISPLAY, describeTimeLeft, formatDeparture } from '../../dashboard/booking-display';
 import { formatClock, formatDay } from '../../search/search-rules';
 import { useBooking, useBookingDocuments, useReissueDocument } from '../bookings-api';
+import { splitFareEvenly } from '../bookings-rules';
 import { DocumentsCard } from '../components/documents-card';
 import type { BookingDetail } from '../types';
 
@@ -78,6 +79,7 @@ function BookingView({ booking }: { booking: BookingDetail }) {
   const timeLeft = booking.ticketTimeLimit
     ? describeTimeLeft(booking.ticketTimeLimit, new Date())
     : null;
+  const travellerFaresMinor = splitFareEvenly(booking.price.sellMinor, booking.travellers.length);
 
   return (
     <div className="flex flex-col gap-6">
@@ -152,13 +154,18 @@ function BookingView({ booking }: { booking: BookingDetail }) {
                       {TRAVELLER_TYPE[traveller.type]}
                     </span>
                   </p>
-                  <p className="text-xs tabular-nums text-muted-foreground">
-                    {traveller.ticketNumber
-                      ? `Ticket ${traveller.ticketNumber}`
-                      : booking.product === 'flight'
-                        ? 'Not issued yet'
-                        : 'Seat on the manifest'}
-                  </p>
+                  <div className="flex flex-col items-end gap-0.5">
+                    <p className="text-sm font-medium tabular-nums text-foreground">
+                      {formatMoneyShort(travellerFaresMinor[index] ?? 0, booking.currency)}
+                    </p>
+                    <p className="text-xs tabular-nums text-muted-foreground">
+                      {traveller.ticketNumber
+                        ? `Ticket ${traveller.ticketNumber}`
+                        : booking.product === 'flight'
+                          ? 'Not issued yet'
+                          : 'Seat on the manifest'}
+                    </p>
+                  </div>
                 </li>
               ))}
             </ul>

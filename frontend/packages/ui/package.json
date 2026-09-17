@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1",
-    "@radix-ui/react-dropdown-menu": "^2"
+    "@radix-ui/react-dropdown-menu": "^2",
+    "iconsax-reactjs": "^0.0.8"
   }
 }

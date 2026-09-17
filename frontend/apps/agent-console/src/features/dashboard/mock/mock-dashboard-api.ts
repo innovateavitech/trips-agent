@@ -1,5 +1,11 @@
 import type { DashboardApi } from '../dashboard-api';
-import type { BookingSummary } from '../types';
+import type {
+  BookingSummary,
+  HomeOverview,
+  InsightItem,
+  TransactionRow,
+  UpcomingItem,
+} from '../types';
 
 /**
  * ============================================================================
@@ -122,6 +128,166 @@ function bookings(): BookingSummary[] {
   ];
 }
 
+/**
+ * The Home page's "For you today" folds in booking urgency (issue-ticket
+ * deadlines, failed confirmations) alongside collection/insight flavor —
+ * there is no separate collections feature yet, so those two rows are static.
+ */
+function forYouToday(attention: BookingSummary[], overdueInvoice: TransactionRow): InsightItem[] {
+  const fromBookings: InsightItem[] = attention.slice(0, 2).map((booking) => {
+    if (booking.status === 'failed') {
+      return {
+        id: booking.reference,
+        tone: 'destructive',
+        message: `${booking.carrier} did not confirm ${booking.leadTraveller}'s booking — it needs your decision.`,
+        actions: [{ label: 'Resolve', href: '/resolution' }],
+      };
+    }
+    return {
+      id: booking.reference,
+      tone: 'warning',
+      message: `${booking.leadTraveller}'s ticket with ${booking.carrier} must be issued before the airline's time limit.`,
+      actions: [{ label: 'Issue ticket', href: `/bookings/${booking.reference}` }],
+    };
+  });
+
+  return [
+    ...fromBookings,
+    {
+      id: 'insight-overdue-invoice',
+      tone: 'destructive',
+      message: `${overdueInvoice.name}'s invoice is 61 days overdue — no response to the last two reminders.`,
+      actions: [
+        { label: 'View', href: overdueInvoice.href },
+        { label: 'Send reminder', href: overdueInvoice.href },
+      ],
+    },
+    {
+      id: 'insight-collection-rate',
+      tone: 'info',
+      message: 'Collection rate improved to 82% — up 8.4% from last month.',
+      actions: [{ label: 'View report', href: '/analytics' }],
+    },
+  ];
+}
+
+function upcomingTravel(all: BookingSummary[]): UpcomingItem[] {
+  return all
+    .filter(
+      (b) => b.status === 'ticketed' || b.status === 'awaiting_ticket' || b.status === 'confirmed',
+    )
+    .slice(0, 4)
+    .map((booking) => ({
+      id: booking.reference,
+      kind: 'travel',
+      product: booking.product,
+      title: `${firstName(booking.leadTraveller)}'s trip to ${booking.destination}`,
+      meta: [
+        `${booking.origin} - ${booking.destination}`,
+        formatShortDate(booking.departsAt),
+        booking.carrier,
+      ],
+      href: `/bookings/${booking.reference}`,
+    }));
+}
+
+/** No group-departure booking data exists yet — this tab is illustrative until it does. */
+function upcomingCatalogue(): UpcomingItem[] {
+  return [
+    {
+      id: 'catalogue-zanzibar',
+      kind: 'catalogue',
+      product: 'tour',
+      title: 'Zanzibar Getaway — 5 nights',
+      meta: ['Departs Jun 12', '8 of 12 seats taken', 'Deposit due May 20'],
+      href: '/catalog',
+    },
+    {
+      id: 'catalogue-dubai',
+      kind: 'catalogue',
+      product: 'tour',
+      title: 'Dubai Shopping Festival',
+      meta: ['Departs Jul 3', '5 of 15 seats taken', 'Deposit due Jun 10'],
+      href: '/catalog',
+    },
+  ];
+}
+
+function firstName(fullName: string): string {
+  return fullName.split(' ')[0] ?? fullName;
+}
+
+function invoiceRows(all: BookingSummary[]): TransactionRow[] {
+  const statuses: TransactionRow['status'][] = ['overdue', 'pending', 'draft', 'overdue'];
+  return all.slice(0, 4).map((booking, index) => ({
+    id: booking.reference,
+    name: firstName(booking.leadTraveller),
+    amountMinor: booking.sellMinor,
+    currency: booking.currency,
+    reference: `Invoice No. ${7720 + index}`,
+    status: statuses[index] ?? 'pending',
+    href: `/invoices/${booking.reference}`,
+  }));
+}
+
+function paymentRows(all: BookingSummary[]): TransactionRow[] {
+  return all
+    .filter((b) => b.status === 'ticketed' || b.status === 'confirmed')
+    .slice(0, 4)
+    .map((booking, index) => ({
+      id: `payment-${booking.reference}`,
+      name: firstName(booking.leadTraveller),
+      amountMinor: booking.sellMinor,
+      currency: booking.currency,
+      reference: `Payment ref. PMT-${3300 + index}`,
+      status: 'paid' as const,
+      href: `/invoices/${booking.reference}`,
+    }));
+}
+
+const FALLBACK_INVOICE: TransactionRow = {
+  id: 'fallback',
+  name: 'Your customer',
+  amountMinor: 0,
+  currency: 'NGN',
+  reference: 'Invoice No. 0000',
+  status: 'overdue',
+  href: '/invoices',
+};
+
+const shortDateFormat = new Intl.DateTimeFormat('en-NG', {
+  month: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+  timeZone: 'Africa/Lagos',
+});
+
+function formatShortDate(iso: string): string {
+  return shortDateFormat.format(new Date(iso));
+}
+
+function buildHomeOverview(all: BookingSummary[], attention: BookingSummary[]): HomeOverview {
+  const invoices = invoiceRows(all);
+
+  return {
+    earnings: {
+      totalMinor: 1_045_035_602,
+      currency: 'NGN',
+      changeBasisPoints: 3000,
+      composition: [
+        { label: 'Flights & buses', valueMinor: 627_000_000 },
+        { label: 'Tours & packages', valueMinor: 313_000_000 },
+      ],
+    },
+    forYouToday: forYouToday(attention, invoices[0] ?? FALLBACK_INVOICE),
+    upcomingItems: [...upcomingTravel(all), ...upcomingCatalogue()],
+    invoices,
+    payments: paymentRows(all),
+  };
+}
+
 export const mockDashboardApi: DashboardApi = {
   async getOverview() {
     await new Promise((resolve) => setTimeout(resolve, LATENCY_MS));
@@ -137,6 +303,10 @@ export const mockDashboardApi: DashboardApi = {
         return a.ticketTimeLimit ? -1 : b.ticketTimeLimit ? 1 : 0;
       });
 
-    return { needsAttention, recentBookings: all.slice(0, 6) };
+    return {
+      needsAttention,
+      recentBookings: all.slice(0, 6),
+      home: buildHomeOverview(all, needsAttention),
+    };
   },
 };

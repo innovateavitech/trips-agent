@@ -2,6 +2,7 @@ import type {
   BookingDetail,
   BookingStatus,
   BookingTraveller,
+  CustomerKind,
   PaidFrom,
   ProductKind,
   TimelineEntry,
@@ -76,6 +77,8 @@ interface Seed {
   bookedAgoMs: number;
   paidFrom: PaidFrom;
   failure?: string;
+  /** Defaults to 'individual' — most seed bookings are a person travelling, not a company account. */
+  customerKind?: CustomerKind;
 }
 
 function build(seed: Seed): BookingDetail {
@@ -99,6 +102,8 @@ function build(seed: Seed): BookingDetail {
     ticketTimeLimit: seed.ticketTimeLimitInMs === null ? null : iso(now + seed.ticketTimeLimitInMs),
     pnr: seed.pnr,
     bookedAt: iso(bookedAt),
+    customerKind: seed.customerKind ?? 'individual',
+    arrivesAt: iso(departs + seed.durationMs),
     paidFrom: seed.paidFrom,
     travellers: seed.travellers.map(([name, type], index) => ({
       name,
@@ -284,6 +289,63 @@ function seed(): BookingDetail[] {
       pnr: null,
       bookedAgoMs: 4 * HOUR,
       paidFrom: 'wallet',
+    },
+    {
+      reference: 'TRP-8K2W8J',
+      travellers: [['Grace Adebayo', 'ADT']],
+      product: 'flight',
+      origin: 'LOS',
+      destination: 'PHC',
+      carrier: 'Ibom Air QI 0114',
+      departsInMs: -3 * DAY,
+      durationMs: 80 * MINUTE,
+      status: 'ticketed',
+      sellMinor: 12_400_000,
+      ticketTimeLimitInMs: null,
+      pnr: 'QI8K2W',
+      bookedAgoMs: 5 * DAY,
+      paidFrom: 'wallet',
+    },
+    {
+      reference: 'TRP-8K2Z2B',
+      travellers: [
+        ['Chuka Obi', 'ADT'],
+        ['Femi Alade', 'ADT'],
+        ['Blessing Eze', 'ADT'],
+      ],
+      product: 'bus',
+      origin: 'Lagos',
+      destination: 'Ibadan',
+      carrier: 'GIG Mobility',
+      departsInMs: -1 * HOUR,
+      durationMs: 6 * HOUR,
+      status: 'ticketed',
+      sellMinor: 15_600_000,
+      ticketTimeLimitInMs: null,
+      pnr: 'GIG2Z2B',
+      bookedAgoMs: 2 * DAY,
+      paidFrom: 'card',
+      customerKind: 'business',
+    },
+    {
+      reference: 'TRP-8K2Y6M',
+      travellers: [
+        ['Ada Nwachukwu', 'ADT'],
+        ['Segun Bello', 'ADT'],
+      ],
+      product: 'flight',
+      origin: 'LOS',
+      destination: 'ABV',
+      carrier: 'Air Peace P4 7130',
+      departsInMs: 6 * DAY,
+      durationMs: 75 * MINUTE,
+      status: 'ticketed',
+      sellMinor: 27_500_000,
+      ticketTimeLimitInMs: null,
+      pnr: 'P4Y6M2',
+      bookedAgoMs: 6 * HOUR,
+      paidFrom: 'wallet',
+      customerKind: 'business',
     },
   ].map((entry) => build(entry as Seed));
 }

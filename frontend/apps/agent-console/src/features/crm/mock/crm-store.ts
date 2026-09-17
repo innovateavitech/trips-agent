@@ -1,7 +1,10 @@
 import type {
   Communication,
   CustomerBooking,
+  CustomerInvoice,
+  CustomerKind,
   CustomerRef,
+  CustomerTraveller,
   LeadSource,
   LeadStage,
   Quote,
@@ -39,8 +42,13 @@ export interface StoredLead {
 }
 
 export interface StoredCustomer extends CustomerRef {
+  kind: CustomerKind;
   createdAt: string;
+  /** When they last booked. Null with no bookings. */
+  lastBookedAt: string | null;
   bookings: CustomerBooking[];
+  invoices: CustomerInvoice[];
+  travellers: CustomerTraveller[];
 }
 
 export interface CrmData {
@@ -56,6 +64,35 @@ const hoursFromNow = (hours: number) => new Date(Date.now() + hours * 3_600_000)
 const dayFromToday = (days: number) =>
   new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
+function invoice(
+  invoiceNumber: string,
+  status: CustomerInvoice['status'],
+  amountMinor: number,
+  daysAgo: number,
+  bookingReference: string,
+): Omit<CustomerInvoice, 'customerName'> {
+  return {
+    id: `inv-${invoiceNumber}`,
+    invoiceNumber,
+    amountMinor,
+    currency: 'NGN',
+    status,
+    issuedAt: hoursAgo(daysAgo * 24),
+    bookingReference,
+  };
+}
+
+function traveller(
+  id: string,
+  title: CustomerTraveller['title'],
+  name: string,
+  email: string | null,
+  dateOfBirth: string,
+  gender: CustomerTraveller['gender'],
+): CustomerTraveller {
+  return { id, title, name, email, dateOfBirth, gender };
+}
+
 function seed(): CrmData {
   const customer = (
     id: string,
@@ -64,47 +101,205 @@ function seed(): CrmData {
     phone: string | null,
     days: number,
     bookings: CustomerBooking[] = [],
+    extra: Pick<Partial<StoredCustomer>, 'kind' | 'invoices' | 'travellers'> = {},
   ): StoredCustomer => ({
     id,
     name,
     email,
     phone,
+    kind: extra.kind ?? 'individual',
     createdAt: hoursAgo(days * 24),
+    lastBookedAt:
+      bookings
+        .map((booking) => booking.bookedAt)
+        .filter((at): at is string => Boolean(at))
+        .sort()
+        .at(-1) ?? null,
     bookings,
+    invoices: extra.invoices ?? [],
+    travellers: extra.travellers ?? [],
   });
+
+  /** A flight or bus trip: travels `travelInDays` from today (negative is past), booked `bookedDaysAgo`. */
+  const trip = (
+    reference: string,
+    product: 'flight' | 'bus',
+    [from, fromCode]: [string, string],
+    [to, toCode]: [string, string],
+    carrier: string,
+    { bookedDaysAgo, travelInDays }: { bookedDaysAgo: number; travelInDays: number },
+    amountMinor: number,
+  ): CustomerBooking => ({
+    reference,
+    title: `${from} → ${to}, ${carrier}`,
+    travelDate: dayFromToday(travelInDays),
+    status: 'Ticketed',
+    amountMinor,
+    product,
+    route: { from, to, fromCode, toCode },
+    carrier,
+    bookedAt: hoursAgo(bookedDaysAgo * 24 + 3),
+  });
+
+  const LAGOS: [string, string] = ['Lagos', 'LOS'];
+  const ABUJA: [string, string] = ['Abuja', 'ABV'];
 
   const customers: StoredCustomer[] = [
     customer('c-chiamaka', 'Chiamaka Okonkwo', 'chiamaka.okonkwo@example.test', '0803 214 5521', 0),
     customer('c-ibrahim', 'Ibrahim Sule', 'ibrahim.sule@example.test', '0806 771 2090', 1),
     customer('c-martins', 'Adeola Martins', 'adeola.martins@example.test', '0809 115 3348', 6),
     customer('c-grace', 'Grace Eze', 'grace.eze@example.test', '0802 660 1187', 12, [
-      {
-        reference: 'TRP-8K2N7C',
-        title: 'Lagos → Abuja, Air Peace',
-        travelDate: dayFromToday(-40),
-        status: 'Ticketed',
-        amountMinor: 14_250_000,
-      },
+      trip(
+        'TRP-8K2N7C',
+        'flight',
+        LAGOS,
+        ABUJA,
+        'Air Peace',
+        { bookedDaysAgo: 9, travelInDays: -5 },
+        14_250_000,
+      ),
     ]),
     customer('c-tosin', 'Tosin Bello', 'tosin.bello@example.test', '0805 332 9004', 30, [
       {
+        // A tour: no product, route or carrier — it shows under "All" by its title.
         reference: 'TRP-8K2Q4M',
         title: 'Cape Town and the Garden Route, 12 travellers',
         travelDate: dayFromToday(35),
         status: 'Confirmed',
         amountMinor: 3_180_000_000,
+        bookedAt: hoursAgo(25 * 24),
       },
-      {
-        reference: 'TRP-8K1Z2A',
-        title: 'Lagos → Accra, Ibom Air',
-        travelDate: dayFromToday(-120),
-        status: 'Ticketed',
-        amountMinor: 19_800_000,
-      },
+      trip(
+        'TRP-8K1Z2A',
+        'flight',
+        LAGOS,
+        ['Accra', 'ACC'],
+        'Ibom Air',
+        { bookedDaysAgo: 4, travelInDays: 10 },
+        19_800_000,
+      ),
     ]),
     customer('c-uche', 'Uche Nnamdi', 'uche.nnamdi@example.test', null, 20),
     customer('c-halima', 'Halima Abubakar', 'halima.abubakar@example.test', '0807 404 8812', 3),
     customer('c-kelechi', 'Kelechi Obi', null, '0810 550 7713', 2),
+    customer(
+      'c-harbour',
+      'Harbour Point Logistics',
+      'travel@harbourpoint.example.test',
+      '+234 901 220 4410',
+      45,
+      [
+        trip(
+          'TRP-8K2R1D',
+          'flight',
+          LAGOS,
+          ABUJA,
+          'Air Peace',
+          { bookedDaysAgo: 2, travelInDays: 0 },
+          28_500_000,
+        ),
+        trip(
+          'TRP-8K2P5E',
+          'bus',
+          ['Enugu', 'ENU'],
+          LAGOS,
+          'Libra Motors',
+          { bookedDaysAgo: 5, travelInDays: 6 },
+          4_200_000,
+        ),
+        trip(
+          'TRP-8K1X9Q',
+          'flight',
+          LAGOS,
+          ABUJA,
+          'Air Peace',
+          { bookedDaysAgo: 12, travelInDays: -8 },
+          31_050_000,
+        ),
+        trip(
+          'TRP-8K0V6B',
+          'flight',
+          LAGOS,
+          ['Warri', 'QRW'],
+          'Air Peace',
+          { bookedDaysAgo: 20, travelInDays: -15 },
+          19_800_000,
+        ),
+        trip(
+          'TRP-8K0T3H',
+          'bus',
+          ['Kano', 'KAN'],
+          LAGOS,
+          'Libra Motors',
+          { bookedDaysAgo: 30, travelInDays: -25 },
+          3_850_000,
+        ),
+        trip(
+          'TRP-8JZY7L',
+          'flight',
+          LAGOS,
+          ['London', 'LHR'],
+          'British Airways',
+          { bookedDaysAgo: 40, travelInDays: 21 },
+          1_284_000_000,
+        ),
+      ],
+      {
+        kind: 'business',
+        invoices: [
+          invoice('INV-2026-0418', 'overdue', 31_050_000, 12, 'TRP-8K1X9Q'),
+          invoice('INV-2026-0431', 'pending', 4_200_000, 5, 'TRP-8K2P5E'),
+          invoice('INV-2026-0402', 'paid', 19_800_000, 20, 'TRP-8K0V6B'),
+          invoice('INV-2026-0437', 'draft', 28_500_000, 2, 'TRP-8K2R1D'),
+        ].map((raw) => ({ ...raw, customerName: 'Harbour Point Logistics' })),
+        travellers: [
+          traveller(
+            't-1',
+            'Mr',
+            'Chinedu Okafor',
+            'chinedu.okafor@harbourpoint.example.test',
+            '1986-03-14',
+            'Male',
+          ),
+          traveller(
+            't-2',
+            'Mrs',
+            'Funmilayo Adebayo',
+            'funmi.adebayo@harbourpoint.example.test',
+            '1990-11-02',
+            'Female',
+          ),
+          traveller(
+            't-3',
+            'Mr',
+            'Musa Danjuma',
+            'musa.danjuma@harbourpoint.example.test',
+            '1979-07-21',
+            'Male',
+          ),
+          traveller('t-4', 'Ms', 'Ifeoma Nwosu', null, '1994-01-30', 'Female'),
+        ],
+      },
+    ),
+    customer(
+      'c-kanem',
+      'Kanem Energy',
+      'admin@kanemenergy.example.test',
+      '+234 908 773 1602',
+      75,
+      [
+        trip(
+          'TRP-8JZW3P',
+          'flight',
+          ABUJA,
+          ['Dubai', 'DXB'],
+          'Emirates',
+          { bookedDaysAgo: 18, travelInDays: -14 },
+          816_500_000,
+        ),
+      ],
+      { kind: 'business' },
+    ),
   ];
 
   const lead = (

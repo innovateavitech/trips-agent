@@ -1,0 +1,43 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="94.1113" height="94.1113" viewBox="0 0 94.1113 94.1113" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Frame 1000004850">
+<rect id="Rectangle 156405" x="35.9576" y="9.16541" width="43.1241" height="56.3565" rx="4.25202" transform="rotate(23.031 35.9576 9.16541)" fill="#ECECEC" stroke="#BABABA" stroke-width="0.566936"/>
+<rect id="Rectangle 156404" x="44.461" y="5.19697" width="43.1241" height="56.3565" rx="4.25202" transform="rotate(23.031 44.461 5.19697)" fill="white" stroke="#BABABA" stroke-width="0.566936"/>
+<g id="Group 314092">
+<line id="Line 435" x1="69.7751" y1="25.8566" x2="48.5346" y2="16.9653" stroke="#ECECEC" stroke-width="3.40161" stroke-linecap="round"/>
+<circle id="Ellipse 1240" cx="75.1188" cy="28.6295" r="1.98427" fill="#ECECEC"/>
+</g>
+<g id="Group 314093">
+<line id="Line 435_2" x1="65.8066" y1="34.3611" x2="44.5661" y2="25.4698" stroke="#ECECEC" stroke-width="3.40161" stroke-linecap="round"/>
+<circle id="Ellipse 1240_2" cx="71.1503" cy="37.134" r="1.98427" fill="#ECECEC"/>
+</g>
+<g id="Group 314094">
+<line id="Line 435_3" x1="61.8387" y1="43.4328" x2="40.5983" y2="34.5415" stroke="#ECECEC" stroke-width="3.40161" stroke-linecap="round"/>
+<circle id="Ellipse 1240_3" cx="67.1825" cy="46.2057" r="1.98427" fill="#ECECEC"/>
+</g>
+<g id="Group 314095">
+<line id="Line 435_4" x1="57.8694" y1="51.9363" x2="36.629" y2="43.045" stroke="#ECECEC" stroke-width="3.40161" stroke-linecap="round"/>
+<circle id="Ellipse 1240_4" cx="63.2132" cy="54.7092" r="1.98427" fill="#ECECEC"/>
+</g>
+<g id="Group 314096">
+<line id="Line 435_5" x1="53.9009" y1="60.4394" x2="32.6604" y2="51.5481" stroke="#ECECEC" stroke-width="3.40161" stroke-linecap="round"/>
+<circle id="Ellipse 1240_5" cx="59.2446" cy="63.2131" r="1.98427" fill="#ECECEC"/>
+</g>
+<g id="Frame 1410113464">
+<g clip-path="url(#clip0_0_757)">
+<path d="M13.8984 47.046C14.8771 44.7403 17.5397 43.6645 19.8455 44.6433L32.8922 50.1813C35.1979 51.16 36.2737 53.8226 35.2949 56.1283L31.5291 65.0001C29.5716 69.6116 24.2464 71.7631 19.6349 69.8056L10.7632 66.0398C8.45742 65.0611 7.38166 62.3985 8.3604 60.0927L13.8984 47.046Z" fill="#F5F1F1"/>
+<line id="Line 436" x1="16.5394" y1="54.7265" x2="27.3112" y2="58.6951" stroke="#CCC8C8" stroke-width="0.566936"/>
+<line id="Line 437" x1="19.5486" y1="48.6785" x2="20.6824" y2="52.6471" stroke="#CCC8C8" stroke-width="0.566936"/>
+<line id="Line 438" x1="28.6193" y1="52.08" x2="29.7532" y2="56.0486" stroke="#CCC8C8" stroke-width="0.566936"/>
+<line id="Line 439" x1="17.5401" y1="50.7428" x2="22.0756" y2="50.1758" stroke="#CCC8C8" stroke-width="0.566935"/>
+<line id="Line 440" x1="26.6108" y1="54.1443" x2="31.1463" y2="53.5774" stroke="#CCC8C8" stroke-width="0.566935"/>
+</g>
+<path d="M19.7345 44.9038L32.7816 50.442C34.9431 51.3595 35.9515 53.8558 35.0342 56.0173L31.268 64.8897C29.3717 69.3567 24.2132 71.4409 19.7461 69.5449L10.8736 65.7788C8.71221 64.8611 7.7036 62.365 8.62104 60.2035L14.1592 47.1564C15.0768 44.9951 17.573 43.9865 19.7345 44.9038Z" stroke="#BABABA" stroke-width="0.566936"/>
+</g>
+<path id="Rectangle 156406" d="M26.0511 60.4306C24.8979 60.8377 23.9475 61.2573 23.196 61.726C22.2537 62.3136 21.607 62.9879 21.2705 63.8234C20.9345 64.6576 20.9235 65.6133 21.1773 66.7346C21.3956 67.6994 21.8135 68.8027 22.4075 70.0804L13.7166 66.9194L6.12873 63.5011C4.97931 62.983 4.08428 62.0138 3.96251 60.824C3.86756 59.896 3.9644 59.1664 4.20997 58.54C4.45626 57.9119 4.86028 57.3678 5.40721 56.8211C6.3259 55.9028 7.73048 55.6545 9.03387 55.9942L26.0511 60.4306Z" fill="#CCC8C8" stroke="#BABABA" stroke-width="0.566936"/>
+</g>
+<defs>
+<clipPath id="clip0_0_757">
+<path d="M13.8984 47.046C14.8771 44.7403 17.5397 43.6645 19.8455 44.6433L32.8922 50.1813C35.1979 51.16 36.2737 53.8226 35.2949 56.1283L31.5291 65.0001C29.5716 69.6116 24.2464 71.7631 19.6349 69.8056L10.7632 66.0398C8.45742 65.0611 7.38166 62.3985 8.3604 60.0927L13.8984 47.046Z" fill="white"/>
+</clipPath>
+</defs>
+</svg>

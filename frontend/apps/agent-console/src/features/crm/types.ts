@@ -6,6 +6,11 @@
  * Field for field the CRM contract in docs/BUILD_PLAN.md.
  */
 
+import type { CustomerKind } from '../bookings/types';
+import type { CustomerInvoice } from '../invoices/types';
+
+export type { CustomerInvoice, CustomerKind };
+
 export type LeadStage = 'New' | 'Quoted' | 'Negotiating' | 'Won' | 'Lost';
 export type LeadSource = 'TripRequestWidget' | 'ContactForm' | 'Manual';
 export type QuoteStatus = 'Draft' | 'Sent' | 'Viewed' | 'Accepted' | 'Declined' | 'Expired';
@@ -87,6 +92,14 @@ export interface Lead extends LeadSummary {
   communications: Communication[];
 }
 
+/** A customer keyed in by the team from the Customers screen, before any booking. */
+export interface CustomerRequest {
+  kind: CustomerKind;
+  name: string;
+  email: string | null;
+  phone: string | null;
+}
+
 export interface LeadRequest {
   customer: { name: string; email: string | null; phone: string | null };
   destination: string;
@@ -141,6 +154,17 @@ export interface CustomerSummary {
   totalBookings: number;
   lastActivityAt: string;
   openLeadCount: number;
+  /**
+   * The three fields below are optional: the real customers endpoint (F7)
+   * does not return them yet, so `createHttpCrmApi` leaves them unset and the
+   * Customers screen shows "Individual" and "—" rather than guessing — the
+   * same arrangement as `customerKind` on the Travel list.
+   */
+  kind?: CustomerKind;
+  /** When they last booked anything, ISO 8601. Null when they never have. */
+  lastBookingAt?: string | null;
+  /** When the customer record was made, ISO 8601. */
+  createdAt?: string;
 }
 
 export interface CustomerBooking {
@@ -149,6 +173,29 @@ export interface CustomerBooking {
   travelDate: string | null;
   status: string;
   amountMinor: number;
+  /**
+   * The fields below are optional: the real customer endpoint (F7) does not
+   * return them yet. Without them a row shows its `title` alone and counts
+   * under "All" only — the screen never guesses a route or a carrier.
+   */
+  product?: 'flight' | 'bus';
+  /** Cities for the row ("Lagos to Abuja") and codes for "Top route" ("LOS – ABV"). */
+  route?: { from: string; to: string; fromCode: string; toCode: string };
+  /** "Air Peace", "Libra Motors". */
+  carrier?: string;
+  /** When it was booked, ISO 8601. */
+  bookedAt?: string;
+}
+
+/** Someone who travels on this customer's bookings — a business's staff, a family. */
+export interface CustomerTraveller {
+  id: string;
+  title: 'Mr' | 'Mrs' | 'Ms' | 'Miss' | 'Dr' | null;
+  name: string;
+  email: string | null;
+  /** `YYYY-MM-DD`. */
+  dateOfBirth: string | null;
+  gender: 'Male' | 'Female' | null;
 }
 
 export interface Customer extends CustomerSummary {
@@ -159,6 +206,9 @@ export interface Customer extends CustomerSummary {
   bookings: CustomerBooking[];
   tasks: Task[];
   communications: Communication[];
+  /** Optional until the customer endpoint returns them (F7): the tabs show their empty state. */
+  invoices?: CustomerInvoice[];
+  travellers?: CustomerTraveller[];
 }
 
 export interface TaskRequest {

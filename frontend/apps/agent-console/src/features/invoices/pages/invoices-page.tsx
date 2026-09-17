@@ -16,17 +16,7 @@ import { formatMoney } from '@trips/utils';
 import { describeError } from '../../../api/errors';
 import { PageHeader } from '../../../shell/page-header';
 import { useInvoices } from '../invoices-api';
-import type { InvoiceStatus } from '../types';
-
-const STATUS_DISPLAY: Record<
-  InvoiceStatus,
-  { label: string; tone: 'destructive' | 'warning' | 'neutral' | 'success' }
-> = {
-  overdue: { label: 'Overdue', tone: 'destructive' },
-  pending: { label: 'Pending', tone: 'warning' },
-  draft: { label: 'Draft', tone: 'neutral' },
-  paid: { label: 'Paid', tone: 'success' },
-};
+import { INVOICE_STATUS_DISPLAY } from '../invoice-display';
 
 const dateFormat = new Intl.DateTimeFormat('en-NG', {
   day: 'numeric',
@@ -90,7 +80,7 @@ export function InvoicesPage() {
             </TableHeader>
             <TableBody>
               {invoices.data.map((invoice) => {
-                const status = STATUS_DISPLAY[invoice.status];
+                const status = INVOICE_STATUS_DISPLAY[invoice.status];
                 return (
                   <TableRow key={invoice.id}>
                     <TableCell>

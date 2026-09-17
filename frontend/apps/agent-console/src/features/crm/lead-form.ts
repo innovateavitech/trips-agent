@@ -33,7 +33,8 @@ export const EMPTY_LEAD_FORM: LeadForm = {
 
 export type BuiltLead = { ok: true; request: LeadRequest } | { ok: false; errors: Problems };
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Loose on purpose: catches a typo, never refuses a real address. */
+export const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * A lead needs a person, a way to reach them and somewhere they want to go —

@@ -4,15 +4,22 @@ import {
   Airplane,
   ArrowDown,
   ArrowDown2,
+  ArrowLeft,
   Bag2,
   Bill,
+  Building,
   Bus,
+  Calendar,
+  Call,
   Chart2,
   DocumentText,
+  Edit2,
   Export,
   Global,
+  Hashtag,
   Home,
   MessageQuestion,
+  Sms,
   NotificationBing,
   Profile2User,
   SearchNormal1,
@@ -62,3 +69,10 @@ export const BookTravelIcon = outline(Export);
 export const BusIcon = outline(Bus);
 export const AirplaneIcon = outline(Airplane);
 export const TrendUpIcon = outline(TrendUp);
+export const BackIcon = outline(ArrowLeft);
+export const EditIcon = outline(Edit2);
+export const NameIcon = outline(Hashtag);
+export const CustomerTypeIcon = outline(Building);
+export const EmailIcon = outline(Sms);
+export const PhoneIcon = outline(Call);
+export const CalendarIcon = outline(Calendar);

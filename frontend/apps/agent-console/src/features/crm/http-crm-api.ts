@@ -1,6 +1,6 @@
 import type { Schemas } from '@trips/api-client';
 import { api } from '../../api/client';
-import { unwrap } from '../../api/errors';
+import { ApiError, unwrap } from '../../api/errors';
 import { toOptionalWholeNumber, toWholeNumber } from '../pricing/pricing-rules';
 import type { CrmApi } from './crm-api';
 import type {
@@ -237,6 +237,19 @@ export const httpCrmApi: CrmApi = {
       await unwrap(
         api.GET('/api/v1/crm/customers/{customerId}', { params: { path: { customerId: id } } }),
       ),
+    );
+  },
+
+  /**
+   * The API has no endpoint that creates a customer on its own yet — only from
+   * a lead. Until `POST /api/v1/crm/customers` exists and `pnpm generate:api`
+   * brings it here, this says so plainly rather than failing somewhere deeper.
+   */
+  async createCustomer() {
+    throw new ApiError(
+      405,
+      'Adding a customer is not available yet',
+      'The server cannot create a customer from this screen yet. A customer is added automatically when they book.',
     );
   },
 

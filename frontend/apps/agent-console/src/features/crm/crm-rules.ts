@@ -1,7 +1,10 @@
 import { formatMoneyShort } from '@trips/utils';
+import { dayWithinRange } from '../bookings/bookings-rules';
 import { amountInputFromMinor, parseAmount } from '../pricing/pricing-rules';
 import type {
   Channel,
+  CustomerBooking,
+  CustomerSummary,
   LeadSource,
   LeadStage,
   LeadSummary,
@@ -50,6 +53,153 @@ export const CHANNEL_LABEL: Record<Channel, string> = {
   Call: 'Call',
   Note: 'Note',
 };
+
+/* ------------------------------------------------------------- customers -- */
+
+export interface CustomerFilters {
+  /** Matched against name, email and phone, ignoring case. */
+  query: string;
+  /** `YYYY-MM-DD` days in Lagos; blank for no limit. */
+  lastBooking: { from: string; to: string };
+  dateAdded: { from: string; to: string };
+}
+
+/**
+ * The Customers list after its filters, most recently active first.
+ *
+ * A date filter keeps only customers who have that date: someone who has
+ * never booked is not "last booked in April", so a "Last booking" range
+ * hides them. With no range set, nobody is hidden for a missing date.
+ */
+export function filterCustomers(
+  customers: readonly CustomerSummary[],
+  { query, lastBooking, dateAdded }: CustomerFilters,
+): CustomerSummary[] {
+  const needle = query.trim().toLowerCase();
+  const within = (iso: string | null | undefined, range: { from: string; to: string }) =>
+    !range.from && !range.to ? true : iso ? dayWithinRange(iso, range.from, range.to) : false;
+
+  return customers
+    .filter(
+      (customer) =>
+        (!needle ||
+          [customer.name, customer.email ?? '', customer.phone ?? ''].some((text) =>
+            text.toLowerCase().includes(needle),
+          )) &&
+        within(customer.lastBookingAt, lastBooking) &&
+        within(customer.createdAt, dateAdded),
+    )
+    .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt));
+}
+
+/* ------------------------------------------------------ one customer -- */
+
+export type CustomerTripStage = 'active' | 'upcoming' | 'completed';
+
+/**
+ * Where one of a customer's trips stands on the calendar, by its travel day
+ * in Lagos: later than today is upcoming, today is active, earlier is
+ * completed. `null` when there is no travel date, or the booking was
+ * cancelled, refunded or failed — those show their own status instead.
+ */
+export function customerTripStage(
+  booking: Pick<CustomerBooking, 'travelDate' | 'status'>,
+  now: Date,
+): CustomerTripStage | null {
+  if (!booking.travelDate || /cancel|refund|fail/i.test(booking.status)) return null;
+  const today = lagosDay(now.toISOString());
+  if (booking.travelDate > today) return 'upcoming';
+  if (booking.travelDate === today) return 'active';
+  return 'completed';
+}
+
+export type ProductFilter = 'all' | 'flight' | 'bus';
+
+export const PRODUCT_FILTERS: ReadonlyArray<{ value: ProductFilter; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'flight', label: 'Flight' },
+  { value: 'bus', label: 'Bus' },
+];
+
+/** A customer's bookings for one product, newest booking first. */
+export function bookingsForProduct(
+  bookings: readonly CustomerBooking[],
+  product: ProductFilter,
+): CustomerBooking[] {
+  return bookings
+    .filter((booking) => product === 'all' || booking.product === product)
+    .sort((a, b) => (b.bookedAt ?? '').localeCompare(a.bookedAt ?? ''));
+}
+
+export interface CustomerInsights {
+  tripCount: number;
+  totalMinor: number;
+  /** Whole kobo, rounded. Null with no trips. */
+  averageMinor: number | null;
+  biggestMinor: number | null;
+  /** "LOS – ABV": the route booked most often, ties to the larger spend. */
+  topRoute: string | null;
+  /** The flight carrier booked most often, ties to the larger spend. Buses are not airlines. */
+  topAirline: string | null;
+  flightMinor: number;
+  busMinor: number;
+  lastBookedAt: string | null;
+}
+
+/** The figures at the top of a customer's page, from their bookings alone. */
+export function customerInsights(bookings: readonly CustomerBooking[]): CustomerInsights {
+  const totalMinor = bookings.reduce((sum, booking) => sum + booking.amountMinor, 0);
+  const sumFor = (product: 'flight' | 'bus') =>
+    bookings
+      .filter((booking) => booking.product === product)
+      .reduce((sum, booking) => sum + booking.amountMinor, 0);
+
+  return {
+    tripCount: bookings.length,
+    totalMinor,
+    averageMinor: bookings.length > 0 ? Math.round(totalMinor / bookings.length) : null,
+    biggestMinor:
+      bookings.length > 0 ? Math.max(...bookings.map((booking) => booking.amountMinor)) : null,
+    topRoute: mostBooked(bookings, (booking) =>
+      booking.route ? `${booking.route.fromCode} – ${booking.route.toCode}` : null,
+    ),
+    topAirline: mostBooked(bookings, (booking) =>
+      booking.product === 'flight' ? (booking.carrier ?? null) : null,
+    ),
+    flightMinor: sumFor('flight'),
+    busMinor: sumFor('bus'),
+    lastBookedAt:
+      bookings
+        .map((booking) => booking.bookedAt)
+        .filter((at): at is string => Boolean(at))
+        .sort()
+        .at(-1) ?? null,
+  };
+}
+
+function mostBooked(
+  bookings: readonly CustomerBooking[],
+  keyOf: (booking: CustomerBooking) => string | null,
+): string | null {
+  const tally = new Map<string, { count: number; spend: number }>();
+  for (const booking of bookings) {
+    const key = keyOf(booking);
+    if (!key) continue;
+    const entry = tally.get(key) ?? { count: 0, spend: 0 };
+    tally.set(key, { count: entry.count + 1, spend: entry.spend + booking.amountMinor });
+  }
+  let best: [string, { count: number; spend: number }] | null = null;
+  for (const entry of tally) {
+    if (
+      !best ||
+      entry[1].count > best[1].count ||
+      (entry[1].count === best[1].count && entry[1].spend > best[1].spend)
+    ) {
+      best = entry;
+    }
+  }
+  return best?.[0] ?? null;
+}
 
 /** The board's columns, newest lead first in each. */
 export function groupByStage(leads: readonly LeadSummary[]): Record<LeadStage, LeadSummary[]> {

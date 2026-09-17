@@ -101,3 +101,48 @@ describe('the CRM stand-in', () => {
     await refused(api.completeTask('t-1'), 409);
   });
 });
+
+describe('adding a customer in the stand-in', () => {
+  const request = {
+    kind: 'business' as const,
+    name: 'Lekki Pharma',
+    email: 'travel@lekkipharma.example.test',
+    phone: null,
+  };
+
+  it('adds them, with nothing booked yet, and lists them', async () => {
+    const created = await settle(api.createCustomer(request));
+
+    expect(created).toMatchObject({
+      name: 'Lekki Pharma',
+      kind: 'business',
+      totalBookings: 0,
+      lifetimeValueMinor: 0,
+      bookings: [],
+    });
+    expect(await settle(api.getCustomer(created.id))).toMatchObject({ name: 'Lekki Pharma' });
+    expect((await settle(api.listCustomers())).map((c) => c.id)).toContain(created.id);
+  });
+
+  it('refuses a second record for an email already in use, ignoring case', async () => {
+    await settle(api.createCustomer(request));
+    await refused(
+      api.createCustomer({
+        ...request,
+        name: 'Someone else',
+        email: 'TRAVEL@lekkipharma.example.test',
+      }),
+      409,
+    );
+  });
+
+  it('knows +234 and 0 are the same phone number', async () => {
+    // Harbour Point Logistics is seeded with +234 901 220 4410.
+    await refused(api.createCustomer({ ...request, email: null, phone: '0901 220 4410' }), 409);
+  });
+
+  it('wants a name and a way to reach them', async () => {
+    await refused(api.createCustomer({ ...request, name: ' ' }), 422);
+    await refused(api.createCustomer({ ...request, email: null, phone: null }), 422);
+  });
+});

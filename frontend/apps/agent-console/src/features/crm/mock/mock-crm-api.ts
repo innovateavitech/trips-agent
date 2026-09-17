@@ -20,7 +20,7 @@ import { crmData, type StoredCustomer, type StoredLead } from './crm-store';
  *
  * The CRM screens' stand-in, keeping the contract's rules: a lost lead says
  * why, a sent quote is never edited, sending a quote moves a new lead to
- * Quoted, and a customer is created from the lead rather than keyed in first.
+ * Quoted, and no two customers share an email or a phone number.
  */
 
 const LATENCY_MS = 300;
@@ -31,6 +31,27 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 let sequence = 100;
 const nextId = (prefix: string) => `${prefix}-${(sequence += 1)}`;
+
+/** Nigerian numbers written either way — "+234 901 220 4410" and "0901 220 4410" — are one number. */
+function phoneKey(phone: string | null | undefined): string | null {
+  const digits = phone?.replace(/\D/g, '') ?? '';
+  if (!digits) return null;
+  return digits.startsWith('234') ? `0${digits.slice(3)}` : digits;
+}
+
+/** The customer who already has this email or phone, if anyone does. */
+function findCustomer(
+  email: string | null | undefined,
+  phone: string | null | undefined,
+): StoredCustomer | undefined {
+  const wantedEmail = email?.trim().toLowerCase() || null;
+  const wantedPhone = phoneKey(phone);
+  return crmData().customers.find(
+    (candidate) =>
+      (wantedEmail !== null && candidate.email?.toLowerCase() === wantedEmail) ||
+      (wantedPhone !== null && phoneKey(candidate.phone) === wantedPhone),
+  );
+}
 
 function customerRef(id: string): CustomerRef {
   const found = crmData().customers.find((customer) => customer.id === id);
@@ -142,11 +163,15 @@ function customerOf(customer: StoredCustomer): Customer {
     lastActivityAt: activity[activity.length - 1] ?? customer.createdAt,
     openLeadCount: theirLeads.filter((lead) => lead.stage !== 'Won' && lead.stage !== 'Lost')
       .length,
+    kind: customer.kind,
+    lastBookingAt: customer.lastBookedAt,
     currency: 'NGN',
     createdAt: customer.createdAt,
     leads: theirLeads.map(summarise),
     quotes: theirQuotes.map(quoteSummary),
     bookings: customer.bookings,
+    invoices: customer.invoices,
+    travellers: customer.travellers,
     tasks: [
       ...tasksFor('Customer', customer.id),
       ...theirLeads.flatMap((lead) => tasksFor('Lead', lead.id)),
@@ -187,22 +212,20 @@ export const mockCrmApi: CrmApi = {
     if (!request.customer.name.trim()) throw new ApiError(422, 'Give the customer a name.');
     if (!request.destination.trim()) throw new ApiError(422, 'Say where they want to go.');
 
-    // Customers are never keyed in first: find them by email or phone, or create them from the lead.
-    const email = request.customer.email?.trim().toLowerCase() || null;
-    const phone = request.customer.phone?.replace(/\s+/g, '') || null;
-    let customer = customers.find(
-      (candidate) =>
-        (email && candidate.email?.toLowerCase() === email) ||
-        (phone && candidate.phone?.replace(/\s+/g, '') === phone),
-    );
+    // A lead finds its customer by email or phone, or creates them.
+    let customer = findCustomer(request.customer.email, request.customer.phone);
     if (!customer) {
       customer = {
         id: nextId('c'),
         name: request.customer.name.trim(),
         email: request.customer.email?.trim() || null,
         phone: request.customer.phone?.trim() || null,
+        kind: 'individual',
         createdAt: new Date().toISOString(),
+        lastBookedAt: null,
         bookings: [],
+        invoices: [],
+        travellers: [],
       };
       customers.push(customer);
     }
@@ -341,7 +364,8 @@ export const mockCrmApi: CrmApi = {
         tasks: _tasks,
         communications: _messages,
         currency: _currency,
-        createdAt: _createdAt,
+        invoices: _invoices,
+        travellers: _travellers,
         ...summary
       } = customerOf(customer);
       return summary;
@@ -352,6 +376,42 @@ export const mockCrmApi: CrmApi = {
     await delay();
     const customer = crmData().customers.find((candidate) => candidate.id === id);
     if (!customer) throw new ApiError(404, 'We could not find that customer.');
+    return customerOf(customer);
+  },
+
+  async createCustomer(request) {
+    await delay(SAVE_LATENCY_MS);
+    const name = request.name.trim();
+    const email = request.email?.trim() || null;
+    const phone = request.phone?.trim() || null;
+
+    if (!name) throw new ApiError(422, 'Give the customer a name.');
+    if (!email && !phone) {
+      throw new ApiError(422, 'Add an email or a phone number, so you can reach them.');
+    }
+
+    const existing = findCustomer(email, phone);
+    if (existing) {
+      throw new ApiError(
+        409,
+        `${existing.name} is already a customer`,
+        'Someone with that email or phone number is already in your customers. Open their record instead of adding them again.',
+      );
+    }
+
+    const customer: StoredCustomer = {
+      id: nextId('c'),
+      name,
+      email,
+      phone,
+      kind: request.kind,
+      createdAt: new Date().toISOString(),
+      lastBookedAt: null,
+      bookings: [],
+      invoices: [],
+      travellers: [],
+    };
+    crmData().customers.push(customer);
     return customerOf(customer);
   },
 

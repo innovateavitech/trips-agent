@@ -159,6 +159,10 @@ export const preset = {
           from: { transform: 'translateX(-100%)' },
           to: { transform: 'translateX(0)' },
         },
+        'slide-in-right': {
+          from: { transform: 'translateX(100%)' },
+          to: { transform: 'translateX(0)' },
+        },
       },
       animation: {
         // Short and few, on purpose. Motion earns its place or it is noise.
@@ -166,6 +170,8 @@ export const preset = {
         'slide-up': 'slide-up 200ms ease-out',
         // The tablet navigation drawer. Answers a tap, so it is allowed to move.
         'slide-in-left': 'slide-in-left 220ms cubic-bezier(0.16, 1, 0.3, 1)',
+        // A form panel from the right ("Add customer"). Same answer to a tap, same timing.
+        'slide-in-right': 'slide-in-right 220ms cubic-bezier(0.16, 1, 0.3, 1)',
       },
     },
   },

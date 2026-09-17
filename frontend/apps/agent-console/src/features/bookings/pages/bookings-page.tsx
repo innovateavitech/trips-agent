@@ -6,17 +6,11 @@ import {
   Badge,
   BookTravelIcon,
   Button,
-  ChevronDownIcon,
   ConfigurationIcon,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
   EmptyState,
   ErrorState,
   GlobalSearchInput,
-  Input,
   SegmentedControl,
-  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -28,6 +22,8 @@ import {
 } from '@trips/ui';
 import { formatMoneyShort } from '@trips/utils';
 import { describeError } from '../../../api/errors';
+import { DateRangeMenu, NO_RANGE, type DateRange } from '../../../shell/date-range-menu';
+import { LIST_HEADER_CELL, ListSkeleton } from '../../../shell/list-table';
 import { PageHeader } from '../../../shell/page-header';
 import { formatShortDate, formatShortDateTime } from '../../dashboard/booking-display';
 import { useBookings } from '../bookings-api';
@@ -40,13 +36,6 @@ import {
   type TravelStage,
 } from '../bookings-rules';
 import type { BookingListItem } from '../types';
-
-interface DateRange {
-  from: string;
-  to: string;
-}
-
-const NO_RANGE: DateRange = { from: '', to: '' };
 
 /**
  * #54 — every trip an agency's customers have taken, grouped one row per
@@ -142,7 +131,7 @@ export function BookingsPage() {
         />
       </div>
 
-      {bookings.isPending ? <ListSkeleton /> : null}
+      {bookings.isPending ? <ListSkeleton label="Loading trips" /> : null}
 
       {bookings.isError ? (
         <ErrorState
@@ -197,72 +186,19 @@ export function BookingsPage() {
   );
 }
 
-function DateRangeMenu({
-  label,
-  range,
-  onChange,
-}: {
-  label: string;
-  range: DateRange;
-  onChange: (range: DateRange) => void;
-}) {
-  const active = Boolean(range.from || range.to);
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className={cn(
-          buttonVariants({ variant: 'outline', size: 'sm' }),
-          'gap-2 rounded-full',
-          active ? 'border-primary text-primary' : 'text-muted-foreground',
-        )}
-      >
-        {label}
-        <ChevronDownIcon size={16} />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64 p-3">
-        <div className="flex flex-col gap-3">
-          <Input
-            type="date"
-            label="From"
-            value={range.from}
-            max={range.to || undefined}
-            onChange={(event) => onChange({ ...range, from: event.target.value })}
-          />
-          <Input
-            type="date"
-            label="To"
-            value={range.to}
-            min={range.from || undefined}
-            onChange={(event) => onChange({ ...range, to: event.target.value })}
-          />
-          {active ? (
-            <Button type="button" variant="ghost" size="sm" onClick={() => onChange(NO_RANGE)}>
-              Clear
-            </Button>
-          ) : null}
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-const headerCellClasses =
-  'h-10 bg-muted text-xs font-medium normal-case tracking-normal text-muted-foreground first:rounded-l-lg last:rounded-r-lg';
-
 function TravelTable({ bookings }: { bookings: BookingListItem[] }) {
   return (
     <div className="overflow-hidden rounded-xl">
       <Table>
         <TableHeader>
           <TableRow className="border-none hover:bg-transparent">
-            <TableHead className={headerCellClasses}>Customer</TableHead>
-            <TableHead className={headerCellClasses}>Travellers</TableHead>
-            <TableHead className={headerCellClasses}>Route</TableHead>
-            <TableHead className={headerCellClasses}>Booking date</TableHead>
-            <TableHead className={headerCellClasses}>Booking start date</TableHead>
-            <TableHead className={headerCellClasses}>Booking end date</TableHead>
-            <TableHead className={cn(headerCellClasses, 'text-right')}>Amount</TableHead>
+            <TableHead className={LIST_HEADER_CELL}>Customer</TableHead>
+            <TableHead className={LIST_HEADER_CELL}>Travellers</TableHead>
+            <TableHead className={LIST_HEADER_CELL}>Route</TableHead>
+            <TableHead className={LIST_HEADER_CELL}>Booking date</TableHead>
+            <TableHead className={LIST_HEADER_CELL}>Booking start date</TableHead>
+            <TableHead className={LIST_HEADER_CELL}>Booking end date</TableHead>
+            <TableHead className={cn(LIST_HEADER_CELL, 'text-right')}>Amount</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -323,25 +259,6 @@ function TravelTable({ bookings }: { bookings: BookingListItem[] }) {
           })}
         </TableBody>
       </Table>
-    </div>
-  );
-}
-
-function ListSkeleton() {
-  return (
-    <div
-      aria-busy="true"
-      aria-label="Loading trips"
-      className="flex flex-col divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-subtle"
-    >
-      {[0, 1, 2, 3, 4].map((row) => (
-        <div key={row} className="flex items-center gap-4 px-4 py-4">
-          <Skeleton className="h-10 w-10 rounded-full" />
-          <Skeleton className="h-4 flex-1" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-20" />
-        </div>
-      ))}
     </div>
   );
 }

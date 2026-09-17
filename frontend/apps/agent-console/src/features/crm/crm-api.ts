@@ -5,6 +5,7 @@ import type {
   Communication,
   CommunicationRequest,
   Customer,
+  CustomerRequest,
   CustomerSummary,
   Lead,
   LeadRequest,
@@ -34,6 +35,8 @@ export interface CrmApi {
   sendQuote(id: string): Promise<Quote>;
   listCustomers(): Promise<CustomerSummary[]>;
   getCustomer(id: string): Promise<Customer>;
+  /** 409 when a customer already has that email or phone: one person, one record. */
+  createCustomer(request: CustomerRequest): Promise<Customer>;
   listTasks(filter: { open: boolean }): Promise<Task[]>;
   addTask(request: TaskRequest): Promise<Task>;
   completeTask(id: string): Promise<Task>;
@@ -120,6 +123,9 @@ function useCrmMutation<TInput, TResult>(run: (api: CrmApi, input: TInput) => Pr
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: crmKeys.all(agencyId) }),
   });
 }
+
+export const useCreateCustomer = () =>
+  useCrmMutation((api, request: CustomerRequest) => api.createCustomer(request));
 
 export const useCreateLead = () =>
   useCrmMutation((api, request: LeadRequest) => api.createLead(request));

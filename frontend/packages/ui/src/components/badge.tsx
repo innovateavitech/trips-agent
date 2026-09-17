@@ -33,13 +33,26 @@ const badgeVariants = cva(
 );
 
 export interface BadgeProps
-  extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
+  extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {
+  /**
+   * A small dot in the tone's colour before the label — the Figma status chip
+   * on the customer screens ("● Completed"). Decorative: the label says it.
+   */
+  dot?: boolean;
+}
 
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(function Badge(
-  { className, tone, ...props },
+  { className, tone, dot = false, children, ...props },
   ref,
 ) {
-  return <span ref={ref} className={cn(badgeVariants({ tone }), className)} {...props} />;
+  return (
+    <span ref={ref} className={cn(badgeVariants({ tone }), dot && 'gap-1.5', className)} {...props}>
+      {dot ? (
+        <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-current" />
+      ) : null}
+      {children}
+    </span>
+  );
 });
 
 export { badgeVariants };

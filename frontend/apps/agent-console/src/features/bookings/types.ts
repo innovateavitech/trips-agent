@@ -43,6 +43,13 @@ export interface BookingTraveller {
   name: string;
   /** The issued ticket number, once there is one. Buses have none. */
   ticketNumber: string | null;
+  /**
+   * As on the travel document. Optional: the real orders API does not model
+   * this yet, so `toDetail` leaves it unset rather than guessing.
+   */
+  passportNumber?: string | null;
+  /** `YYYY-MM-DD`. Optional for the same reason as `passportNumber`. */
+  dateOfBirth?: string | null;
 }
 
 export interface BookingSegment {
@@ -87,6 +94,15 @@ export interface BookingDetail extends BookingListItem {
   timeline: TimelineEntry[];
   /** Set while the booking waits in the resolution queue. */
   failure: BookingFailure | null;
+  /**
+   * Flights only; `null` for a bus. Optional for the same reason as
+   * `BookingTraveller.passportNumber` — not on the real API yet.
+   */
+  cabinClass?: string | null;
+  /** The customer's contact, for whoever needs to reach them about this trip. Optional, same reason. */
+  contactEmail?: string | null;
+  /** Optional, same reason as `contactEmail`. */
+  contactPhone?: string | null;
 }
 
 /**

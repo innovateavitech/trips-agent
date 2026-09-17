@@ -1,7 +1,8 @@
-import { Ticket } from 'lucide-react';
+import { ArrowLeft, Bus, Plane, Ticket } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import {
   Alert,
+  Avatar,
   Badge,
   Card,
   CardHeader,
@@ -13,13 +14,12 @@ import {
 } from '@trips/ui';
 import { formatMoneyShort } from '@trips/utils';
 import { ApiError, describeError } from '../../../api/errors';
-import { PageHeader } from '../../../shell/page-header';
-import { STATUS_DISPLAY, describeTimeLeft, formatDeparture } from '../../dashboard/booking-display';
+import { STATUS_DISPLAY, describeTimeLeft } from '../../dashboard/booking-display';
 import { formatClock, formatDay } from '../../search/search-rules';
 import { useBooking, useBookingDocuments, useReissueDocument } from '../bookings-api';
-import { splitFareEvenly } from '../bookings-rules';
+import { describeDuration, formatDateOfBirth, splitFareEvenly } from '../bookings-rules';
 import { DocumentsCard } from '../components/documents-card';
-import type { BookingDetail } from '../types';
+import type { BookingDetail, BookingSegment } from '../types';
 
 const TRAVELLER_TYPE: Record<BookingDetail['travellers'][number]['type'], string> = {
   ADT: 'Adult',
@@ -35,6 +35,17 @@ const timeFormat = new Intl.DateTimeFormat('en-NG', {
   hourCycle: 'h23',
   timeZone: 'Africa/Lagos',
 });
+
+const shortDayFormat = new Intl.DateTimeFormat('en-NG', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+});
+
+/** `'2026-09-19T11:00'` → `'19 Sept'`. */
+function shortDay(localDateTime: string): string {
+  return shortDayFormat.format(new Date(`${localDateTime.slice(0, 10)}T00:00:00Z`));
+}
 
 /** #54 — one booking, in full: who, where, what it cost, and everything that has happened to it. */
 export function BookingDetailPage() {
@@ -83,11 +94,28 @@ function BookingView({ booking }: { booking: BookingDetail }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title={`Booking ${booking.reference}`}
-        description={`${booking.origin} → ${booking.destination} · ${booking.carrier} · ${formatDeparture(booking.departsAt)}`}
-        actions={<Badge tone={status.tone}>{status.label}</Badge>}
-      />
+      <Link
+        to="/bookings"
+        className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+        Trips
+      </Link>
+
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Avatar name={booking.leadTraveller} size={56} tone="muted" />
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              {booking.leadTraveller}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {booking.customerKind === 'business' ? 'Business' : 'Individual'}
+            </p>
+          </div>
+        </div>
+        <Badge tone={status.tone}>{status.label}</Badge>
+      </div>
 
       {booking.status === 'awaiting_ticket' ? (
         <Alert tone="warning" title={`We're confirming with ${booking.carrier}`}>
@@ -115,32 +143,61 @@ function BookingView({ booking }: { booking: BookingDetail }) {
         <div className="flex flex-col gap-6 lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Itinerary</CardTitle>
+              <CardTitle>
+                Itinerary — {shortDay(booking.segments[0]?.departsAt ?? booking.departsAt)}
+                {' – '}
+                {shortDay(
+                  booking.segments[booking.segments.length - 1]?.arrivesAt ??
+                    booking.segments[0]?.departsAt ??
+                    booking.departsAt,
+                )}
+              </CardTitle>
             </CardHeader>
-            <ul className="divide-y divide-border border-t border-border">
-              {booking.segments.map((segment, index) => (
-                <li
-                  key={index}
-                  className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {segment.origin} → {segment.destination}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{segment.carrier}</p>
-                  </div>
-                  <p className="text-sm tabular-nums text-foreground">
-                    {formatDay(segment.departsAt)} · {formatClock(segment.departsAt)}
-                    {segment.arrivesAt ? `–${formatClock(segment.arrivesAt)}` : ''}
-                  </p>
-                </li>
-              ))}
-            </ul>
+            <ItineraryTimeline product={booking.product} segments={booking.segments} />
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Travellers</CardTitle>
+              <CardTitle>Payment summary</CardTitle>
+            </CardHeader>
+            <dl className="flex flex-col gap-4 border-t border-border px-5 py-4 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-foreground">Passengers × {booking.travellers.length}</dt>
+                <dd className="tabular-nums text-foreground">
+                  {formatMoneyShort(travellerFaresMinor[0] ?? 0, booking.currency)}
+                </dd>
+              </div>
+              {booking.price.margin ? (
+                <>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-foreground">Net total</dt>
+                    <dd className="tabular-nums text-foreground">
+                      {formatMoneyShort(booking.price.margin.netMinor, booking.currency)}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-foreground">Your margin</dt>
+                    <dd className="tabular-nums text-foreground">
+                      {formatMoneyShort(booking.price.margin.markupMinor, booking.currency)}
+                    </dd>
+                  </div>
+                </>
+              ) : null}
+              <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+                <dt className="text-lg font-semibold text-foreground">Total for all passengers</dt>
+                <dd className="text-lg font-semibold tabular-nums text-foreground">
+                  {formatMoneyShort(booking.price.sellMinor, booking.currency)}
+                </dd>
+              </div>
+            </dl>
+            <p className="border-t border-border px-5 py-3 text-xs text-muted-foreground">
+              Paid {booking.paidFrom === 'wallet' ? 'from your wallet' : "on the customer's card"}
+            </p>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Travellers ({booking.travellers.length})</CardTitle>
             </CardHeader>
             <ul className="divide-y divide-border border-t border-border">
               {booking.travellers.map((traveller, index) => (
@@ -148,12 +205,18 @@ function BookingView({ booking }: { booking: BookingDetail }) {
                   key={index}
                   className="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
                 >
-                  <p className="text-sm text-foreground">
-                    {traveller.name}{' '}
-                    <span className="text-xs text-muted-foreground">
-                      {TRAVELLER_TYPE[traveller.type]}
-                    </span>
-                  </p>
+                  <div className="flex flex-col">
+                    <p className="text-sm text-foreground">{traveller.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {[
+                        TRAVELLER_TYPE[traveller.type],
+                        traveller.passportNumber,
+                        traveller.dateOfBirth ? formatDateOfBirth(traveller.dateOfBirth) : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  </div>
                   <div className="flex flex-col items-end gap-0.5">
                     <p className="text-sm font-medium tabular-nums text-foreground">
                       {formatMoneyShort(travellerFaresMinor[index] ?? 0, booking.currency)}
@@ -195,44 +258,117 @@ function BookingView({ booking }: { booking: BookingDetail }) {
         </div>
 
         <div className="flex flex-col gap-6">
-          <Card className="flex flex-col gap-3 p-5">
-            <p className="text-xs text-muted-foreground">Your customer paid</p>
-            <p className="text-2xl font-semibold tabular-nums text-foreground">
-              {formatMoneyShort(booking.price.sellMinor, booking.currency)}
-            </p>
-            {booking.price.margin ? (
-              <dl className="flex flex-col gap-1 border-t border-border pt-3 text-sm">
-                <div className="flex justify-between text-muted-foreground">
-                  <dt>Net</dt>
-                  <dd className="tabular-nums">
-                    {formatMoneyShort(booking.price.margin.netMinor, booking.currency)}
-                  </dd>
-                </div>
-                <div className="flex justify-between font-medium text-success-subtle-foreground">
-                  <dt>Your margin</dt>
-                  <dd className="tabular-nums">
-                    {formatMoneyShort(booking.price.margin.markupMinor, booking.currency)}
-                  </dd>
-                </div>
-              </dl>
-            ) : null}
-            <p className="text-xs text-muted-foreground">
-              Paid {booking.paidFrom === 'wallet' ? 'from your wallet' : "on the customer's card"}
-            </p>
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer details</CardTitle>
+            </CardHeader>
+            <dl className="flex flex-col gap-3 border-t border-border px-5 py-4 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Name</dt>
+                <dd className="text-right font-medium text-foreground">{booking.leadTraveller}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Customer type</dt>
+                <dd className="text-right text-foreground">
+                  {booking.customerKind === 'business' ? 'Business' : 'Individual'}
+                </dd>
+              </div>
+            </dl>
           </Card>
 
-          <Card className="flex flex-col gap-3 p-5">
-            <p className="text-xs text-muted-foreground">Supplier reference</p>
-            <p className="text-xl font-semibold tracking-widest text-foreground">
-              {booking.pnr ?? '—'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Booked {timeFormat.format(new Date(booking.bookedAt))}
-            </p>
+          <Card>
+            <CardHeader>
+              <CardTitle>Booking details</CardTitle>
+            </CardHeader>
+            <dl className="flex flex-col gap-3 border-t border-border px-5 py-4 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Booking PNR</dt>
+                <dd className="text-right font-medium text-foreground">{booking.pnr ?? '—'}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Airline</dt>
+                <dd className="text-right text-foreground">{booking.carrier}</dd>
+              </div>
+              {booking.cabinClass ? (
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">Cabin class</dt>
+                  <dd className="text-right text-foreground">{booking.cabinClass}</dd>
+                </div>
+              ) : null}
+              <div className="flex items-start justify-between gap-3">
+                <dt className="shrink-0 text-muted-foreground">Contact email</dt>
+                <dd className="min-w-0 break-all text-right text-foreground">
+                  {booking.contactEmail ?? '—'}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Phone number</dt>
+                <dd className="text-right text-foreground">{booking.contactPhone ?? '—'}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Booking date</dt>
+                <dd className="text-right text-foreground">
+                  {timeFormat.format(new Date(booking.bookedAt))}
+                </dd>
+              </div>
+            </dl>
           </Card>
 
           <BookingDocuments booking={booking} />
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** The big origin-to-destination timeline: times, dates, and how the trip gets there. */
+function ItineraryTimeline({
+  product,
+  segments,
+}: {
+  product: BookingDetail['product'];
+  segments: BookingSegment[];
+}) {
+  const first = segments[0];
+  const last = segments[segments.length - 1];
+  if (!first || !last) return null;
+
+  const RouteIcon = product === 'flight' ? Plane : Bus;
+  const stops =
+    segments.length === 1
+      ? 'Direct'
+      : `${segments.length - 1} stop${segments.length > 2 ? 's' : ''}`;
+
+  return (
+    <div className="flex items-center gap-4 px-5 pb-5 pt-1">
+      <div className="flex flex-col gap-1">
+        <p className="text-3xl font-semibold tabular-nums text-foreground">
+          {formatClock(first.departsAt)}
+        </p>
+        <p className="text-base font-medium text-foreground">{first.origin}</p>
+        <p className="text-sm text-muted-foreground">{formatDay(first.departsAt)}</p>
+      </div>
+
+      <div className="flex flex-1 flex-col items-center gap-1 px-2">
+        <p className="text-sm text-muted-foreground">
+          {last.arrivesAt ? describeDuration(first.departsAt, last.arrivesAt) : '—'}
+        </p>
+        <div className="flex w-full items-center gap-2">
+          <span aria-hidden="true" className="h-px flex-1 bg-border" />
+          <RouteIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span aria-hidden="true" className="h-px flex-1 bg-border" />
+        </div>
+        <p className="text-sm text-muted-foreground">{stops}</p>
+      </div>
+
+      <div className="flex flex-col items-end gap-1">
+        <p className="text-3xl font-semibold tabular-nums text-foreground">
+          {last.arrivesAt ? formatClock(last.arrivesAt) : '—'}
+        </p>
+        <p className="text-base font-medium text-foreground">{last.destination}</p>
+        <p className="text-sm text-muted-foreground">
+          {last.arrivesAt ? formatDay(last.arrivesAt) : ''}
+        </p>
       </div>
     </div>
   );

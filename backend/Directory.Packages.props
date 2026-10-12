@@ -42,8 +42,8 @@
        (Massient, Inc.); 8.x is the last Apache-2.0 line. See
        docs/adr/0004-masstransit-v8-and-hangfire.md before bumping the major. -->
   <ItemGroup Label="Messaging (MassTransit + RabbitMQ)">
-    <PackageVersion Include="MassTransit" Version="8.5.10" />
-    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.10" />
+    <PackageVersion Include="MassTransit" Version="8.5.11" />
+    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.11" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.12" />
   </ItemGroup>
 
@@ -77,8 +77,8 @@
 
   <ItemGroup Label="Authentication">
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
-    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.22.0" />
-    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.23.0" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
   </ItemGroup>
 
   <ItemGroup Label="Resilience">
@@ -92,7 +92,7 @@
   <ItemGroup Label="Caching">
     <!-- Markup rule cache (issue #28). The raw client rather than IDistributedCache, because the
          invalidation scheme needs an atomic INCR, which IDistributedCache cannot express. -->
-    <PackageVersion Include="StackExchange.Redis" Version="3.2.1" />
+    <PackageVersion Include="StackExchange.Redis" Version="3.4.0" />
   </ItemGroup>
 
   <!-- Image processing for the asset pipeline (#18). SkiaSharp is MIT over BSD-licensed Skia.
@@ -106,7 +106,7 @@
   <ItemGroup Label="Email">
     <!-- Plain SMTP, so it talks to Mailpit locally and to any SMTP relay in production without
          tying us to a cloud provider's SDK (CLAUDE.md: "Cloud is not chosen yet"). -->
-    <PackageVersion Include="MailKit" Version="4.17.0" />
+    <PackageVersion Include="MailKit" Version="4.18.1" />
   </ItemGroup>
 
   <!-- Invoices and vouchers (#46), the PDF library named in the delivery plan's stack table.
@@ -114,18 +114,18 @@
        USD 1M, and a paid Professional or Enterprise licence is needed above it. Which one applies
        is a business decision, so it is configuration — Documents:QuestPdfLicense — not code. -->
   <ItemGroup Label="PDF documents">
-    <PackageVersion Include="QuestPDF" Version="2026.8.0" />
+    <PackageVersion Include="QuestPDF" Version="2026.9.1" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
-    <PackageVersion Include="coverlet.collector" Version="10.0.1" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
     <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />
     <PackageVersion Include="FluentAssertions" Version="6.12.2" />
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.15.0" />
-    <PackageVersion Include="Testcontainers.Redis" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.Redis" Version="4.16.0" />
     <!-- Unit tests run real SaveChanges calls against in-memory SQLite, so interceptors can be
          tested without Docker. Never referenced by production code. -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
